@@ -1,0 +1,49 @@
+# Research design defaults. The full COGAR pipeline is not implemented yet.
+seed: 0
+
+scenario:
+  name: multifront_asset_defense
+  n_fronts: 3
+  attacker_initial: 6
+  defender_initial: 6
+  max_slots_per_side: 12
+  macro_horizon: 10
+  event_triggered_replan: true
+  triggers: [unit_death, reinforcement_arrival, asset_state_change]
+  reinforcement_waves_per_side: [0, 2]
+  reinforcement_size: [1, 3]
+
+lower_policy:
+  type: entity_attention_mappo
+  shared_parameters: true
+  task_conditioned: true
+  local_allies_train: [1, 4]
+  local_enemies_train: [1, 4]
+  tasks: [assault, fix, hold, intercept, reserve]
+  freeze_for_primary_comparison: true
+
+intervention_data:
+  common_random_numbers: true
+  rollouts_per_candidate: 16
+  split_unit: [snapshot_id, scenario_id, opponent_lineage]
+  optimizer_aware_rounds: 2
+
+egom:
+  encoder: set_transformer
+  full_partition_context: true
+  ensemble_size: 5
+  outputs: [task_success, friendly_loss, enemy_loss, resolution_time, asset_damage]
+  calibration: temperature_scaling
+
+commander:
+  candidate_budget_per_side: 32
+  identity_assignment: min_cost
+  solver: entropy_regularized_maximin
+  uncertainty_penalty: 1.0
+  switch_cost: 0.05
+
+evaluation:
+  train_seeds: 5
+  eval_episodes_per_matchup: 500
+  ood_axes: [scale, force_ratio, event_timing, unit_type, geometry, opponent, joint]
+  primary_metrics: [asset_task_success, worst_opponent_return, false_safe, allocation_regret, recovery_time, p95_latency]

@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+outputs/
+checkpoints/
+runs/
+*.pt
+*.pth
+upstream/external/
+upstream/_external/
+upstream/LOCKS.local.md
