@@ -1,0 +1,14 @@
+seed: 0
+model: hpn
+entity_dim: 16
+self_dim: 8
+hidden_dim: 64
+n_fixed_actions: 10
+aggregation: sum_sqrt
+algorithm: ippo
+gamma: 0.99
+gae_lambda: 0.95
+learning_rate: 0.0003
+clip_ratio: 0.2
+entropy_coef: 0.01
+value_coef: 0.5
