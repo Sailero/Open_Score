@@ -1,12 +1,12 @@
 # Third Paper workspace
 
-> **当前论文一句话：本文研究如何在攻防双方因战损和增援而持续改变规模时，通过可变规模执行、能力评估、动态重编组和上下层协同学习，维持多目标防御的总体胜率。**
+> **当前论文一句话：我们研究如何把一个开放规模的多目标攻防态势拆成若干个1–4对1–4单目标子博弈，并利用可复用的微操能力、局面结局预测和实时分组博弈，在伤亡或增援后维持全局防守胜率。**
 
 工作区分为三部分：
 
 - `01_original_saga_iclr/`：历史 SAGA 大设想归档，本轮未修改；
-- `HAD_Env/`：自研三维攻防环境，作为第一阶段 Demo；本轮修复独立导入和目标阵营伤害语义；
-- `02_q2_capability_aware_dynamic_command/`：Open-SCORE 四阶段论文规格和最小可运行代码。
+- `HAD_Env/`：自研三维攻防环境，作为第一阶段纯加速度 Demo；
+- `02_q2_capability_aware_dynamic_command/`：Open-SCORE 四阶段论文规格、HAD适配和最小可运行代码。
 
 建议阅读：
 
@@ -30,9 +30,9 @@ python -m pytest
 python scripts/smoke_stage1.py
 ```
 
-当前结果为 5 tests passed，HAD 3v4/2-target 完成一次环境步、TD loss 和 backward。尚无策略收敛或论文实验结果。
+当前代码覆盖HAD 3v4/1-target双边纯加速度环境步、TD loss和backward；6项接口测试已通过。尚无策略收敛或论文实验结果。
 
-下一目标是用 3–5 周完成 S1 HAD Demo；四阶段双环境投稿级工作当前估计约 121–204 人日，不能压缩成无条件的 1–2 个月承诺。
+下一目标是用5–8周完成S1 HAD多规模训练与PSRO pilot；完整双环境投稿级工作估计约119–200人日。
 
 ## Git 恢复点
 

@@ -6,6 +6,7 @@ from typing import Callable, Dict
 
 import torch
 from torch import Tensor, nn
+from torch.nn import functional as F
 
 
 @dataclass(frozen=True)
@@ -14,6 +15,36 @@ class AlternatingUpdateResult:
     old_worst_scale_success: float
     new_worst_scale_success: float
     loss: float
+
+
+class FinalOutcomeResidual(nn.Module):
+    """Correct S2's local payoff using full-episode win/loss supervision."""
+
+    def __init__(self, input_dim: int, hidden_dim: int = 64):
+        super().__init__()
+        self.network = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 1),
+            nn.Tanh(),
+        )
+
+    def forward(self, global_command_features: Tensor) -> Tensor:
+        return self.network(global_command_features).squeeze(-1)
+
+
+def final_outcome_residual_loss(
+    local_payoff: Tensor,
+    predicted_residual: Tensor,
+    final_defender_outcome: Tensor,
+    residual_weight: float = 0.25,
+) -> Tensor:
+    """Fit the corrected high-level payoff to the actual final outcome."""
+
+    corrected = local_payoff.detach() + residual_weight * predicted_residual
+    return F.smooth_l1_loss(corrected, final_defender_outcome.float())
 
 
 def stability_regularized_loss(

@@ -1,5 +1,5 @@
-"""Stage 2: bilateral finite-horizon outcome modelling."""
+"""Stage 2: supervised local outcome-and-time prediction."""
 
-from .outcome_model import BilateralOutcomeModel, selection_focused_loss
+from .outcome_model import BootstrapOutcomeEnsemble, OutcomeTimeMLP, outcome_time_loss
 
-__all__ = ["BilateralOutcomeModel", "selection_focused_loss"]
+__all__ = ["BootstrapOutcomeEnsemble", "OutcomeTimeMLP", "outcome_time_loss"]

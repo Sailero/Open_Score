@@ -8,8 +8,10 @@ baseline reproduction and attribution.
 |---|---|---|---|
 | S1 | QMIX / PyMARL | https://github.com/oxwhirl/pymarl | Fixed-Capacity QMIX, VDN, IQL semantics and official anchor |
 | S1 | REFIL | https://github.com/shariqiqbal2810/REFIL | Attention-QMIX/REFIL variable-entity baseline |
+| S1 | PSRO / OpenSpiel | https://github.com/google-deepmind/open_spiel/tree/master/open_spiel/python/algorithms/psro_v2 | Meta-game semantics and validation reference |
 | S2–S4 | ALMA | https://github.com/shariqiqbal2810/ALMA | AQL allocator, heuristic and joint-training baseline |
-| S2 | Set Transformer | https://github.com/juho-lee/set_transformer | Bilateral masked attention encoder reference |
+| S2 | Deep Ensembles | https://github.com/google/uncertainty-baselines | Optional uncertainty implementation reference |
+| Env | SMAClite | https://github.com/uoe-agents/smaclite | Second environment and SMAClite-AD extension base |
 | S2 | DFL learning-to-rank | https://github.com/JayMan91/ltr-predopt | Pairwise/listwise decision-focused baseline |
 | S4 | HARL | https://github.com/PKU-MARL/HARL | Sequential-update baseline/implementation reference |
 

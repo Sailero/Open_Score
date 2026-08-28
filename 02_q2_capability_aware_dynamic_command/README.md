@@ -1,51 +1,54 @@
-# Open-SCORE：开放规模攻防的四阶段能力—指挥框架
+# Open-SCORE：从小型子博弈到开放人口指挥
 
-> **一句话：本文研究如何在攻防双方因战损和增援而持续改变规模时，通过可变规模执行、能力评估、动态重编组和上下层协同学习，维持多目标防御的总体胜率。**
-
-本目录同时包含研究规格和最小可运行代码骨架。四阶段作为一个统一系统贡献：
+> **我们研究如何把一个开放规模的多目标攻防态势拆成若干个1–4对1–4单目标子博弈，并利用可复用的微操能力、局面结局预测和实时分组博弈，在伤亡或增援后维持全局防守胜率。**
 
 ```text
-S1 变规模 QMIX 执行
-   → S2 双边编组结果评估
-   → S3 人口事件后的稳健重编组
-   → S4 带规模守卫的上下层交替优化
-   └──────────────────────→ 刷新 S1 能力版本
+S1 1--4 vs 1--4 local QMIX + team PSRO
+     ↓ versioned local capability
+S2 outcome/time MLP + empirical 95% interval
+     ↓ local payoff evidence
+S3 bilateral grouping maximin game
+     ↓ global assignments
+S4 final-outcome residual + guarded alternating updates
+     └──────── refresh S1/S2/S3 ────────┘
 ```
 
-每个阶段只保留一个核心机制，不再增加新聚类器、PSRO、LLM、对手辨识网络或可微优化器。QMIX、REFIL、ALMA、Set Transformer 和 HARL 都有官方源码并作为实现基础或 baseline；真正需要验证的创新是四个接口能否共同解决双方人口变化下的多目标攻防，而不是把已有组件分别宣称为新算法。
+## 当前决定
 
-## 阅读顺序
+- HAD是第一平台：单随机目标、双方各1–4人、双方只控制27个量化加速度。
+- S1使用小型DeepSets-GRU-QMIX；warm-start成功后再做3轮PSRO pilot，最多8轮。
+- S2使用规范化输入的简单MLP ensemble，只预测结局—时间联合分布。
+- S3根据S2区间构造双方分组收益矩阵并在线求maximin。
+- S4用完整轨迹最终胜负学习全局残差，并交替更新/验收各版本。
+- SMAClite-AD取代Open-SMAX-AD成为首选第二环境；原版SMAClite不能直接支持双边PSRO和保护目标。
 
-1. [研究结论与阅读路线](docs/00_研究结论与阅读路线.md)
-2. [问题定义与创新边界](docs/01_问题定义与创新边界.md)
-3. [相关工作与环境审计](docs/02_相关工作与环境审计.md)
-4. [四阶段方法简版](docs/03_方法简版.md)
-5. [详细技术方案与核心代码](docs/04_方法实现规格与伪代码.md)
-6. [实验设计与验收门槛](docs/05_实验设计与预期证据.md)
-7. [工作量、档位与拆分](docs/06_工作量_档位与拆稿.md)
-8. [代码框架与第一阶段 Demo](docs/07_代码框架与第一阶段Demo.md)
+## 阅读入口
+
+1. [研究结论与本轮修正](docs/00_研究结论与阅读路线.md)
+2. [问题定义和四阶段输入输出](docs/01_问题定义与创新边界.md)
+3. [SMAClite、PSRO及源码调研](docs/02_相关工作与环境审计.md)
+4. [论文式方法简版](docs/03_方法简版.md)
+5. [详细数学方案与核心代码](docs/04_方法实现规格与伪代码.md)
+6. [实验设计](docs/05_实验设计与预期证据.md)
+7. [工作量和论文边界](docs/06_工作量_档位与拆稿.md)
+8. [HAD S1代码手册](docs/07_代码框架与第一阶段Demo.md)
 9. [论文框架](paper/论文框架.md)
 
-## 代码入口
+## 运行
 
 ```powershell
+conda activate gpu_py_310
 python -m pip install -e .
 python -m pytest
 python scripts/smoke_stage1.py
 ```
 
-当前 smoke 已在 CPU 上完成 HAD 3v4/2-target 环境步、变规模 QMIX 前向、TD loss 和 backward；5 个单测通过。它证明接口和梯度链可执行，不表示策略已经训练收敛。
+当前 `gpu_py_310` 已实测使用RTX 3060完成CUDA前向、HAD双边环境步、QMIX loss和backward。该环境目前缺少pytest，且SciPy 1.9.3与NumPy 1.26.4有兼容警告；项目依赖已要求 `scipy>=1.11.4`。
 
-## 环境结论
+## 真值边界
 
-- **HAD/Open-HAD：第一 Demo 和主机制环境。** 当前只用打击智能体和目标；已经有 S1 adapter，尚缺环境自有 PRNG、clone/restore、任务 API 和增援。
-- **ALMA `sc2multiarmy`：官方复现锚点。** AQL、heuristic 和 joint training 是必须 baseline，建议放在 WSL2 隔离环境。
-- **Open-SMAX-AD：第二动力学。** 只有 Open-HAD 闭环成立后才开发；JAX GPU 不支持原生 Windows，目标 5070 Ti 上采用 WSL2。
+已实现：双边纯加速度HAD适配、随机单目标、简化变规模QMIX、PSRO元博弈、S2 MLP、S3 maximin、S4 residual/rollback及smoke/tests。
 
-## 当前真值
+未实现：完整sequence learner、双方训练runner、PSRO BR训练、S2 rollout数据集、S3个体匹配/闭环、S4 outer loop和SMAClite-AD。
 
-已实现：四阶段核心类、HAD S1 适配、配置、测试和 smoke。
-
-未实现：完整 episode runner/replay/sequence learner、任何收敛结果、S2 干预数据管线、S3 完整在线 runner、S4 outer loop、ALMA 官方复现和 Open-SMAX-AD。
-
-因此，文档中的胜率均为 go/no-go 门槛，不是已经获得的结果。
+因此当前没有训练收敛、PSRO收敛或论文胜率结果。

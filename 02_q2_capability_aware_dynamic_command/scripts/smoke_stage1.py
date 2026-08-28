@@ -18,9 +18,9 @@ from open_score.stage1 import QMixTransition, VariableScaleQMIX, one_step_qmix_t
 
 def main() -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    adapter = HADStage1Adapter(3, 4, 2, controlled_side="Red", max_steps=40)
+    adapter = HADStage1Adapter(3, 4, max_steps=40)
     first = adapter.reset(seed=7)
-    observation, state = tensorize_had_observation(first, device)
+    observation, state = tensorize_had_observation(first["Red"], device)
     model = VariableScaleQMIX(
         entity_dim=adapter.ENTITY_DIM,
         self_dim=adapter.SELF_DIM,
@@ -30,13 +30,16 @@ def main() -> None:
     ).to(device)
     target = copy.deepcopy(model).eval()
     actions, _ = model.act(observation, epsilon=1.0)
-    second, reward, done, info = adapter.step(actions.squeeze(0).cpu().numpy())
-    next_observation, next_state = tensorize_had_observation(second, device)
+    blue_actions = torch.randint(0, adapter.ACTION_DIM, (len(adapter.env.blue_agents),))
+    second, rewards, done, info = adapter.step(
+        actions.squeeze(0).cpu().numpy(), blue_actions.numpy()
+    )
+    next_observation, next_state = tensorize_had_observation(second["Red"], device)
     transition = QMixTransition(
         observation=observation,
         state=state,
         actions=actions,
-        reward=torch.tensor([reward], dtype=torch.float32, device=device),
+        reward=torch.tensor([rewards["Red"]], dtype=torch.float32, device=device),
         next_observation=next_observation,
         next_state=next_state,
         done=torch.tensor([done], dtype=torch.float32, device=device),
@@ -48,9 +51,13 @@ def main() -> None:
         json.dumps(
             {
                 "device": str(device),
-                "controlled_agents": int(observation.agent_mask.sum()),
+                "red_agents": int(observation.agent_mask.sum()),
+                "blue_agents": len(adapter.env.blue_agents),
                 "entities": int(state.entity_mask.sum()),
-                "reward": reward,
+                "action_primitives": adapter.ACTION_DIM,
+                "target_position": info["target_position"],
+                "red_reward": rewards["Red"],
+                "zero_sum_check": rewards["Red"] + rewards["Blue"],
                 "done": done,
                 "terminated": info["terminated"],
                 "loss": float(loss.detach().cpu()),

@@ -2,14 +2,16 @@
 
 from .commander import (
     CommandDecision,
+    build_defender_payoff,
     enumerate_count_allocations,
     needs_replan,
-    solve_defender_minimax,
+    solve_defender_maximin,
 )
 
 __all__ = [
     "CommandDecision",
+    "build_defender_payoff",
     "enumerate_count_allocations",
     "needs_replan",
-    "solve_defender_minimax",
+    "solve_defender_maximin",
 ]

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760">
+  <defs>
+    <marker id="a" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9Z" fill="#3e4a5d"/></marker>
+    <style>.t{font:700 27px Arial;fill:#18212f}.s{font:400 15px Arial;fill:#526071}.h{font:700 18px Arial;fill:#18212f}.b{font:400 14px Arial;fill:#354254}.x{font:400 12px Arial;fill:#526071}.box{stroke:#98a5b4;stroke-width:1.4;rx:11}.arr{stroke:#3e4a5d;stroke-width:2;fill:none;marker-end:url(#a)}</style>
+  </defs>
+  <rect width="1400" height="760" fill="white"/>
+  <text x="50" y="47" class="t">Stage 1 in HAD: pure acceleration control and team-level PSRO</text>
+  <text x="50" y="74" class="s">A single policy checkpoint supports every registered 1–4 vs 1–4 scale; no pursuit or target-selection macro action is exposed.</text>
+
+  <rect x="45" y="115" width="450" height="510" class="box" fill="#f7f8fa"/>
+  <text x="70" y="151" class="h">Randomized one-target subgame</text>
+  <rect x="82" y="181" width="375" height="250" rx="8" fill="#ffffff" stroke="#b7c0ca" stroke-dasharray="6 5"/>
+  <text x="97" y="205" class="x">target initialization region</text>
+  <circle cx="282" cy="310" r="18" fill="#e89b42"/><circle cx="282" cy="310" r="7" fill="#fff"/>
+  <path d="M142 266 l15 -23 l15 23 z" fill="#2d6a9f"/><path d="M169 378 l15 -23 l15 23 z" fill="#2d6a9f"/>
+  <path d="M385 260 l15 -23 l15 23 z" fill="#2d6a9f"/>
+  <circle cx="379" cy="372" r="12" fill="#c94f4f"/><circle cx="420" cy="321" r="12" fill="#c94f4f"/>
+  <path d="M157 241 l24 -17" class="arr"/><path d="M184 353 l10 28" class="arr"/>
+  <path d="M400 235 l-20 14" class="arr"/><path d="M379 360 l-25 -19" class="arr"/><path d="M420 309 l-18 -25" class="arr"/>
+  <text x="90" y="470" class="b">Observation: relative position, velocity, health, role, target</text>
+  <text x="90" y="500" class="b">Action: one of 27 normalized acceleration vectors</text>
+  <text x="90" y="530" class="b">Shared HAD rule: range / fire / damage / termination</text>
+  <text x="90" y="572" class="h">Zero-sum objective</text>
+  <text x="90" y="600" class="b">terminal result ± potential-based shaping; rA = −rD</text>
+
+  <rect x="550" y="115" width="355" height="510" class="box" fill="#eef6fb"/>
+  <text x="575" y="151" class="h">Simple variable-scale QMIX</text>
+  <rect x="585" y="185" width="285" height="78" rx="8" fill="#fff" stroke="#87a9c3"/>
+  <text x="605" y="214" class="b">DeepSets mean / max / count</text><text x="605" y="239" class="x">masked entities, no attention</text>
+  <path d="M727 264 V297" class="arr"/>
+  <rect x="585" y="304" width="285" height="78" rx="8" fill="#fff" stroke="#87a9c3"/>
+  <text x="605" y="333" class="b">Shared agent GRU (hidden = 64)</text><text x="605" y="358" class="x">individual Q-values for 27 actions</text>
+  <path d="M727 383 V416" class="arr"/>
+  <rect x="585" y="423" width="285" height="89" rx="8" fill="#fff" stroke="#87a9c3"/>
+  <text x="605" y="452" class="b">Masked monotonic mixer</text><text x="605" y="477" class="x">hidden = 32; mixing = 16</text><text x="605" y="499" class="x">same weights across team sizes</text>
+  <text x="575" y="563" class="b">Defender and attacker use separate networks,</text>
+  <text x="575" y="590" class="b">but exactly the same architecture.</text>
+
+  <rect x="960" y="115" width="395" height="510" class="box" fill="#fff5ea"/>
+  <text x="985" y="151" class="h">Team-policy PSRO after warm start</text>
+  <rect x="1000" y="190" width="315" height="62" rx="8" fill="#fff" stroke="#d49a53"/>
+  <text x="1020" y="217" class="b">Evaluate cross-scale empirical payoff M</text><text x="1020" y="239" class="x">independent seeds and random target positions</text>
+  <path d="M1157 253 V281" class="arr"/>
+  <rect x="1000" y="288" width="315" height="62" rx="8" fill="#fff" stroke="#d49a53"/>
+  <text x="1020" y="315" class="b">Solve defender / attacker meta-Nash</text><text x="1020" y="337" class="x">small zero-sum linear programs</text>
+  <path d="M1157 351 V379" class="arr"/>
+  <rect x="1000" y="386" width="315" height="76" rx="8" fill="#fff" stroke="#d49a53"/>
+  <text x="1020" y="413" class="b">Train approximate QMIX best responses</text><text x="1020" y="437" class="x">one whole cooperative team is one player</text>
+  <path d="M1157 463 V491" class="arr"/>
+  <rect x="1000" y="498" width="315" height="82" rx="8" fill="#fff" stroke="#d49a53"/>
+  <text x="1020" y="525" class="b">Append policies and re-evaluate</text><text x="1020" y="549" class="x">stop: estimated NashConv ≤ .10 × 3</text><text x="1020" y="571" class="x">or 8 iterations; never claim exact equilibrium</text>
+  <path d="M1325 540 H1340 V220 H1320" class="arr"/>
+  <path d="M495 365 H540" class="arr"/><path d="M905 365 H950" class="arr"/>
+  <text x="51" y="688" class="s">S1 evidence: per-scale payoff matrix, worst-opponent win rate, interpolation drop, estimated NashConv, environment steps, and wall time on RTX 3060.</text>
+</svg>

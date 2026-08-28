@@ -1,81 +1,102 @@
-"""Assignment-conditioned breach predictor for frozen stage-1 executors."""
+"""Simple supervised outcome-and-time model for one canonical small subgame."""
 
-from typing import Optional, Tuple
+from typing import Dict
 
 import torch
 from torch import Tensor, nn
 from torch.nn import functional as F
 
-from open_score.nn import MaskedSetAttentionEncoder
 
+class OutcomeTimeMLP(nn.Module):
+    """Predict the joint terminal side and terminal-time bin.
 
-class BilateralOutcomeModel(nn.Module):
-    """Predict P(any protected target is breached within H_o).
-
-    Defender and attacker tokens contain an entity embedding concatenated with
-    a task-assignment encoding.  Set pooling makes both rosters variable-sized.
+    Classes 0..K-1 mean a defender win in time bin k, K..2K-1 mean
+    an attacker breach, and class 2K means timeout.  A single categorical
+    distribution keeps win probability and remaining-time estimates coherent.
     """
 
     def __init__(
         self,
-        state_entity_dim: int,
-        defender_token_dim: int,
-        attacker_token_dim: int,
-        hidden_dim: int = 128,
+        input_dim: int,
+        horizon_bins: int = 20,
+        hidden_dim: int = 64,
     ):
         super().__init__()
-        self.state_encoder = MaskedSetAttentionEncoder(
-            state_entity_dim, hidden_dim, hidden_dim
-        )
-        self.defender_encoder = MaskedSetAttentionEncoder(
-            defender_token_dim, hidden_dim, hidden_dim
-        )
-        self.attacker_encoder = MaskedSetAttentionEncoder(
-            attacker_token_dim, hidden_dim, hidden_dim
-        )
-        self.head = nn.Sequential(
-            nn.Linear(3 * hidden_dim, hidden_dim),
+        self.horizon_bins = horizon_bins
+        self.network = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 1),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 2 * horizon_bins + 1),
         )
 
-    def forward(
+    def forward(self, canonical_state: Tensor) -> Tensor:
+        return self.network(canonical_state)
+
+    def summarize(
         self,
-        state_entities: Tensor,
-        state_mask: Tensor,
-        defender_tokens: Tensor,
-        defender_mask: Tensor,
-        attacker_tokens: Tensor,
-        attacker_mask: Tensor,
-    ) -> Tensor:
-        state = self.state_encoder(state_entities, state_mask)
-        defender = self.defender_encoder(defender_tokens, defender_mask)
-        attacker = self.attacker_encoder(attacker_tokens, attacker_mask)
-        return self.head(torch.cat([state, defender, attacker], dim=-1)).squeeze(-1)
+        canonical_state: Tensor,
+        steps_per_bin: int = 10,
+        command_bins: int = 1,
+    ) -> Dict[str, Tensor]:
+        probabilities = torch.softmax(self(canonical_state), dim=-1)
+        k = self.horizon_bins
+        defender = probabilities[..., :k]
+        breach = probabilities[..., k : 2 * k]
+        timeout = probabilities[..., -1]
+        bin_steps = torch.arange(1, k + 1, device=probabilities.device, dtype=probabilities.dtype)
+        terminal_mass = defender + breach
+        expected_steps = (terminal_mass * bin_steps).sum(-1) * steps_per_bin
+        expected_steps = expected_steps + timeout * (k * steps_per_bin)
+        command_bins = max(1, min(command_bins, k))
+        return {
+            "defender_win_probability": defender.sum(-1) + timeout,
+            "breach_probability": breach.sum(-1),
+            "breach_within_command": breach[..., :command_bins].sum(-1),
+            "expected_remaining_steps": expected_steps,
+            "timeout_probability": timeout,
+        }
 
-    def breach_probability(self, *args: Tensor) -> Tensor:
-        return torch.sigmoid(self.forward(*args))
+
+class BootstrapOutcomeEnsemble(nn.Module):
+    """A small MLP ensemble that exposes empirical 95% model intervals."""
+
+    def __init__(
+        self,
+        members: int,
+        input_dim: int,
+        horizon_bins: int = 20,
+        hidden_dim: int = 64,
+    ):
+        super().__init__()
+        if members < 2:
+            raise ValueError("an uncertainty ensemble requires at least two members")
+        self.members = nn.ModuleList(
+            [OutcomeTimeMLP(input_dim, horizon_bins, hidden_dim) for _ in range(members)]
+        )
+
+    @torch.no_grad()
+    def predict_interval(
+        self,
+        canonical_state: Tensor,
+        steps_per_bin: int = 10,
+        command_bins: int = 1,
+    ) -> Dict[str, Tensor]:
+        summaries = [
+            member.summarize(canonical_state, steps_per_bin, command_bins)
+            for member in self.members
+        ]
+        result: Dict[str, Tensor] = {}
+        for key in summaries[0]:
+            samples = torch.stack([summary[key] for summary in summaries], dim=0)
+            result[key] = samples.mean(dim=0)
+            result[f"{key}_lower95"] = torch.quantile(samples, 0.025, dim=0)
+            result[f"{key}_upper95"] = torch.quantile(samples, 0.975, dim=0)
+        return result
 
 
-def selection_focused_loss(
-    logits: Tensor,
-    breach_labels: Tensor,
-    selection_weights: Tensor,
-    ranking_pairs: Optional[Tuple[Tensor, Tensor]] = None,
-    ranking_weight: float = 0.2,
-) -> Tensor:
-    """Weighted probability loss plus within-snapshot pairwise ranking.
+def outcome_time_loss(logits: Tensor, terminal_class: Tensor) -> Tensor:
+    """Supervised negative log-likelihood for the joint terminal label."""
 
-    `selection_weights` are frozen from a pilot selector; they must not be
-    recomputed from the same labels used by this loss.
-    """
-
-    point_loss = F.binary_cross_entropy_with_logits(logits, breach_labels.float(), reduction="none")
-    weights = selection_weights.float().clamp_min(0.0)
-    point_loss = (point_loss * weights).sum() / weights.sum().clamp_min(1.0)
-    if ranking_pairs is None:
-        return point_loss
-    safer_index, riskier_index = ranking_pairs
-    # Lower logit means safer; enforce riskier_logit > safer_logit.
-    rank_loss = F.softplus(logits[safer_index] - logits[riskier_index]).mean()
-    return point_loss + ranking_weight * rank_loss
+    return F.cross_entropy(logits, terminal_class.long())
