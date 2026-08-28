@@ -1,24 +1,28 @@
 # Third Paper workspace
 
-本工作区把历史大设想与当前可在 1–2 个月内执行的论文完全隔离。
+> **当前论文一句话：本文研究如何让多目标防御指挥官在战损后在线重编组时，少选“预测安全、实则失守”的分兵方案。**
 
-> **当前研究的一句话：让宏观指挥官在调兵前知道每支临时小队究竟能不能完成任务，并在伤亡和增援后立即重分兵、守住关键点。**
+本工作区把历史大设想、原始自建环境与当前单篇论文规格分开：
 
-- `01_original_saga_iclr/`：原始 SAGA / ICLR-scale 构想、论文、理论和原型的只读归档。
-- `02_q2_capability_aware_dynamic_command/`：当前论文阶段，聚焦“下层真实能力评估 + 双边动态分兵”，不再把一般动态聚类或四层架构本身当作创新。
+- `01_original_saga_iclr/`：原始 SAGA / ICLR-scale 构想、论文、理论和原型归档，本轮未改动。
+- `HAD_Env/`：用户自研三维攻防环境；当前论文拟只保留打击智能体和目标点并适配为 Open-HAD，本轮只审计、未修改。
+- `02_q2_capability_aware_dynamic_command/`：当前 SCORE 论文的精简研究规格、论文框架、参考文献和方法示意图。
 
-建议按以下顺序阅读：
+建议阅读：
 
-1. [一句话场景与最终判断](02_q2_capability_aware_dynamic_command/docs/00_一句话场景与最终判断.md)
-2. [具体场景与问题定义](02_q2_capability_aware_dynamic_command/docs/01_具体场景与问题定义.md)
-3. [四阶段可行性与创新审计](02_q2_capability_aware_dynamic_command/docs/02_四阶段可行性与创新审计.md)
-4. [方法框架](02_q2_capability_aware_dynamic_command/docs/05_COGAR方法框架.md)
-5. [八周执行与投稿分级](02_q2_capability_aware_dynamic_command/docs/08_八周执行与投稿分级.md)
+1. [研究结论与阅读路线](02_q2_capability_aware_dynamic_command/docs/00_研究结论与阅读路线.md)
+2. [问题定义与创新边界](02_q2_capability_aware_dynamic_command/docs/01_问题定义与创新边界.md)
+3. [相关工作与环境审计](02_q2_capability_aware_dynamic_command/docs/02_相关工作与环境审计.md)
+4. [方法简版](02_q2_capability_aware_dynamic_command/docs/03_方法简版.md)
+5. [方法实现规格与伪代码](02_q2_capability_aware_dynamic_command/docs/04_方法实现规格与伪代码.md)
+6. [实验设计与预期证据](02_q2_capability_aware_dynamic_command/docs/05_实验设计与预期证据.md)
+7. [工作量、档位与拆稿](02_q2_capability_aware_dynamic_command/docs/06_工作量_档位与拆稿.md)
+8. [图表与生成记录](02_q2_capability_aware_dynamic_command/docs/07_图表与生成记录.md)
+9. [论文框架](02_q2_capability_aware_dynamic_command/paper/论文框架.md)
 
-Git 快照：
+当前交付是**经调研与审计后的研究定义**，不是已完成的算法或实验。旧 COGAR 文档、占位代码和无效配置已从当前工作树移除；它们仍可从 Git 恢复：
 
-- `f281296`：转向开放人口攻防前的 CDOC 版本。
-- `8766809`：上一版开放人口对抗分配方案。
-- `9a9b77e`：本轮“四阶段能力驱动指挥”重构前的远端备份。
+- `abadfcc`：备份 Claude 总体分析、原 Q2 目录与 HAD 环境状态；
+- `d5ac696`：备份根目录的 Claude 备用框架草稿。
 
-当前代码仍只是可运行的 P0 环境和可变实体网络骨架；完整 COGAR 方法尚未实现，文档中的预期效果均是待实验验证的假设，而不是已有结果。
+单人 5–8 周的现实目标是完成 E0–E2 并判断论文是否成立；若要形成含强基线、正式 seeds 和第二动力学关键复核的 Q2 投稿稿，当前估计为单人 17–25 周，不能把尚未测速的实验量压成无条件的 1–2 个月承诺。
