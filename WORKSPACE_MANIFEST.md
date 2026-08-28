@@ -1,48 +1,19 @@
 # Workspace manifest
 
 **Updated:** 2026-08-28
-**Workspace:** `D:\Code\Third_Paper`
+**Active root:** `D:\Code\Third_Paper\Open-SCORE`
 
-## 01_original_saga_iclr
+主分支只保留 `Open-SCORE/`：
 
-历史 SAGA 大构想归档。本轮未修改，也不把其中代码或结果视为 Open-SCORE 证据。
+- `src/HAD_Env/`：已纳入项目包的自研三维 HAD 环境；
+- `src/open_score/stage1/`：变规模实体 QMIX、课程、episode replay、双边 runner、序列 learner 与 PSRO；
+- `src/open_score/stage2..4/`：后续阶段的最小接口；
+- `docs/`、`paper/`：研究定义、调研、方法与实验协议；
+- `scripts/`、`tests/`：smoke、2v2 PSRO pilot 和回归测试。
 
-## HAD_Env
+历史内容恢复点：
 
-Open-HAD 的代码起点。现有红蓝打击/侦察/干扰类、目标、三维运动、攻击与观测接口。本轮只为第一阶段做两项明确修改：
+- 远程分支 `archive/pre-s1-full-20260828`，提交 `9271abb`：本轮整理前的完整工作区；
+- 主分支不再保留 `01_original_saga_iclr/`、顶层 `HAD_Env/` 或旧 `02_q2_capability_aware_dynamic_command/` 的重复副本。
 
-1. 删除未使用且缺失的 `common.arguments` 导入，使环境可独立 import；
-2. 目标只受蓝方攻击者伤害，防止红方防守者摧毁己方目标。
-
-仍缺环境自有 PRNG、clone/restore、参数化终止、任务 assignment、增援槽位和正式回归测试。
-
-## 02_q2_capability_aware_dynamic_command
-
-工作题目：
-
-> *Open-SCORE: Composing Small-Game Capabilities for Open-Population Multi-Target Defense*
-
-目录包含：
-
-- `docs/00–07`：结论、定义、调研、四阶段方法、实验、工作量和代码路线；
-- `docs/figures/`：三张经渲染检查的可编辑论文矢量图；
-- `src/open_score/`：S1–S4 核心模块和双边纯加速度 HAD 适配器；
-- `configs/`：第一阶段 YAML；
-- `scripts/`：CPU/CUDA smoke；
-- `tests/`：核心接口测试；
-- `paper/`：论文框架与 BibTeX；
-
-上一版窄方案的历史概念图已删除；新图已按本轮真实接口重绘，但图中仍只表示方法设计，不表示已经取得实验结果。
-
-## 真值边界
-
-- 已完成：源码调研、环境审计、四阶段数学/代码接口、可执行 smoke、核心测试、实验和工作量设计。
-- 尚未完成：episode replay/runner/sequence learner、任何训练曲线或胜率、Open-HAD P0/P1、S2 数据、S3 在线闭环、S4 outer loop、ALMA 复现和 SMAClite-AD。
-- “任意小规模”在首篇明确限定为敌我双方各1–4；更大的总规模由S3组合多个局部子博弈。
-- 四阶段作为一个框架贡献，但每阶段必须有消融和硬门槛。
-
-## Git 可恢复点
-
-- `2d7e0b0`：上一版单篇收缩方案及五张方法图；
-- `d5ac696`：Claude 备用框架；
-- `abadfcc`：更早的 Claude 总体分析、旧 Q2 目录和原 HAD 状态。
+真值边界：S1 训练闭环已经可运行；短 2v2 pilot 只证明管线，不证明策略收敛。SMAClite-AD、完整 S2 数据、S3 闭环与 S4 共同适应尚未实现。

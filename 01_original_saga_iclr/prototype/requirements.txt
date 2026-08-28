@@ -1,6 +1,0 @@
-# 已在 conda 环境 gpu_py_310 (Python 3.10, RTX 3060) 验证的版本
-numpy>=1.24
-torch>=2.0          # 本机: 2.4.1+cu124
-matplotlib>=3.5
-pettingzoo>=1.24    # MPE simple_tag
-magent2>=0.3.4      # MAgent2 battle_v4
