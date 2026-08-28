@@ -1,28 +1,41 @@
 # Third Paper workspace
 
-> **当前论文一句话：本文研究如何让多目标防御指挥官在战损后在线重编组时，少选“预测安全、实则失守”的分兵方案。**
+> **当前论文一句话：本文研究如何在攻防双方因战损和增援而持续改变规模时，通过可变规模执行、能力评估、动态重编组和上下层协同学习，维持多目标防御的总体胜率。**
 
-本工作区把历史大设想、原始自建环境与当前单篇论文规格分开：
+工作区分为三部分：
 
-- `01_original_saga_iclr/`：原始 SAGA / ICLR-scale 构想、论文、理论和原型归档，本轮未改动。
-- `HAD_Env/`：用户自研三维攻防环境；当前论文拟只保留打击智能体和目标点并适配为 Open-HAD，本轮只审计、未修改。
-- `02_q2_capability_aware_dynamic_command/`：当前 SCORE 论文的精简研究规格、论文框架、参考文献和方法示意图。
+- `01_original_saga_iclr/`：历史 SAGA 大设想归档，本轮未修改；
+- `HAD_Env/`：自研三维攻防环境，作为第一阶段 Demo；本轮修复独立导入和目标阵营伤害语义；
+- `02_q2_capability_aware_dynamic_command/`：Open-SCORE 四阶段论文规格和最小可运行代码。
 
 建议阅读：
 
 1. [研究结论与阅读路线](02_q2_capability_aware_dynamic_command/docs/00_研究结论与阅读路线.md)
 2. [问题定义与创新边界](02_q2_capability_aware_dynamic_command/docs/01_问题定义与创新边界.md)
 3. [相关工作与环境审计](02_q2_capability_aware_dynamic_command/docs/02_相关工作与环境审计.md)
-4. [方法简版](02_q2_capability_aware_dynamic_command/docs/03_方法简版.md)
-5. [方法实现规格与伪代码](02_q2_capability_aware_dynamic_command/docs/04_方法实现规格与伪代码.md)
-6. [实验设计与预期证据](02_q2_capability_aware_dynamic_command/docs/05_实验设计与预期证据.md)
-7. [工作量、档位与拆稿](02_q2_capability_aware_dynamic_command/docs/06_工作量_档位与拆稿.md)
-8. [图表与生成记录](02_q2_capability_aware_dynamic_command/docs/07_图表与生成记录.md)
+4. [四阶段方法简版](02_q2_capability_aware_dynamic_command/docs/03_方法简版.md)
+5. [详细技术方案与核心代码](02_q2_capability_aware_dynamic_command/docs/04_方法实现规格与伪代码.md)
+6. [实验设计与验收门槛](02_q2_capability_aware_dynamic_command/docs/05_实验设计与预期证据.md)
+7. [工作量、档位与拆分](02_q2_capability_aware_dynamic_command/docs/06_工作量_档位与拆稿.md)
+8. [代码框架与第一阶段 Demo](02_q2_capability_aware_dynamic_command/docs/07_代码框架与第一阶段Demo.md)
 9. [论文框架](02_q2_capability_aware_dynamic_command/paper/论文框架.md)
 
-当前交付是**经调研与审计后的研究定义**，不是已完成的算法或实验。旧 COGAR 文档、占位代码和无效配置已从当前工作树移除；它们仍可从 Git 恢复：
+## 当前代码状态
 
-- `abadfcc`：备份 Claude 总体分析、原 Q2 目录与 HAD 环境状态；
-- `d5ac696`：备份根目录的 Claude 备用框架草稿。
+已经实现四阶段核心类、HAD Stage-1 适配器、变规模实体 QMIX、配置、smoke 和测试。在当前 CPU PyTorch 环境中：
 
-单人 5–8 周的现实目标是完成 E0–E2 并判断论文是否成立；若要形成含强基线、正式 seeds 和第二动力学关键复核的 Q2 投稿稿，当前估计为单人 17–25 周，不能把尚未测速的实验量压成无条件的 1–2 个月承诺。
+```powershell
+cd 02_q2_capability_aware_dynamic_command
+python -m pytest
+python scripts/smoke_stage1.py
+```
+
+当前结果为 5 tests passed，HAD 3v4/2-target 完成一次环境步、TD loss 和 backward。尚无策略收敛或论文实验结果。
+
+下一目标是用 3–5 周完成 S1 HAD Demo；四阶段双环境投稿级工作当前估计约 121–204 人日，不能压缩成无条件的 1–2 个月承诺。
+
+## Git 恢复点
+
+- `2d7e0b0`：上一版冻结 S1、聚焦选择可靠性的 SCORE 方案；
+- `d5ac696`：Claude 备用框架；
+- `abadfcc`：更早的 Claude 总体分析和原 HAD 状态。

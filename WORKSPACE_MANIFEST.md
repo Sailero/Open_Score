@@ -1,41 +1,47 @@
 # Workspace manifest
 
-**Last restructured:** 2026-08-28
+**Updated:** 2026-08-28
 **Workspace:** `D:\Code\Third_Paper`
 
 ## 01_original_saga_iclr
 
-历史 SAGA 大设想的归档。本轮没有修改，也不把其中的实验结果或原型自动视为 SCORE 的证据。
+历史 SAGA 大构想归档。本轮未修改，也不把其中代码或结果视为 Open-SCORE 证据。
 
 ## HAD_Env
 
-用户自研三维攻防环境，是 Open-HAD 的唯一代码起点。现有资产包括运动、打击/拦截、目标耐久与死亡逻辑；已审计到缺失依赖、全局随机数、无 snapshot/restore、无上层 assignment、无增援接口、友伤/终止等语义风险。本轮只理解与记录，没有改动代码。
+Open-HAD 的代码起点。现有红蓝打击/侦察/干扰类、目标、三维运动、攻击与观测接口。本轮只为第一阶段做两项明确修改：
+
+1. 删除未使用且缺失的 `common.arguments` 导入，使环境可独立 import；
+2. 目标只受蓝方攻击者伤害，防止红方防守者摧毁己方目标。
+
+仍缺环境自有 PRNG、clone/restore、参数化终止、任务 assignment、增援槽位和正式回归测试。
 
 ## 02_q2_capability_aware_dynamic_command
 
-当前论文规格，工作题目为：
+工作题目：
 
-> *SCORE: Selection-Calibrated Outcome-Guided Reallocation for Dynamic-Population Multi-Target Defense*
+> *Open-SCORE: Capability-Aware Hierarchical Learning for Open-Population Multi-Target Defense*
 
-目录只保留论文真正需要的材料：
+目录包含：
 
-- `docs/00–07`：结论、问题边界、相关工作/环境审计、方法简版、实现规格/伪代码、实验协议、工作量/投稿档位、五图记录；
-- `docs/figures/`：按冻结协议重新生成的五张概念参考图；投稿时仍应依照同文档的 Mermaid 重绘为矢量图；
-- `paper/论文框架.md`：从标题、摘要到 Method、Experiments、Limitations 的整篇骨架；
-- `paper/references.bib`：已核验引用键的 BibTeX；
-- `README.md`：当前目录入口。
+- `docs/00–07`：结论、定义、调研、四阶段方法、实验、工作量和代码路线；
+- `src/open_score/`：S1–S4 核心模块和 HAD 适配器；
+- `configs/`：第一阶段 YAML；
+- `scripts/`：CPU/CUDA smoke；
+- `tests/`：五项核心测试；
+- `paper/`：论文框架与 BibTeX；
 
-旧 COGAR 占位源码、配置、测试、分散章节和过时图已删除，因为它们既不实现当前 SCORE，也会误导完成度。当前目录因此是**论文研究规格而非软件包**。
+上一版窄方案的历史概念图已删除；新图应在 S1 Demo 收敛后依据真实接口重绘。
 
-## 研究真值边界
+## 真值边界
 
-- 已完成：HAD/ALMA/SMAX 适配审计、核心文献定位、创新边界、SCORE 方法协议、完整伪代码、E0–E4 实验与统计方案、工作量/拆稿判断、论文框架和五张概念图。
-- 尚未完成：Open-HAD 适配、冻结 S1、双边干预数据、SCORE 实现、任何 SCORE 实验、ALMA 官方复现、Open-SMAX-AD 新任务扩展和投稿稿结果。
-- 所有数值都是预算、预注册门槛或待检验假设；不能当作已经得到的性能。
-- 第一篇只包含冻结 S1 下的 S2+S3；上下层共同适应 S4 属于第二篇。
+- 已完成：源码调研、环境审计、四阶段数学/代码接口、可执行 smoke、核心测试、实验和工作量设计。
+- 尚未完成：episode replay/runner/sequence learner、任何训练曲线或胜率、Open-HAD P0/P1、S2 数据、S3 在线闭环、S4 outer loop、ALMA 复现和 Open-SMAX-AD。
+- “任意规模”只表示网络结构不绑定固定 $N$；经验结论必须限定在已测试规模区间。
+- 四阶段作为一个框架贡献，但每阶段必须有消融和硬门槛。
 
 ## Git 可恢复点
 
-- `abadfcc`：本轮重构前的 Claude 总体分析、Q2 旧目录与 HAD 状态；
-- `d5ac696`：根目录 Claude 备用框架草稿；
-- 更早的历史方案仍可由 Git log 定位，不在当前入口重复陈列。
+- `2d7e0b0`：上一版单篇收缩方案及五张方法图；
+- `d5ac696`：Claude 备用框架；
+- `abadfcc`：更早的 Claude 总体分析、旧 Q2 目录和原 HAD 状态。

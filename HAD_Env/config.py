@@ -1,5 +1,8 @@
 import numpy as np
-from common.arguments import get_args
+
+# `get_args` was imported from a project-external `common` package but was never
+# used in this module.  Keeping that import made the standalone HAD environment
+# impossible to import, so the stage-1 adapter deliberately removes it.
 
 
 # 1. 可视化的相关设置

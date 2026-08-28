@@ -26,7 +26,11 @@ class Entity:
 
     def update_status(self, world):
         # AttackAgents是所有打击智能体类的列表集合
-        AttackAgents = [agent for agent in world if agent.Type == 'Attack' and agent.Health > 0]
+        # In the asset-defence task, targets belong to Red and are damaged only
+        # by Blue attackers.  The previous all-colour rule made Red defenders
+        # destroy their own target when firing nearby.
+        AttackAgents = [agent for agent in world
+                        if agent.Type == 'Attack' and agent.Color == 'Blue' and agent.Health > 0]
         DistanceList = [distance(self.position, Agent.get_position()) for Agent in AttackAgents]
 
         # 假设智能体打击具有友伤属性

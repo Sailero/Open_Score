@@ -3,10 +3,14 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
 .DS_Store
 Thumbs.db
 
 # Network-failed upstream clone remnants are documented but not versioned.
 **/_incomplete_spectra_clone_20260827/
 **/upstream/failed_clone_empty/
-

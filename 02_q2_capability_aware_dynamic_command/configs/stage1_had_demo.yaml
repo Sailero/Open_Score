@@ -1,0 +1,45 @@
+experiment: stage1_had_variable_qmix_demo
+seed: 20260828
+device: auto
+
+environment:
+  name: had_stage1
+  controlled_side: Red
+  train_red_attackers: [2, 4, 6]
+  train_blue_attackers: [2, 4, 6]
+  train_targets: [1, 2, 3]
+  held_out_scale_cases:
+    - [3, 5, 2]
+    - [5, 7, 3]
+    - [7, 5, 3]
+  max_steps: 400
+  action_primitives: 9
+
+model:
+  entity_dim: 12
+  self_dim: 10
+  task_dim: 6
+  state_entity_dim: 11
+  action_dim: 9
+  agent_hidden_dim: 128
+  mixer_hidden_dim: 64
+  mixing_dim: 32
+
+training:
+  gamma: 0.99
+  learning_rate: 0.0005
+  batch_episodes: 16
+  replay_episodes: 2000
+  burn_in: 8
+  sequence_length: 32
+  target_update_interval: 200
+  epsilon_start: 1.0
+  epsilon_finish: 0.05
+  epsilon_anneal_steps: 100000
+  max_environment_steps: 1000000
+
+demo_gate:
+  seeds: 3
+  minimum_train_win_rate: 0.65
+  minimum_held_out_win_rate: 0.50
+  maximum_seen_to_held_out_drop: 0.20
