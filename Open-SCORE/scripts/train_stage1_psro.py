@@ -1,6 +1,6 @@
 """Train the executable HAD Stage-1 PSRO loop.
 
-The default is a deliberately small 2v2 pipeline pilot.  Use
+The default is a deliberately small 3v2 pipeline pilot.  Use
 ``--mode curriculum`` for the registered 1--4 population curriculum.  A pilot
 checks data flow and gradient/PSRO integration; it is not convergence evidence.
 """
@@ -24,7 +24,6 @@ from open_score.stage1 import (
     HADStage1Factory,
     LearningProgressCurriculum,
     RuleBasedController,
-    all_evaluation_scales,
     psro_has_stabilised,
     supported_scales,
 )
@@ -32,7 +31,7 @@ from open_score.stage1 import (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", choices=("pilot2v2", "curriculum"), default="pilot2v2")
+    parser.add_argument("--mode", choices=("pilot3v2", "curriculum"), default="pilot3v2")
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
     parser.add_argument("--seed", type=int, default=20260828)
     parser.add_argument("--iterations", type=int, default=1)
@@ -77,12 +76,15 @@ def main() -> None:
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     device = choose_device(args.device)
-    fixed_scale = (2, 2) if args.mode == "pilot2v2" else None
-    train_scales = [(2, 2)] if fixed_scale else supported_scales(4, True)
-    evaluation_scales = [(2, 2)] if fixed_scale else all_evaluation_scales(4)
+    fixed_scale = (3, 2) if args.mode == "pilot3v2" else None
+    train_scales = [(3, 2)] if fixed_scale else supported_scales(4, 1)
+    # HAD construction enforces Red > Blue, so the formal evaluation grid is
+    # the same six registered scales.  Balanced stock scenarios belong to the
+    # separate, unmodified SMAClite validation track.
+    evaluation_scales = list(train_scales)
     curriculum = None if fixed_scale else LearningProgressCurriculum(
         max_agents=4,
-        defender_not_outnumbered=True,
+        minimum_red_advantage=1,
         episodes_per_stage=args.episodes_per_stage,
         uniform_coverage=0.20,
     )
@@ -140,7 +142,7 @@ def main() -> None:
             break
     payload = jsonify(
         {
-            "status": "pipeline_pilot" if args.mode == "pilot2v2" else "training_run",
+            "status": "pipeline_pilot" if args.mode == "pilot3v2" else "training_run",
             "convergence_claim": False,
             "mode": args.mode,
             "device": str(device),

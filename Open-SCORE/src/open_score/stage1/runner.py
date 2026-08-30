@@ -7,6 +7,7 @@ import numpy as np
 import torch
 
 from open_score.envs import HADStage1Adapter, tensorize_had_observation
+from open_score.stage1.baselines import VariableScaleMAPPO
 from open_score.stage1.curriculum import Scale
 from open_score.stage1.entity_qmix import VariableScaleQMIX
 from open_score.stage1.replay import CompetitiveEpisode, TeamEpisode
@@ -127,6 +128,42 @@ class QMixController:
         return actions.squeeze(0).detach().cpu().numpy().astype(np.int64)
 
 
+class MAPPOController:
+    """Decentralized categorical actor controller for a MAPPO checkpoint."""
+
+    def __init__(
+        self,
+        model: VariableScaleMAPPO,
+        device: torch.device,
+        deterministic: bool = False,
+        name: str = "mappo",
+    ):
+        self.model = model
+        self.device = device
+        self.deterministic = deterministic
+        self.name = name
+        self.hidden: Optional[torch.Tensor] = None
+
+    def reset(self) -> None:
+        self.hidden = None
+
+    def act(self, adapter, side, observation, rng) -> np.ndarray:
+        del adapter, side
+        team, _ = tensorize_had_observation(observation, self.device)
+        self.model.eval()
+        with torch.no_grad():
+            logits, self.hidden = self.model.actor_logits(team, self.hidden)
+            if self.deterministic:
+                actions = logits.argmax(dim=-1).squeeze(0).cpu().numpy()
+            else:
+                probabilities = torch.softmax(logits, dim=-1).squeeze(0).cpu().numpy()
+                actions = np.asarray(
+                    [rng.choice(len(row), p=row) for row in probabilities],
+                    dtype=np.int64,
+                )
+        return actions.astype(np.int64)
+
+
 def frozen_qmix_controller(
     model: VariableScaleQMIX,
     device: torch.device,
@@ -136,6 +173,17 @@ def frozen_qmix_controller(
     for parameter in frozen.parameters():
         parameter.requires_grad_(False)
     return QMixController(frozen, device, epsilon=0.0, name=name)
+
+
+def frozen_mappo_controller(
+    model: VariableScaleMAPPO,
+    device: torch.device,
+    name: str,
+) -> MAPPOController:
+    frozen = copy.deepcopy(model).to(device).eval()
+    for parameter in frozen.parameters():
+        parameter.requires_grad_(False)
+    return MAPPOController(frozen, device, deterministic=True, name=name)
 
 
 class HADStage1Factory:
@@ -151,11 +199,15 @@ class HADStage1Factory:
         ),
         gamma: float = 0.99,
         shaping_scale: float = 0.10,
+        clearance_weight: float = 0.50,
+        intercept_weight: float = 0.25,
     ):
         self.max_steps = max_steps
         self.target_region = target_region
         self.gamma = gamma
         self.shaping_scale = shaping_scale
+        self.clearance_weight = clearance_weight
+        self.intercept_weight = intercept_weight
         self.cache: Dict[Scale, HADStage1Adapter] = {}
 
     def get(self, scale: Scale) -> HADStage1Adapter:
@@ -167,6 +219,8 @@ class HADStage1Factory:
                 target_region=self.target_region,
                 gamma=self.gamma,
                 shaping_scale=self.shaping_scale,
+                clearance_weight=self.clearance_weight,
+                intercept_weight=self.intercept_weight,
             )
         return self.cache[scale]
 

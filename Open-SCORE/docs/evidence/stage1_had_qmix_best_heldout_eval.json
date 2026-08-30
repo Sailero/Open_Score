@@ -1,0 +1,147 @@
+{
+  "policy": "checkpoint:qmix",
+  "side": "Red",
+  "device": "cuda",
+  "strict_red_superiority": true,
+  "scales": [
+    [
+      2,
+      1
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      3,
+      2
+    ],
+    [
+      4,
+      1
+    ],
+    [
+      4,
+      2
+    ],
+    [
+      4,
+      3
+    ]
+  ],
+  "episodes": 60,
+  "controlled_mean_payoff": -0.43333333333333335,
+  "controlled_win_rate": 0.2833333333333333,
+  "mean_episode_length": 28.283333333333335,
+  "per_scale_controlled_payoff": {
+    "2v1": 0.0,
+    "3v1": -0.4,
+    "3v2": -0.6,
+    "4v1": -0.2,
+    "4v2": -0.4,
+    "4v3": -1.0
+  },
+  "checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\stage1_had_targeted_dynamic\\checkpoints\\qmix_seed20260830_best.pt",
+  "checkpoint_sha256": "e4cb143a647c72d11ecc6c5832bea4e6ab0316d0688369440b13150e634e174b",
+  "checkpoint_extra": {
+    "algorithm": "qmix",
+    "seed": 20260830,
+    "train_side": "Red",
+    "registered_scales": [
+      [
+        2,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        3,
+        2
+      ],
+      [
+        4,
+        1
+      ],
+      [
+        4,
+        2
+      ],
+      [
+        4,
+        3
+      ]
+    ],
+    "strict_red_superiority": true,
+    "episodes": 275,
+    "cumulative_episodes": 275,
+    "environment_steps": 7398,
+    "curriculum": {
+      "stage": 4,
+      "total_episodes": 275,
+      "fast_td": {
+        "2v1": 0.09498447425139667,
+        "4v3": 0.08153661128615819,
+        "3v2": 0.12054680324191823,
+        "4v1": 0.12383769669771766,
+        "3v1": 0.14403432239864195,
+        "4v2": 0.08067191845722123
+      },
+      "slow_td": {
+        "2v1": 0.13373259719724173,
+        "4v3": 0.11526822516301181,
+        "3v2": 0.12253354807907255,
+        "4v1": 0.12789062131863974,
+        "3v1": 0.12144278904481849,
+        "4v2": 0.11917762701644098
+      },
+      "visits": {
+        "2v1": 247,
+        "4v3": 57,
+        "3v2": 59,
+        "4v1": 61,
+        "3v1": 46,
+        "4v2": 47
+      },
+      "sample_visits": {
+        "2v1": 211,
+        "3v1": 7,
+        "3v2": 13,
+        "4v1": 18,
+        "4v2": 9,
+        "4v3": 17
+      }
+    },
+    "selection": "paired_eval_best",
+    "selection_evaluation": {
+      "controlled_mean_payoff": -0.36666666666666664,
+      "controlled_win_rate": 0.31666666666666665,
+      "mean_episode_length": 29.233333333333334,
+      "episodes": 60,
+      "per_scale_controlled_payoff": {
+        "2v1": 0.0,
+        "3v1": -0.2,
+        "3v2": -1.0,
+        "4v1": 0.2,
+        "4v2": -0.4,
+        "4v3": -0.8
+      }
+    },
+    "contract": {
+      "entity_dim": 12,
+      "self_dim": 10,
+      "task_dim": 6,
+      "state_entity_dim": 11,
+      "action_dim": 27
+    },
+    "reward_protocol": {
+      "terminal_outcome": "plus_or_minus_one",
+      "potential_shaping_scale": 0.5,
+      "terminal_potential_is_zero": true,
+      "clearance_weight": 0.5,
+      "intercept_weight": 0.25
+    }
+  },
+  "formal_convergence_claim": false
+}

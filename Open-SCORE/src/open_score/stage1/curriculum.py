@@ -14,26 +14,27 @@ import numpy as np
 Scale = Tuple[int, int]
 
 
-def supported_scales(max_agents: int = 4, defender_not_outnumbered: bool = True) -> List[Scale]:
-    """Return registered (defender, attacker) team sizes in deterministic order."""
+def supported_scales(max_agents: int = 4, minimum_red_advantage: int = 1) -> List[Scale]:
+    """Return registered ``(Red, Blue)`` HAD team sizes.
+
+    HAD attack agents self-destruct after firing.  The Stage-1 protocol
+    therefore preregisters only scenarios in which Red starts with a strict
+    numerical advantage (``minimum_red_advantage=1``).  A caller may pass zero
+    only for a deliberately separate ablation; :class:`HADStage1Adapter`
+    itself still rejects non-superior Red rosters.
+    """
 
     if max_agents < 1:
         raise ValueError("max_agents must be positive")
+    if minimum_red_advantage < 0:
+        raise ValueError("minimum_red_advantage must be non-negative")
+    if minimum_red_advantage >= max_agents:
+        raise ValueError("minimum_red_advantage leaves no valid HAD scale")
     return [
-        (defenders, attackers)
-        for defenders in range(1, max_agents + 1)
-        for attackers in range(1, max_agents + 1)
-        if not defender_not_outnumbered or defenders >= attackers
-    ]
-
-
-def all_evaluation_scales(max_agents: int = 4) -> List[Scale]:
-    """Return the full square grid, including out-of-support stress tests."""
-
-    return [
-        (defenders, attackers)
-        for defenders in range(1, max_agents + 1)
-        for attackers in range(1, max_agents + 1)
+        (red, blue)
+        for red in range(1, max_agents + 1)
+        for blue in range(1, max_agents + 1)
+        if red - blue >= minimum_red_advantage
     ]
 
 
@@ -45,6 +46,7 @@ class CurriculumSnapshot:
     fast_td: Mapping[Scale, float]
     slow_td: Mapping[Scale, float]
     visits: Mapping[Scale, int]
+    sample_visits: Mapping[Scale, int]
 
 
 class LearningProgressCurriculum:
@@ -58,7 +60,7 @@ class LearningProgressCurriculum:
     def __init__(
         self,
         max_agents: int = 4,
-        defender_not_outnumbered: bool = True,
+        minimum_red_advantage: int = 1,
         episodes_per_stage: int = 2_000,
         uniform_coverage: float = 0.20,
         temperature: float = 0.25,
@@ -73,33 +75,40 @@ class LearningProgressCurriculum:
         if temperature <= 0.0:
             raise ValueError("temperature must be positive")
         self.max_agents = max_agents
-        self.defender_not_outnumbered = defender_not_outnumbered
+        self.minimum_red_advantage = minimum_red_advantage
         self.episodes_per_stage = episodes_per_stage
         self.uniform_coverage = uniform_coverage
         self.temperature = temperature
         self.fast_rate = fast_rate
         self.slow_rate = slow_rate
         self.count_bonus = count_bonus
-        self.stage = 1
+        # With strict Red superiority there is no valid scale at stage 1.
+        self.stage = 1 + minimum_red_advantage
         self.total_episodes = 0
         self.fast_td: Dict[Scale, float] = {}
         self.slow_td: Dict[Scale, float] = {}
         self.visits: Dict[Scale, int] = {}
+        self.sample_visits: Dict[Scale, int] = {}
 
     @property
     def registered_scales(self) -> Tuple[Scale, ...]:
-        return tuple(supported_scales(self.max_agents, self.defender_not_outnumbered))
+        return tuple(supported_scales(self.max_agents, self.minimum_red_advantage))
 
     @property
     def unlocked_scales(self) -> Tuple[Scale, ...]:
-        # Stage r unlocks all supported scales with r defenders.  This yields
-        # 1v1 -> {2v1,2v2} -> ... while sharing one policy throughout.
+        # Stage r unlocks all supported scales with r Red agents.  Under the
+        # default HAD constraint this yields 2v1 -> {3v1,3v2} -> ... while one
+        # policy remains shared throughout.
         return tuple(scale for scale in self.registered_scales if scale[0] <= self.stage)
 
     def maybe_advance(self, total_episodes: Optional[int] = None) -> bool:
         if total_episodes is not None:
             self.total_episodes = int(total_episodes)
-        target_stage = min(self.max_agents, 1 + self.total_episodes // self.episodes_per_stage)
+        first_stage = 1 + self.minimum_red_advantage
+        target_stage = min(
+            self.max_agents,
+            first_stage + self.total_episodes // self.episodes_per_stage,
+        )
         changed = target_stage > self.stage
         self.stage = max(self.stage, target_stage)
         return changed
@@ -121,7 +130,9 @@ class LearningProgressCurriculum:
         scores = []
         for scale in scales:
             progress = abs(self.fast_td.get(scale, 0.0) - self.slow_td.get(scale, 0.0))
-            novelty = self.count_bonus / np.sqrt(1.0 + self.visits.get(scale, 0))
+            novelty = self.count_bonus / np.sqrt(
+                1.0 + self.sample_visits.get(scale, 0)
+            )
             scores.append(progress + novelty)
         logits = np.asarray(scores, dtype=np.float64) / self.temperature
         logits -= logits.max()
@@ -135,8 +146,28 @@ class LearningProgressCurriculum:
         generator = rng if rng is not None else np.random.default_rng()
         probabilities = self.probabilities()
         scales = tuple(probabilities)
-        index = int(generator.choice(len(scales), p=np.asarray(list(probabilities.values()))))
-        return scales[index]
+        # A probabilistic coverage floor does not guarantee that a short run
+        # ever observes every newly unlocked roster.  Force exactly one first
+        # visit before reverting to learning-progress sampling.
+        unseen = [scale for scale in scales if self.sample_visits.get(scale, 0) == 0]
+        if unseen:
+            selected = unseen[0]
+        else:
+            index = int(
+                generator.choice(
+                    len(scales), p=np.asarray(list(probabilities.values()))
+                )
+            )
+            selected = scales[index]
+        self.record_sample(selected)
+        return selected
+
+    def record_sample(self, scale: Scale) -> None:
+        """Record an externally selected scale (for fixed-scale baselines)."""
+
+        if scale not in self.registered_scales:
+            raise ValueError(f"scale {scale} is outside the registered training domain")
+        self.sample_visits[scale] = self.sample_visits.get(scale, 0) + 1
 
     def record_episode(self) -> None:
         self.total_episodes += 1
@@ -150,6 +181,7 @@ class LearningProgressCurriculum:
             fast_td=dict(self.fast_td),
             slow_td=dict(self.slow_td),
             visits=dict(self.visits),
+            sample_visits=dict(self.sample_visits),
         )
 
     def state_dict(self) -> Dict[str, object]:
@@ -162,6 +194,7 @@ class LearningProgressCurriculum:
             "fast_td": encode(self.fast_td),
             "slow_td": encode(self.slow_td),
             "visits": encode(self.visits),
+            "sample_visits": encode(self.sample_visits),
         }
 
     def load_state_dict(self, state: Mapping[str, object]) -> None:
@@ -177,3 +210,4 @@ class LearningProgressCurriculum:
         self.fast_td = decode(state.get("fast_td", {}), float)
         self.slow_td = decode(state.get("slow_td", {}), float)
         self.visits = decode(state.get("visits", {}), int)
+        self.sample_visits = decode(state.get("sample_visits", {}), int)

@@ -51,5 +51,5 @@
   <text x="1020" y="525" class="b">Append policies and re-evaluate</text><text x="1020" y="549" class="x">stop: estimated NashConv ≤ .10 × 3</text><text x="1020" y="571" class="x">or 8 iterations; never claim exact equilibrium</text>
   <path d="M1325 540 H1340 V220 H1320" class="arr"/>
   <path d="M495 365 H540" class="arr"/><path d="M905 365 H950" class="arr"/>
-  <text x="51" y="688" class="s">S1 evidence: per-scale payoff matrix, worst-opponent win rate, interpolation drop, estimated NashConv, environment steps, and wall time on RTX 3060.</text>
+  <text x="51" y="688" class="s">Future PSRO evidence: per-scale payoff matrix, worst-opponent win rate, interpolation drop, estimated NashConv, environment steps, and wall time on RTX 5070 Ti.</text>
 </svg>

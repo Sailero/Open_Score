@@ -1,0 +1,53 @@
+{
+  "schema_version": "stage1-had-heldout-test-v1",
+  "created_at": "2026-08-30",
+  "selection_protocol": {
+    "validation_base_seed": 28260830,
+    "validation_use": "checkpoint selection by six-scale mean payoff",
+    "best_criterion": "mean payoff across all six scales",
+    "worst_scale_was_not_the_selection_criterion": true
+  },
+  "heldout_protocol": {
+    "base_seed": 29260830,
+    "episode_seeds": "29260830..29260889 in deterministic scale-major order",
+    "paired_across_policies": true,
+    "episodes_per_scale": 10,
+    "scales": [[2, 1], [3, 1], [3, 2], [4, 1], [4, 2], [4, 3]],
+    "used_during_training_or_checkpoint_selection": false
+  },
+  "policies": {
+    "rule_guard": {
+      "controlled_mean_payoff": 0.43333333333333335,
+      "controlled_win_rate": 0.7166666666666667,
+      "mean_episode_length": 24.05,
+      "per_scale_controlled_payoff": {
+        "2v1": 0.8,
+        "3v1": 0.4,
+        "3v2": 0.0,
+        "4v1": 1.0,
+        "4v2": 0.4,
+        "4v3": 0.0
+      }
+    },
+    "validation_selected_dynamic_qmix": {
+      "checkpoint_sha256": "e4cb143a647c72d11ecc6c5832bea4e6ab0316d0688369440b13150e634e174b",
+      "controlled_mean_payoff": -0.43333333333333335,
+      "controlled_win_rate": 0.2833333333333333,
+      "mean_episode_length": 28.283333333333335,
+      "per_scale_controlled_payoff": {
+        "2v1": 0.0,
+        "3v1": -0.4,
+        "3v2": -0.6,
+        "4v1": -0.2,
+        "4v2": -0.4,
+        "4v3": -1.0
+      }
+    }
+  },
+  "conclusion": "The validation-selected QMIX checkpoint is runnable but is substantially weaker than the rule guard on paired held-out seeds.",
+  "formal_convergence_claim": false,
+  "source_evidence": [
+    "stage1_had_rule_heldout_eval.json",
+    "stage1_had_qmix_best_heldout_eval.json"
+  ]
+}

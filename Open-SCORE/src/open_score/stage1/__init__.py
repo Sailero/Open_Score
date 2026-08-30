@@ -1,9 +1,16 @@
 """Stage 1: variable-scale, task-conditioned QMIX executor."""
 
 from .entity_qmix import EntityMonotonicMixer, VariableEntityAgent, VariableScaleQMIX
+from .baselines import (
+    CentralStateValue,
+    MAPPOMetrics,
+    SequenceMAPPOLearner,
+    VariableEntityActor,
+    VariableScaleMAPPO,
+    VariableScaleVDN,
+)
 from .curriculum import (
     LearningProgressCurriculum,
-    all_evaluation_scales,
     supported_scales,
 )
 from .learner import LearnerMetrics, SequenceQMIXLearner, linear_epsilon
@@ -27,9 +34,11 @@ from .runner import (
     CompetitiveEpisodeRunner,
     HADStage1Factory,
     QMixController,
+    MAPPOController,
     RandomController,
     RuleBasedController,
     frozen_qmix_controller,
+    frozen_mappo_controller,
 )
 from .training import BestResponseResult, EvaluationSummary, evaluate_pair, make_had_qmix
 
@@ -40,6 +49,12 @@ __all__ = [
     "SequenceQMIXLearner",
     "VariableEntityAgent",
     "VariableScaleQMIX",
+    "VariableScaleVDN",
+    "VariableScaleMAPPO",
+    "VariableEntityActor",
+    "CentralStateValue",
+    "SequenceMAPPOLearner",
+    "MAPPOMetrics",
     "QMixTransition",
     "MetaNash",
     "PSROIterationMetrics",
@@ -54,14 +69,15 @@ __all__ = [
     "RandomController",
     "RuleBasedController",
     "QMixController",
+    "MAPPOController",
     "BestResponseResult",
     "EvaluationSummary",
-    "all_evaluation_scales",
     "supported_scales",
     "linear_epsilon",
     "collate_episodes",
     "evaluate_pair",
     "frozen_qmix_controller",
+    "frozen_mappo_controller",
     "make_had_qmix",
     "estimated_nash_conv",
     "one_step_qmix_td_loss",

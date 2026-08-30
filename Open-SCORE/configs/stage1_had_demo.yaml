@@ -11,8 +11,9 @@ environment:
     x: [-2300.0, -1900.0]
     y: [-1200.0, 1200.0]
     z: [50.0, 300.0]
-  registered_train_cases: red_ge_blue_all_1_to_4
-  out_of_support_stress_cases: red_lt_blue_all_1_to_4
+  registered_train_cases: red_gt_blue_all_1_to_4
+  registered_scales: [2v1, 3v1, 3v2, 4v1, 4v2, 4v3]
+  invalid_cases: red_le_blue_rejected_at_construction
   max_steps: 300
   action_primitives: 27
 
@@ -38,7 +39,7 @@ training:
   epsilon_finish: 0.05
   epsilon_anneal_steps: 100000
   curriculum:
-    unlock_order: [1v1, 2v1_2v2, 3v1_3v2_3v3, 4v1_4v2_4v3_4v4]
+    unlock_order: [2v1, 3v1_3v2, 4v1_4v2_4v3]
     episodes_per_stage: 2000
     sampler: td_learning_progress
     uniform_coverage: 0.20

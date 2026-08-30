@@ -33,8 +33,9 @@ class HADStage1Adapter:
     """Expose HAD as a two-team zero-sum game with one random target.
 
     Each instantiated HAD world has a fixed roster, while the same defender and
-    attacker networks are reused across all 1v1--4v4 worlds. Both teams submit
-    only quantised acceleration vectors; HAD retains its rule-based firing.
+    attacker networks are reused across all registered strict Red-superior
+    worlds. Both teams submit only quantised acceleration vectors; HAD retains
+    its rule-based firing.
     """
 
     ENTITY_DIM = 12
@@ -55,12 +56,21 @@ class HADStage1Adapter:
         ),
         gamma: float = 0.99,
         shaping_scale: float = 0.10,
+        clearance_weight: float = 0.50,
+        intercept_weight: float = 0.25,
         task_type: str = "Training",
     ):
         if not (1 <= red_attackers <= 4 and 1 <= blue_attackers <= 4):
             raise ValueError("Stage-1 supports 1--4 agents on each side")
+        if red_attackers <= blue_attackers:
+            raise ValueError(
+                "HAD Stage-1 requires strict Red numerical superiority "
+                "(red_attackers > blue_attackers) because firing agents self-destruct"
+            )
         if len(target_region) != 3 or any(len(bounds) != 2 for bounds in target_region):
             raise ValueError("target_region must provide low/high bounds for x, y, z")
+        if shaping_scale < 0.0 or clearance_weight < 0.0 or intercept_weight < 0.0:
+            raise ValueError("reward-shaping weights must be non-negative")
         from HAD_Env.config import AeroPoint
         from HAD_Env.make_env import HADEnv
 
@@ -78,6 +88,8 @@ class HADStage1Adapter:
         self.target_region = np.asarray(target_region, dtype=np.float32)
         self.gamma = gamma
         self.shaping_scale = shaping_scale
+        self.clearance_weight = clearance_weight
+        self.intercept_weight = intercept_weight
         self.step_count = 0
         self.rng = np.random.default_rng()
 
@@ -114,12 +126,36 @@ class HADStage1Adapter:
     def _potential(self) -> float:
         """Scale-normalised defender potential used only for dense shaping."""
 
-        from HAD_Env.config import initial_health
+        from HAD_Env.config import AeroPoint, initial_health
 
-        target_fraction = float(self.env.targets[0].Health) / float(initial_health)
+        target = self.env.targets[0]
+        target_fraction = float(target.Health) / float(initial_health)
         red_fraction = sum(float(a.Health) for a in self.env.red_agents) / len(self.env.red_agents)
         blue_fraction = sum(float(a.Health) for a in self.env.blue_agents) / len(self.env.blue_agents)
-        return target_fraction + 0.25 * (red_fraction - blue_fraction)
+        diagonal = float(np.linalg.norm([high - low for low, high in AeroPoint]))
+        alive_red = [agent for agent in self.env.red_agents if agent.Health > 0]
+        alive_blue = [agent for agent in self.env.blue_agents if agent.Health > 0]
+        if alive_blue:
+            clearance = min(
+                np.linalg.norm(np.asarray(agent.position) - np.asarray(target.position))
+                for agent in alive_blue
+            ) / diagonal
+        else:
+            clearance = 1.0
+        if alive_red and alive_blue:
+            intercept_distance = min(
+                np.linalg.norm(np.asarray(red.position) - np.asarray(blue.position))
+                for red in alive_red
+                for blue in alive_blue
+            ) / diagonal
+        else:
+            intercept_distance = 1.0
+        return (
+            target_fraction
+            + 0.25 * (red_fraction - blue_fraction)
+            + self.clearance_weight * clearance
+            - self.intercept_weight * intercept_distance
+        )
 
     def step(
         self,
@@ -147,7 +183,11 @@ class HADStage1Adapter:
         truncated = self.step_count >= self.max_steps and not terminated
         done = terminated or truncated
         after = self._potential()
-        red_reward = self.shaping_scale * (self.gamma * after - before)
+        # Setting Phi(terminal)=0 retains the registered terminal objective
+        # while providing dense geometric TD targets during an episode.
+        shaped_after = 0.0 if done else after
+        shaping_reward = self.shaping_scale * (self.gamma * shaped_after - before)
+        red_reward = shaping_reward
         if done:
             # Surviving until the registered horizon is a defender success.
             red_reward += float(terminal_sign if terminated else 1)
@@ -158,6 +198,9 @@ class HADStage1Adapter:
                 "truncated": truncated,
                 "outcome_red": float(terminal_sign if terminated else (1 if truncated else 0)),
                 "target_position": list(self.env.targets[0].position),
+                "defender_potential_before": float(before),
+                "defender_potential_after": float(shaped_after),
+                "potential_shaping_reward": float(shaping_reward),
             }
         )
         observations = {side: self.observe(side) for side in ("Red", "Blue")}
@@ -249,7 +292,11 @@ class HADStage1Adapter:
             "agent_mask": agent_mask,
             "avail_actions": avail_actions,
             "state_entities": np.stack([self._state_features(entity) for entity in world]),
-            "state_mask": np.asarray([entity.Health > 0 for entity in world], dtype=bool),
+            # Global-state masks distinguish real world slots from batch
+            # padding.  Death is already encoded by the health/alive features;
+            # masking dead slots made an all-destroyed terminal state look like
+            # an invalid empty set to centralized critics and mixers.
+            "state_mask": np.ones(len(world), dtype=bool),
         }
 
 

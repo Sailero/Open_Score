@@ -18,7 +18,7 @@ from open_score.stage1 import QMixTransition, VariableScaleQMIX, one_step_qmix_t
 
 def main() -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    adapter = HADStage1Adapter(3, 4, max_steps=40)
+    adapter = HADStage1Adapter(3, 2, max_steps=40)
     first = adapter.reset(seed=7)
     observation, state = tensorize_had_observation(first["Red"], device)
     model = VariableScaleQMIX(

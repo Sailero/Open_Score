@@ -1,0 +1,346 @@
+{
+  "schema_version": "stage1-had-reproduction-v1",
+  "status": "small_budget_training_check",
+  "formal_convergence_claim": false,
+  "reason": "This run verifies executable learning and short-budget trends; formal claims require preregistered multi-seed budgets and intervals.",
+  "environment": "HADStage1Adapter",
+  "roles": {
+    "Red": "asset defender",
+    "Blue": "asset attacker"
+  },
+  "firing_semantics": "any HAD AttackAgent self-destructs after firing",
+  "strict_red_superiority": true,
+  "registered_scales": [
+    [
+      2,
+      1
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      3,
+      2
+    ],
+    [
+      4,
+      1
+    ],
+    [
+      4,
+      2
+    ],
+    [
+      4,
+      3
+    ]
+  ],
+  "shared_policy_across_scales": true,
+  "action_space": "27 acceleration primitives; no macro tactics",
+  "rule_strategy": {
+    "Red": "guard",
+    "Blue": "rush",
+    "evaluation": {
+      "controlled_mean_payoff": 0.3333333333333333,
+      "controlled_win_rate": 0.6666666666666666,
+      "mean_episode_length": 24.083333333333332,
+      "episodes": 12,
+      "per_scale_controlled_payoff": {
+        "2v1": 0.0,
+        "3v1": 1.0,
+        "3v2": 1.0,
+        "4v1": 0.0,
+        "4v2": -1.0,
+        "4v3": 1.0
+      }
+    }
+  },
+  "device": "cuda",
+  "torch_version": "2.13.0+cu130",
+  "cuda_available": true,
+  "gpu": "NVIDIA GeForce RTX 5070 Ti",
+  "arguments": {
+    "algorithms": [
+      "qmix",
+      "vdn",
+      "mappo"
+    ],
+    "train_side": "Red",
+    "device": "cuda",
+    "seeds": [
+      20260830
+    ],
+    "episodes": 72,
+    "batch_episodes": 4,
+    "replay_episodes": 256,
+    "updates_per_episode": 1,
+    "ppo_epochs": 3,
+    "learning_rate": 0.0005,
+    "max_steps": 50,
+    "eval_every": 12,
+    "eval_episodes_per_scale": 2,
+    "episodes_per_stage": 12,
+    "epsilon_anneal_steps": 2000,
+    "agent_hidden_dim": 64,
+    "critic_hidden_dim": 64,
+    "output_dir": "Open-SCORE\\outputs\\stage1_had_reproduction",
+    "evidence_dir": "Open-SCORE\\docs\\evidence"
+  },
+  "results": [
+    {
+      "algorithm": "qmix",
+      "seed": 20260830,
+      "train_side": "Red",
+      "parameter_count": 65276,
+      "episodes": 72,
+      "environment_steps": 2009,
+      "updates": 69,
+      "elapsed_seconds": 28.358908100053668,
+      "throughput_environment_steps_per_second": 70.84193766953241,
+      "initial_evaluation": {
+        "controlled_mean_payoff": -0.3333333333333333,
+        "controlled_win_rate": 0.3333333333333333,
+        "mean_episode_length": 31.583333333333332,
+        "episodes": 12,
+        "per_scale_controlled_payoff": {
+          "2v1": 0.0,
+          "3v1": 0.0,
+          "3v2": 0.0,
+          "4v1": 0.0,
+          "4v2": -1.0,
+          "4v3": -1.0
+        }
+      },
+      "final_evaluation": {
+        "controlled_mean_payoff": -0.5,
+        "controlled_win_rate": 0.25,
+        "mean_episode_length": 31.5,
+        "episodes": 12,
+        "per_scale_controlled_payoff": {
+          "2v1": 0.0,
+          "3v1": 0.0,
+          "3v2": -1.0,
+          "4v1": 0.0,
+          "4v2": -1.0,
+          "4v3": -1.0
+        }
+      },
+      "best_curve_mean_payoff": -0.16666666666666666,
+      "small_budget_improvement": -0.16666666666666669,
+      "learning_status": "learning_not_established",
+      "latest_learning_metrics": {
+        "loss": 0.1766616553068161,
+        "mean_absolute_td": 0.42376625537872314,
+        "grad_norm": 3.9449853897094727,
+        "q_total_mean": 1.8833976984024048,
+        "target_mean": 1.5085513591766357,
+        "learner_step": 69,
+        "td_by_scale": {
+          "(3, 1)": 0.17135456204414368,
+          "(4, 1)": 0.942163348197937,
+          "(2, 1)": 0.3364209830760956
+        }
+      },
+      "curriculum": {
+        "stage": 4,
+        "total_episodes": 72,
+        "fast_td": {
+          "2v1": 0.5401615920226902,
+          "3v1": 0.4572930588582731,
+          "3v2": 0.6318524032268087,
+          "4v1": 0.6432670175563544,
+          "4v3": 0.23145776987075806
+        },
+        "slow_td": {
+          "2v1": 1.1732401987167271,
+          "3v1": 0.6964067673760319,
+          "3v2": 0.9523923840820591,
+          "4v1": 0.4322609402182279,
+          "4v3": 0.23145776987075806
+        },
+        "visits": {
+          "2v1": 69,
+          "3v1": 21,
+          "3v2": 14,
+          "4v1": 5,
+          "4v3": 1
+        }
+      },
+      "checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\stage1_had_reproduction\\checkpoints\\qmix_seed20260830.pt",
+      "checkpoint_sha256": "a1a044534b0e6740d5117d1731bd91918032823c3ca63fba2600c8d34efe32c6"
+    },
+    {
+      "algorithm": "vdn",
+      "seed": 20260830,
+      "train_side": "Red",
+      "parameter_count": 45211,
+      "episodes": 72,
+      "environment_steps": 1974,
+      "updates": 69,
+      "elapsed_seconds": 21.503926500037778,
+      "throughput_environment_steps_per_second": 91.79718875976126,
+      "initial_evaluation": {
+        "controlled_mean_payoff": -0.3333333333333333,
+        "controlled_win_rate": 0.3333333333333333,
+        "mean_episode_length": 31.583333333333332,
+        "episodes": 12,
+        "per_scale_controlled_payoff": {
+          "2v1": 0.0,
+          "3v1": 0.0,
+          "3v2": 0.0,
+          "4v1": 0.0,
+          "4v2": -1.0,
+          "4v3": -1.0
+        }
+      },
+      "final_evaluation": {
+        "controlled_mean_payoff": -0.5,
+        "controlled_win_rate": 0.25,
+        "mean_episode_length": 34.083333333333336,
+        "episodes": 12,
+        "per_scale_controlled_payoff": {
+          "2v1": 0.0,
+          "3v1": 0.0,
+          "3v2": -1.0,
+          "4v1": 0.0,
+          "4v2": -1.0,
+          "4v3": -1.0
+        }
+      },
+      "best_curve_mean_payoff": -0.16666666666666666,
+      "small_budget_improvement": -0.16666666666666669,
+      "learning_status": "learning_not_established",
+      "latest_learning_metrics": {
+        "loss": 0.04351760447025299,
+        "mean_absolute_td": 0.156934455037117,
+        "grad_norm": 0.23080657422542572,
+        "q_total_mean": 0.2503005862236023,
+        "target_mean": 0.1464288830757141,
+        "learner_step": 69,
+        "td_by_scale": {
+          "(4, 2)": 0.12107346951961517,
+          "(4, 3)": 0.2969155013561249,
+          "(2, 1)": 0.1286783218383789,
+          "(3, 1)": 0.12280339002609253
+        }
+      },
+      "curriculum": {
+        "stage": 4,
+        "total_episodes": 72,
+        "fast_td": {
+          "2v1": 0.15017493533163806,
+          "3v2": 0.17251560446683067,
+          "3v1": 0.19131204721536432,
+          "4v1": 0.21196605953404912,
+          "4v2": 0.16752042791811914,
+          "4v3": 0.24160348172231555
+        },
+        "slow_td": {
+          "2v1": 0.2652976935130057,
+          "3v2": 0.20696053125293992,
+          "3v1": 0.221626039471997,
+          "4v1": 0.17282274427624797,
+          "4v2": 0.256338198993224,
+          "4v3": 0.8754711674947367
+        },
+        "visits": {
+          "2v1": 64,
+          "3v2": 28,
+          "3v1": 23,
+          "4v1": 11,
+          "4v2": 22,
+          "4v3": 16
+        }
+      },
+      "checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\stage1_had_reproduction\\checkpoints\\vdn_seed20260830.pt",
+      "checkpoint_sha256": "4309dbf3eb5ddc13e063e4d77940269b6da1a52142aa4d9ebaaa1368be8a74db"
+    },
+    {
+      "algorithm": "mappo",
+      "seed": 20260830,
+      "train_side": "Red",
+      "parameter_count": 62684,
+      "episodes": 72,
+      "environment_steps": 2130,
+      "updates": 18,
+      "elapsed_seconds": 22.62611559999641,
+      "throughput_environment_steps_per_second": 94.13900457577164,
+      "initial_evaluation": {
+        "controlled_mean_payoff": -0.3333333333333333,
+        "controlled_win_rate": 0.3333333333333333,
+        "mean_episode_length": 28.333333333333332,
+        "episodes": 12,
+        "per_scale_controlled_payoff": {
+          "2v1": 0.0,
+          "3v1": 0.0,
+          "3v2": 0.0,
+          "4v1": 0.0,
+          "4v2": -1.0,
+          "4v3": -1.0
+        }
+      },
+      "final_evaluation": {
+        "controlled_mean_payoff": -0.5,
+        "controlled_win_rate": 0.25,
+        "mean_episode_length": 31.083333333333332,
+        "episodes": 12,
+        "per_scale_controlled_payoff": {
+          "2v1": 0.0,
+          "3v1": 0.0,
+          "3v2": -1.0,
+          "4v1": -1.0,
+          "4v2": -1.0,
+          "4v3": 0.0
+        }
+      },
+      "best_curve_mean_payoff": 0.16666666666666666,
+      "small_budget_improvement": -0.16666666666666669,
+      "learning_status": "learning_not_established",
+      "latest_learning_metrics": {
+        "loss": 0.009235609322786331,
+        "policy_loss": -0.021380523219704628,
+        "value_loss": 0.126717671751976,
+        "entropy": 3.27427077293396,
+        "approximate_kl": 0.001790146459825337,
+        "clip_fraction": 0.0,
+        "grad_norm": 0.14810742437839508,
+        "learner_step": 18,
+        "learning_signal_by_scale": {
+          "(4, 1)": 0.4676324774821599,
+          "(4, 2)": 0.22988669574260712
+        }
+      },
+      "curriculum": {
+        "stage": 4,
+        "total_episodes": 72,
+        "fast_td": {
+          "2v1": 0.3706801688635153,
+          "3v2": 0.31655984032829565,
+          "3v1": 0.17344278795280843,
+          "4v2": 0.2056746691096123,
+          "4v1": 0.5143416406948139,
+          "4v3": 0.2632177071645856
+        },
+        "slow_td": {
+          "2v1": 0.4201178511747497,
+          "3v2": 0.48832257022354575,
+          "3v1": 0.3093777838877319,
+          "4v2": 0.25099807159555,
+          "4v1": 0.8606695401353954,
+          "4v3": 0.2600909628085792
+        },
+        "visits": {
+          "2v1": 10,
+          "3v2": 10,
+          "3v1": 7,
+          "4v2": 9,
+          "4v1": 9,
+          "4v3": 4
+        }
+      },
+      "checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\stage1_had_reproduction\\checkpoints\\mappo_seed20260830.pt",
+      "checkpoint_sha256": "313bdf845cdc982b78edd052f804079bf122fbb8e823a45c31d5b40063627c3b"
+    }
+  ]
+}

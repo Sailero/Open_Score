@@ -1,0 +1,71 @@
+experiment: stage1_had_rule_qmix_vdn_mappo
+protocol_version: stage1-had-reproduction-v1
+seed_policy:
+  smoke: [20260830]
+  formal: [20260830, 20260831, 20260832, 20260833, 20260834]
+
+environment:
+  name: HADStage1Adapter
+  roles: {Red: asset_defender, Blue: asset_attacker}
+  firing_semantics: attack_agent_self_destructs_after_firing
+  strict_constraint: red_agents_gt_blue_agents
+  registered_scales: [2v1, 3v1, 3v2, 4v1, 4v2, 4v3]
+  rejected_scales: red_agents_le_blue_agents
+  targets: 1
+  max_steps: 50
+  action_space: 27_quantized_acceleration_primitives
+  reward:
+    terminal_outcome: plus_or_minus_one
+    potential_shaping_scale: 0.5
+    terminal_potential_is_zero: true
+    clearance_weight: 0.5
+    intercept_weight: 0.25
+
+strategies:
+  rule:
+    Red: guard
+    Blue: rush
+  intelligent:
+    name: variable_entity_qmix
+    shared_across_all_registered_scales: true
+    entity_and_agent_masks: true
+    parameter_sharing: true
+    curriculum:
+      unlock: [2v1, 3v1_3v2, 4v1_4v2_4v3]
+      sampler: fast_slow_learning_signal_progress
+      uniform_coverage: 0.20
+    research_basis: [REFIL_entity_inputs, EPC_population_unlock, SPMARL_learning_progress]
+    exact_reimplementation_claim: false
+
+baselines:
+  common_observation_contract: true
+  common_action_contract: true
+  algorithms: [vdn, qmix, mappo]
+  opponent: fixed_rule_policy
+  train_side: Red
+
+budgets:
+  smoke:
+    episodes: 6
+    batch_episodes: 2
+    eval_episodes_per_scale: 1
+    max_steps: 20
+    convergence_claim: false
+  small_budget_check:
+    episodes: 72
+    batch_episodes: 4
+    eval_every: 12
+    eval_episodes_per_scale: 2
+    max_steps: 50
+    convergence_claim: false
+  formal_minimum:
+    seeds: 5
+    report_confidence_intervals: true
+    budget_selected_from_learning_curve_plateau: true
+    held_out_evaluation_seeds: true
+    convergence_claim_only_after_plateau_and_stability: true
+
+artifacts:
+  runtime_output: outputs/stage1_had_reproduction
+  tracked_summary: docs/evidence/stage1_had_summary.json
+  tracked_curves: docs/evidence/stage1_had_training_curves.csv

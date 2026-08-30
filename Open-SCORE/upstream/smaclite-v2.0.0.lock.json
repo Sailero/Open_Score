@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "generated_on": "2026-08-30",
+  "upstream": {
+    "name": "SMAClite",
+    "repository": "https://github.com/uoe-agents/smaclite",
+    "tag": "v2.0.0",
+    "commit": "e936d9dbf4f85551d6fd445a6c1150867bc79c55",
+    "distribution_name": "smaclite",
+    "distribution_version": "0.0.1",
+    "license_file_in_commit": false
+  },
+  "source_integrity": {
+    "setup.py": "bee306271c8c5727697c41f393d3612384239eded4a6227c18c500cd1e483754",
+    "README.md": "ee604f0c5a1f1e042544dab0142c30972f0dc937c64996ee2c1c054416c55c81",
+    "smaclite/env/smaclite.py": "5cc5f85f55f654a4a36227261105f42d73dcb72096767fef2336af2d7d2b383b"
+  },
+  "stock_scenarios": {
+    "combined_sha256": "0c862da08a59410a5832bc59899e39419d9e749f3ac41b20e34c463fbe8ef4b0",
+    "files": {
+      "10m_vs_11m.json": "f9a48f17a46ca8ae1efb229187e3c37b5e335de95027354392b5e8234e8dd3ed",
+      "27m_vs_30m.json": "b1c72c3a2a84cc389d8701869feaaeb5a0f141235bae64a3a6005413d1001a54",
+      "2c_vs_64zg.json": "05e1ad0f57a310d09d6a3628a51b9ff7c06869342ef2d03956895ce30cdc44d4",
+      "2s3z.json": "69f8f101c57d48472012a98ded06185b74fde08c7dcf4fddb3f8003122990eb0",
+      "2s_vs_1sc.json": "ad9bb54462b82f485ac1b7a8b92010d2b31693cd7af92dc422133ed53fe7784d",
+      "3s5z.json": "902be3ab9719fe562e9a94f003716760b60ae96c8b4516b9ef70c922cd3ba67b",
+      "3s5z_vs_3s6z.json": "a6f8da096585b44326553221d881a0fecf9c140b4458fc38fbfd137bc49353b6",
+      "3s_vs_5z.json": "87ab474a566772c3a77e0ecdd2f75155c11660497b00b0b149563299225c19c5",
+      "bane_vs_bane.json": "35d2c0682d7ffa6e3fe2a4a012a233ab05500fbb7eca73657d33b4fc5dfd0f05",
+      "corridor.json": "4d6cc82b893e1f0920b40e3a425ce9af83beb5df9dc5e6ed14aa7bf232b9b852",
+      "example_custom_map.json": "4b15fbb6bfb86b97413f2940896594ea1929941d31ab4b206fa1d147f859e6a2",
+      "mmm.json": "0df8d3617d010e23123dbe03e1d08abe3642851d13cd4ce4654a259633127168",
+      "mmm2.json": "e939d9e7d4b412e04bbd86c078498a58faae79c80ef0c9b91c1ffa49a6262310"
+    }
+  },
+  "validated_windows_environment": {
+    "python": "3.10.20",
+    "numpy": "1.26.4",
+    "gymnasium": "1.2.2",
+    "Rtree": "1.0.0",
+    "pygame": "2.6.1",
+    "scikit-learn": "1.7.2",
+    "setuptools": "80.9.0",
+    "torch": "2.13.0+cu130",
+    "gpu": "NVIDIA GeForce RTX 5070 Ti"
+  },
+  "installation": {
+    "script": "scripts/install_smaclite.ps1",
+    "mode": "editable_from_exact_commit",
+    "reason": "The v2.0.0 wheel built by setup.py omits map/unit subpackages and data; editable source installation passes the official stock smoke test.",
+    "upstream_checkout_modified": false
+  },
+  "extension": {
+    "protocol_id": "OpenSCORE/SMACliteAD-Asset-v0",
+    "module": "open_score.envs.smaclite_ad",
+    "stock_namespace_modified": false,
+    "stock_scenario_files_modified": false,
+    "claim_label": "SMAClite-AD (Open-SCORE extension; not an official SMAClite scenario)"
+  }
+}

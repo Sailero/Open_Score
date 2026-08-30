@@ -96,7 +96,7 @@ def test_stage2_and_stage3_core_shapes():
 
 
 def test_had_adapter_emits_variable_scale_contract():
-    adapter = HADStage1Adapter(2, 3, max_steps=5)
+    adapter = HADStage1Adapter(3, 2, max_steps=5)
     raw = adapter.reset(seed=3)
     target_seed3 = np.asarray(adapter.env.targets[0].position)
     adapter.reset(seed=3)
@@ -110,11 +110,11 @@ def test_had_adapter_emits_variable_scale_contract():
     observation, state = tensorize_had_observation(raw["Red"])
     observation.validate()
     state.validate()
-    assert observation.entity_obs.shape == (1, 2, 6, adapter.ENTITY_DIM)
+    assert observation.entity_obs.shape == (1, 3, 6, adapter.ENTITY_DIM)
     assert state.entities.shape == (1, 6, adapter.STATE_ENTITY_DIM)
     assert adapter.ACTION_DIM == 27
     assert np.all(np.linalg.norm(adapter.action_vectors, axis=1) <= 1.0 + 1e-6)
-    next_raw, rewards, done, info = adapter.step([1, 2], [3, 4, 5])
+    next_raw, rewards, done, info = adapter.step([1, 2, 3], [4, 5])
     assert next_raw["Red"]["entity_obs"].shape == raw["Red"]["entity_obs"].shape
     assert np.isclose(rewards["Red"] + rewards["Blue"], 0.0)
     assert isinstance(done, bool)
@@ -130,19 +130,18 @@ def test_stage1_psro_meta_game_and_gap():
 
 
 def test_population_curriculum_unlocks_only_registered_scales():
-    assert supported_scales(4, True) == [
-        (1, 1),
-        (2, 1), (2, 2),
-        (3, 1), (3, 2), (3, 3),
-        (4, 1), (4, 2), (4, 3), (4, 4),
+    assert supported_scales(4, 1) == [
+        (2, 1),
+        (3, 1), (3, 2),
+        (4, 1), (4, 2), (4, 3),
     ]
     curriculum = LearningProgressCurriculum(episodes_per_stage=2)
-    assert curriculum.unlocked_scales == ((1, 1),)
+    assert curriculum.unlocked_scales == ((2, 1),)
     curriculum.record_episode()
     curriculum.record_episode()
-    assert curriculum.stage == 2
+    assert curriculum.stage == 3
     assert np.isclose(sum(curriculum.probabilities().values()), 1.0)
-    assert set(curriculum.probabilities()) == {(1, 1), (2, 1), (2, 2)}
+    assert set(curriculum.probabilities()) == {(2, 1), (3, 1), (3, 2)}
 
 
 def test_psro_uses_independent_curricula_for_each_side():
@@ -151,16 +150,16 @@ def test_psro_uses_independent_curricula_for_each_side():
         CompetitiveEpisodeRunner(HADStage1Factory(max_steps=2)),
         [RandomController("red")],
         [RandomController("blue")],
-        train_scales=supported_scales(4, True),
-        evaluation_scales=[(1, 1)],
+        train_scales=supported_scales(4, 1),
+        evaluation_scales=[(2, 1)],
         device=torch.device("cpu"),
         curriculum=curriculum,
     )
     trainer.red_curriculum.record_episode()
     trainer.red_curriculum.record_episode()
-    assert trainer.red_curriculum.stage == 2
-    assert trainer.blue_curriculum.stage == 1
-    assert curriculum.stage == 1
+    assert trainer.red_curriculum.stage == 3
+    assert trainer.blue_curriculum.stage == 2
+    assert curriculum.stage == 2
 
 
 def test_sequence_qmix_updates_on_padded_variable_scale_episodes():
@@ -168,15 +167,15 @@ def test_sequence_qmix_updates_on_padded_variable_scale_episodes():
     random_red = RandomController("red_random")
     random_blue = RandomController("blue_random")
     episodes = [
-        runner.run((1, 1), random_red, random_blue, seed=11).red,
-        runner.run((2, 2), random_red, random_blue, seed=12).red,
+        runner.run((2, 1), random_red, random_blue, seed=11).red,
+        runner.run((3, 2), random_red, random_blue, seed=12).red,
     ]
     batch = collate_episodes(episodes)
     learner = SequenceQMIXLearner(make_model(), target_update_interval=1)
     before = [parameter.detach().clone() for parameter in learner.online.parameters()]
     metrics = learner.train_batch(batch)
     assert np.isfinite(metrics.loss)
-    assert set(metrics.td_by_scale) == {(1, 1), (2, 2)}
+    assert set(metrics.td_by_scale) == {(2, 1), (3, 2)}
     assert any(not torch.equal(old, new) for old, new in zip(before, learner.online.parameters()))
 
 

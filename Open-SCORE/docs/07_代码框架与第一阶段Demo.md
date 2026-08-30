@@ -7,6 +7,7 @@ src/HAD_Env/                         原 HAD，目标在最左侧区域逐局随
 src/open_score/envs/had_stage1.py    双方纯加速度、零和终局与势函数塑形
 src/open_score/stage1/
 ├── entity_qmix.py                   共享 DeepSets–GRU utility + 变人数单调 mixer
+├── baselines.py                     同一数据契约下的变规模 VDN 与 MAPPO
 ├── curriculum.py                    分阶段解锁 + TD 学习进展采样
 ├── replay.py                        变人数/变时长 episode padding
 ├── runner.py                        双边 rollout、QMIX/随机/规则控制器
@@ -15,10 +16,11 @@ src/open_score/stage1/
 ├── psro.py                          meta-Nash、估计 NashConv、停止规则
 └── psro_trainer.py                  双团队 PSRO iteration
 scripts/smoke_stage1.py              单步前后向 smoke
-scripts/train_stage1_psro.py         2v2 pilot / 1–4 curriculum CLI
+scripts/train_stage1_baselines.py    规则/QMIX/VDN/MAPPO 复现、评估与 checkpoint
+scripts/train_stage1_psro.py         后续 PSRO 研究入口（本轮不验收）
 ```
 
-S2–S4 代码只保留接口，不在本阶段调用。
+S2 已有独立的真实 HAD 推演—监督训练—校准—评估闭环；S3/S4 本轮冻结。
 
 ## 2. 场景与动作
 
@@ -35,18 +37,18 @@ $$r_D=r_{terminal}+0.1[\gamma\Phi(s')-\Phi(s)],\qquad r_A=-r_D,$$
 
 ## 3. 为什么这样训练人数
 
-正式支持域不是随意抽 16 格，而是
+HAD 的两类攻击单位在开火后都会自毁，因此本轮支持域严格定义为
 
-$$\mathcal C_{train}=\{(n_D,n_A):1\le n_A\le n_D\le4\},$$
+$$\mathcal C_{train}=\{(n_D,n_A):1\le n_A<n_D\le4\},$$
 
-共 10 格。选择它是因为当前任务设定明确保证防守人数不少于攻击人数；所有 $n_D<n_A$ 的 6 格仍评估，但标为 out-of-support stress。
+即 `2v1、3v1、3v2、4v1、4v2、4v3` 共六格。平局规模和红方更少的规模在当前物理语义下不作为压力测试，避免把自毁机制与数量劣势混为一个不可解释因素。
 
 课程包含两层：
 
-1. 参考 EPC 的 population curriculum，按 1v1、2v1/2v2、3v1/3v2/3v3、4v1–4v4 逐级解锁；
+1. 参考 EPC 的 population curriculum，按 `2v1 → 3v1/3v2 → 4v1/4v2/4v3` 逐级解锁；
 2. 参考 SPMARL/PLR 的 learning-progress 思路，在已解锁规模内用快慢 TD-error EMA 之差加访问次数奖励采样，并混入 20% 均匀分布防遗忘。
 
-这不是逐规模训练十套模型：从第一局开始始终是同一套参数共享网络。与纯线性课程、全程均匀随机和固定规模逐模型训练的比较将决定该课程是否值得保留。
+这不是逐规模训练六套模型：从第一局开始始终是同一套参数共享网络。当前“共享实体编码 + 学习进展课程”受 REFIL/SPMARL 启发，但没有实现 REFIL 的随机因子辅助目标或完整 SPMARL；正式报告必须按这个边界命名。
 
 ## 4. 网络与训练
 
@@ -59,11 +61,11 @@ $$\mathcal C_{train}=\{(n_D,n_A):1\le n_A\le n_D\le4\},$$
 
 最多 4v4 不足以证明 Transformer 必需，因此首版保持小网络；REFIL/Attention-QMIX 是强 baseline，而不是默认堆叠模块。
 
-## 5. PSRO 语义与停止
+## 5. PSRO 语义与停止（后续接口）
 
 PSRO 的一个玩家是整支协作团队，一个 checkpoint 可运行所有注册人数。每轮：评估种群 payoff matrix、解零和 meta-Nash、双方分别对对手混合策略训练 QMIX 近似 BR、独立评估后入库。
 
-正式停止需连续 3 轮同时满足：
+PSRO 代码保留，但用户已明确本轮先不承担这部分计算量，因此不进入当前 S1 验收。未来启用时，正式停止需连续 3 轮同时满足：
 
 - estimated NashConv ≤ 0.10；
 - meta-game value 变化 ≤ 0.03；
@@ -73,43 +75,44 @@ PSRO 的一个玩家是整支协作团队，一个 checkpoint 可运行所有注
 
 ## 6. 本轮实测
 
-2026-08-28 在本机完成：
+截至 2026-08-30 在 Windows 11、i7-14700KF、RTX 5070 Ti、`torch310` 完成：
 
-- `python -m pytest -q`：10 项通过；
-- CPU smoke：HAD 3v4、随机目标、单步 loss/backward 通过；
-- `gpu_py_310` CUDA smoke：RTX 3060 Laptop GPU 上通过；
-- 2v2 PSRO pipeline：1 轮、双方各 8 个 BR episode、40 步上限，约 7.9 秒，种群从 2×2 扩到 3×3，红/蓝 learner 最后 loss 分别约 0.411/0.696。
+- 严格六规模的环境、mask、zero-sum shaping、replay、VDN/QMIX/MAPPO 参数更新和 checkpoint resume 自动测试；
+- 未参与选模的六规模各 10 局 held-out 上，规则 `Red guard vs Blue rush` 的平均防守 payoff 为 `+0.433`、胜率 `71.7%`；
+- 当前代码版三算法各 36 回合 CUDA smoke 均真实更新参数：QMIX validation payoff `-0.600 → -0.267`，VDN `-0.600 → -0.600`，MAPPO 中途到 `-0.467` 但 final 回落到 `-0.600`。MAPPO 的 feed-forward critic 尚无 horizon 输入，只能算训练管线 smoke；
+- QMIX 固定 `2v1` 的 300 回合定向运行：8395 环境步、586 次更新、约 181.5 秒；同一组 10 个评估 seed 上由 `-0.4` 改善到最终 `-0.2`，第 200 回合最佳 `0.0`。这是小预算改善信号，尚未胜过规则 guard 的 `0.0`。
+- 从固定 `2v1` validation-best warm-resume 到六规模后，validation-best 为 `-0.367`、final 为 `-0.633`；一次性 held-out 上 validation-selected QMIX 为 `-0.433 / 28.3%`，明显弱于规则策略。
 
-短 pilot 的 payoff 每格只有 1 局，且 BR 预算仅 272/297 环境步，因此 `oracle_budget_met=false`；其中任何胜率、meta value 或 estimated NashConv 都没有统计意义。它证明的是数据流、双边梯度、payoff 扩表和 meta-solver 没有接口错误。
+上述训练只有一个 seed，validation 还被反复用于选模；只有最后的 held-out 集合是一次性测试。结果能证明训练链和局部改善，不能称为“优秀策略”“稳定收敛”或论文结果。完整解释见 `docs/reports/S1_HAD_复现与验证报告.md`；机器证据在 `docs/evidence/stage1_had_*.json/csv`，checkpoint 在被 `.gitignore` 排除的 `outputs/` 下并由证据 JSON 保存 SHA-256。
 
 ## 7. 推荐运行顺序
 
 ```powershell
-cd D:\Code\Third_Paper\Open-SCORE
-python -m pytest -q
-python scripts/smoke_stage1.py
+Set-Location E:\Code\Open_Score\Open-SCORE
+D:\Software\Anaconda\envs\torch310\python.exe -m pytest -q
+D:\Software\Anaconda\envs\torch310\python.exe scripts\smoke_stage1.py
 
-conda run -n gpu_py_310 python scripts/train_stage1_psro.py `
-  --mode pilot2v2 --device cuda --iterations 1 `
-  --br-episodes 8 --batch-episodes 4 --payoff-episodes 1 --max-steps 40
+# 三算法、严格六规模的小预算复现
+D:\Software\Anaconda\envs\torch310\python.exe scripts\train_stage1_baselines.py `
+  --algorithms qmix vdn mappo --device cuda --episodes 72
 
-# 扩展前先把每阶段 episode 数、payoff 局数和输出路径写入实验登记表
-conda run -n gpu_py_310 python scripts/train_stage1_psro.py `
-  --mode curriculum --device cuda --iterations 3 `
-  --br-episodes 2000 --payoff-episodes 20 --max-steps 300
+# 定向固定规模；正式使用前应预注册种子和评估局数
+D:\Software\Anaconda\envs\torch310\python.exe scripts\train_stage1_baselines.py `
+  --algorithms qmix --device cuda --fixed-scale 2 1 `
+  --episodes 300 --updates-per-episode 2 --eval-episodes-per-scale 10
 ```
 
 最后一条只是下一轮工程起点，不是论文最终预算。正式预算应依据每阶段学习曲线、吞吐和至少 3 个开发 seed 决定。
 
 ## 8. 进入 S2 的 go/no-go
 
-1. 同一 checkpoint 在全部 10 个训练规模稳定运行；
-2. 对规则库和独立学习对手，平衡规模表现显著优于随机；
-3. 对 6 个未支持压力格报告性能边界，不把失败隐藏在平均值中；
+1. 同一 checkpoint 在全部六个严格 `Red > Blue` 规模稳定运行；
+2. 对规则库和独立学习对手，固定 `2v1` 与动态六规模显著优于随机；
+3. 预注册留出 1–2 个支持域规模，不能用训练过的六格结果冒充零样本泛化；
 4. 学习进展课程优于均匀采样或用更少样本达到同等最坏规模表现；
-5. PSRO 相对 simultaneous self-play 提升最坏对手胜率，且 BR oracle 展示充分训练；
+5. 规则策略和至少一套智能策略 checkpoint 可重复加载；PSRO 不作为本轮门槛；
 6. 保存每条 rollout 的防守/攻击策略 ID、checkpoint lineage 和能力版本，保证 S2 能构造策略条件样本；
 7. 至少存在可复现的策略对 payoff 差异/克制关系，否则将“策略条件非传递性”降为消融而非贡献；
 8. 三个开发 seed 和完整 wall time 可接受。
 
-若变规模执行失败，S2–S4 暂停；若 PSRO 失败但共享策略成功，可把 PSRO 降为 baseline，先以多策略自博弈种群生成 S2 数据。
+若变规模执行失败，S2 仍可用规则 rollout 验证工程，但不能宣称已获得第一阶段优秀策略；S3/S4 继续冻结。PSRO 后续只能在共享策略已经稳定之后作为对手多样性 baseline。

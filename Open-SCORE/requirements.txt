@@ -2,4 +2,5 @@
 numpy>=1.23
 scipy>=1.11.4
 PyYAML>=6.0
+pygame>=2.5
 pytest>=7.0

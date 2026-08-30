@@ -1,0 +1,162 @@
+{
+  "schema_version": "stage1-had-reproduction-v1",
+  "status": "small_budget_training_check",
+  "formal_convergence_claim": false,
+  "reason": "This run verifies executable learning and short-budget trends; formal claims require preregistered multi-seed budgets and intervals.",
+  "environment": "HADStage1Adapter",
+  "roles": {
+    "Red": "asset defender",
+    "Blue": "asset attacker"
+  },
+  "firing_semantics": "any HAD AttackAgent self-destructs after firing",
+  "strict_red_superiority": true,
+  "registered_scales": [
+    [
+      2,
+      1
+    ]
+  ],
+  "shared_policy_architecture": true,
+  "trained_across_registered_scales": false,
+  "training_mode": "fixed_scale",
+  "action_space": "27 acceleration primitives; no macro tactics",
+  "reward_protocol": {
+    "terminal_outcome": "plus_or_minus_one",
+    "potential_shaping_scale": 0.5,
+    "terminal_potential_is_zero": true,
+    "potential_features": [
+      "target_health",
+      "team_survival",
+      "attacker_target_clearance",
+      "defender_attacker_intercept_distance"
+    ]
+  },
+  "rule_strategy": {
+    "Red": "guard",
+    "Blue": "rush",
+    "evaluation": {
+      "controlled_mean_payoff": 0.0,
+      "controlled_win_rate": 0.5,
+      "mean_episode_length": 26.1,
+      "episodes": 10,
+      "per_scale_controlled_payoff": {
+        "2v1": 0.0
+      }
+    }
+  },
+  "device": "cuda",
+  "torch_version": "2.13.0+cu130",
+  "cuda_available": true,
+  "gpu": "NVIDIA GeForce RTX 5070 Ti",
+  "arguments": {
+    "algorithms": [
+      "qmix"
+    ],
+    "train_side": "Blue",
+    "fixed_scale": [
+      2,
+      1
+    ],
+    "device": "cuda",
+    "seeds": [
+      20260830
+    ],
+    "episodes": 300,
+    "batch_episodes": 8,
+    "replay_episodes": 512,
+    "updates_per_episode": 2,
+    "ppo_epochs": 3,
+    "learning_rate": 0.0005,
+    "shaping_scale": 0.5,
+    "max_steps": 50,
+    "eval_every": 50,
+    "eval_episodes_per_scale": 10,
+    "episodes_per_stage": 50,
+    "epsilon_anneal_steps": 10000,
+    "agent_hidden_dim": 64,
+    "critic_hidden_dim": 64,
+    "output_dir": "Open-SCORE\\outputs\\stage1_had_targeted_blue_2v1",
+    "evidence_dir": "Open-SCORE\\docs\\evidence",
+    "evidence_prefix": "stage1_had_targeted_blue_2v1",
+    "resume": null
+  },
+  "results": [
+    {
+      "algorithm": "qmix",
+      "seed": 20260830,
+      "train_side": "Blue",
+      "parameter_count": 65276,
+      "episodes_this_run": 300,
+      "cumulative_episodes": 300,
+      "resumed_from": null,
+      "initial_environment_steps": 0,
+      "environment_steps": 14618,
+      "environment_steps_this_run": 14618,
+      "updates": 586,
+      "elapsed_seconds": 260.5777056000661,
+      "throughput_environment_steps_per_second": 56.09842932010332,
+      "initial_evaluation": {
+        "controlled_mean_payoff": -1.0,
+        "controlled_win_rate": 0.0,
+        "mean_episode_length": 50.0,
+        "episodes": 10,
+        "per_scale_controlled_payoff": {
+          "2v1": -1.0
+        }
+      },
+      "final_evaluation": {
+        "controlled_mean_payoff": -1.0,
+        "controlled_win_rate": 0.0,
+        "mean_episode_length": 50.0,
+        "episodes": 10,
+        "per_scale_controlled_payoff": {
+          "2v1": -1.0
+        }
+      },
+      "best_curve_mean_payoff": -1.0,
+      "best_evaluation": {
+        "controlled_mean_payoff": -1.0,
+        "controlled_win_rate": 0.0,
+        "mean_episode_length": 50.0,
+        "episodes": 10,
+        "per_scale_controlled_payoff": {
+          "2v1": -1.0
+        }
+      },
+      "best_episode": 0,
+      "small_budget_improvement": 0.0,
+      "learning_status": "learning_not_established",
+      "latest_learning_metrics": {
+        "loss": 0.013638529926538467,
+        "mean_absolute_td": 0.0913035199046135,
+        "grad_norm": 0.23515860736370087,
+        "q_total_mean": 0.5546462535858154,
+        "target_mean": 0.5385615229606628,
+        "learner_step": 586,
+        "td_by_scale": {
+          "(2, 1)": 0.09130352549254894
+        }
+      },
+      "curriculum": {
+        "stage": 4,
+        "total_episodes": 300,
+        "fast_td": {
+          "2v1": 0.09468363675515173
+        },
+        "slow_td": {
+          "2v1": 0.10670329075419352
+        },
+        "visits": {
+          "2v1": 293
+        },
+        "sample_visits": {
+          "2v1": 300
+        }
+      },
+      "checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\stage1_had_targeted_blue_2v1\\checkpoints\\qmix_seed20260830.pt",
+      "checkpoint_sha256": "899bc6aa5c25defcb4045f12a96e47e30ffb776fc3c0059bc8e87b372991e02f",
+      "best_checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\stage1_had_targeted_blue_2v1\\checkpoints\\qmix_seed20260830_best.pt",
+      "best_checkpoint_sha256": "534483120338a7043eeacf923fefb40702be45c5c064c3bbcce297464d4aaa06"
+    }
+  ]
+}

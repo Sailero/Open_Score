@@ -12,6 +12,7 @@ dependencies = [
   "scipy>=1.11.4",
   "torch>=1.13",
   "PyYAML>=6.0",
+  "pygame>=2.5",
 ]
 
 [tool.setuptools.packages.find]
