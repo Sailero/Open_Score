@@ -108,6 +108,8 @@ conda run -n gpu_py_310 python scripts/train_stage1_psro.py `
 3. 对 6 个未支持压力格报告性能边界，不把失败隐藏在平均值中；
 4. 学习进展课程优于均匀采样或用更少样本达到同等最坏规模表现；
 5. PSRO 相对 simultaneous self-play 提升最坏对手胜率，且 BR oracle 展示充分训练；
-6. 三个开发 seed 和完整 wall time 可接受。
+6. 保存每条 rollout 的防守/攻击策略 ID、checkpoint lineage 和能力版本，保证 S2 能构造策略条件样本；
+7. 至少存在可复现的策略对 payoff 差异/克制关系，否则将“策略条件非传递性”降为消融而非贡献；
+8. 三个开发 seed 和完整 wall time 可接受。
 
 若变规模执行失败，S2–S4 暂停；若 PSRO 失败但共享策略成功，可把 PSRO 降为 baseline，先以多策略自博弈种群生成 S2 数据。

@@ -12,8 +12,8 @@
     </style>
   </defs>
   <rect width="1440" height="800" fill="#ffffff"/>
-  <text x="55" y="48" class="title">Open-SCORE: composing reusable small games for open-population defense</text>
-  <text x="55" y="75" class="sub">Population losses/reinforcements trigger regrouping; low-level policies still output acceleration only.</text>
+  <text x="55" y="48" class="title">Open-SCORE: strategy-conditioned subgame composition for open-population defense</text>
+  <text x="55" y="75" class="sub">Population events and unknown opponents trigger robust regrouping; low-level policies still output acceleration only.</text>
 
   <rect x="45" y="115" width="190" height="385" class="box" fill="#f3f5f8"/>
   <text x="65" y="150" class="stage">Global scene</text>
@@ -38,29 +38,29 @@
   <text x="326" y="434" class="tiny">team policy populations + meta-policy</text>
 
   <rect x="585" y="115" width="250" height="385" class="box" fill="#eef8f4"/>
-  <text x="605" y="150" class="stage">S2 · Outcome predictor</text>
-  <text x="605" y="187" class="body">Canonical padded local state</text>
+  <text x="605" y="150" class="stage">S2 · Local game model</text>
+  <text x="605" y="187" class="body">Local state + policy/context</text>
   <text x="605" y="215" class="body">Small bootstrap MLP ensemble</text>
   <rect x="610" y="252" width="200" height="154" rx="8" fill="#ffffff" stroke="#72a78f"/>
   <text x="626" y="280" class="head">Joint outcome–time distribution</text>
   <text x="626" y="312" class="body">defense success probability</text>
   <text x="626" y="340" class="body">near-term breach probability</text>
   <text x="626" y="368" class="body">expected remaining steps</text>
-  <text x="626" y="396" class="body">empirical 95% model interval</text>
+  <text x="626" y="396" class="body">calibrated risk upper bound</text>
   <text x="605" y="451" class="tiny">No attention model unless the MLP fails.</text>
 
   <rect x="885" y="115" width="300" height="385" class="box" fill="#fff5ea"/>
-  <text x="905" y="150" class="stage">S3 · Grouping game</text>
-  <text x="905" y="184" class="body">Enumerate both teams' count allocations</text>
-  <text x="905" y="212" class="body">Query S2 for each allocation pair</text>
+  <text x="905" y="150" class="stage">S3 · Restricted grouping game</text>
+  <text x="905" y="184" class="body">Warm-start active allocation columns</text>
+  <text x="905" y="212" class="body">Query S2 for active column pairs</text>
   <rect x="910" y="245" width="250" height="105" rx="8" fill="#ffffff" stroke="#d49a53"/>
-  <text x="928" y="274" class="head">Conservative payoff matrix U</text>
+  <text x="928" y="274" class="head">Robust macro Q matrix</text>
   <text x="928" y="302" class="body">breach upper bound + time pressure</text>
-  <text x="928" y="328" class="body">+ regrouping cost</text>
-  <text x="905" y="390" class="body">Solve  maxₓ minⱼ  xᵀU[:,j]  by LP</text>
+  <text x="928" y="328" class="body">+ regrouping / future value</text>
+  <text x="905" y="390" class="body">Solve restricted LP; add BR columns</text>
   <text x="905" y="425" class="head">Output</text>
-  <text x="905" y="452" class="body">mixed allocation + worst response</text>
-  <text x="905" y="477" class="body">+ auditable decision diagnostics</text>
+  <text x="905" y="452" class="body">mixed allocation + robust response</text>
+  <text x="905" y="477" class="body">+ column gap / auditable trace</text>
 
   <rect x="1235" y="115" width="165" height="385" class="box" fill="#f3f5f8"/>
   <text x="1255" y="150" class="stage">Execute</text>
@@ -76,9 +76,9 @@
   <path d="M835 307 H875" class="flow"/><path d="M1185 307 H1225" class="flow"/>
 
   <rect x="285" y="565" width="900" height="155" class="box" fill="#f6f1fb" stroke="#9d83b8"/>
-  <text x="310" y="600" class="stage">S4 · Final-outcome co-adaptation</text>
-  <text x="310" y="632" class="body">Learn a bounded global residual:  δψ(global state, both allocations) ≈ final outcome − S2 payoff</text>
-  <text x="310" y="662" class="body">Re-solve S3 → train new S1 PSRO best responses under commanded assignments → refresh S2</text>
+  <text x="310" y="600" class="stage">S4 · Outcome-aligned co-adaptation</text>
+  <text x="310" y="632" class="body">S4-A: learn a bounded macro-value residual from command-level returns; keep S1/S2 frozen first</text>
+  <text x="310" y="662" class="body">If held-out guards improve: append new S1 PSRO best responses → refresh affected S2 policy pairs</text>
   <text x="310" y="692" class="body">Accept a new joint version only when held-out scale/opponent guards pass; otherwise roll back.</text>
   <path d="M1317 500 V642 H1198" class="dash"/>
   <path d="M885 643 H846 V512 H710" class="dash"/>
