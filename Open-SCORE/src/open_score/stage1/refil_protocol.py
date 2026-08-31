@@ -523,7 +523,9 @@ def run_refil_round(args, device: torch.device, git_provenance: Mapping[str, obj
     learner.save(final_path, checkpoint_extra("final", final_evaluation))
     if best_evaluation is None or best_steps is None:
         raise RuntimeError("no trained checkpoint was eligible for validation selection")
+    final_learner_steps = learner.learner_step
     learner.load(best_path, map_location=device)
+    selected_checkpoint_learner_steps = learner.learner_step
     heldout, heldout_records = evaluate_refil(
         runner,
         controller,
@@ -553,7 +555,8 @@ def run_refil_round(args, device: torch.device, git_provenance: Mapping[str, obj
         "parameter_count": sum(parameter.numel() for parameter in model.parameters()),
         "environment_steps": environment_steps,
         "episodes": episode_count,
-        "learner_steps": learner.learner_step,
+        "learner_steps": final_learner_steps,
+        "selected_checkpoint_learner_steps": selected_checkpoint_learner_steps,
         "elapsed_seconds": elapsed,
         "throughput_environment_steps_per_second": environment_steps / max(elapsed, 1e-9),
         "initial_validation": initial,

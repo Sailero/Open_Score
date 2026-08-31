@@ -22,6 +22,7 @@ from .data import (
     write_records_jsonl,
 )
 from .metrics import evaluate_stage2_predictions, metric_definitions_zh
+from .win_model import DynamicHADWinNet
 from .outcome_model import (
     BootstrapOutcomeEnsemble,
     HADDeepSetOutcomeNet,
@@ -43,6 +44,7 @@ from .training import (
 __all__ = [
     "BootstrapOutcomeEnsemble",
     "CalibratedRiskBound",
+    "DynamicHADWinNet",
     "FeatureNormalizer",
     "HADCanonicalizer",
     "HADDeepSetOutcomeNet",

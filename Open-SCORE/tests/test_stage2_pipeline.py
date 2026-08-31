@@ -14,6 +14,7 @@ import yaml
 from open_score.stage2 import (
     BootstrapOutcomeEnsemble,
     CalibratedRiskBound,
+    DynamicHADWinNet,
     competing_risk_nll,
     collect_had_records,
     iter_had_records,
@@ -36,6 +37,29 @@ from open_score.stage2 import (
     write_records_csv,
     write_records_jsonl,
 )
+
+
+def test_round01_dynamic_win_model_is_permutation_invariant_and_reloadable(tmp_path):
+    torch.manual_seed(404)
+    model = DynamicHADWinNet(entity_hidden_dim=16, hidden_dim=24)
+    state = torch.randn(5, 85)
+    # Presence is the final value of each 9-value unit slot.
+    for offset in (8, 17, 26, 35, 44, 53, 62, 71):
+        state[:, offset + 8] = 1.0
+    permuted = state.clone()
+    first = state[:, 8:17].clone()
+    second = state[:, 17:26].clone()
+    permuted[:, 8:17] = second
+    permuted[:, 17:26] = first
+    assert torch.allclose(model(state), model(permuted), atol=1e-6, rtol=1e-6)
+    loss = model(state).square().mean()
+    loss.backward()
+    assert any(parameter.grad is not None for parameter in model.parameters())
+    path = tmp_path / "dynamic-win.pt"
+    torch.save(model.state_dict(), path)
+    restored = DynamicHADWinNet(entity_hidden_dim=16, hidden_dim=24)
+    restored.load_state_dict(torch.load(path, weights_only=True), strict=True)
+    assert torch.equal(model(state), restored(state))
 
 
 def test_stage2_contract_roundtrip_and_lineage_group_five_way_split(tmp_path):
