@@ -1,6 +1,7 @@
 """Stage 1: variable-scale, task-conditioned QMIX executor."""
 
 from .entity_qmix import (
+    EntityAttentionFlexMixer,
     EntityMonotonicMixer,
     SingleAgentQueryAttentionEncoder,
     VariableEntityAgent,
@@ -16,6 +17,7 @@ from .baselines import (
 )
 from .curriculum import (
     LearningProgressCurriculum,
+    StepLearningProgressCurriculum,
     supported_scales,
 )
 from .behavior_cloning import (
@@ -47,6 +49,7 @@ from .replay import (
     collate_episodes,
 )
 from .runner import (
+    BatchedHADRedRunner,
     CompetitiveEpisodeRunner,
     HADStage1Factory,
     QMixController,
@@ -71,9 +74,11 @@ from .smaclite_stock_training import (
 )
 
 __all__ = [
+    "EntityAttentionFlexMixer",
     "EntityMonotonicMixer",
     "SingleAgentQueryAttentionEncoder",
     "LearningProgressCurriculum",
+    "StepLearningProgressCurriculum",
     "DEMONSTRATION_SEED_OFFSET",
     "DEMONSTRATION_TRAINING_SEED_STRIDE",
     "RuleDemonstrationDataset",
@@ -98,6 +103,7 @@ __all__ = [
     "EpisodeReplayBuffer",
     "HADStage1Factory",
     "CompetitiveEpisodeRunner",
+    "BatchedHADRedRunner",
     "RandomController",
     "RuleBasedController",
     "QMixController",

@@ -6,8 +6,9 @@ lightweight learning-progress score inspired by SPMARL/PLR, with an explicit
 uniform-coverage floor so that easy scales cannot be forgotten.
 """
 
+from collections import deque
 from dataclasses import dataclass
-from typing import Dict, List, Mapping, Optional, Tuple
+from typing import Deque, Dict, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -211,3 +212,219 @@ class LearningProgressCurriculum:
         self.slow_td = decode(state.get("slow_td", {}), float)
         self.visits = decode(state.get("visits", {}), int)
         self.sample_visits = decode(state.get("sample_visits", {}), int)
+
+
+class StepLearningProgressCurriculum:
+    """Frozen 1M-step HAD curriculum from the round-01 protocol.
+
+    The first three phases are deterministic small-to-all scale curricula.  In
+    the fourth phase, probabilities are refreshed every ``update_steps`` from
+    two non-overlapping windows of per-episode absolute TD errors.  The final
+    phase returns to uniform sampling to consolidate every registered scale.
+    """
+
+    DEFAULT_BOUNDARIES = (100_000, 250_000, 400_000, 850_000)
+
+    def __init__(
+        self,
+        scales: Optional[Sequence[Scale]] = None,
+        boundaries: Sequence[int] = DEFAULT_BOUNDARIES,
+        update_steps: int = 10_000,
+        td_window: int = 50,
+        uniform_floor: float = 0.30,
+        max_scale_probability: float = 0.40,
+    ) -> None:
+        self.scales = tuple(scales or supported_scales(4, 1))
+        if not self.scales:
+            raise ValueError("curriculum needs at least one registered scale")
+        if len(set(self.scales)) != len(self.scales):
+            raise ValueError("curriculum scales must be unique")
+        self.boundaries = tuple(int(value) for value in boundaries)
+        if len(self.boundaries) != 4 or any(
+            left >= right
+            for left, right in zip(self.boundaries, self.boundaries[1:])
+        ):
+            raise ValueError("curriculum requires four increasing boundaries")
+        if update_steps < 1 or td_window < 1:
+            raise ValueError("update_steps and td_window must be positive")
+        if not 0.0 <= uniform_floor <= 1.0:
+            raise ValueError("uniform_floor must be in [0, 1]")
+        if not 0.0 < max_scale_probability <= 1.0:
+            raise ValueError("max_scale_probability must be in (0, 1]")
+        if max_scale_probability * len(self.scales) < 1.0:
+            raise ValueError("probability cap is infeasible for registered scales")
+        self.update_steps = int(update_steps)
+        self.td_window = int(td_window)
+        self.uniform_floor = float(uniform_floor)
+        self.max_scale_probability = float(max_scale_probability)
+        self.td_history: Dict[Scale, Deque[float]] = {
+            scale: deque(maxlen=2 * self.td_window) for scale in self.scales
+        }
+        self.sample_visits: Dict[Scale, int] = {scale: 0 for scale in self.scales}
+        self._probability_bucket = -1
+        self._cached_probabilities: Dict[Scale, float] = {}
+
+    def phase(self, environment_steps: int) -> int:
+        steps = int(environment_steps)
+        for phase, boundary in enumerate(self.boundaries):
+            if steps < boundary:
+                return phase
+        return 4
+
+    def active_scales(self, environment_steps: int) -> Tuple[Scale, ...]:
+        phase = self.phase(environment_steps)
+        if phase == 0:
+            preferred = ((2, 1),)
+        elif phase == 1:
+            preferred = ((2, 1), (3, 1), (3, 2))
+        else:
+            preferred = self.scales
+        active = tuple(scale for scale in preferred if scale in self.scales)
+        return active or (self.scales[0],)
+
+    @staticmethod
+    def _uniform(scales: Sequence[Scale]) -> Dict[Scale, float]:
+        probability = 1.0 / len(scales)
+        return {scale: probability for scale in scales}
+
+    def _cap_and_redistribute(
+        self, probabilities: Mapping[Scale, float]
+    ) -> Dict[Scale, float]:
+        result = {scale: float(value) for scale, value in probabilities.items()}
+        # Equal redistribution is repeated because one redistribution can make
+        # another scale cross the cap.
+        for _ in range(len(result) + 1):
+            over = {
+                scale: value - self.max_scale_probability
+                for scale, value in result.items()
+                if value > self.max_scale_probability
+            }
+            if not over:
+                break
+            excess = sum(over.values())
+            for scale in over:
+                result[scale] = self.max_scale_probability
+            receivers = [
+                scale
+                for scale, value in result.items()
+                if value < self.max_scale_probability - 1e-12
+            ]
+            if not receivers:
+                raise RuntimeError("could not redistribute curriculum probability")
+            share = excess / len(receivers)
+            for scale in receivers:
+                result[scale] += share
+        total = sum(result.values())
+        return {scale: value / total for scale, value in result.items()}
+
+    def _adaptive_probabilities(self) -> Dict[Scale, float]:
+        if any(
+            len(self.td_history[scale]) < 2 * self.td_window
+            for scale in self.scales
+        ):
+            return self._uniform(self.scales)
+        scores = []
+        for scale in self.scales:
+            values = np.asarray(self.td_history[scale], dtype=np.float64)
+            old = float(values[: self.td_window].mean())
+            new = float(values[self.td_window :].mean())
+            score = abs(np.log(old + 1e-6) - np.log(new + 1e-6))
+            scores.append(score)
+        score_array = np.asarray(scores, dtype=np.float64)
+        if not np.isfinite(score_array).all() or score_array.sum() <= 1e-12:
+            prioritized = np.full(len(self.scales), 1.0 / len(self.scales))
+        else:
+            prioritized = score_array / score_array.sum()
+        uniform = np.full(len(self.scales), 1.0 / len(self.scales))
+        mixed = (
+            (1.0 - self.uniform_floor) * prioritized
+            + self.uniform_floor * uniform
+        )
+        return self._cap_and_redistribute(
+            {scale: value for scale, value in zip(self.scales, mixed)}
+        )
+
+    def probabilities(self, environment_steps: int) -> Dict[Scale, float]:
+        phase = self.phase(environment_steps)
+        active = self.active_scales(environment_steps)
+        if phase != 3:
+            return self._uniform(active)
+        bucket = int(environment_steps) // self.update_steps
+        if bucket != self._probability_bucket or not self._cached_probabilities:
+            self._cached_probabilities = self._adaptive_probabilities()
+            self._probability_bucket = bucket
+        return dict(self._cached_probabilities)
+
+    def sample(
+        self, environment_steps: int, rng: Optional[np.random.Generator] = None
+    ) -> Scale:
+        generator = rng if rng is not None else np.random.default_rng()
+        probabilities = self.probabilities(environment_steps)
+        scales = tuple(probabilities)
+        index = int(
+            generator.choice(
+                len(scales), p=np.asarray(list(probabilities.values()))
+            )
+        )
+        selected = scales[index]
+        self.sample_visits[selected] += 1
+        return selected
+
+    def record_td_samples(
+        self, samples_by_scale: Mapping[Scale, Sequence[float]]
+    ) -> None:
+        for scale, values in samples_by_scale.items():
+            if scale not in self.td_history:
+                raise ValueError(f"scale {scale} is not registered")
+            for value in values:
+                finite = float(value)
+                if np.isfinite(finite):
+                    self.td_history[scale].append(max(0.0, finite))
+
+    def state_dict(self) -> Dict[str, object]:
+        encode = lambda scale: f"{scale[0]}v{scale[1]}"
+        return {
+            "scales": [list(scale) for scale in self.scales],
+            "boundaries": list(self.boundaries),
+            "update_steps": self.update_steps,
+            "td_window": self.td_window,
+            "uniform_floor": self.uniform_floor,
+            "max_scale_probability": self.max_scale_probability,
+            "td_history": {
+                encode(scale): list(values)
+                for scale, values in self.td_history.items()
+            },
+            "sample_visits": {
+                encode(scale): value
+                for scale, value in self.sample_visits.items()
+            },
+            "probability_bucket": self._probability_bucket,
+            "cached_probabilities": {
+                encode(scale): value
+                for scale, value in self._cached_probabilities.items()
+            },
+        }
+
+    def load_state_dict(self, state: Mapping[str, object]) -> None:
+        if tuple(tuple(value) for value in state["scales"]) != self.scales:
+            raise ValueError("saved curriculum scales do not match")
+        if tuple(int(value) for value in state["boundaries"]) != self.boundaries:
+            raise ValueError("saved curriculum boundaries do not match")
+
+        def decode(label: str) -> Scale:
+            red, blue = label.split("v")
+            return int(red), int(blue)
+
+        self.td_history = {
+            scale: deque(maxlen=2 * self.td_window) for scale in self.scales
+        }
+        for label, values in state.get("td_history", {}).items():
+            self.td_history[decode(label)].extend(float(value) for value in values)
+        self.sample_visits = {scale: 0 for scale in self.scales}
+        for label, value in state.get("sample_visits", {}).items():
+            self.sample_visits[decode(label)] = int(value)
+        self._probability_bucket = int(state.get("probability_bucket", -1))
+        self._cached_probabilities = {
+            decode(label): float(value)
+            for label, value in state.get("cached_probabilities", {}).items()
+        }

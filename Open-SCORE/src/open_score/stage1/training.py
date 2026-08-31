@@ -27,6 +27,8 @@ def make_had_qmix(
     mixing_dim: int = 16,
     encoder_kind: str = "deepset",
     attention_heads: int = 4,
+    attention_embed_dim: Optional[int] = None,
+    hypernet_hidden_dim: int = 128,
 ) -> VariableScaleQMIX:
     return VariableScaleQMIX(
         entity_dim=HADStage1Adapter.ENTITY_DIM,
@@ -39,6 +41,8 @@ def make_had_qmix(
         mixing_dim=mixing_dim,
         encoder_kind=encoder_kind,
         attention_heads=attention_heads,
+        attention_embed_dim=attention_embed_dim,
+        hypernet_hidden_dim=hypernet_hidden_dim,
     ).to(device)
 
 

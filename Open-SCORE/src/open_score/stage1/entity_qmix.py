@@ -49,10 +49,18 @@ class SingleAgentQueryAttentionEncoder(nn.Module):
         )
 
     def forward(
-        self, entities: Tensor, mask: Tensor, query_features: Tensor
+        self,
+        entities: Tensor,
+        mask: Tensor,
+        query_features: Tensor,
+        visibility_mask: Optional[Tensor] = None,
     ) -> Tuple[Tensor, Tensor]:
         entity_embeddings = self.entity_embedding(entities)
         valid = mask.bool()
+        if visibility_mask is not None:
+            if visibility_mask.shape != mask.shape:
+                raise ValueError("visibility_mask must match the entity mask")
+            valid = valid & visibility_mask.bool()
         has_entity = valid.any(dim=-1)
         # MultiheadAttention rejects an all-padding row. Padding-only agent
         # slots receive a zero sentinel and are zeroed again after attention.
@@ -88,12 +96,19 @@ class PermutationEquivariantActionHead(nn.Module):
 
     TARGET_TYPE_COUNT = 4
 
-    def __init__(self, hidden_dim: int, action_dim: int, type_dim: int = 8):
+    def __init__(
+        self,
+        hidden_dim: int,
+        action_dim: int,
+        type_dim: int = 8,
+        entity_embedding_dim: Optional[int] = None,
+    ):
         super().__init__()
+        entity_embedding_dim = entity_embedding_dim or hidden_dim
         self.fixed_head = nn.Linear(hidden_dim, action_dim)
         self.target_type_embedding = nn.Embedding(self.TARGET_TYPE_COUNT, type_dim)
         self.target_scorer = nn.Sequential(
-            nn.Linear(2 * hidden_dim + type_dim, hidden_dim),
+            nn.Linear(hidden_dim + entity_embedding_dim + type_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, 1),
         )
@@ -143,37 +158,54 @@ class VariableEntityAgent(nn.Module):
         hidden_dim: int = 128,
         encoder_kind: str = "deepset",
         attention_heads: int = 4,
+        attention_embed_dim: Optional[int] = None,
+        include_last_action: bool = False,
     ):
         super().__init__()
-        if encoder_kind not in {"deepset", "saqa"}:
-            raise ValueError("encoder_kind must be 'deepset' or 'saqa'")
+        if encoder_kind not in {"deepset", "saqa", "refil"}:
+            raise ValueError("encoder_kind must be 'deepset', 'saqa' or 'refil'")
         self.hidden_dim = hidden_dim
         self.action_dim = action_dim
         self.encoder_kind = encoder_kind
         self.attention_heads = int(attention_heads)
+        self.include_last_action = bool(include_last_action)
+        context_dim = hidden_dim
         if encoder_kind == "deepset":
             self.entity_encoder: nn.Module = MaskedSetEncoder(
                 entity_dim, hidden_dim, hidden_dim
             )
         else:
+            context_dim = int(attention_embed_dim or hidden_dim)
             self.entity_encoder = SingleAgentQueryAttentionEncoder(
                 entity_dim,
                 self_dim + task_dim,
-                hidden_dim,
+                context_dim,
                 self.attention_heads,
             )
         self.input_layer = nn.Sequential(
-            nn.Linear(hidden_dim + self_dim + task_dim, hidden_dim),
+            nn.Linear(
+                context_dim
+                + self_dim
+                + task_dim
+                + (action_dim if self.include_last_action else 0),
+                hidden_dim,
+            ),
             nn.ReLU(),
         )
         self.rnn = nn.GRUCell(hidden_dim, hidden_dim)
-        self.q_head = PermutationEquivariantActionHead(hidden_dim, action_dim)
+        self.q_head = PermutationEquivariantActionHead(
+            hidden_dim, action_dim, entity_embedding_dim=context_dim
+        )
 
     def initial_hidden(self, batch: int, agents: int, device: torch.device) -> Tensor:
         return torch.zeros(batch, agents, self.hidden_dim, device=device)
 
     def forward(
-        self, observation: TeamObservation, hidden: Optional[Tensor] = None
+        self,
+        observation: TeamObservation,
+        hidden: Optional[Tensor] = None,
+        last_action: Optional[Tensor] = None,
+        visibility_mask: Optional[Tensor] = None,
     ) -> Tuple[Tensor, Tensor]:
         observation.validate()
         batch, agents, entities, entity_dim = observation.entity_obs.shape
@@ -190,16 +222,32 @@ class VariableEntityAgent(nn.Module):
             flat_query = torch.cat(
                 [observation.self_obs, observation.task_obs], dim=-1
             ).reshape(batch * agents, -1)
+            flat_visibility = (
+                None
+                if visibility_mask is None
+                else visibility_mask.reshape(batch * agents, entities)
+            )
             flat_context, flat_embeddings = self.entity_encoder(
-                flat_entities, flat_mask, flat_query
+                flat_entities, flat_mask, flat_query, flat_visibility
             )
             entity_context = flat_context.reshape(batch, agents, -1)
             entity_embeddings = flat_embeddings.reshape(
                 batch, agents, entities, -1
             )
-        inputs = self.input_layer(
-            torch.cat([entity_context, observation.self_obs, observation.task_obs], dim=-1)
-        )
+        features = [entity_context, observation.self_obs, observation.task_obs]
+        if self.include_last_action:
+            if last_action is None:
+                last_action = torch.zeros(
+                    batch,
+                    agents,
+                    self.action_dim,
+                    dtype=observation.self_obs.dtype,
+                    device=observation.self_obs.device,
+                )
+            if last_action.shape != (batch, agents, self.action_dim):
+                raise ValueError("last_action has an incompatible shape")
+            features.append(last_action.to(observation.self_obs.dtype))
+        inputs = self.input_layer(torch.cat(features, dim=-1))
         if hidden is None:
             hidden = self.initial_hidden(batch, agents, inputs.device)
         next_hidden = self.rnn(inputs.reshape(batch * agents, -1), hidden.reshape(batch * agents, -1))
@@ -257,6 +305,167 @@ class EntityMonotonicMixer(nn.Module):
         return (positive_w2 * hidden).sum(dim=-1) + self.final_bias(state_context).squeeze(-1)
 
 
+class EntityAttentionFlexMixer(nn.Module):
+    """REFIL-style variable-cardinality monotonic mixing network.
+
+    Agent-conditioned cross-attention creates one positive row of first-layer
+    mixing weights per active agent.  A learned global query creates the bias,
+    final weights and state value.  The optional per-agent visibility masks are
+    used by REFIL's imagined within-group/cross-group auxiliary objective.
+    """
+
+    def __init__(
+        self,
+        state_entity_dim: int,
+        agent_context_dim: int,
+        hypernet_hidden_dim: int = 128,
+        mixing_dim: int = 32,
+        attention_heads: int = 4,
+    ) -> None:
+        super().__init__()
+        if hypernet_hidden_dim % attention_heads:
+            raise ValueError("attention_heads must divide hypernet_hidden_dim")
+        self.attention_heads = int(attention_heads)
+        self.mixing_dim = int(mixing_dim)
+        self.entity_embedding = nn.Sequential(
+            nn.Linear(state_entity_dim, hypernet_hidden_dim),
+            nn.ReLU(),
+        )
+        self.agent_query = nn.Sequential(
+            nn.Linear(agent_context_dim, hypernet_hidden_dim),
+            nn.Tanh(),
+        )
+        self.agent_attention = nn.MultiheadAttention(
+            hypernet_hidden_dim, self.attention_heads, batch_first=True
+        )
+        self.global_query = nn.Parameter(torch.zeros(1, 1, hypernet_hidden_dim))
+        nn.init.normal_(self.global_query, std=0.02)
+        self.global_attention = nn.MultiheadAttention(
+            hypernet_hidden_dim, self.attention_heads, batch_first=True
+        )
+        self.first_weight = nn.Linear(hypernet_hidden_dim, mixing_dim)
+        self.first_bias = nn.Linear(hypernet_hidden_dim, mixing_dim)
+        self.final_weight = nn.Linear(hypernet_hidden_dim, mixing_dim)
+        self.state_value = nn.Linear(hypernet_hidden_dim, 1)
+
+    def _global_context(self, embedded: Tensor, state_mask: Tensor) -> Tensor:
+        batch = embedded.shape[0]
+        query = self.global_query.expand(batch, -1, -1)
+        context, _ = self.global_attention(
+            query,
+            embedded,
+            embedded,
+            key_padding_mask=~state_mask.bool(),
+            need_weights=False,
+        )
+        return context.squeeze(1)
+
+    def _agent_context(
+        self,
+        embedded: Tensor,
+        state_mask: Tensor,
+        agent_context: Tensor,
+        visibility_mask: Optional[Tensor],
+    ) -> Tensor:
+        query = self.agent_query(agent_context)
+        attention_mask = None
+        if visibility_mask is not None:
+            if visibility_mask.shape != (
+                embedded.shape[0],
+                agent_context.shape[1],
+                embedded.shape[1],
+            ):
+                raise ValueError("mixer visibility mask has an incompatible shape")
+            valid = visibility_mask.bool() & state_mask.bool().unsqueeze(1)
+            missing = ~valid.any(dim=-1)
+            if bool(missing.any()):
+                valid = valid.clone()
+                first_valid = state_mask.to(torch.int64).argmax(dim=-1)
+                rows = missing.nonzero(as_tuple=False)
+                valid[rows[:, 0], rows[:, 1], first_valid[rows[:, 0]]] = True
+            attention_mask = (~valid).repeat_interleave(
+                self.attention_heads, dim=0
+            )
+        context, _ = self.agent_attention(
+            query,
+            embedded,
+            embedded,
+            attn_mask=attention_mask,
+            key_padding_mask=~state_mask.bool(),
+            need_weights=False,
+        )
+        return context
+
+    def _weights(
+        self,
+        state: GlobalState,
+        agent_context: Tensor,
+        visibility_mask: Optional[Tensor] = None,
+    ) -> Tuple[Tensor, Tensor]:
+        state.validate()
+        embedded = self.entity_embedding(state.entities)
+        agent_latent = self._agent_context(
+            embedded, state.entity_mask, agent_context, visibility_mask
+        )
+        global_context = self._global_context(embedded, state.entity_mask)
+        positive_first = torch.softmax(self.first_weight(agent_latent), dim=-1)
+        return positive_first, global_context
+
+    def _finish(
+        self,
+        contributions: Tensor,
+        global_context: Tensor,
+    ) -> Tensor:
+        hidden = F.elu(contributions + self.first_bias(global_context))
+        positive_final = torch.softmax(
+            self.final_weight(global_context), dim=-1
+        )
+        return (
+            (positive_final * hidden).sum(dim=-1)
+            + self.state_value(global_context).squeeze(-1)
+        )
+
+    def forward(
+        self,
+        chosen_agent_q: Tensor,
+        state: GlobalState,
+        agent_context: Tensor,
+        agent_mask: Tensor,
+        visibility_mask: Optional[Tensor] = None,
+    ) -> Tensor:
+        first, global_context = self._weights(
+            state, agent_context, visibility_mask
+        )
+        active = agent_mask.to(chosen_agent_q.dtype).unsqueeze(-1)
+        contributions = (
+            first * chosen_agent_q.unsqueeze(-1) * active
+        ).sum(dim=1)
+        return self._finish(contributions, global_context)
+
+    def imagined(
+        self,
+        within_q: Tensor,
+        interaction_q: Tensor,
+        state: GlobalState,
+        agent_context: Tensor,
+        agent_mask: Tensor,
+        within_visibility: Tensor,
+        interaction_visibility: Tensor,
+    ) -> Tensor:
+        within_weights, global_context = self._weights(
+            state, agent_context, within_visibility
+        )
+        interaction_weights, _ = self._weights(
+            state, agent_context, interaction_visibility
+        )
+        active = agent_mask.to(within_q.dtype).unsqueeze(-1)
+        contributions = (
+            within_weights * within_q.unsqueeze(-1) * active
+            + interaction_weights * interaction_q.unsqueeze(-1) * active
+        ).sum(dim=1)
+        return self._finish(contributions, global_context)
+
+
 class VariableScaleQMIX(nn.Module):
     """Shared utility network plus the variable-cardinality monotonic mixer."""
 
@@ -272,14 +481,21 @@ class VariableScaleQMIX(nn.Module):
         mixing_dim: int = 32,
         encoder_kind: str = "deepset",
         attention_heads: int = 4,
+        attention_embed_dim: Optional[int] = None,
+        hypernet_hidden_dim: int = 128,
     ):
         super().__init__()
         self.encoder_kind = encoder_kind
         self.attention_heads = int(attention_heads)
+        self.is_refil = encoder_kind == "refil"
         self.architecture_name = (
-            "OpenSCORE-SAQA-QMIX-SP"
-            if encoder_kind == "saqa"
-            else "OpenSCORE-DeepSet-QMIX"
+            "REFIL-QMIX-HAD-v1"
+            if self.is_refil
+            else (
+                "OpenSCORE-SAQA-QMIX-SP"
+                if encoder_kind == "saqa"
+                else "OpenSCORE-DeepSet-QMIX"
+            )
         )
         self.agent = VariableEntityAgent(
             entity_dim,
@@ -289,22 +505,85 @@ class VariableScaleQMIX(nn.Module):
             hidden_dim=agent_hidden_dim,
             encoder_kind=encoder_kind,
             attention_heads=attention_heads,
+            attention_embed_dim=attention_embed_dim,
+            include_last_action=self.is_refil,
         )
-        self.mixer = EntityMonotonicMixer(
-            state_entity_dim,
-            self_dim + task_dim,
-            hidden_dim=mixer_hidden_dim,
-            mixing_dim=mixing_dim,
-        )
+        if self.is_refil:
+            self.mixer: nn.Module = EntityAttentionFlexMixer(
+                state_entity_dim,
+                self_dim + task_dim,
+                hypernet_hidden_dim=hypernet_hidden_dim,
+                mixing_dim=mixing_dim,
+                attention_heads=attention_heads,
+            )
+        else:
+            self.mixer = EntityMonotonicMixer(
+                state_entity_dim,
+                self_dim + task_dim,
+                hidden_dim=mixer_hidden_dim,
+                mixing_dim=mixing_dim,
+            )
 
     def agent_q(
-        self, observation: TeamObservation, hidden: Optional[Tensor] = None
+        self,
+        observation: TeamObservation,
+        hidden: Optional[Tensor] = None,
+        last_action: Optional[Tensor] = None,
+        visibility_mask: Optional[Tensor] = None,
     ) -> Tuple[Tensor, Tensor]:
-        return self.agent(observation, hidden)
+        return self.agent(
+            observation,
+            hidden,
+            last_action=last_action,
+            visibility_mask=visibility_mask,
+        )
 
     def mix(self, chosen_q: Tensor, observation: TeamObservation, state: GlobalState) -> Tensor:
         context = torch.cat([observation.self_obs, observation.task_obs], dim=-1)
         return self.mixer(chosen_q, state, context, observation.agent_mask)
+
+    @staticmethod
+    def imagination_visibility(
+        observation: TeamObservation,
+        group_a: Tensor,
+    ) -> Tuple[Tensor, Tensor]:
+        """Return same-group and cross-group masks for one episode split."""
+
+        batch, agents, entities = observation.entity_mask.shape
+        if group_a.shape != (batch, entities):
+            raise ValueError("group assignment must have shape [batch, entities]")
+        # HAD includes an explicit is-self feature in the final entity column.
+        # This remains reliable under entity permutations and padded batching.
+        self_rows = observation.entity_obs[..., -1].argmax(dim=-1)
+        self_group = torch.gather(group_a, 1, self_rows)
+        same = group_a.unsqueeze(1) == self_group.unsqueeze(-1)
+        return same, ~same
+
+    def mix_imagined(
+        self,
+        within_q: Tensor,
+        interaction_q: Tensor,
+        observation: TeamObservation,
+        state: GlobalState,
+        group_a: Tensor,
+    ) -> Tensor:
+        if not self.is_refil or not isinstance(
+            self.mixer, EntityAttentionFlexMixer
+        ):
+            raise RuntimeError("imagined mixing is available only for REFIL")
+        within, interaction = self.imagination_visibility(observation, group_a)
+        context = torch.cat(
+            [observation.self_obs, observation.task_obs], dim=-1
+        )
+        return self.mixer.imagined(
+            within_q,
+            interaction_q,
+            state,
+            context,
+            observation.agent_mask,
+            within,
+            interaction,
+        )
 
     @torch.no_grad()
     def act(
@@ -312,8 +591,11 @@ class VariableScaleQMIX(nn.Module):
         observation: TeamObservation,
         hidden: Optional[Tensor] = None,
         epsilon: float = 0.0,
+        last_action: Optional[Tensor] = None,
     ) -> Tuple[Tensor, Tensor]:
-        q_values, next_hidden = self.agent_q(observation, hidden)
+        q_values, next_hidden = self.agent_q(
+            observation, hidden, last_action=last_action
+        )
         greedy = q_values.argmax(dim=-1)
         if epsilon <= 0.0:
             return greedy, next_hidden

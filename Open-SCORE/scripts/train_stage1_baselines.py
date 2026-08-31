@@ -62,7 +62,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--algorithms",
         nargs="+",
-        choices=("qmix", "vdn", "mappo"),
+        choices=("qmix", "vdn", "mappo", "refil_qmix"),
         default=("qmix", "vdn", "mappo"),
     )
     parser.add_argument("--train-side", choices=("Red", "Blue"), default="Red")
@@ -77,17 +77,29 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
     parser.add_argument("--seeds", nargs="+", type=int, default=(20260830,))
     parser.add_argument("--episodes", type=int, default=72)
+    parser.add_argument("--total-environment-steps", type=int, default=0)
+    parser.add_argument("--num-envs", type=int, default=8)
     parser.add_argument("--batch-episodes", type=int, default=4)
     parser.add_argument("--replay-episodes", type=int, default=256)
     parser.add_argument("--updates-per-episode", type=int, default=1)
     parser.add_argument("--target-update-interval", type=int, default=200)
     parser.add_argument("--ppo-epochs", type=int, default=3)
     parser.add_argument("--learning-rate", type=float, default=5e-4)
+    parser.add_argument("--gamma", type=float, default=0.99)
+    parser.add_argument("--td-lambda", type=float, default=0.6)
+    parser.add_argument(
+        "--optimizer", choices=("adam", "rmsprop"), default="adam"
+    )
+    parser.add_argument("--rmsprop-alpha", type=float, default=0.99)
+    parser.add_argument("--rmsprop-eps", type=float, default=1e-5)
     parser.add_argument("--shaping-scale", type=float, default=0.5)
     parser.add_argument("--max-steps", type=int, default=50)
     parser.add_argument("--eval-every", type=int, default=12)
     parser.add_argument("--eval-episodes-per-scale", type=int, default=2)
     parser.add_argument("--heldout-episodes-per-scale", type=int, default=8)
+    parser.add_argument("--eval-every-environment-steps", type=int, default=50_000)
+    parser.add_argument("--eval-episodes-per-scale-opponent", type=int, default=10)
+    parser.add_argument("--heldout-episodes-per-scale-opponent", type=int, default=100)
     parser.add_argument(
         "--opponent-styles",
         nargs="+",
@@ -111,6 +123,27 @@ def parse_args() -> argparse.Namespace:
         "--encoder-kind", choices=("deepset", "saqa"), default="deepset"
     )
     parser.add_argument("--attention-heads", type=int, default=4)
+    parser.add_argument("--attention-embed-dim", type=int, default=128)
+    parser.add_argument("--mixing-dim", type=int, default=32)
+    parser.add_argument("--hypernet-hidden-dim", type=int, default=128)
+    parser.add_argument("--refil-imagine-weight", type=float, default=0.5)
+    parser.add_argument(
+        "--curriculum",
+        choices=("legacy_episode", "step_learning_progress"),
+        default="legacy_episode",
+    )
+    parser.add_argument(
+        "--curriculum-boundaries",
+        nargs=4,
+        type=int,
+        default=(100_000, 250_000, 400_000, 850_000),
+    )
+    parser.add_argument("--curriculum-update-steps", type=int, default=10_000)
+    parser.add_argument("--curriculum-td-window", type=int, default=50)
+    parser.add_argument("--curriculum-uniform-floor", type=float, default=0.30)
+    parser.add_argument(
+        "--curriculum-max-scale-probability", type=float, default=0.40
+    )
     parser.add_argument(
         "--bc-demo-episodes-per-scale-opponent",
         type=int,
@@ -1990,10 +2023,16 @@ def plateau_stability_audit(
 def main() -> None:
     args = parse_args()
     validate_args(args)
+    refil_requested = "refil_qmix" in args.algorithms
     args._git_provenance = collect_and_require_git_provenance(
-        PROJECT, formal=args.formal_evidence
+        PROJECT, formal=(args.formal_evidence or refil_requested)
     )
     device = choose_device(args.device)
+    if refil_requested:
+        from open_score.stage1.refil_protocol import run_refil_round
+
+        run_refil_round(args, device, args._git_provenance)
+        return
     scales = (
         [tuple(args.fixed_scale)]
         if args.fixed_scale is not None
