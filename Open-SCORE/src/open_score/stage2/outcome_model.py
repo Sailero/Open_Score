@@ -95,7 +95,7 @@ class HADDeepSetOutcomeNet(OutcomeTimeMLP):
         state_dim: int = HAD_STATE_DIM,
     ):
         if state_dim != self.HAD_STATE_DIM or input_dim < state_dim:
-            raise ValueError("had_deepset requires the 84-value HAD canonical prefix")
+            raise ValueError("had_deepset requires the 85-value HAD canonical prefix")
         nn.Module.__init__(self)
         self.input_dim = input_dim
         self.state_dim = state_dim
