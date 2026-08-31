@@ -25,6 +25,8 @@ def make_had_qmix(
     agent_hidden_dim: int = 64,
     mixer_hidden_dim: int = 32,
     mixing_dim: int = 16,
+    encoder_kind: str = "deepset",
+    attention_heads: int = 4,
 ) -> VariableScaleQMIX:
     return VariableScaleQMIX(
         entity_dim=HADStage1Adapter.ENTITY_DIM,
@@ -35,6 +37,8 @@ def make_had_qmix(
         agent_hidden_dim=agent_hidden_dim,
         mixer_hidden_dim=mixer_hidden_dim,
         mixing_dim=mixing_dim,
+        encoder_kind=encoder_kind,
+        attention_heads=attention_heads,
     ).to(device)
 
 

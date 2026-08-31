@@ -1,6 +1,6 @@
 """Environment adapters for a common four-stage tensor contract."""
 
-from .had_stage1 import HADStage1Adapter, tensorize_had_observation
+from .had_stage1 import HADSnapshot, HADStage1Adapter, tensorize_had_observation
 from .smaclite_ad import (
     PROTOCOL_ID as SMACLITE_AD_PROTOCOL_ID,
     SMACliteADConfig,
@@ -13,6 +13,7 @@ from .smaclite_ad import (
 
 __all__ = [
     "HADStage1Adapter",
+    "HADSnapshot",
     "SMACLITE_AD_PROTOCOL_ID",
     "SMACliteADConfig",
     "SMACliteADEnv",

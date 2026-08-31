@@ -13,7 +13,7 @@ class HADCanonicalizer:
     """Convert HAD global entities into a target-centred 4v4 vector.
 
     HAD's state entity schema is ``position(3), velocity(3), health, alive,
-    red, blue, target``.  Agents are sorted separately inside each side by
+    red, blue, target, remaining_horizon``.  Agents are sorted separately by
     distance to the target and lexicographic state features.  Consequently,
     permuting environment entity rows cannot change the result.
 
@@ -24,13 +24,15 @@ class HADCanonicalizer:
 
     max_defenders: int = 4
     max_attackers: int = 4
-    entity_dim: int = 11
+    entity_dim: int = 12
 
     @property
     def state_dim(self) -> int:
         # target: pos/vel/health/alive (8); agent: rel-pos/vel/health/alive/present (9)
         # final four values: roster and alive fractions for both sides.
-        return 8 + 9 * (self.max_defenders + self.max_attackers) + 4
+        # One final scalar carries normalized remaining horizon from the S1
+        # Markov state. Legacy 11-column rows are migrated with value 1.0.
+        return 8 + 9 * (self.max_defenders + self.max_attackers) + 4 + 1
 
     @staticmethod
     def _sort_agents(agents: np.ndarray, target: np.ndarray) -> np.ndarray:
@@ -60,8 +62,10 @@ class HADCanonicalizer:
         state_mask: Optional[np.ndarray] = None,
     ) -> np.ndarray:
         entities = np.asarray(state_entities, dtype=np.float32)
-        if entities.ndim != 2 or entities.shape[1] != self.entity_dim:
-            raise ValueError(f"HAD state_entities must have shape [entities, {self.entity_dim}]")
+        if entities.ndim != 2 or entities.shape[1] not in {11, self.entity_dim}:
+            raise ValueError(
+                f"HAD state_entities must have 11 legacy or {self.entity_dim} current columns"
+            )
         if not np.all(np.isfinite(entities)):
             raise ValueError("HAD state_entities contain non-finite values")
         if state_mask is not None:
@@ -73,6 +77,10 @@ class HADCanonicalizer:
             entities = entities[mask]
             if len(entities) == 0:
                 raise ValueError("state_mask removes every state entity")
+        if entities.shape[1] == 11:
+            entities = np.concatenate(
+                (entities, np.ones((len(entities), 1), dtype=np.float32)), axis=1
+            )
 
         defender_rows = entities[:, 8] > 0.5
         attacker_rows = entities[:, 9] > 0.5
@@ -103,6 +111,7 @@ class HADCanonicalizer:
                 self._agent_slots(defenders, target, self.max_defenders),
                 self._agent_slots(attackers, target, self.max_attackers),
                 counts,
+                np.asarray([target[11]], dtype=np.float32),
             ]
         ).astype(np.float32, copy=False)
         if result.shape != (self.state_dim,):

@@ -66,7 +66,8 @@ def _best_move_towards(
 class SMACliteADRuleController:
     """Fixed full-state audit opponent using only SMAClite primitive actions."""
 
-    VALID_STYLES = {"rush_asset", "intercept", "idle"}
+    VALID_STYLES = {"rush_asset", "clear_then_asset", "intercept", "idle"}
+    information_scope = "privileged_full_environment_state"
 
     def __init__(self, style: str):
         if style not in self.VALID_STYLES:
@@ -79,6 +80,8 @@ class SMACliteADRuleController:
 
     def act(self, env, side, observation, rng) -> np.ndarray:
         del observation, rng
+        if self.style == "clear_then_asset" and side != "Red":
+            raise ValueError("clear_then_asset is defined only for the Red attacker")
         slots = env._red_slots if side == "Red" else env._blue_slots
         opponents = env._blue_slots if side == "Red" else env._red_slots
         alive_opponents = [unit for unit in opponents if unit.hp > 0]
@@ -91,6 +94,34 @@ class SMACliteADRuleController:
                 result.append(1)
                 continue
             available = env._available_actions_for(unit, side)
+            if self.style == "clear_then_asset" and alive_opponents:
+                # Stable lowest-health focus fire makes this a reproducible
+                # two-phase solvability reference: clear defenders, then asset.
+                target = min(
+                    alive_opponents,
+                    key=lambda opponent: (
+                        float(opponent.hp + opponent.shield),
+                        int(opponent.id_in_faction),
+                    ),
+                )
+                attack_action = 6 + int(target.id_in_faction)
+                if available[attack_action]:
+                    result.append(attack_action)
+                else:
+                    result.append(_best_move_towards(env, unit, target.pos, side))
+                continue
+            if (
+                self.style == "clear_then_asset"
+                and not alive_opponents
+                and env._asset is not None
+            ):
+                assert env.asset_action_id is not None
+                asset_action = env.asset_action_id
+                if available[asset_action]:
+                    result.append(asset_action)
+                else:
+                    result.append(_best_move_towards(env, unit, env._asset.pos, side))
+                continue
             if self.style == "rush_asset" and side == "Red" and env._asset is not None:
                 assert env.asset_action_id is not None
                 asset_action = env.asset_action_id
@@ -194,16 +225,22 @@ class SMACliteADFactory:
         max_red_agents: int = 6,
         max_blue_agents: int = 5,
         episode_limit: int = 50,
+        reward_mode: str = "strict_potential",
+        discount_gamma: float = 0.99,
         shaping_scale: float = 0.10,
         approach_weight: float = 0.0,
         spawn_jitter: float = 0.0,
+        use_cpp_rvo2: bool = False,
     ):
         self.max_red_agents = max_red_agents
         self.max_blue_agents = max_blue_agents
         self.episode_limit = episode_limit
+        self.reward_mode = reward_mode
+        self.discount_gamma = discount_gamma
         self.shaping_scale = shaping_scale
         self.approach_weight = approach_weight
         self.spawn_jitter = spawn_jitter
+        self.use_cpp_rvo2 = bool(use_cpp_rvo2)
         self.cache: Dict[Ratio, SMACliteADEnv] = {}
 
     def get(self, ratio: Ratio) -> SMACliteADEnv:
@@ -215,9 +252,12 @@ class SMACliteADFactory:
                 max_red_agents=self.max_red_agents,
                 max_blue_agents=self.max_blue_agents,
                 episode_limit=self.episode_limit,
+                reward_mode=self.reward_mode,
+                discount_gamma=self.discount_gamma,
                 shaping_scale=self.shaping_scale,
                 approach_weight=self.approach_weight,
                 spawn_jitter=self.spawn_jitter,
+                use_cpp_rvo2=self.use_cpp_rvo2,
             )
         return self.cache[ratio]
 

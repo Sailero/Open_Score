@@ -202,7 +202,7 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("docs/evidence/smaclite_validation_torch310.json"),
+        default=Path("outputs/smoke_smaclite/validation.json"),
     )
     args = parser.parse_args()
     payload: Dict[str, object] = {

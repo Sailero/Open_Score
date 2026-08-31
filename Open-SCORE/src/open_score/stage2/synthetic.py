@@ -91,23 +91,47 @@ def generate_synthetic_records(
                 breach_probability = _sigmoid(-defender_margin)
                 timeout_probability = 0.05 + 0.12 * np.exp(-abs(defender_margin))
                 for replicate in range(replicates_per_candidate):
-                    draw = float(rng.random())
+                    # Common random numbers: for a fixed root, Blue threat and
+                    # continuation, every Red candidate sees the same random
+                    # variates.  Only the counterfactual policy effect changes.
+                    continuation_seed = (
+                        seed * 1_000_003
+                        + root_index * 10_007
+                        + attacker_index * 101
+                        + replicate
+                    )
+                    continuation_rng = np.random.default_rng(continuation_seed)
+                    draw = float(continuation_rng.random())
                     if draw < timeout_probability:
                         outcome = "timeout"
                         terminal_steps = horizon_steps
                     elif draw < timeout_probability + (1.0 - timeout_probability) * breach_probability:
                         outcome = "breach"
-                        fraction = np.clip(rng.beta(1.5, 2.5) * (1.1 - 0.35 * breach_probability), 0.03, 0.98)
+                        fraction = np.clip(continuation_rng.beta(1.5, 2.5) * (1.1 - 0.35 * breach_probability), 0.03, 0.98)
                         terminal_steps = max(1, min(horizon_steps - 1, int(round(fraction * horizon_steps))))
                     else:
                         outcome = "defender_win"
-                        fraction = np.clip(rng.beta(2.2, 1.8) * (0.75 + 0.15 * breach_probability), 0.03, 0.98)
+                        fraction = np.clip(continuation_rng.beta(2.2, 1.8) * (0.75 + 0.15 * breach_probability), 0.03, 0.98)
                         terminal_steps = max(1, min(horizon_steps - 1, int(round(fraction * horizon_steps))))
-                    candidate_id = (
-                        f"{defender_policy}@synthetic-policy-v1"
-                        f"__vs__{attacker_policy}@synthetic-policy-v1"
+                    candidate_id = f"{defender_policy}@synthetic-policy-v1"
+                    threat_id = f"{attacker_policy}@synthetic-policy-v1"
+                    continuation_id = f"continuation-{replicate:03d}"
+                    defender_casualties = int(
+                        continuation_rng.binomial(defender_count, 0.15)
                     )
-                    rollout_id = f"{root_id}:{candidate_id}:rep-{replicate}"
+                    target_final_health = (
+                        0.0
+                        if outcome == "breach"
+                        else float(continuation_rng.uniform(0.5, 1.0))
+                    )
+                    target_min_health = (
+                        0.0
+                        if outcome == "breach"
+                        else float(continuation_rng.uniform(0.35, target_final_health))
+                    )
+                    rollout_id = (
+                        f"{root_id}:{candidate_id}:threat={threat_id}:{continuation_id}"
+                    )
                     records.append(
                         record_from_rollout(
                             canonical_state=state,
@@ -118,7 +142,7 @@ def generate_synthetic_records(
                             lineage_group_id=f"synthetic:lineage-{root_index:05d}",
                             root_id=root_id,
                             rollout_id=rollout_id,
-                            seed=seed + root_index * 100 + replicate,
+                            seed=continuation_seed,
                             defender_count=defender_count,
                             attacker_count=attacker_count,
                             defender_policy_id=defender_policy,
@@ -133,6 +157,34 @@ def generate_synthetic_records(
                                 float(attacker_index) / max(1, len(attacker_policies) - 1),
                             ),
                             candidate_id=candidate_id,
+                            threat_id=threat_id,
+                            continuation_id=continuation_id,
+                            root_seed=seed + root_index,
+                            continuation_seed=continuation_seed,
+                            stochasticity_profile="synthetic-crn-v1",
+                            payoff_red=(-1.0 if outcome == "breach" else 1.0),
+                            target_final_health_fraction=target_final_health,
+                            target_min_health_fraction=target_min_health,
+                            defender_survivors=defender_count - defender_casualties,
+                            attacker_survivors=(0 if outcome == "defender_win" else attacker_count),
+                            defender_casualties=defender_casualties,
+                            attacker_casualties=(attacker_count if outcome == "defender_win" else 0),
+                            breach_steps=(terminal_steps if outcome == "breach" else None),
+                            attackers_neutralized_steps=(
+                                terminal_steps if outcome == "defender_win" else None
+                            ),
+                            minimum_threat_distance=float(continuation_rng.uniform(0.0, 0.5)),
+                            cumulative_target_damage=(
+                                1.0 if outcome == "breach" else float(continuation_rng.uniform(0.0, 0.5))
+                            ),
+                            cumulative_defender_damage=float(
+                                continuation_rng.uniform(0.0, defender_count)
+                            ),
+                            cumulative_attacker_damage=float(
+                                continuation_rng.uniform(0.0, attacker_count)
+                            ),
+                            red_action_cost=float(continuation_rng.uniform(0.0, horizon_steps)),
+                            blue_action_cost=float(continuation_rng.uniform(0.0, horizon_steps)),
                         )
                     )
     return records

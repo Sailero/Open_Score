@@ -1,6 +1,7 @@
 """Tensor contracts shared by environments and all four research stages."""
 
 from dataclasses import dataclass
+from typing import Optional
 
 import torch
 from torch import Tensor
@@ -17,6 +18,11 @@ class TeamObservation:
         task_obs: [batch, agents, task_features]
         agent_mask: [batch, agents], True for an active controlled agent
         avail_actions: [batch, agents, actions], True for an available action
+        action_entity_index: optional [batch, agents, actions] mapping a
+            target-selecting action to its entity row, or -1 for a fixed
+            non-target action
+        action_target_type: optional [batch, agents, actions] target kind
+            (0 non-target, 1 enemy/damage, 2 ally/heal, 3 protected asset)
     """
 
     entity_obs: Tensor
@@ -25,6 +31,8 @@ class TeamObservation:
     task_obs: Tensor
     agent_mask: Tensor
     avail_actions: Tensor
+    action_entity_index: Optional[Tensor] = None
+    action_target_type: Optional[Tensor] = None
 
     def validate(self) -> None:
         batch, agents, entities, _ = self.entity_obs.shape
@@ -38,12 +46,39 @@ class TeamObservation:
             raise ValueError("agent_mask does not match agent axes")
         if self.avail_actions.shape[:2] != (batch, agents):
             raise ValueError("avail_actions does not match agent axes")
+        action_shape = self.avail_actions.shape
+        if self.action_entity_index is not None:
+            if self.action_entity_index.shape != action_shape:
+                raise ValueError("action_entity_index does not match avail_actions")
+            indices = self.action_entity_index
+            if torch.any(indices < -1) or torch.any(indices >= entities):
+                raise ValueError("action_entity_index contains an invalid entity row")
+            if torch.any(indices >= 0) and self.action_target_type is None:
+                raise ValueError("target actions require explicit action_target_type")
+        if self.action_target_type is not None:
+            if self.action_target_type.shape != action_shape:
+                raise ValueError("action_target_type does not match avail_actions")
+            if torch.any(self.action_target_type < 0) or torch.any(
+                self.action_target_type > 3
+            ):
+                raise ValueError("action_target_type must use the registered 0..3 enum")
+            if self.action_entity_index is None:
+                raise ValueError("action_target_type requires action_entity_index")
+            target = self.action_entity_index >= 0
+            typed = self.action_target_type > 0
+            if torch.any(target != typed):
+                raise ValueError("target action indices and target types disagree")
         visible = self.entity_mask.any(dim=-1)
         if torch.any(self.agent_mask.bool() & ~visible):
             raise ValueError("each active agent must observe at least one entity")
 
     def to(self, device: torch.device) -> "TeamObservation":
-        return TeamObservation(*[value.to(device) for value in self.__dict__.values()])
+        return TeamObservation(
+            **{
+                name: value.to(device) if value is not None else None
+                for name, value in self.__dict__.items()
+            }
+        )
 
 
 @dataclass

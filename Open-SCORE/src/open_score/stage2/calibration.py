@@ -45,6 +45,48 @@ class TemperatureScaler:
         refined, _ = search(max(0.05, coarse / 1.20), min(20.0, coarse * 1.20), 121)
         return cls(refined)
 
+    @classmethod
+    def fit_right_censored(
+        cls,
+        probabilities: np.ndarray,
+        event_classes: np.ndarray,
+        event_observed: np.ndarray,
+        censor_bins: np.ndarray,
+        horizon_bins: int,
+    ) -> "TemperatureScaler":
+        """Fit temperature by the discrete competing-risk censored NLL."""
+
+        values = np.asarray(probabilities, dtype=np.float64)
+        classes = np.asarray(event_classes, dtype=np.int64)
+        observed = np.asarray(event_observed, dtype=bool)
+        censored_at = np.asarray(censor_bins, dtype=np.int64)
+        if values.ndim != 2 or values.shape[1] != 2 * horizon_bins + 1:
+            raise ValueError("censored calibration probability shape is invalid")
+        if any(array.shape != (len(values),) for array in (classes, observed, censored_at)):
+            raise ValueError("censored calibration arrays must align")
+        values = np.clip(values, 1e-12, 1.0)
+        values /= values.sum(axis=1, keepdims=True)
+        log_probability = np.log(values)
+
+        def loss(temperature: float) -> float:
+            calibrated = _softmax(log_probability / temperature)
+            likelihood = calibrated[np.arange(len(values)), classes]
+            for index in np.flatnonzero(~observed):
+                start = int(np.clip(censored_at[index], 0, horizon_bins))
+                likelihood[index] = (
+                    calibrated[index, start:horizon_bins].sum()
+                    + calibrated[index, horizon_bins + start : 2 * horizon_bins].sum()
+                    + calibrated[index, -1]
+                )
+            return float(-np.log(np.clip(likelihood, 1e-12, 1.0)).mean())
+
+        def search(low: float, high: float, count: int) -> float:
+            candidates = np.exp(np.linspace(np.log(low), np.log(high), count))
+            return float(candidates[int(np.argmin([loss(value) for value in candidates]))])
+
+        coarse = search(0.20, 5.0, 161)
+        return cls(search(max(0.05, coarse / 1.20), min(20.0, coarse * 1.20), 121))
+
     def apply(self, probabilities: np.ndarray) -> np.ndarray:
         values = np.asarray(probabilities, dtype=np.float64)
         if values.ndim != 2 or self.temperature <= 0.0:
@@ -61,12 +103,19 @@ class TemperatureScaler:
         return cls(float(value["temperature"]))
 
 
-def _finite_sample_quantile(values: Sequence[float], alpha: float) -> float:
+def _finite_sample_quantile(
+    values: Sequence[float], alpha: float, *, require_guarantee: bool = False
+) -> float:
     scores = np.sort(np.asarray(values, dtype=np.float64))
     if len(scores) < 1:
         raise ValueError("cannot calibrate an empty score collection")
     # Split-conformal 'higher' order statistic: ceil((n+1)*(1-alpha)).
-    rank = min(len(scores), int(np.ceil((len(scores) + 1) * (1.0 - alpha))))
+    requested_rank = int(np.ceil((len(scores) + 1) * (1.0 - alpha)))
+    if require_guarantee and requested_rank > len(scores):
+        raise ValueError(
+            "too few independent calibration lineages for the requested conformal alpha"
+        )
+    rank = min(len(scores), requested_rank)
     return float(scores[max(0, rank - 1)])
 
 
@@ -124,6 +173,7 @@ class CalibratedRiskBound:
         candidate_ids: Sequence[str],
         lineage_group_ids: Sequence[str],
         alpha: float = 0.10,
+        require_finite_sample_guarantee: bool = False,
     ) -> "CalibratedRiskBound":
         if not 0.0 < alpha < 1.0:
             raise ValueError("alpha must lie strictly between zero and one")
@@ -139,7 +189,14 @@ class CalibratedRiskBound:
             key: true_rate - prediction
             for key, (prediction, true_rate, _) in cells.items()
         }
-        marginal = max(0.0, _finite_sample_quantile(list(residuals.values()), alpha))
+        marginal = max(
+            0.0,
+            _finite_sample_quantile(
+                list(residuals.values()),
+                alpha,
+                require_guarantee=require_finite_sample_guarantee,
+            ),
+        )
         root_scores: Dict[str, float] = {}
         for (root_id, _), residual in residuals.items():
             root_scores[root_id] = max(root_scores.get(root_id, -np.inf), residual)
@@ -152,7 +209,11 @@ class CalibratedRiskBound:
         root_max = max(
             marginal,
             0.0,
-            _finite_sample_quantile(list(lineage_scores.values()), alpha),
+            _finite_sample_quantile(
+                list(lineage_scores.values()),
+                alpha,
+                require_guarantee=require_finite_sample_guarantee,
+            ),
         )
         return cls(
             alpha,

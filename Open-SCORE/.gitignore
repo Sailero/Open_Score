@@ -9,4 +9,5 @@ runs/
 *.pth
 upstream/external/
 upstream/_external/
+upstream/wheels/
 upstream/LOCKS.local.md

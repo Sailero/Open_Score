@@ -84,6 +84,8 @@ class SMACliteADConfig:
     max_blue_agents: int = 8
     episode_limit: int = 150
     objective: str = "asset"
+    reward_mode: str = "strict_potential"
+    discount_gamma: float = 0.99
     shaping_scale: float = 0.10
     approach_weight: float = 0.0
     spawn_jitter: float = 0.0
@@ -101,6 +103,16 @@ class SMACliteADConfig:
             raise ValueError("episode_limit must be positive")
         if self.objective not in {"asset", "elimination"}:
             raise ValueError("objective must be 'asset' or 'elimination'")
+        if self.reward_mode not in {
+            "terminal_only",
+            "strict_potential",
+            "heuristic_delta",
+        }:
+            raise ValueError(
+                "reward_mode must be terminal_only, strict_potential or heuristic_delta"
+            )
+        if not 0.0 < self.discount_gamma <= 1.0:
+            raise ValueError("discount_gamma must lie in (0, 1]")
         if self.shaping_scale < 0 or self.approach_weight < 0:
             raise ValueError("shaping_scale and approach_weight must be non-negative")
         if not 0.0 <= self.spawn_jitter <= 3.0:
@@ -157,16 +169,15 @@ def make_smaclite_ad_map(config: SMACliteADConfig) -> "MapInfo":
 
 
 class SMACliteStockAdapter:
-    """Non-mutating tensor adapter for an official fixed stock scenario.
+    """Non-mutating, lossless entity parser for an official stock scenario.
 
-    The official flat per-agent observation is represented as one observation
-    entity and the official flat global state as one state entity.  This is a
-    deliberately lossless compatibility representation: it lets the shared
-    VDN/QMIX/MAPPO runner establish stock baselines without claiming that the
-    stock vector has an entity decomposition.
+    Enemy blocks are keyed by upstream ``id_in_faction``; ally blocks are
+    expanded back from upstream's self-omitting compact order.  Movement and
+    own-unit fields remain in ``self_obs``.  Thus no environment, reward or
+    action semantics change, while target action slots have an explicit entity
+    row suitable for the shared permutation-equivariant scorer.
     """
 
-    SELF_DIM = 1
     TASK_DIM = 1
 
     def __init__(
@@ -188,8 +199,24 @@ class SMACliteStockAdapter:
         self.n_agents = int(self.unwrapped.n_agents)
         self.episode_limit = int(episode_limit)
         self.episode_steps = 0
-        self.ENTITY_DIM = int(self.unwrapped.obs_size)
-        self.STATE_ENTITY_DIM = int(self.unwrapped.state_size)
+        self._enemy_feature_dim = int(self.unwrapped.enemy_feat_size)
+        self._ally_feature_dim = int(self.unwrapped.ally_feat_size)
+        self._own_feature_dim = int(
+            1
+            + self.unwrapped.map_info.ally_has_shields
+            + self.unwrapped.map_info.num_unit_types
+        )
+        self._entity_payload_dim = max(
+            self._enemy_feature_dim,
+            self._ally_feature_dim,
+            self._own_feature_dim,
+        )
+        # raw block plus [self, same-team, enemy, asset]
+        self.ENTITY_DIM = self._entity_payload_dim + 4
+        self.SELF_DIM = 4 + self._own_feature_dim
+        # Add episode phase to make the feed-forward centralized critic Markov.
+        # The official state vector itself remains lossless in the prefix.
+        self.STATE_ENTITY_DIM = int(self.unwrapped.state_size) + 1
         self.ACTION_DIM = int(self.unwrapped.n_actions)
         self._episode_done = True
 
@@ -206,9 +233,59 @@ class SMACliteStockAdapter:
             [index in self.unwrapped.agents for index in range(self.n_agents)],
             dtype=bool,
         )
-        entity_obs = np.asarray(observations, dtype=np.float32)[:, None, :]
-        entity_mask = alive[:, None]
-        self_obs = alive.astype(np.float32)[:, None]
+        flat = np.asarray(observations, dtype=np.float32)
+        entity_count = self.n_agents + int(self.unwrapped.n_enemies)
+        entity_obs = np.zeros(
+            (self.n_agents, entity_count, self.ENTITY_DIM), dtype=np.float32
+        )
+        entity_mask = np.zeros((self.n_agents, entity_count), dtype=bool)
+        self_obs = np.zeros((self.n_agents, self.SELF_DIM), dtype=np.float32)
+        enemy_offset = 4
+        ally_offset = enemy_offset + self.unwrapped.n_enemies * self._enemy_feature_dim
+        own_offset = ally_offset + (self.n_agents - 1) * self._ally_feature_dim
+        action_entity_index = np.full(
+            (self.n_agents, self.ACTION_DIM), -1, dtype=np.int64
+        )
+        action_target_type = np.zeros(
+            (self.n_agents, self.ACTION_DIM), dtype=np.int64
+        )
+        for observer_index in range(self.n_agents):
+            if not alive[observer_index]:
+                continue
+            row = flat[observer_index]
+            own_block = row[own_offset : own_offset + self._own_feature_dim]
+            self_obs[observer_index, :4] = row[:4]
+            self_obs[observer_index, 4:] = own_block
+            entity_obs[observer_index, observer_index, : self._own_feature_dim] = own_block
+            entity_obs[observer_index, observer_index, -4:] = (1.0, 1.0, 0.0, 0.0)
+            entity_mask[observer_index, observer_index] = True
+            for ally_index in range(self.n_agents):
+                if ally_index == observer_index:
+                    continue
+                compact_index = ally_index - int(ally_index > observer_index)
+                base = ally_offset + compact_index * self._ally_feature_dim
+                block = row[base : base + self._ally_feature_dim]
+                entity_obs[observer_index, ally_index, : self._ally_feature_dim] = block
+                entity_obs[observer_index, ally_index, -4:] = (0.0, 1.0, 0.0, 0.0)
+                entity_mask[observer_index, ally_index] = bool(block[0] > 0.0)
+            for enemy_index in range(self.unwrapped.n_enemies):
+                base = enemy_offset + enemy_index * self._enemy_feature_dim
+                block = row[base : base + self._enemy_feature_dim]
+                entity_index = self.n_agents + enemy_index
+                entity_obs[observer_index, entity_index, : self._enemy_feature_dim] = block
+                entity_obs[observer_index, entity_index, -4:] = (0.0, 0.0, 1.0, 0.0)
+                entity_mask[observer_index, entity_index] = bool(np.any(block != 0.0))
+            unit = self.unwrapped.agents[observer_index]
+            is_healer = unit.combat_type == CombatType.HEALING
+            target_count = self.n_agents if is_healer else self.unwrapped.n_enemies
+            for target_index in range(target_count):
+                action_index = 6 + target_index
+                if action_index >= self.ACTION_DIM:
+                    break
+                action_entity_index[observer_index, action_index] = (
+                    target_index if is_healer else self.n_agents + target_index
+                )
+                action_target_type[observer_index, action_index] = 2 if is_healer else 1
         task_obs = np.full(
             (self.n_agents, 1),
             1.0 - self.episode_steps / self.episode_limit,
@@ -216,7 +293,15 @@ class SMACliteStockAdapter:
         )
         task_obs[~alive] = 0.0
         available = np.asarray(self.unwrapped.get_avail_actions(), dtype=bool)
-        state = np.asarray(self.unwrapped.get_state(), dtype=np.float32)[None, :]
+        remaining_horizon = max(
+            0.0, 1.0 - self.episode_steps / self.episode_limit
+        )
+        state = np.concatenate(
+            [
+                np.asarray(self.unwrapped.get_state(), dtype=np.float32),
+                np.asarray([remaining_horizon], dtype=np.float32),
+            ]
+        )[None, :]
         return {
             "entity_obs": entity_obs,
             "entity_mask": entity_mask,
@@ -224,6 +309,8 @@ class SMACliteStockAdapter:
             "task_obs": task_obs,
             "agent_mask": alive,
             "avail_actions": available,
+            "action_entity_index": action_entity_index,
+            "action_target_type": action_target_type,
             "state_entities": state,
             "state_mask": np.ones(1, dtype=bool),
         }
@@ -257,7 +344,7 @@ class SMACliteStockAdapter:
             "environment_id": self.environment_id,
             "episode_steps": self.episode_steps,
             "upstream_commit": UPSTREAM_COMMIT,
-            "adapter": "lossless_flat_vector_to_single_entity",
+            "adapter": "lossless_stock_blocks_to_explicit_target_entities_v2",
         }
 
     def close(self) -> None:
@@ -281,8 +368,8 @@ class SMACliteADEnv(SMACliteEnv if _SMACLITE_IMPORT_ERROR is None else object):
 
     ENTITY_DIM = 13
     SELF_DIM = 12
-    TASK_DIM = 8
-    STATE_ENTITY_DIM = 11
+    TASK_DIM = 9
+    STATE_ENTITY_DIM = 12
 
     def __init__(
         self,
@@ -293,6 +380,8 @@ class SMACliteADEnv(SMACliteEnv if _SMACLITE_IMPORT_ERROR is None else object):
         max_blue_agents: int = 8,
         episode_limit: int = 150,
         objective: str = "asset",
+        reward_mode: str = "strict_potential",
+        discount_gamma: float = 0.99,
         shaping_scale: float = 0.10,
         approach_weight: float = 0.0,
         spawn_jitter: float = 0.0,
@@ -307,6 +396,8 @@ class SMACliteADEnv(SMACliteEnv if _SMACLITE_IMPORT_ERROR is None else object):
             max_blue_agents=max_blue_agents,
             episode_limit=episode_limit,
             objective=objective,
+            reward_mode=reward_mode,
+            discount_gamma=discount_gamma,
             shaping_scale=shaping_scale,
             approach_weight=approach_weight,
             spawn_jitter=spawn_jitter,
@@ -647,6 +738,58 @@ class SMACliteADEnv(SMACliteEnv if _SMACLITE_IMPORT_ERROR is None else object):
         diagonal = float(np.hypot(self.map_info.width, self.map_info.height))
         return min(distances, default=diagonal) / diagonal
 
+    def _shaping_potential(
+        self,
+        red_fraction: float,
+        blue_fraction: float,
+        asset_fraction: float,
+        approach_fraction: float,
+    ) -> float:
+        """Return the Red potential used by the registered shaping contract.
+
+        Higher potential means a state is more favourable to Red.  Raw feature
+        fractions are kept explicit so the strict-potential identity can be
+        audited without depending on mutable simulator objects.
+        """
+
+        return float(
+            self.config.shaping_scale
+            * (
+                -asset_fraction
+                - 0.25 * blue_fraction
+                + 0.25 * red_fraction
+                - self.config.approach_weight * approach_fraction
+            )
+        )
+
+    def _shaping_reward(
+        self,
+        before: Tuple[float, float, float, float],
+        after: Tuple[float, float, float, float],
+        episode_done: bool,
+    ) -> Tuple[float, float, float]:
+        """Return shaping reward and the before/after potentials.
+
+        ``strict_potential`` implements ``gamma * Phi(s') - Phi(s)`` and sets
+        the absorbing terminal potential to zero.  Consequently the discounted
+        shaped return differs from the terminal-only return by the constant
+        ``-Phi(s_0)`` and cannot change the optimal policy.  ``heuristic_delta``
+        preserves the pre-v4 engineering reward solely as an explicit ablation.
+        """
+
+        before_phi = self._shaping_potential(*before)
+        actual_after_phi = self._shaping_potential(*after)
+        if self.config.reward_mode == "terminal_only":
+            return 0.0, before_phi, 0.0 if episode_done else actual_after_phi
+        if self.config.reward_mode == "strict_potential":
+            after_phi = 0.0 if episode_done else actual_after_phi
+            reward = self.config.discount_gamma * after_phi - before_phi
+            return float(reward), before_phi, after_phi
+        # Legacy gamma=1 delta.  It is intentionally not described as
+        # policy-invariant when learners use gamma < 1.
+        reward = actual_after_phi - before_phi
+        return float(reward), before_phi, actual_after_phi
+
     def step(
         self,
         actions: Union[Mapping[str, Sequence[int]], Sequence[int]],
@@ -707,15 +850,24 @@ class SMACliteADEnv(SMACliteEnv if _SMACLITE_IMPORT_ERROR is None else object):
 
         after_red, after_blue, after_asset = self._fractions()
         after_approach = self._approach_fraction()
-        dense_red = self.config.shaping_scale * (
-            (before_asset - after_asset)
-            + 0.25 * (before_blue - after_blue)
-            - 0.25 * (before_red - after_red)
-            + self.config.approach_weight * (before_approach - after_approach)
+        shaping_red, potential_before, potential_after = self._shaping_reward(
+            (before_red, before_blue, before_asset, before_approach),
+            (after_red, after_blue, after_asset, after_approach),
+            self._episode_done,
         )
-        red_reward = dense_red + (float(outcome_red) if self._episode_done else 0.0)
+        terminal_red = float(outcome_red) if self._episode_done else 0.0
+        red_reward = shaping_red + terminal_red
         rewards = {"Red": float(red_reward), "Blue": float(-red_reward)}
-        info = self._info(outcome_red=outcome_red, termination_reason=reason)
+        info = self._info(
+            outcome_red=outcome_red,
+            termination_reason=reason,
+            reward_components={
+                "terminal_red": terminal_red,
+                "shaping_red": float(shaping_red),
+                "potential_before": float(potential_before),
+                "potential_after": float(potential_after),
+            },
+        )
         return self._observe_both(), rewards, terminated, truncated, info
 
     def _all_entity_slots(self) -> Sequence[Optional[object]]:
@@ -795,6 +947,9 @@ class SMACliteADEnv(SMACliteEnv if _SMACLITE_IMPORT_ERROR is None else object):
             asset_alive = float(self.asset_alive)
         delta = destination - unit.pos
         diagonal = float(np.hypot(self.map_info.width, self.map_info.height))
+        remaining_horizon = max(
+            0.0, 1.0 - self.episode_steps / self.config.episode_limit
+        )
         return np.asarray(
             [
                 delta[0] / self.map_info.width,
@@ -805,6 +960,7 @@ class SMACliteADEnv(SMACliteEnv if _SMACLITE_IMPORT_ERROR is None else object):
                 self.config.red_agents / self.config.max_red_agents,
                 self.config.blue_agents / self.config.max_blue_agents,
                 1.0 if side == "Red" else -1.0,
+                remaining_horizon,
             ],
             dtype=np.float32,
         )
@@ -813,6 +969,9 @@ class SMACliteADEnv(SMACliteEnv if _SMACLITE_IMPORT_ERROR is None else object):
         is_red = entity in self._red_slots
         is_blue = entity in self._blue_slots
         is_asset = entity is self._asset
+        remaining_horizon = max(
+            0.0, 1.0 - self.episode_steps / self.config.episode_limit
+        )
         return np.asarray(
             [
                 entity.pos[0] / self.map_info.width,
@@ -826,6 +985,7 @@ class SMACliteADEnv(SMACliteEnv if _SMACLITE_IMPORT_ERROR is None else object):
                 float(is_red),
                 float(is_blue),
                 float(is_asset),
+                remaining_horizon,
             ],
             dtype=np.float32,
         )
@@ -844,6 +1004,12 @@ class SMACliteADEnv(SMACliteEnv if _SMACLITE_IMPORT_ERROR is None else object):
         task_obs = np.zeros((max_agents, self.TASK_DIM), dtype=np.float32)
         agent_mask = np.zeros(max_agents, dtype=bool)
         avail_actions = np.zeros((max_agents, self.action_dim), dtype=bool)
+        action_entity_index = np.full(
+            (max_agents, self.action_dim), -1, dtype=np.int64
+        )
+        action_target_type = np.zeros(
+            (max_agents, self.action_dim), dtype=np.int64
+        )
         avail_actions[:, 0] = True
         for agent_index, observer in enumerate(controlled):
             if not self._alive(observer):
@@ -852,6 +1018,24 @@ class SMACliteADEnv(SMACliteEnv if _SMACLITE_IMPORT_ERROR is None else object):
             self_obs[agent_index] = self._self_features(observer, side)
             task_obs[agent_index] = self._task_features(observer, side)
             avail_actions[agent_index] = self._available_actions_for(observer, side)
+            if side == "Red":
+                for target_index in range(self.config.max_blue_agents):
+                    action = 6 + target_index
+                    action_entity_index[agent_index, action] = (
+                        self.config.max_red_agents + target_index
+                    )
+                    action_target_type[agent_index, action] = 1
+                if self._asset is not None:
+                    assert self.asset_action_id is not None
+                    action_entity_index[agent_index, self.asset_action_id] = (
+                        self.config.max_red_agents + self.config.max_blue_agents
+                    )
+                    action_target_type[agent_index, self.asset_action_id] = 3
+            else:
+                for target_index in range(self.config.max_red_agents):
+                    action = 6 + target_index
+                    action_entity_index[agent_index, action] = target_index
+                    action_target_type[agent_index, action] = 1
             for entity_index, entity in enumerate(entity_slots):
                 if entity is None or not self._alive(entity):
                     continue
@@ -880,6 +1064,8 @@ class SMACliteADEnv(SMACliteEnv if _SMACLITE_IMPORT_ERROR is None else object):
             "task_obs": task_obs,
             "agent_mask": agent_mask,
             "avail_actions": avail_actions,
+            "action_entity_index": action_entity_index,
+            "action_target_type": action_target_type,
             "state_entities": state_entities,
             "state_mask": state_mask,
         }
@@ -888,7 +1074,10 @@ class SMACliteADEnv(SMACliteEnv if _SMACLITE_IMPORT_ERROR is None else object):
         return {side: self.observe(side) for side in ("Red", "Blue")}
 
     def _info(
-        self, outcome_red: int, termination_reason: Optional[str]
+        self,
+        outcome_red: int,
+        termination_reason: Optional[str],
+        reward_components: Optional[Mapping[str, float]] = None,
     ) -> Dict[str, object]:
         red_fraction, blue_fraction, asset_fraction = self._fractions()
         return {
@@ -903,12 +1092,18 @@ class SMACliteADEnv(SMACliteEnv if _SMACLITE_IMPORT_ERROR is None else object):
             "red_health_fraction": float(red_fraction),
             "blue_health_fraction": float(blue_fraction),
             "asset_health_fraction": float(asset_fraction),
+            "reward_mode": self.config.reward_mode,
+            "discount_gamma": float(self.config.discount_gamma),
+            "shaping_scale": float(self.config.shaping_scale),
             "approach_weight": float(self.config.approach_weight),
             "spawn_jitter": float(self.config.spawn_jitter),
             "randomization_config_sha256": self._randomization_config_hash,
             "layout_hash": self._layout_metadata.get("layout_sha256"),
             "layout": dict(self._layout_metadata),
             "upstream_commit": UPSTREAM_COMMIT,
+            "reward_components": (
+                None if reward_components is None else dict(reward_components)
+            ),
         }
 
 
@@ -937,6 +1132,20 @@ def tensorize_smaclite_ad_observation(
         avail_actions=torch.as_tensor(
             observation["avail_actions"], dtype=torch.bool, device=device
         ).unsqueeze(0),
+        action_entity_index=(
+            torch.as_tensor(
+                observation["action_entity_index"], dtype=torch.long, device=device
+            ).unsqueeze(0)
+            if "action_entity_index" in observation
+            else None
+        ),
+        action_target_type=(
+            torch.as_tensor(
+                observation["action_target_type"], dtype=torch.long, device=device
+            ).unsqueeze(0)
+            if "action_target_type" in observation
+            else None
+        ),
     )
     state = GlobalState(
         entities=torch.as_tensor(
@@ -961,18 +1170,26 @@ def tensorize_smaclite_stock_observation(
 
 
 def stock_scenario_fingerprint() -> Dict[str, object]:
-    """Hash installed stock scenario JSON files for provenance checks."""
+    """Hash installed stock scenarios with the registered manifest algorithm.
+
+    The aggregate intentionally matches ``stock_runtime_probe.py`` and the
+    stock reproduction manifest: for every lexicographically sorted JSON file,
+    hash ``filename + NUL + raw file bytes + LF``.  Keeping one aggregate
+    definition prevents the stock-source and EPyMARL evidence paths from
+    reporting different hashes for the same immutable map set.
+    """
 
     _require_smaclite()
     root = Path(smaclite.__file__).resolve().parent / "env" / "maps" / "smaclite_maps"
     files: Dict[str, str] = {}
     combined = hashlib.sha256()
     for path in sorted(root.glob("*.json")):
-        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        raw = path.read_bytes()
+        digest = hashlib.sha256(raw).hexdigest()
         files[path.name] = digest
         combined.update(path.name.encode("utf-8"))
         combined.update(b"\0")
-        combined.update(digest.encode("ascii"))
+        combined.update(raw)
         combined.update(b"\n")
     if not files:
         raise FileNotFoundError(
@@ -988,6 +1205,8 @@ def stock_scenario_fingerprint() -> Dict[str, object]:
         "commit": UPSTREAM_COMMIT,
         "distribution_version": package_version,
         "module_path": str(Path(smaclite.__file__).resolve()),
+        "file_count": len(files),
+        "combined_hash_algorithm": "sorted_filename_nul_raw_bytes_lf_sha256",
         "combined_sha256": combined.hexdigest(),
         "files": files,
     }

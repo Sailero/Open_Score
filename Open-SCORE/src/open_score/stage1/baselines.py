@@ -16,7 +16,11 @@ from torch.nn import functional as F
 
 from open_score.contracts import GlobalState, TeamObservation
 from open_score.nn import MaskedSetEncoder
-from open_score.stage1.entity_qmix import VariableEntityAgent
+from open_score.stage1.entity_qmix import (
+    PermutationEquivariantActionHead,
+    SingleAgentQueryAttentionEncoder,
+    VariableEntityAgent,
+)
 from open_score.stage1.replay import PaddedEpisodeBatch
 
 
@@ -38,16 +42,22 @@ class VariableScaleVDN(nn.Module):
         state_entity_dim: int,
         action_dim: int,
         agent_hidden_dim: int = 128,
+        encoder_kind: str = "deepset",
+        attention_heads: int = 4,
         **_: object,
     ):
         super().__init__()
         del state_entity_dim
+        self.encoder_kind = encoder_kind
+        self.attention_heads = int(attention_heads)
         self.agent = VariableEntityAgent(
             entity_dim,
             self_dim,
             task_dim,
             action_dim,
             hidden_dim=agent_hidden_dim,
+            encoder_kind=encoder_kind,
+            attention_heads=attention_heads,
         )
 
     def agent_q(
@@ -97,16 +107,32 @@ class VariableEntityActor(nn.Module):
         task_dim: int,
         action_dim: int,
         hidden_dim: int = 128,
+        encoder_kind: str = "deepset",
+        attention_heads: int = 4,
     ):
         super().__init__()
+        if encoder_kind not in {"deepset", "saqa"}:
+            raise ValueError("encoder_kind must be 'deepset' or 'saqa'")
         self.hidden_dim = hidden_dim
-        self.entity_encoder = MaskedSetEncoder(entity_dim, hidden_dim, hidden_dim)
+        self.encoder_kind = encoder_kind
+        self.attention_heads = int(attention_heads)
+        if encoder_kind == "deepset":
+            self.entity_encoder: nn.Module = MaskedSetEncoder(
+                entity_dim, hidden_dim, hidden_dim
+            )
+        else:
+            self.entity_encoder = SingleAgentQueryAttentionEncoder(
+                entity_dim,
+                self_dim + task_dim,
+                hidden_dim,
+                self.attention_heads,
+            )
         self.input_layer = nn.Sequential(
             nn.Linear(hidden_dim + self_dim + task_dim, hidden_dim),
             nn.Tanh(),
         )
         self.rnn = nn.GRUCell(hidden_dim, hidden_dim)
-        self.policy_head = nn.Linear(hidden_dim, action_dim)
+        self.policy_head = PermutationEquivariantActionHead(hidden_dim, action_dim)
 
     def initial_hidden(self, batch: int, agents: int, device: torch.device) -> Tensor:
         return torch.zeros(batch, agents, self.hidden_dim, device=device)
@@ -120,9 +146,24 @@ class VariableEntityActor(nn.Module):
             batch * agents, entities, entity_dim
         )
         flat_mask = observation.entity_mask.reshape(batch * agents, entities)
-        context = self.entity_encoder(flat_entities, flat_mask).reshape(
-            batch, agents, -1
-        )
+        if self.encoder_kind == "deepset":
+            entity_embeddings = self.entity_encoder.element(flat_entities).reshape(
+                batch, agents, entities, -1
+            )
+            context = self.entity_encoder(flat_entities, flat_mask).reshape(
+                batch, agents, -1
+            )
+        else:
+            flat_query = torch.cat(
+                [observation.self_obs, observation.task_obs], dim=-1
+            ).reshape(batch * agents, -1)
+            flat_context, flat_embeddings = self.entity_encoder(
+                flat_entities, flat_mask, flat_query
+            )
+            context = flat_context.reshape(batch, agents, -1)
+            entity_embeddings = flat_embeddings.reshape(
+                batch, agents, entities, -1
+            )
         actor_input = self.input_layer(
             torch.cat(
                 [context, observation.self_obs, observation.task_obs], dim=-1
@@ -134,7 +175,12 @@ class VariableEntityActor(nn.Module):
             actor_input.reshape(batch * agents, -1),
             hidden.reshape(batch * agents, -1),
         ).reshape(batch, agents, -1)
-        logits = self.policy_head(next_hidden).masked_fill(
+        logits = self.policy_head(
+            next_hidden,
+            entity_embeddings,
+            observation.action_entity_index,
+            observation.action_target_type,
+        ).masked_fill(
             ~observation.avail_actions.bool(), -1e9
         )
         active = observation.agent_mask.unsqueeze(-1).to(next_hidden.dtype)
@@ -174,14 +220,20 @@ class VariableScaleMAPPO(nn.Module):
         action_dim: int,
         actor_hidden_dim: int = 128,
         critic_hidden_dim: int = 128,
+        encoder_kind: str = "deepset",
+        attention_heads: int = 4,
     ):
         super().__init__()
+        self.encoder_kind = encoder_kind
+        self.attention_heads = int(attention_heads)
         self.actor = VariableEntityActor(
             entity_dim,
             self_dim,
             task_dim,
             action_dim,
             hidden_dim=actor_hidden_dim,
+            encoder_kind=encoder_kind,
+            attention_heads=attention_heads,
         )
         self.critic = CentralStateValue(state_entity_dim, critic_hidden_dim)
 
@@ -203,8 +255,86 @@ class MAPPOMetrics:
     approximate_kl: float
     clip_fraction: float
     grad_norm: float
+    actor_grad_norm: float
+    critic_grad_norm: float
     learner_step: int
     learning_signal_by_scale: Mapping[Tuple[int, int], float]
+
+
+class RunningValueNormalizer:
+    """Running scalar return normalizer used by the MAPPO value objective.
+
+    Statistics are updated once per on-policy batch (not once per PPO epoch),
+    and padded timesteps are excluded.  Keeping this state outside the model
+    makes the checkpoint contract explicit and prevents resumed critics from
+    silently interpreting normalized values under fresh statistics.
+    """
+
+    def __init__(self, device: torch.device, epsilon: float = 1e-5):
+        self.mean = torch.zeros((), dtype=torch.float64, device=device)
+        self.count = torch.as_tensor(epsilon, dtype=torch.float64, device=device)
+        self.second_moment = self.count.clone()
+        self.epsilon = float(epsilon)
+
+    @property
+    def variance(self) -> Tensor:
+        return (self.second_moment / self.count).clamp_min(self.epsilon)
+
+    def update(self, values: Tensor, mask: Tensor) -> None:
+        selected = values.detach()[mask.bool()].to(dtype=torch.float64)
+        if selected.numel() == 0:
+            return
+        batch_count = torch.as_tensor(
+            selected.numel(), dtype=torch.float64, device=selected.device
+        )
+        batch_mean = selected.mean()
+        batch_second_moment = ((selected - batch_mean).square()).sum()
+        delta = batch_mean - self.mean
+        total_count = self.count + batch_count
+        self.second_moment = (
+            self.second_moment
+            + batch_second_moment
+            + delta.square() * self.count * batch_count / total_count
+        )
+        self.mean = self.mean + delta * batch_count / total_count
+        self.count = total_count
+
+    def normalize(self, values: Tensor) -> Tensor:
+        mean = self.mean.to(device=values.device, dtype=values.dtype)
+        std = self.variance.sqrt().to(device=values.device, dtype=values.dtype)
+        return (values - mean) / std
+
+    def denormalize(self, values: Tensor) -> Tensor:
+        mean = self.mean.to(device=values.device, dtype=values.dtype)
+        std = self.variance.sqrt().to(device=values.device, dtype=values.dtype)
+        return values * std + mean
+
+    def state_dict(self) -> Dict[str, object]:
+        return {
+            "mean": self.mean.detach().cpu(),
+            "second_moment": self.second_moment.detach().cpu(),
+            "count": self.count.detach().cpu(),
+            "epsilon": self.epsilon,
+        }
+
+    def load_state_dict(self, state: Mapping[str, object]) -> None:
+        required = {"mean", "second_moment", "count", "epsilon"}
+        if set(state) != required:
+            raise ValueError(
+                "invalid MAPPO value-normalizer state: expected "
+                f"{sorted(required)}, found {sorted(state)}"
+            )
+        device = self.mean.device
+        self.mean = torch.as_tensor(state["mean"], dtype=torch.float64, device=device)
+        self.second_moment = torch.as_tensor(
+            state["second_moment"], dtype=torch.float64, device=device
+        )
+        self.count = torch.as_tensor(
+            state["count"], dtype=torch.float64, device=device
+        )
+        self.epsilon = float(state["epsilon"])
+        if self.count <= 0 or self.epsilon <= 0:
+            raise ValueError("invalid MAPPO value-normalizer count/epsilon")
 
 
 class SequenceMAPPOLearner:
@@ -232,7 +362,13 @@ class SequenceMAPPOLearner:
         if clip_ratio <= 0.0 or epochs < 1:
             raise ValueError("clip_ratio and epochs must be positive")
         self.model = model
-        self.optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+        self.actor_optimizer = torch.optim.Adam(
+            model.actor.parameters(), lr=learning_rate
+        )
+        self.critic_optimizer = torch.optim.Adam(
+            model.critic.parameters(), lr=learning_rate
+        )
+        self.value_normalizer = RunningValueNormalizer(next(model.parameters()).device)
         self.gamma = gamma
         self.gae_lambda = gae_lambda
         self.clip_ratio = clip_ratio
@@ -284,6 +420,17 @@ class SequenceMAPPOLearner:
         returns = advantages + values[:, :-1]
         return advantages, returns
 
+    def _update_value_scale(
+        self, old_values_raw: Tensor, returns: Tensor, mask: Tensor
+    ) -> Tuple[Tensor, Tensor]:
+        """Put old predictions and targets on the same newly updated scale."""
+
+        self.value_normalizer.update(returns, mask)
+        return (
+            self.value_normalizer.normalize(old_values_raw),
+            self.value_normalizer.normalize(returns),
+        )
+
     def train_batch(self, batch: PaddedEpisodeBatch) -> MAPPOMetrics:
         self.model.train()
         with torch.no_grad():
@@ -293,7 +440,8 @@ class SequenceMAPPOLearner:
                 -1, batch.actions.unsqueeze(-1)
             ).squeeze(-1)
             old_values = self._unroll_value(self.model, batch)
-            advantages, returns = self._gae(old_values, batch)
+            old_values_raw = self.value_normalizer.denormalize(old_values)
+            advantages, returns = self._gae(old_values_raw, batch)
             valid_time = batch.filled.bool()
             valid_advantages = advantages[valid_time]
             advantage_mean = valid_advantages.mean()
@@ -312,13 +460,16 @@ class SequenceMAPPOLearner:
                 scale: sum(values) / len(values)
                 for scale, values in grouped_signal.items()
             }
+            old_values_on_updated_scale, normalized_returns = (
+                self._update_value_scale(old_values_raw, returns, batch.filled)
+            )
 
         actor_mask = (
             batch.agent_mask[:, :-1].to(batch.rewards.dtype)
             * batch.filled.unsqueeze(-1)
         )
         actor_normalizer = actor_mask.sum().clamp_min(1.0)
-        value_normalizer = batch.filled.sum().clamp_min(1.0)
+        value_loss_normalizer = batch.filled.sum().clamp_min(1.0)
         last = None
         for _ in range(self.epochs):
             logits = self._unroll_actor(self.model, batch)[:, :-1]
@@ -341,27 +492,31 @@ class SequenceMAPPOLearner:
             entropy = (entropy_per_agent * actor_mask).sum() / actor_normalizer
 
             values = self._unroll_value(self.model, batch)[:, :-1]
-            value_delta = values - old_values[:, :-1]
-            clipped_values = old_values[:, :-1] + value_delta.clamp(
+            value_delta = values - old_values_on_updated_scale[:, :-1]
+            clipped_values = old_values_on_updated_scale[:, :-1] + value_delta.clamp(
                 -self.clip_ratio, self.clip_ratio
             )
-            value_error = (values - returns).square()
-            clipped_value_error = (clipped_values - returns).square()
+            value_error = (values - normalized_returns).square()
+            clipped_value_error = (clipped_values - normalized_returns).square()
             value_loss = 0.5 * (
                 torch.maximum(value_error, clipped_value_error) * batch.filled
-            ).sum() / value_normalizer
+            ).sum() / value_loss_normalizer
 
-            loss = (
-                policy_loss
-                + self.value_coefficient * value_loss
-                - self.entropy_coefficient * entropy
+            actor_loss = policy_loss - self.entropy_coefficient * entropy
+            critic_loss = self.value_coefficient * value_loss
+            loss = actor_loss + critic_loss
+            self.actor_optimizer.zero_grad(set_to_none=True)
+            actor_loss.backward()
+            actor_grad_norm = torch.nn.utils.clip_grad_norm_(
+                self.model.actor.parameters(), self.max_grad_norm
             )
-            self.optimizer.zero_grad(set_to_none=True)
-            loss.backward()
-            grad_norm = torch.nn.utils.clip_grad_norm_(
-                self.model.parameters(), self.max_grad_norm
+            self.actor_optimizer.step()
+            self.critic_optimizer.zero_grad(set_to_none=True)
+            critic_loss.backward()
+            critic_grad_norm = torch.nn.utils.clip_grad_norm_(
+                self.model.critic.parameters(), self.max_grad_norm
             )
-            self.optimizer.step()
+            self.critic_optimizer.step()
 
             with torch.no_grad():
                 approximate_kl = (
@@ -378,7 +533,8 @@ class SequenceMAPPOLearner:
                 entropy,
                 approximate_kl,
                 clip_fraction,
-                grad_norm,
+                actor_grad_norm,
+                critic_grad_norm,
             )
 
         self.learner_step += 1
@@ -390,7 +546,13 @@ class SequenceMAPPOLearner:
             entropy=float(last[3].detach().cpu()),
             approximate_kl=float(last[4].detach().cpu()),
             clip_fraction=float(last[5].detach().cpu()),
-            grad_norm=float(torch.as_tensor(last[6]).detach().cpu()),
+            grad_norm=float(
+                torch.maximum(torch.as_tensor(last[6]), torch.as_tensor(last[7]))
+                .detach()
+                .cpu()
+            ),
+            actor_grad_norm=float(torch.as_tensor(last[6]).detach().cpu()),
+            critic_grad_norm=float(torch.as_tensor(last[7]).detach().cpu()),
             learner_step=self.learner_step,
             learning_signal_by_scale=learning_signal_by_scale,
         )
@@ -401,8 +563,13 @@ class SequenceMAPPOLearner:
         path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(
             {
+                "checkpoint_contract": (
+                    "sequence-mappo-v2-separate-optimizers-running-valuenorm"
+                ),
                 "model": self.model.state_dict(),
-                "optimizer": self.optimizer.state_dict(),
+                "actor_optimizer": self.actor_optimizer.state_dict(),
+                "critic_optimizer": self.critic_optimizer.state_dict(),
+                "value_normalizer": self.value_normalizer.state_dict(),
                 "learner_step": self.learner_step,
                 "extra": dict(extra or {}),
             },
@@ -413,8 +580,19 @@ class SequenceMAPPOLearner:
         self, path: Path, map_location: Optional[torch.device] = None
     ) -> Mapping[str, object]:
         checkpoint = torch.load(path, map_location=map_location or self.device)
+        expected_contract = (
+            "sequence-mappo-v2-separate-optimizers-running-valuenorm"
+        )
+        if checkpoint.get("checkpoint_contract") != expected_contract:
+            raise ValueError(
+                "incompatible MAPPO checkpoint contract; legacy combined-optimizer "
+                "checkpoints cannot safely restore independent optimizer and "
+                "value-normalizer state"
+            )
         self.model.load_state_dict(checkpoint["model"])
-        self.optimizer.load_state_dict(checkpoint["optimizer"])
+        self.actor_optimizer.load_state_dict(checkpoint["actor_optimizer"])
+        self.critic_optimizer.load_state_dict(checkpoint["critic_optimizer"])
+        self.value_normalizer.load_state_dict(checkpoint["value_normalizer"])
         self.learner_step = int(checkpoint["learner_step"])
         return checkpoint.get("extra", {})
 

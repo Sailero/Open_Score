@@ -1,7 +1,9 @@
 """Two-sided HAD adapter for the one-target, small-scale Stage-1 game."""
 
+import copy
+from dataclasses import dataclass
 from itertools import product
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 import torch
@@ -29,6 +31,23 @@ def _make_acceleration_primitives() -> np.ndarray:
 ACCELERATION_PRIMITIVES = _make_acceleration_primitives()
 
 
+@dataclass(frozen=True)
+class HADSnapshot:
+    """Complete in-memory branch point for counterfactual continuation rollouts.
+
+    The public observation is intentionally insufficient for restoring HAD: it
+    omits entity IDs, controller-side engine attributes and random-generator
+    state.  Stage 2 therefore branches from this explicit engine snapshot while
+    serialising only the canonical command-time state in its dataset.
+    """
+
+    step_count: int
+    entity_states: Tuple[Mapping[str, object], ...]
+    environment_rng_state: Mapping[str, object]
+    adapter_rng_state: Mapping[str, object]
+    numpy_random_state: Tuple[object, ...]
+
+
 class HADStage1Adapter:
     """Expose HAD as a two-team zero-sum game with one random target.
 
@@ -40,8 +59,12 @@ class HADStage1Adapter:
 
     ENTITY_DIM = 12
     SELF_DIM = 10
-    TASK_DIM = 6
-    STATE_ENTITY_DIM = 11
+    # Episode phase is part of the Markov state.  The actor receives it in the
+    # task vector and the centralized mixer/critic receives it on every real
+    # state entity.  Repeating one global scalar is intentional: masked mean /
+    # max aggregation preserves it for every roster size.
+    TASK_DIM = 7
+    STATE_ENTITY_DIM = 12
     ACTION_DIM = len(ACCELERATION_PRIMITIVES)
 
     def __init__(
@@ -115,6 +138,51 @@ class HADStage1Adapter:
         # asset-defence task. `evaluate` remains accepted for API compatibility.
         self.env.reset(evaluate=True, seed=seed)
         self.step_count = 0
+        return {side: self.observe(side) for side in ("Red", "Blue")}
+
+    def snapshot(self) -> HADSnapshot:
+        """Capture all mutable physical and RNG state needed for an exact fork."""
+
+        return HADSnapshot(
+            step_count=int(self.step_count),
+            entity_states=tuple(copy.deepcopy(entity.__dict__) for entity in self.env.world),
+            environment_rng_state=copy.deepcopy(self.env.np_random.bit_generator.state),
+            adapter_rng_state=copy.deepcopy(self.rng.bit_generator.state),
+            numpy_random_state=copy.deepcopy(np.random.get_state()),
+        )
+
+    def restore(
+        self,
+        snapshot: HADSnapshot,
+        *,
+        continuation_seed: Optional[int] = None,
+    ) -> Dict[str, Dict[str, np.ndarray]]:
+        """Restore a branch point and optionally seed all continuation RNGs.
+
+        A continuation seed deliberately replaces the captured RNG state.  The
+        same seed can then be used for every Red candidate in a root/threat
+        block, which makes environment and controller noise common random
+        numbers rather than merely giving the rows matching metadata.
+        """
+
+        if len(snapshot.entity_states) != len(self.env.world):
+            raise ValueError("HAD snapshot roster differs from adapter roster")
+        for entity, state in zip(self.env.world, snapshot.entity_states):
+            entity.__dict__.clear()
+            entity.__dict__.update(copy.deepcopy(dict(state)))
+        self.step_count = int(snapshot.step_count)
+        self.env.update_alive_agents()
+        if continuation_seed is None:
+            self.env.np_random.bit_generator.state = copy.deepcopy(
+                snapshot.environment_rng_state
+            )
+            self.rng.bit_generator.state = copy.deepcopy(snapshot.adapter_rng_state)
+            np.random.set_state(copy.deepcopy(snapshot.numpy_random_state))
+        else:
+            seed = int(continuation_seed)
+            self.env.np_random = np.random.default_rng(seed)
+            self.rng = np.random.default_rng(seed ^ 0x5A17D0A1)
+            np.random.seed(seed % (2**32))
         return {side: self.observe(side) for side in ("Red", "Blue")}
 
     @staticmethod
@@ -248,9 +316,15 @@ class HADStage1Adapter:
         span = np.asarray([high - low for low, high in AeroPoint], dtype=np.float32)
         relative = (np.asarray(target.position) - np.asarray(agent.position)) / span
         role = 1.0 if side == "Red" else -1.0
+        remaining_horizon = max(0.0, 1.0 - self.step_count / self.max_steps)
         return np.asarray(
             list(relative)
-            + [float(target.Health) / initial_health, float(target.Health > 0), role],
+            + [
+                float(target.Health) / initial_health,
+                float(target.Health > 0),
+                role,
+                remaining_horizon,
+            ],
             dtype=np.float32,
         )
 
@@ -263,11 +337,13 @@ class HADStage1Adapter:
         velocity = np.asarray(entity.velocity) / float(vDomain[1])
         health_scale = initial_health if entity.Color == "Entity" else 1.0
         types = [float(entity.Color == name) for name in ("Red", "Blue", "Entity")]
+        remaining_horizon = max(0.0, 1.0 - self.step_count / self.max_steps)
         return np.asarray(
             list(position)
             + list(velocity)
             + [float(entity.Health) / health_scale, float(entity.Health > 0)]
-            + types,
+            + types
+            + [remaining_horizon],
             dtype=np.float32,
         )
 

@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-score.local/schema/stock-run-record-v1.json",
+  "title": "Open-SCORE stock SMAClite run record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "protocol_id",
+    "profile",
+    "protocol_compliance",
+    "algorithm_label",
+    "algorithm",
+    "map",
+    "seed",
+    "training_steps",
+    "test_episodes",
+    "cpu_threads_per_run",
+    "require_single_core_affinity",
+    "cpu_affinity_mask",
+    "thread_environment",
+    "runtime_cpu_probe",
+    "source_pins",
+    "open_score_git",
+    "manifest_provenance",
+    "launcher_sha256",
+    "runtime_rvo2",
+    "windows_compatibility_overlay",
+    "command",
+    "status"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "protocol_id": {"type": "string", "minLength": 1},
+    "profile": {"type": "string", "minLength": 1},
+    "protocol_compliance": {"enum": ["registered", "override_non_reproduction"]},
+    "algorithm_label": {"type": "string", "pattern": "^EPyMARL-"},
+    "algorithm": {"enum": ["qmix", "vdn", "mappo"]},
+    "map": {"enum": ["2s_vs_1sc", "3s5z", "MMM2"]},
+    "seed": {"type": "integer"},
+    "training_steps": {"type": "integer", "minimum": 1},
+    "test_episodes": {"type": "integer", "minimum": 1},
+    "cpu_threads_per_run": {"type": "integer", "minimum": 1},
+    "require_single_core_affinity": {"type": "boolean"},
+    "cpu_affinity_mask": {"type": ["integer", "null"], "minimum": 1},
+    "cpu_affinity_logical_index": {"type": ["integer", "null"], "minimum": 0},
+    "thread_environment": {
+      "type": "object",
+      "required": [
+        "OMP_NUM_THREADS",
+        "MKL_NUM_THREADS",
+        "OPENBLAS_NUM_THREADS",
+        "NUMEXPR_NUM_THREADS",
+        "VECLIB_MAXIMUM_THREADS"
+      ],
+      "additionalProperties": false
+    },
+    "runtime_cpu_probe": {
+      "type": "object",
+      "required": ["path", "sha256", "scope", "result"]
+    },
+    "source_pins": {"type": "object"},
+    "open_score_git": {
+      "type": "object",
+      "required": ["repository_root", "commit", "dirty", "status_porcelain"],
+      "properties": {
+        "repository_root": {"type": "string", "minLength": 1},
+        "commit": {"type": "string", "pattern": "^[0-9a-fA-F]{40}$"},
+        "dirty": {"type": "boolean"},
+        "status_porcelain": {"type": "array"}
+      }
+    },
+    "manifest_provenance": {
+      "type": "object",
+      "required": ["path", "repository_relative_path", "tracked", "git_blob_object_id", "sha256", "outer_commit"],
+      "properties": {
+        "tracked": {"type": "boolean"},
+        "git_blob_object_id": {"type": ["string", "null"], "pattern": "^[0-9a-fA-F]{40}$"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+        "outer_commit": {"type": "string", "pattern": "^[0-9a-fA-F]{40}$"}
+      }
+    },
+    "launcher_sha256": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+    "runtime_rvo2": {
+      "type": "object",
+      "required": ["backend", "source_commit", "source_checkout_tracked_clean"],
+      "properties": {
+        "backend": {"enum": ["cpp", "numpy"]},
+        "source_commit": {"type": "string", "minLength": 40, "maxLength": 40},
+        "source_checkout_tracked_clean": {"const": true},
+        "binary_path": {"type": ["string", "null"]},
+        "binary_filename": {"type": ["string", "null"]},
+        "binary_sha256": {"type": ["string", "null"]}
+      },
+      "additionalProperties": true
+    },
+    "windows_compatibility_overlay": {
+      "type": "object",
+      "required": ["path", "sha256", "scope", "sacred_capture_mode"]
+    },
+    "command": {"type": "array", "items": {"type": "string"}},
+    "checkpoint_path": {"type": ["string", "null"]},
+    "produced_checkpoint_root": {"type": "string", "minLength": 1},
+    "produced_checkpoint": {
+      "type": "object",
+      "required": ["checkpoint_root", "latest_step", "latest_directory", "file_sha256", "combined_sha256"]
+    },
+    "post_run_source_audit": {
+      "type": "object",
+      "required": ["passed", "outer_commit", "outer_dirty", "failures"],
+      "properties": {
+        "passed": {"const": true},
+        "outer_commit": {"type": "string", "pattern": "^[0-9a-fA-F]{40}$"},
+        "outer_dirty": {"const": false},
+        "failures": {"type": "array", "maxItems": 0}
+      }
+    },
+    "resume_limitations": {"type": "array", "items": {"type": "string"}},
+    "started_at": {"type": ["string", "null"]},
+    "finished_at": {"type": ["string", "null"]},
+    "exit_code": {"type": ["integer", "null"]},
+    "status": {"enum": ["planned", "running", "completed", "failed", "dry_run"]}
+  },
+  "additionalProperties": true
+}

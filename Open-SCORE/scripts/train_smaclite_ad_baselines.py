@@ -1,8 +1,8 @@
 """Real small-budget QMIX/VDN/MAPPO validation on dynamic SMAClite-AD.
 
-This entry point is deliberately separate from the HAD reproduction CLI.  Its
-tracked output is evidence of executable updates and paired short-budget
-evaluation, never a formal convergence claim.
+This entry point is deliberately separate from the HAD reproduction CLI.  The
+defaults are a paired short-budget engineering check; ``--formal-evidence`` is
+accepted only when every registered YAML argument matches exactly.
 """
 
 from __future__ import annotations
@@ -24,6 +24,8 @@ import numpy as np
 import torch
 
 from open_score.envs.smaclite_ad import PROTOCOL_ID, UPSTREAM_COMMIT
+from open_score.formal_contracts import validate_registered_formal_contract
+from open_score.provenance import collect_and_require_git_provenance
 from open_score.stage1.baselines import (
     SequenceMAPPOLearner,
     VariableScaleMAPPO,
@@ -32,6 +34,7 @@ from open_score.stage1.baselines import (
 from open_score.stage1.entity_qmix import VariableScaleQMIX
 from open_score.stage1.learner import SequenceQMIXLearner, linear_epsilon
 from open_score.stage1.replay import EpisodeReplayBuffer, collate_episodes
+from open_score.stage1.transfer import ACTION_TARGET_CONTRACT, transfer_stock_checkpoint
 from open_score.stage1.smaclite_ad_training import (
     Ratio,
     SMACliteADEpisodeRunner,
@@ -42,6 +45,11 @@ from open_score.stage1.smaclite_ad_training import (
     evaluate_smaclite_ad,
     tensor_shape_audit,
 )
+
+
+PROJECT = Path(__file__).resolve().parents[1]
+STOCK_TO_AD_FORMAL_CONFIG = PROJECT / "configs" / "stage1_stock_to_ad_formal.yaml"
+STOCK_TO_AD_FORMAL_PROTOCOL = "stock-to-ad-transfer-v3-saqa-strict-potential"
 
 
 def parse_ratios(value: str) -> List[Ratio]:
@@ -68,26 +76,79 @@ def parse_args() -> argparse.Namespace:
         default=["qmix", "vdn", "mappo"]
     )
     parser.add_argument("--seeds", nargs="+", type=int, default=[20260830])
+    parser.add_argument(
+        "--initializations",
+        nargs="+",
+        choices=("scratch", "stock_transfer"),
+        default=["scratch"],
+        help=(
+            "Run a scratch control, a stock-to-AD fine-tune, or both.  Both "
+            "arms reuse the same training/evaluation seeds."
+        ),
+    )
+    parser.add_argument(
+        "--stock-checkpoint-template",
+        default=None,
+        help=(
+            "Checkpoint path template for stock_transfer; supports {algorithm} "
+            "and {seed}, for example outputs/stock/{algorithm}_seed{seed}.pt."
+        ),
+    )
     parser.add_argument("--ratios", type=parse_ratios, default=parse_ratios("2:1,3:2,5:3"))
     parser.add_argument("--train-side", choices=("Red", "Blue"), default="Red")
     parser.add_argument(
         "--opponent", choices=("idle", "intercept", "rush_asset"), default="idle"
+    )
+    parser.add_argument(
+        "--warmup-opponent",
+        choices=("idle", "intercept", "rush_asset"),
+        default=None,
+        help=(
+            "Optional easier training opponent for the initial curriculum "
+            "fraction; validation and held-out always use --opponent."
+        ),
+    )
+    parser.add_argument("--warmup-fraction", type=float, default=0.25)
+    parser.add_argument(
+        "--clear-replay-on-opponent-transition",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "Clear and refill Q-learning replay when the warm-up opponent is "
+            "replaced by the target opponent."
+        ),
     )
     parser.add_argument("--episodes", type=int, default=45)
     parser.add_argument("--episode-limit", type=int, default=60)
     parser.add_argument("--batch-episodes", type=int, default=3)
     parser.add_argument("--replay-episodes", type=int, default=96)
     parser.add_argument("--updates-per-episode", type=int, default=1)
+    parser.add_argument("--target-update-interval", type=int, default=200)
+    parser.add_argument("--td-lambda", type=float, default=0.6)
     parser.add_argument("--validation-episodes-per-ratio", type=int, default=5)
     parser.add_argument("--heldout-episodes-per-ratio", type=int, default=5)
     parser.add_argument("--eval-every", type=int, default=15)
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--agent-hidden-dim", type=int, default=32)
     parser.add_argument("--critic-hidden-dim", type=int, default=32)
+    parser.add_argument(
+        "--encoder-kind", choices=("deepset", "saqa"), default="deepset"
+    )
+    parser.add_argument("--attention-heads", type=int, default=4)
     parser.add_argument("--ppo-epochs", type=int, default=2)
     parser.add_argument("--epsilon-start", type=float, default=0.90)
     parser.add_argument("--epsilon-finish", type=float, default=0.10)
     parser.add_argument("--epsilon-anneal-steps", type=int, default=2_000)
+    parser.add_argument("--gamma", type=float, default=0.99)
+    parser.add_argument(
+        "--reward-mode",
+        choices=("terminal_only", "strict_potential", "heuristic_delta"),
+        default="strict_potential",
+        help=(
+            "strict_potential is the formal default; heuristic_delta retains "
+            "the legacy engineering reward only for an explicit ablation."
+        ),
+    )
     parser.add_argument("--shaping-scale", type=float, default=0.50)
     parser.add_argument("--approach-weight", type=float, default=1.0)
     parser.add_argument("--spawn-jitter", type=float, default=2.0)
@@ -95,28 +156,60 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-blue-agents", type=int, default=5)
     parser.add_argument("--device", choices=("cpu", "cuda", "auto"), default="cpu")
     parser.add_argument(
-        "--output-dir", type=Path, default=Path("outputs/smaclite_ad_baselines")
+        "--use-cpp-rvo2",
+        action="store_true",
+        help="Use the compiled SMAClite RVO2 backend for every experiment arm.",
     )
-    parser.add_argument("--evidence-dir", type=Path, default=Path("docs/evidence"))
-    return parser.parse_args()
+    parser.add_argument(
+        "--formal-evidence",
+        action="store_true",
+        help="Enforce the multi-seed scratch/transfer held-out protocol.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Output directory. Defaults to outputs/smaclite_ad_formal under "
+            "--formal-evidence, otherwise outputs/smaclite_ad_baselines."
+        ),
+    )
+    parser.add_argument(
+        "--evidence-dir",
+        type=Path,
+        default=Path("outputs/smaclite_ad_evidence"),
+    )
+    args = parser.parse_args()
+    if args.output_dir is None:
+        args.output_dir = Path(
+            "outputs/smaclite_ad_formal"
+            if args.formal_evidence
+            else "outputs/smaclite_ad_baselines"
+        )
+    return args
 
 
 def validate_args(args: argparse.Namespace) -> None:
+    args._formal_contract = None
     positive = (
         "episodes",
         "episode_limit",
         "batch_episodes",
         "replay_episodes",
         "updates_per_episode",
+        "target_update_interval",
         "validation_episodes_per_ratio",
         "heldout_episodes_per_ratio",
         "eval_every",
         "agent_hidden_dim",
         "critic_hidden_dim",
         "ppo_epochs",
+        "attention_heads",
     )
     if any(getattr(args, name) < 1 for name in positive):
         raise ValueError("episode, batch, evaluation and model sizes must be positive")
+    if args.encoder_kind == "saqa" and args.agent_hidden_dim % args.attention_heads:
+        raise ValueError("attention_heads must divide agent_hidden_dim for SAQA")
     if args.validation_episodes_per_ratio < 5 or args.heldout_episodes_per_ratio < 5:
         raise ValueError("validation and held-out evaluation need at least 5 layouts per ratio")
     if args.spawn_jitter <= 0.0:
@@ -125,6 +218,10 @@ def validate_args(args: argparse.Namespace) -> None:
         raise ValueError("batch_episodes must cover every registered ratio")
     if args.replay_episodes < args.batch_episodes:
         raise ValueError("replay_episodes must be at least batch_episodes")
+    if not 0.0 <= args.td_lambda <= 1.0:
+        raise ValueError("td_lambda must be in [0, 1]")
+    if not 0.0 < args.gamma <= 1.0:
+        raise ValueError("gamma must lie in (0, 1]")
     if args.max_red_agents < max(red for red, _ in args.ratios):
         raise ValueError("max_red_agents is smaller than a registered ratio")
     if args.max_blue_agents < max(blue for _, blue in args.ratios):
@@ -133,6 +230,228 @@ def validate_args(args: argparse.Namespace) -> None:
         raise ValueError("a Red opponent should use rush_asset or idle")
     if args.train_side == "Red" and args.opponent == "rush_asset":
         raise ValueError("a Blue opponent should use intercept or idle")
+    if not 0.0 <= args.warmup_fraction < 1.0:
+        raise ValueError("warmup_fraction must be in [0, 1)")
+    if args.warmup_opponent is not None:
+        if args.warmup_opponent == args.opponent:
+            raise ValueError("warmup_opponent must differ from target opponent")
+        if args.train_side == "Blue" and args.warmup_opponent == "intercept":
+            raise ValueError("a Red warmup opponent should use rush_asset or idle")
+        if args.train_side == "Red" and args.warmup_opponent == "rush_asset":
+            raise ValueError("a Blue warmup opponent should use intercept or idle")
+    if len(set(args.initializations)) != len(args.initializations):
+        raise ValueError("initializations must be unique")
+    if "stock_transfer" in args.initializations and not args.stock_checkpoint_template:
+        raise ValueError(
+            "--stock-checkpoint-template is required for stock_transfer"
+        )
+    if args.formal_evidence:
+        if args.reward_mode != "strict_potential":
+            raise ValueError("formal evidence requires --reward-mode strict_potential")
+        if args.encoder_kind != "saqa":
+            raise ValueError("formal evidence requires --encoder-kind saqa")
+        if not args.use_cpp_rvo2:
+            raise ValueError(
+                "the preregistered formal protocol requires --use-cpp-rvo2"
+            )
+        if len(args.algorithms) != 3 or set(args.algorithms) != {
+            "qmix",
+            "vdn",
+            "mappo",
+        }:
+            raise ValueError(
+                "formal evidence requires qmix, vdn and mappo in one invocation"
+            )
+        if args.train_side != "Red" or args.ratios != [(2, 1), (3, 2), (5, 3)]:
+            raise ValueError(
+                "formal evidence requires Red on ratios 2:1,3:2,5:3"
+            )
+        if not (
+            args.opponent == "intercept"
+            and args.warmup_opponent == "idle"
+            and np.isclose(args.warmup_fraction, 0.25)
+        ):
+            raise ValueError(
+                "formal evidence requires the idle-to-intercept opponent curriculum"
+            )
+        if not args.clear_replay_on_opponent_transition:
+            raise ValueError(
+                "formal evidence requires replay reset at the opponent transition"
+            )
+        if len(args.seeds) != len(set(args.seeds)):
+            raise ValueError("formal evidence requires unique training seeds")
+        if len(set(args.seeds)) < 5:
+            raise ValueError("formal evidence requires at least five unique seeds")
+        if set(args.initializations) != {"scratch", "stock_transfer"}:
+            raise ValueError(
+                "formal evidence requires scratch and stock_transfer arms"
+            )
+        if args.validation_episodes_per_ratio < 20:
+            raise ValueError(
+                "formal evidence requires at least 20 validation layouts per ratio"
+            )
+        if args.heldout_episodes_per_ratio < 20:
+            raise ValueError(
+                "formal evidence requires at least 20 held-out layouts per ratio"
+            )
+        args._formal_contract = validate_ad_formal_contract(args)
+
+
+def validate_ad_formal_contract(args: argparse.Namespace) -> Dict[str, object]:
+    """Require an exact match to the registered stock-to-AD fine-tuning YAML."""
+
+    actual = {
+        "encoder_kind": args.encoder_kind,
+        "attention_heads": args.attention_heads,
+        "initializations": list(args.initializations),
+        "stock_checkpoint_template": args.stock_checkpoint_template,
+        "paired_random_initial_draw": True,
+        "paired_training_and_evaluation_layout_seeds": True,
+        "ratios": [f"{red}v{blue}" for red, blue in args.ratios],
+        "training_seeds": list(args.seeds),
+        "train_side": args.train_side,
+        "checkpoint_selection": "validation_best",
+        "checkpoint_selection_metric": "lexicographic_worst_ratio_then_overall_mean",
+        "heldout_used_once_after_selection": True,
+        "target_opponent": args.opponent,
+        "target_opponent_information_scope": "privileged_full_environment_state",
+        "target_opponent_report_label": "privileged_full_state_threat",
+        "solvability_rule": "clear_then_asset",
+        "naive_lower_bound_rule": "rush_asset",
+        "warmup_opponent": args.warmup_opponent,
+        "warmup_fraction": args.warmup_fraction,
+        "clear_replay_on_opponent_transition": (
+            args.clear_replay_on_opponent_transition
+        ),
+        "mappo_pending_transition": (
+            "flush_idle_pending_before_first_target_rollout"
+        ),
+        "validation_and_heldout_use_target_opponent_only": True,
+        "scale_balanced_replay": True,
+        "episodes": args.episodes,
+        "episode_limit": args.episode_limit,
+        "batch_episodes": args.batch_episodes,
+        "replay_episodes": args.replay_episodes,
+        "updates_per_episode": args.updates_per_episode,
+        "eval_every": args.eval_every,
+        "validation_episodes_per_ratio": args.validation_episodes_per_ratio,
+        "heldout_episodes_per_ratio": args.heldout_episodes_per_ratio,
+        "max_red_agents": args.max_red_agents,
+        "max_blue_agents": args.max_blue_agents,
+        "agent_hidden_dim": args.agent_hidden_dim,
+        "critic_hidden_dim": args.critic_hidden_dim,
+        "reward_mode": args.reward_mode,
+        "gamma": args.gamma,
+        "shaping_scale": args.shaping_scale,
+        "approach_weight": args.approach_weight,
+        "spawn_jitter": args.spawn_jitter,
+        "use_cpp_rvo2": args.use_cpp_rvo2,
+        "backend_mixed_within_comparison": False,
+        "learning_rate": args.learning_rate,
+        "target_update_interval": args.target_update_interval,
+        "td_lambda": args.td_lambda,
+        "ppo_epochs": args.ppo_epochs,
+        "epsilon_start": args.epsilon_start,
+        "epsilon_finish": args.epsilon_finish,
+        "epsilon_anneal_steps": args.epsilon_anneal_steps,
+        "minimum_training_seeds": len(set(args.seeds)),
+        "task_mean_win_rate_threshold": 0.80,
+        "task_every_ratio_win_rate_threshold": 0.70,
+        "transfer_benefit_ci_threshold": 0.0,
+        "plateau_window_evaluations": 5,
+        "max_absolute_win_rate_slope_per_evaluation": 0.02,
+        "max_win_rate_range": 0.10,
+        "task_claim_requires_task_integrity_and_stability_gates": True,
+        "transfer_benefit_is_a_separate_claim": True,
+    }
+    prefix = "ad_finetuning."
+    paths = {
+        label: prefix + label
+        for label in actual
+        if label
+        not in {
+            "stock_checkpoint_template",
+            "training_seeds",
+            "learning_rate",
+            "target_update_interval",
+            "td_lambda",
+            "ppo_epochs",
+            "epsilon_start",
+            "epsilon_finish",
+            "epsilon_anneal_steps",
+            "minimum_training_seeds",
+            "task_mean_win_rate_threshold",
+            "task_every_ratio_win_rate_threshold",
+            "transfer_benefit_ci_threshold",
+            "plateau_window_evaluations",
+            "max_absolute_win_rate_slope_per_evaluation",
+            "max_win_rate_range",
+            "task_claim_requires_task_integrity_and_stability_gates",
+            "transfer_benefit_is_a_separate_claim",
+        }
+    }
+    paths.update(
+        {
+            "stock_checkpoint_template": "artifacts.stock_validation_best_checkpoint",
+            "training_seeds": "ad_finetuning.seeds",
+            "learning_rate": "ad_finetuning.reused_stock_hyperparameters.learning_rate",
+            "target_update_interval": (
+                "ad_finetuning.reused_stock_hyperparameters.target_update_interval"
+            ),
+            "td_lambda": "ad_finetuning.reused_stock_hyperparameters.td_lambda",
+            "ppo_epochs": "ad_finetuning.reused_stock_hyperparameters.ppo_epochs",
+            "epsilon_start": (
+                "ad_finetuning.reused_stock_hyperparameters.epsilon_start"
+            ),
+            "epsilon_finish": (
+                "ad_finetuning.reused_stock_hyperparameters.epsilon_finish"
+            ),
+            "epsilon_anneal_steps": (
+                "ad_finetuning.reused_stock_hyperparameters.epsilon_anneal_steps"
+            ),
+            "minimum_training_seeds": (
+                "acceptance_gates.ad_task_per_algorithm.minimum_training_seeds"
+            ),
+            "task_mean_win_rate_threshold": (
+                "acceptance_gates.ad_task_per_algorithm.heldout_win_rate_mean_ge"
+            ),
+            "task_every_ratio_win_rate_threshold": (
+                "acceptance_gates.ad_task_per_algorithm."
+                "every_ratio_win_rate_mean_ge"
+            ),
+            "transfer_benefit_ci_threshold": (
+                "acceptance_gates.transfer_benefit_separate_hypothesis."
+                "transfer_minus_scratch_seed_bootstrap_ci95_low_gt"
+            ),
+            "plateau_window_evaluations": (
+                "acceptance_gates.convergence.plateau_window_evaluations"
+            ),
+            "max_absolute_win_rate_slope_per_evaluation": (
+                "acceptance_gates.convergence."
+                "max_absolute_win_rate_slope_per_evaluation"
+            ),
+            "max_win_rate_range": (
+                "acceptance_gates.convergence.max_win_rate_range"
+            ),
+            "task_claim_requires_task_integrity_and_stability_gates": (
+                "acceptance_gates.convergence."
+                "task_claim_requires_task_integrity_and_stability_gates"
+            ),
+            "transfer_benefit_is_a_separate_claim": (
+                "acceptance_gates.convergence.transfer_benefit_is_a_separate_claim"
+            ),
+        }
+    )
+    return validate_registered_formal_contract(
+        project_root=PROJECT,
+        config_path=STOCK_TO_AD_FORMAL_CONFIG,
+        contract_name="stage1_smaclite_ad_finetuning",
+        expected_protocol_version=STOCK_TO_AD_FORMAL_PROTOCOL,
+        actual_values=actual,
+        yaml_paths=paths,
+        unordered_fields=("initializations", "training_seeds"),
+        project_path_fields=("stock_checkpoint_template",),
+    )
 
 
 def choose_device(name: str) -> torch.device:
@@ -151,6 +470,62 @@ def seed_everything(seed: int) -> None:
         torch.cuda.manual_seed_all(seed)
 
 
+def robust_validation_key(evaluation) -> Tuple[float, float, float, float]:
+    """Prefer the worst ratio before aggregate validation performance."""
+
+    if not evaluation.per_ratio:
+        raise ValueError("robust selection requires at least one ratio")
+    worst_ratio = min(
+        (
+            float(cell["win_rate"]),
+            float(cell["mean_return"]),
+        )
+        for cell in evaluation.per_ratio.values()
+    )
+    return (
+        worst_ratio[0],
+        worst_ratio[1],
+        float(evaluation.win_rate),
+        float(evaluation.mean_return),
+    )
+
+
+def reset_replay_at_opponent_transition(
+    replay: EpisodeReplayBuffer, capacity: int, seed: int, episode: int
+) -> Tuple[EpisodeReplayBuffer, Dict[str, object]]:
+    """Drop warm-up trajectories and return a deterministically seeded buffer."""
+
+    cleared = len(replay)
+    return EpisodeReplayBuffer(capacity, seed=seed), {
+        "performed": True,
+        "transition_episode": int(episode),
+        "cleared_episode_count": int(cleared),
+        "minimum_refill_episodes_before_update": None,
+        "first_post_transition_update_episode": None,
+    }
+
+
+def flush_mappo_pending_at_opponent_transition(
+    pending: List[object], learner, device: torch.device, episode: int
+):
+    """Flush one all-warm-up PPO batch before the target opponent appears."""
+
+    pending_count = len(pending)
+    metrics = None
+    if pending_count:
+        metrics = learner.train_batch(collate_episodes(pending, device))
+        pending.clear()
+    return metrics, {
+        "performed": True,
+        "algorithm_path": "on_policy_pending_flush",
+        "transition_episode": int(episode),
+        "pending_episode_count_before_transition": pending_count,
+        "flushed_idle_episode_count": pending_count,
+        "discarded_idle_episode_count": 0,
+        "mixed_opponent_batch_prevented": True,
+    }
+
+
 def make_model(algorithm: str, env, device: torch.device, args: argparse.Namespace):
     dimensions = (
         env.ENTITY_DIM,
@@ -165,20 +540,51 @@ def make_model(algorithm: str, env, device: torch.device, args: argparse.Namespa
             agent_hidden_dim=args.agent_hidden_dim,
             mixer_hidden_dim=args.critic_hidden_dim,
             mixing_dim=max(8, args.critic_hidden_dim // 2),
+            encoder_kind=args.encoder_kind,
+            attention_heads=args.attention_heads,
         )
     elif algorithm == "vdn":
         model = VariableScaleVDN(
-            *dimensions, agent_hidden_dim=args.agent_hidden_dim
+            *dimensions,
+            agent_hidden_dim=args.agent_hidden_dim,
+            encoder_kind=args.encoder_kind,
+            attention_heads=args.attention_heads,
         )
     elif algorithm == "mappo":
         model = VariableScaleMAPPO(
             *dimensions,
             actor_hidden_dim=args.agent_hidden_dim,
             critic_hidden_dim=args.critic_hidden_dim,
+            encoder_kind=args.encoder_kind,
+            attention_heads=args.attention_heads,
         )
     else:  # pragma: no cover - argparse guards this
         raise ValueError(algorithm)
     return model.to(device)
+
+
+def reward_contract(args: argparse.Namespace) -> Dict[str, object]:
+    """JSON-ready reward definition shared by checkpoints and run summaries."""
+
+    return {
+        "mode": args.reward_mode,
+        "terminal_payoff": {
+            "asset_destroyed": 1.0,
+            "attackers_eliminated": -1.0,
+            "asset_survived_horizon": -1.0,
+        },
+        "discount_gamma": float(args.gamma),
+        "shaping_scale": float(args.shaping_scale),
+        "approach_weight": float(args.approach_weight),
+        "strict_potential_formula": "F(s,s') = gamma * Phi(s') - Phi(s)",
+        "absorbing_terminal_potential": 0.0,
+        "heuristic_delta_status": (
+            "legacy_non_policy-invariant_ablation_only"
+            if args.reward_mode == "heuristic_delta"
+            else "not_active"
+        ),
+        "selection_primary_metric": "terminal_outcome_win_rate",
+    }
 
 
 def model_sha256(model: torch.nn.Module) -> str:
@@ -277,6 +683,7 @@ def paired_comparison(initial, final) -> Dict[str, object]:
 def train_one(
     algorithm: str,
     seed: int,
+    initialization: str,
     args: argparse.Namespace,
     device: torch.device,
 ) -> Tuple[Dict[str, object], List[Dict[str, object]]]:
@@ -285,23 +692,70 @@ def train_one(
         max_red_agents=args.max_red_agents,
         max_blue_agents=args.max_blue_agents,
         episode_limit=args.episode_limit,
+        reward_mode=args.reward_mode,
+        discount_gamma=args.gamma,
         shaping_scale=args.shaping_scale,
         approach_weight=args.approach_weight,
         spawn_jitter=args.spawn_jitter,
+        use_cpp_rvo2=args.use_cpp_rvo2,
     )
     runner = SMACliteADEpisodeRunner(factory)
     shape_audit = tensor_shape_audit(factory, args.ratios, seed + 700_000)
     model = make_model(algorithm, factory.get(args.ratios[0]), device, args)
+    random_initial_hash = model_sha256(model)
+    transfer_manifest = None
+    if initialization == "stock_transfer":
+        source = Path(
+            args.stock_checkpoint_template.format(algorithm=algorithm, seed=seed)
+        )
+        transfer_manifest = transfer_stock_checkpoint(model, source, algorithm)
+        if bool(transfer_manifest["source_use_cpp_rvo2"]) != args.use_cpp_rvo2:
+            raise ValueError(
+                "stock source and AD fine-tuning must use the same RVO2 backend"
+            )
+        source_hyperparameters = transfer_manifest.get(
+            "source_training_hyperparameters"
+        )
+        if not isinstance(source_hyperparameters, Mapping):
+            raise ValueError("stock source lacks training_hyperparameters")
+        required_hyperparameters = {
+            "learning_rate": args.learning_rate,
+            **(
+                {
+                    "ppo_epochs": args.ppo_epochs,
+                }
+                if algorithm == "mappo"
+                else {
+                    "target_update_interval": args.target_update_interval,
+                    "td_lambda": args.td_lambda,
+                }
+            ),
+        }
+        for name, expected in required_hyperparameters.items():
+            actual = source_hyperparameters.get(name)
+            if actual is None or float(actual) != float(expected):
+                raise ValueError(
+                    f"stock source hyperparameter {name!r} does not match AD fine-tuning"
+                )
+    elif initialization != "scratch":
+        raise ValueError(f"unknown initialization: {initialization}")
     parameter_count = sum(parameter.numel() for parameter in model.parameters())
     initial_hash = model_sha256(model)
     initial_parameters = parameter_vector(model)
     initial_model_state = copy.deepcopy(model.state_dict())
     opponent = SMACliteADRuleController(args.opponent)
+    warmup_opponent = (
+        None
+        if args.warmup_opponent is None
+        else SMACliteADRuleController(args.warmup_opponent)
+    )
+    warmup_episodes = int(args.episodes * args.warmup_fraction)
     if algorithm == "mappo":
         learner = SequenceMAPPOLearner(
             model,
             learning_rate=args.learning_rate,
             epochs=args.ppo_epochs,
+            gamma=args.gamma,
         )
         training_controller = SMACliteADMAPPOController(
             model, device, deterministic=False, name="mappo_train"
@@ -315,7 +769,9 @@ def train_one(
         learner = SequenceQMIXLearner(
             model,
             learning_rate=args.learning_rate,
-            target_update_interval=25,
+            gamma=args.gamma,
+            td_lambda=args.td_lambda,
+            target_update_interval=args.target_update_interval,
         )
         training_controller = SMACliteADQController(
             model, device, epsilon=args.epsilon_start, name=f"{algorithm}_train"
@@ -353,7 +809,9 @@ def train_one(
     environment_steps = 0
     started = time.perf_counter()
     best_checkpoint_path = (
-        args.output_dir / "checkpoints" / f"{algorithm}_seed{seed}_validation_best.pt"
+        args.output_dir
+        / "checkpoints"
+        / f"{algorithm}_{initialization}_seed{seed}_validation_best.pt"
     )
     best_validation_key = None
     best_validation_record = None
@@ -361,10 +819,30 @@ def train_one(
     best_model_state = None
     last_validation_evaluation = None
     last_validation_episode = None
+    replay_transition = {
+        "enabled": bool(warmup_opponent is not None),
+        "performed": False,
+        "algorithm_path": (
+            "on_policy_pending_flush" if algorithm == "mappo" else "off_policy_replay_reset"
+        ),
+        "transition_episode": (
+            warmup_episodes + 1 if warmup_opponent is not None else None
+        ),
+        "cleared_episode_count": 0,
+        "pending_episode_count_before_transition": 0,
+        "flushed_idle_episode_count": 0,
+        "discarded_idle_episode_count": 0,
+        "mixed_opponent_batch_prevented": False,
+        "minimum_refill_episodes_before_update": (
+            args.batch_episodes if algorithm != "mappo" else None
+        ),
+        "first_post_transition_update_episode": None,
+    }
 
     def add_curve(episode: int, evaluation) -> None:
         row = {
             "algorithm": algorithm,
+            "initialization": initialization,
             "seed": seed,
             "episode": episode,
             "environment_steps": environment_steps,
@@ -398,7 +876,7 @@ def train_one(
         nonlocal best_model_state
         if episode <= 0:
             return
-        key = (float(evaluation.win_rate), float(evaluation.mean_return))
+        key = robust_validation_key(evaluation)
         if best_validation_key is not None and key <= best_validation_key:
             return
         best_validation_key = key
@@ -406,9 +884,19 @@ def train_one(
         best_model_state = copy.deepcopy(model.state_dict())
         metadata = {
             "checkpoint_role": "validation_best",
-            "selection_metric": ["win_rate", "mean_return"],
+            "git_provenance": args._git_provenance,
+            "formal_contract": args._formal_contract,
+            "selection_metric": [
+                "worst_ratio_win_rate",
+                "worst_ratio_mean_return",
+                "overall_win_rate",
+                "overall_mean_return",
+            ],
+            "selection_key": list(key),
             "selection_split": "validation",
             "algorithm": algorithm,
+            "initialization": initialization,
+            "transfer_manifest": transfer_manifest,
             "seed": seed,
             "episode": episode,
             "environment_steps": environment_steps,
@@ -420,7 +908,56 @@ def train_one(
             "validation_unique_layouts": evaluation.unique_layouts,
             "ratios": [list(ratio) for ratio in args.ratios],
             "spawn_jitter": args.spawn_jitter,
+            "use_cpp_rvo2": args.use_cpp_rvo2,
+            "reward_contract": reward_contract(args),
             "train_side": args.train_side,
+            "target_opponent": opponent.name,
+            "target_opponent_information_scope": opponent.information_scope,
+            "warmup_opponent": (
+                None if warmup_opponent is None else warmup_opponent.name
+            ),
+            "warmup_episodes": warmup_episodes,
+            "replay_transition": copy.deepcopy(replay_transition),
+            "opponent_transition": copy.deepcopy(replay_transition),
+            "training_hyperparameters": {
+                "learning_rate": args.learning_rate,
+                "gamma": args.gamma,
+                "target_update_interval": args.target_update_interval,
+                "td_lambda": args.td_lambda,
+                "ppo_epochs": args.ppo_epochs,
+            },
+            "contract": {
+                "encoder_kind": args.encoder_kind,
+                "attention_heads": args.attention_heads,
+                "policy_architecture": (
+                    "OpenSCORE-SAQA-QMIX-SP"
+                    if algorithm == "qmix" and args.encoder_kind == "saqa"
+                    else f"OpenSCORE-{args.encoder_kind}-{algorithm.upper()}"
+                ),
+                "action_target_contract": ACTION_TARGET_CONTRACT,
+                "action_target_types": {
+                    "0": "non_target",
+                    "1": "enemy_damage",
+                    "2": "ally_heal",
+                    "3": "protected_asset",
+                },
+                "entity_row_order": "red_slots_then_blue_slots_then_asset",
+                "target_scorer": "shared_per_entity_permutation_equivariant",
+                "implementation_status": (
+                    "Open-SCORE implementation inspired by REFIL Attention-QMIX "
+                    "and SPECTra SAQA/target-action design; not an exact reproduction"
+                ),
+                "spectra_audited_commit": (
+                    "ffababf6187216c9d16b2109ee8ef6fe5fdf1172"
+                ),
+                "spectra_code_copied": False,
+                "references": {
+                    "refil": "https://proceedings.mlr.press/v139/iqbal21a.html",
+                    "spectra_paper": "https://arxiv.org/abs/2503.11726",
+                    "spectra_repository": "https://github.com/funny-rl/SPECTra",
+                    "spmarl": "https://proceedings.mlr.press/v267/zhao25o.html",
+                },
+            },
         }
         learner.save(best_checkpoint_path, metadata)
         best_validation_record = {
@@ -434,6 +971,38 @@ def train_one(
 
     add_curve(0, validation_initial)
     for episode_index in range(1, args.episodes + 1):
+        if (
+            warmup_opponent is not None
+            and episode_index == warmup_episodes + 1
+        ):
+            if replay is not None and args.clear_replay_on_opponent_transition:
+                replay, transition_record = reset_replay_at_opponent_transition(
+                    replay,
+                    args.replay_episodes,
+                    seed + 1_000_029,
+                    episode_index,
+                )
+                transition_record.update(
+                    {
+                        "algorithm_path": "off_policy_replay_reset",
+                        "minimum_refill_episodes_before_update": args.batch_episodes,
+                        "mixed_opponent_batch_prevented": True,
+                    }
+                )
+                replay_transition.update(transition_record)
+            elif algorithm == "mappo":
+                assert pending is not None
+                # All pending trajectories were generated against the idle
+                # opponent. Flush them before the first intercept rollout.
+                flushed_metrics, transition_record = (
+                    flush_mappo_pending_at_opponent_transition(
+                        pending, learner, device, episode_index
+                    )
+                )
+                if flushed_metrics is not None:
+                    latest_metrics = flushed_metrics
+                    updated_ratios.update(latest_metrics.learning_signal_by_scale)
+                replay_transition.update(transition_record)
         ratio = args.ratios[(episode_index - 1) % len(args.ratios)]
         ratio_episode_counts[f"{ratio[0]}:{ratio[1]}"] += 1
         if isinstance(training_controller, SMACliteADQController):
@@ -444,10 +1013,15 @@ def train_one(
                 anneal_steps=args.epsilon_anneal_steps,
             )
         rollout_seed = seed + episode_index * 101
+        rollout_opponent = (
+            warmup_opponent
+            if warmup_opponent is not None and episode_index <= warmup_episodes
+            else opponent
+        )
         rollout = (
-            runner.run(ratio, training_controller, opponent, rollout_seed)
+            runner.run(ratio, training_controller, rollout_opponent, rollout_seed)
             if args.train_side == "Red"
-            else runner.run(ratio, opponent, training_controller, rollout_seed)
+            else runner.run(ratio, rollout_opponent, training_controller, rollout_seed)
         )
         team_episode = rollout.red if args.train_side == "Red" else rollout.blue
         ratio_label = f"{ratio[0]}:{ratio[1]}"
@@ -491,6 +1065,15 @@ def train_one(
                 latest_metrics = learner.train_batch(collate_episodes(pending, device))
                 updated_ratios.update(latest_metrics.learning_signal_by_scale)
                 pending.clear()
+                if (
+                    replay_transition["performed"]
+                    and episode_index > warmup_episodes
+                    and replay_transition["first_post_transition_update_episode"]
+                    is None
+                ):
+                    replay_transition["first_post_transition_update_episode"] = (
+                        episode_index
+                    )
         else:
             replay.add(team_episode)
             if len(replay) >= args.batch_episodes:
@@ -500,9 +1083,19 @@ def train_one(
                             replay.episodes[-args.batch_episodes :], device
                         )
                     else:
-                        batch = replay.sample(args.batch_episodes, device)
+                        batch = replay.sample_scale_balanced(
+                            args.batch_episodes, device
+                        )
                     latest_metrics = learner.train_batch(batch)
                     updated_ratios.update(latest_metrics.td_by_scale)
+                    if (
+                        replay_transition["performed"]
+                        and replay_transition["first_post_transition_update_episode"]
+                        is None
+                    ):
+                        replay_transition["first_post_transition_update_episode"] = (
+                            episode_index
+                        )
 
         if episode_index % args.eval_every == 0:
             evaluation = evaluate_smaclite_ad(
@@ -549,19 +1142,72 @@ def train_one(
     final_hash = model_sha256(model)
     parameter_delta = float(torch.linalg.vector_norm(parameter_vector(model) - initial_parameters))
     final_checkpoint_path = (
-        args.output_dir / "checkpoints" / f"{algorithm}_seed{seed}_final.pt"
+        args.output_dir
+        / "checkpoints"
+        / f"{algorithm}_{initialization}_seed{seed}_final.pt"
     )
     final_metadata = {
         "checkpoint_role": "final",
+        "git_provenance": args._git_provenance,
+        "formal_contract": args._formal_contract,
         "environment": "OpenSCORE/SMACliteAD-Asset-v0",
         "algorithm": algorithm,
+        "initialization": initialization,
+        "transfer_manifest": transfer_manifest,
         "seed": seed,
         "episode": args.episodes,
         "environment_steps": environment_steps,
         "learner_updates": 0 if latest_metrics is None else latest_metrics.learner_step,
         "ratios": [list(ratio) for ratio in args.ratios],
         "spawn_jitter": args.spawn_jitter,
+        "use_cpp_rvo2": args.use_cpp_rvo2,
+        "reward_contract": reward_contract(args),
         "train_side": args.train_side,
+        "target_opponent": opponent.name,
+        "target_opponent_information_scope": opponent.information_scope,
+        "warmup_opponent": (
+            None if warmup_opponent is None else warmup_opponent.name
+        ),
+        "warmup_episodes": warmup_episodes,
+        "replay_transition": copy.deepcopy(replay_transition),
+        "opponent_transition": copy.deepcopy(replay_transition),
+        "training_hyperparameters": {
+            "learning_rate": args.learning_rate,
+            "gamma": args.gamma,
+            "target_update_interval": args.target_update_interval,
+            "td_lambda": args.td_lambda,
+            "ppo_epochs": args.ppo_epochs,
+        },
+        "contract": {
+            "encoder_kind": args.encoder_kind,
+            "attention_heads": args.attention_heads,
+            "policy_architecture": (
+                "OpenSCORE-SAQA-QMIX-SP"
+                if algorithm == "qmix" and args.encoder_kind == "saqa"
+                else f"OpenSCORE-{args.encoder_kind}-{algorithm.upper()}"
+            ),
+            "action_target_contract": ACTION_TARGET_CONTRACT,
+            "action_target_types": {
+                "0": "non_target",
+                "1": "enemy_damage",
+                "2": "ally_heal",
+                "3": "protected_asset",
+            },
+            "entity_row_order": "red_slots_then_blue_slots_then_asset",
+            "target_scorer": "shared_per_entity_permutation_equivariant",
+            "implementation_status": (
+                "Open-SCORE implementation inspired by REFIL Attention-QMIX "
+                "and SPECTra SAQA/target-action design; not an exact reproduction"
+            ),
+            "spectra_audited_commit": "ffababf6187216c9d16b2109ee8ef6fe5fdf1172",
+            "spectra_code_copied": False,
+            "references": {
+                "refil": "https://proceedings.mlr.press/v139/iqbal21a.html",
+                "spectra_paper": "https://arxiv.org/abs/2503.11726",
+                "spectra_repository": "https://github.com/funny-rl/SPECTra",
+                "spmarl": "https://proceedings.mlr.press/v267/zhao25o.html",
+            },
+        },
     }
     learner.save(
         final_checkpoint_path,
@@ -649,9 +1295,29 @@ def train_one(
     elapsed = time.perf_counter() - started
     result = {
         "algorithm": algorithm,
+        "initialization": initialization,
+        "transfer_manifest": transfer_manifest,
+        "random_initial_model_sha256": random_initial_hash,
         "seed": seed,
         "train_side": args.train_side,
         "opponent": opponent.name,
+        "opponent_information_scope": opponent.information_scope,
+        "reward_contract": reward_contract(args),
+        "training_opponent_curriculum": {
+            "warmup_opponent": (
+                None if warmup_opponent is None else warmup_opponent.name
+            ),
+            "warmup_episodes": warmup_episodes,
+            "target_opponent": opponent.name,
+            "validation_and_heldout_use_target_only": True,
+            "opponent_transition": copy.deepcopy(replay_transition),
+            "off_policy_replay_transition": (
+                copy.deepcopy(replay_transition) if algorithm != "mappo" else None
+            ),
+            "on_policy_pending_transition": (
+                copy.deepcopy(replay_transition) if algorithm == "mappo" else None
+            ),
+        },
         "parameter_count": parameter_count,
         "episodes": args.episodes,
         "environment_steps": environment_steps,
@@ -686,6 +1352,9 @@ def train_one(
         "initial_model_sha256": initial_hash,
         "final_model_sha256": final_hash,
         "parameters_changed": final_hash != initial_hash and parameter_delta > 0.0,
+        "validation_best_parameters_changed": (
+            best_validation_record["model_sha256"] != initial_hash
+        ),
         "parameter_delta_l2": parameter_delta,
         "validation": {
             "seed_base": validation_seed,
@@ -694,6 +1363,16 @@ def train_one(
             "final": evaluation_dict(validation_final),
             "final_comparison": validation_comparison,
             "best_checkpoint_evaluation": evaluation_dict(best_validation_evaluation),
+            "checkpoint_selection": {
+                "metric": [
+                    "worst_ratio_win_rate",
+                    "worst_ratio_mean_return",
+                    "overall_win_rate",
+                    "overall_mean_return",
+                ],
+                "lexicographic": True,
+                "selected_key": list(best_validation_key),
+            },
             "layout_manifest": _jsonify(validation_initial.layout_records),
         },
         "heldout": {
@@ -747,22 +1426,343 @@ def write_curves(path: Path, rows: Sequence[Mapping[str, object]]) -> None:
         writer.writerows(rows)
 
 
+def seed_bootstrap_interval(
+    values: Sequence[float], seed: int, draws: int = 20_000
+) -> Dict[str, object]:
+    array = np.asarray(values, dtype=np.float64)
+    if array.size == 0:
+        raise ValueError("cannot bootstrap an empty seed sample")
+    rng = np.random.default_rng(seed)
+    means = rng.choice(array, size=(draws, array.size), replace=True).mean(axis=1)
+    return {
+        "mean": float(array.mean()),
+        "std_across_seeds": float(array.std(ddof=1)) if array.size > 1 else 0.0,
+        "ci95_low": float(np.quantile(means, 0.025)),
+        "ci95_high": float(np.quantile(means, 0.975)),
+        "seed_count": int(array.size),
+    }
+
+
+def initialization_ablation(
+    results: Sequence[Mapping[str, object]],
+) -> Dict[str, object]:
+    """Paired post-selection comparison of stock transfer against scratch."""
+
+    indexed = {
+        (str(result["algorithm"]), int(result["seed"]), str(result["initialization"])): result
+        for result in results
+    }
+    comparisons = []
+    for algorithm in sorted({str(result["algorithm"]) for result in results}):
+        for seed in sorted({int(result["seed"]) for result in results}):
+            scratch = indexed.get((algorithm, seed, "scratch"))
+            transferred = indexed.get((algorithm, seed, "stock_transfer"))
+            if scratch is None or transferred is None:
+                continue
+            scratch_eval = scratch["heldout"]["validation_best"]
+            transfer_eval = transferred["heldout"]["validation_best"]
+            if scratch_eval["layout_hashes"] != transfer_eval["layout_hashes"]:
+                raise AssertionError("initialization ablation layouts are not paired")
+            if (
+                scratch["random_initial_model_sha256"]
+                != transferred["random_initial_model_sha256"]
+            ):
+                raise AssertionError(
+                    "scratch and transfer arms did not start from the same random draw"
+                )
+            scratch_returns = np.asarray(
+                scratch_eval["paired_returns"], dtype=np.float64
+            )
+            transfer_returns = np.asarray(
+                transfer_eval["paired_returns"], dtype=np.float64
+            )
+            delta = transfer_returns - scratch_returns
+            comparisons.append(
+                {
+                    "algorithm": algorithm,
+                    "seed": seed,
+                    "episodes": int(delta.size),
+                    "same_ordered_layouts": True,
+                    "same_random_initial_draw": True,
+                    "random_initial_model_sha256": scratch[
+                        "random_initial_model_sha256"
+                    ],
+                    "transfer_minus_scratch_mean_return": float(delta.mean()),
+                    "transfer_better_pair_fraction": float(np.mean(delta > 1e-6)),
+                    "transfer_minus_scratch_win_rate": float(
+                        transfer_eval["win_rate"] - scratch_eval["win_rate"]
+                    ),
+                    "scratch_mean_return": float(scratch_eval["mean_return"]),
+                    "transfer_mean_return": float(transfer_eval["mean_return"]),
+                }
+            )
+    aggregates = {}
+    for algorithm_index, algorithm in enumerate(
+        sorted({str(result["algorithm"]) for result in results})
+    ):
+        algorithm_results = [
+            result for result in results if result["algorithm"] == algorithm
+        ]
+        arms = {}
+        for initialization in ("scratch", "stock_transfer"):
+            arm = [
+                result
+                for result in algorithm_results
+                if result["initialization"] == initialization
+            ]
+            if not arm:
+                continue
+            arms[initialization] = {
+                "heldout_mean_return": seed_bootstrap_interval(
+                    [
+                        float(result["heldout"]["validation_best"]["mean_return"])
+                        for result in arm
+                    ],
+                    71_000 + algorithm_index * 10 + len(arms),
+                ),
+                "heldout_win_rate": seed_bootstrap_interval(
+                    [
+                        float(result["heldout"]["validation_best"]["win_rate"])
+                        for result in arm
+                    ],
+                    72_000 + algorithm_index * 10 + len(arms),
+                ),
+            }
+        algorithm_comparisons = [
+            comparison
+            for comparison in comparisons
+            if comparison["algorithm"] == algorithm
+        ]
+        delta = None
+        win_delta = None
+        per_ratio_transfer_win_rate = None
+        task_gate = {"passed": False, "reason": "paired arms were not both run"}
+        integrity_gate = {"passed": False, "reason": "no transferred runs"}
+        benefit_gate = {
+            "passed": False,
+            "status": "not_run",
+            "reason": "paired arms were not both run",
+        }
+        if algorithm_comparisons:
+            delta = seed_bootstrap_interval(
+                [
+                    float(comparison["transfer_minus_scratch_mean_return"])
+                    for comparison in algorithm_comparisons
+                ],
+                73_000 + algorithm_index,
+            )
+            win_delta = seed_bootstrap_interval(
+                [
+                    float(comparison["transfer_minus_scratch_win_rate"])
+                    for comparison in algorithm_comparisons
+                ],
+                73_500 + algorithm_index,
+            )
+            transfer_runs = [
+                result
+                for result in algorithm_results
+                if result["initialization"] == "stock_transfer"
+            ]
+            ratio_labels = sorted(
+                transfer_runs[0]["heldout"]["validation_best"]["per_ratio"]
+            )
+            per_ratio_transfer_win_rate = {
+                label: seed_bootstrap_interval(
+                    [
+                        float(
+                            result["heldout"]["validation_best"]["per_ratio"][label][
+                                "win_rate"
+                            ]
+                        )
+                        for result in transfer_runs
+                    ],
+                    74_000 + algorithm_index * 100 + ratio_index,
+                )
+                for ratio_index, label in enumerate(ratio_labels)
+            }
+            transfer_win = arms["stock_transfer"]["heldout_win_rate"]
+            seed_minimum = int(transfer_win["seed_count"]) >= 5
+            selected_trained = all(
+                bool(result["validation_best_parameters_changed"])
+                for result in transfer_runs
+            )
+            transfer_integrity = all(
+                int(result["transfer_manifest"]["changed_copied_tensor_count"]) > 0
+                and int(
+                    result["transfer_manifest"]["copied_source_trained_tensor_count"]
+                )
+                > 0
+                and int(
+                    result["transfer_manifest"][
+                        "source_selected_checkpoint_learner_updates"
+                    ]
+                )
+                > 0
+                and int(
+                    result["transfer_manifest"][
+                        "source_total_training_learner_updates"
+                    ]
+                )
+                >= int(
+                    result["transfer_manifest"][
+                        "source_selected_checkpoint_learner_updates"
+                    ]
+                )
+                for result in transfer_runs
+            )
+            task_gate = {
+                "passed": bool(
+                    seed_minimum
+                    and selected_trained
+                    and transfer_win["mean"] >= 0.80
+                    and all(
+                        value["mean"] >= 0.70
+                        for value in per_ratio_transfer_win_rate.values()
+                    )
+                ),
+                "minimum_training_seeds_met": seed_minimum,
+                "selected_checkpoint_training_met": selected_trained,
+                "requirements": [
+                    "at least five independent training seeds",
+                    "every selected AD checkpoint changed after initialization",
+                    "stock-transfer held-out mean win rate >= 0.80",
+                    "stock-transfer mean win rate >= 0.70 at every ratio",
+                ],
+            }
+            integrity_gate = {
+                "passed": transfer_integrity,
+                "requirements": [
+                    "every selected transfer source follows a learner update",
+                    "total source updates are not earlier than selected-checkpoint updates",
+                    "every copied latent set records source-training changes",
+                ],
+            }
+            scratch_win = arms["scratch"]["heldout_win_rate"]
+            ceiling_limited = bool(
+                scratch_win["mean"] >= 0.95
+                and transfer_win["mean"] >= 0.95
+                and win_delta["mean"] >= -0.05
+            )
+            positive_return_evidence = bool(delta["ci95_low"] > 0.0)
+            benefit_gate = {
+                "passed": bool(transfer_integrity and positive_return_evidence),
+                "status": (
+                    "positive_transfer_supported"
+                    if transfer_integrity and positive_return_evidence
+                    else "ceiling_limited_noninferior"
+                    if transfer_integrity and ceiling_limited
+                    else "positive_transfer_not_supported"
+                ),
+                "transfer_integrity_met": transfer_integrity,
+                "ceiling_limited_noninferiority": ceiling_limited,
+                "requirements_for_positive_transfer_claim": [
+                    "transfer integrity gate passes",
+                    "seed-bootstrap CI95 lower bound of transfer-minus-scratch return > 0",
+                ],
+                "note": (
+                    "This gate is reported separately and cannot invalidate a "
+                    "task-success claim when both arms saturate near 100% wins."
+                ),
+            }
+        aggregates[algorithm] = {
+            "arms": arms,
+            "transfer_minus_scratch_mean_return": delta,
+            "transfer_minus_scratch_win_rate": win_delta,
+            "stock_transfer_win_rate_by_ratio": per_ratio_transfer_win_rate,
+            "task_success_gate": task_gate,
+            "formal_task_gate": task_gate,
+            "transfer_integrity_gate": integrity_gate,
+            "transfer_benefit_gate": benefit_gate,
+        }
+    return {
+        "status": "completed" if comparisons else "not_run",
+        "unit_of_replication": "independent training seed",
+        "selection": "validation-best checkpoints; held-out layouts used once",
+        "paired_by": ["algorithm", "training_seed", "ordered_layout_hash"],
+        "comparisons": comparisons,
+        "aggregates": aggregates,
+    }
+
+
+def validation_plateau_audit(
+    rows: Sequence[Mapping[str, object]], window: int = 5
+) -> Dict[str, object]:
+    grouped: Dict[Tuple[str, str, int], List[Mapping[str, object]]] = {}
+    for row in rows:
+        key = (
+            str(row["algorithm"]),
+            str(row["initialization"]),
+            int(row["seed"]),
+        )
+        grouped.setdefault(key, []).append(row)
+    runs = []
+    for (algorithm, initialization, seed), values in sorted(grouped.items()):
+        ordered = sorted(values, key=lambda value: int(value["episode"]))[-window:]
+        win_rates = np.asarray(
+            [float(value["eval_win_rate"]) for value in ordered], dtype=np.float64
+        )
+        enough = len(ordered) >= window
+        slope = (
+            float(np.polyfit(np.arange(len(win_rates)), win_rates, 1)[0])
+            if len(win_rates) >= 2
+            else float("inf")
+        )
+        win_range = float(np.ptp(win_rates)) if win_rates.size else float("inf")
+        runs.append(
+            {
+                "algorithm": algorithm,
+                "initialization": initialization,
+                "seed": seed,
+                "evaluations": len(ordered),
+                "episode_start": int(ordered[0]["episode"]),
+                "episode_end": int(ordered[-1]["episode"]),
+                "win_rate_slope_per_evaluation": slope,
+                "win_rate_range": win_range,
+                "passed": bool(
+                    enough and abs(slope) <= 0.02 and win_range <= 0.10
+                ),
+            }
+        )
+    transferred = [run for run in runs if run["initialization"] == "stock_transfer"]
+    return {
+        "split": "validation",
+        "window_evaluations": window,
+        "requirements": [
+            "absolute win-rate slope per evaluation <= 0.02",
+            "win-rate range across window <= 0.10",
+        ],
+        "runs": runs,
+        "all_stock_transfer_runs_passed": bool(
+            transferred and all(run["passed"] for run in transferred)
+        ),
+    }
+
+
 def main() -> None:
     args = parse_args()
     validate_args(args)
+    args._git_provenance = collect_and_require_git_provenance(
+        PROJECT, formal=args.formal_evidence
+    )
     device = choose_device(args.device)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     reference_factory = SMACliteADFactory(
         max_red_agents=args.max_red_agents,
         max_blue_agents=args.max_blue_agents,
         episode_limit=args.episode_limit,
+        reward_mode=args.reward_mode,
+        discount_gamma=args.gamma,
         shaping_scale=args.shaping_scale,
         approach_weight=args.approach_weight,
         spawn_jitter=args.spawn_jitter,
+        use_cpp_rvo2=args.use_cpp_rvo2,
     )
     reference_runner = SMACliteADEpisodeRunner(reference_factory)
     reference_controlled = SMACliteADRuleController(
-        "rush_asset" if args.train_side == "Red" else "intercept"
+        "clear_then_asset" if args.train_side == "Red" else "intercept"
+    )
+    naive_controlled = SMACliteADRuleController(
+        "rush_asset" if args.train_side == "Red" else "idle"
     )
     reference_opponent = SMACliteADRuleController(args.opponent)
     rule_reference = evaluate_smaclite_ad(
@@ -774,29 +1774,80 @@ def main() -> None:
         args.validation_episodes_per_ratio,
         int(args.seeds[0]) + 28_000_000,
     )
+    naive_rule_reference = evaluate_smaclite_ad(
+        reference_runner,
+        naive_controlled,
+        reference_opponent,
+        args.train_side,
+        args.ratios,
+        args.validation_episodes_per_ratio,
+        int(args.seeds[0]) + 28_000_000,
+    )
     reference_factory.close()
     results = []
     curves = []
     for seed in args.seeds:
         for algorithm in args.algorithms:
-            result, rows = train_one(algorithm, seed, args, device)
-            results.append(result)
-            curves.extend(rows)
-            print(
-                f"{algorithm} seed={seed}: updates={result['learner_updates']} "
-                f"delta={result['paired_comparison']['mean_return_delta']:.6f} "
-                f"status={result['paired_comparison']['learning_status']}"
-            )
+            for initialization in args.initializations:
+                result, rows = train_one(
+                    algorithm, seed, initialization, args, device
+                )
+                results.append(result)
+                curves.extend(rows)
+                print(
+                    f"{algorithm} init={initialization} seed={seed}: "
+                    f"updates={result['learner_updates']} "
+                    f"delta={result['paired_comparison']['mean_return_delta']:.6f} "
+                    f"status={result['paired_comparison']['learning_status']}"
+                )
+    ablation = initialization_ablation(results)
+    stability = validation_plateau_audit(curves)
+    task_gates_passed = bool(
+        ablation["aggregates"]
+        and all(
+            aggregate["task_success_gate"]["passed"]
+            for aggregate in ablation["aggregates"].values()
+        )
+    )
+    transfer_integrity_gates_passed = bool(
+        ablation["aggregates"]
+        and all(
+            aggregate["transfer_integrity_gate"]["passed"]
+            for aggregate in ablation["aggregates"].values()
+        )
+    )
+    transfer_benefit_claim = bool(
+        ablation["aggregates"]
+        and all(
+            aggregate["transfer_benefit_gate"]["passed"]
+            for aggregate in ablation["aggregates"].values()
+        )
+    )
+    formal_convergence_claim = bool(
+        args.formal_evidence
+        and task_gates_passed
+        and transfer_integrity_gates_passed
+        and stability["all_stock_transfer_runs_passed"]
+    )
     payload = _jsonify(
         {
-            "schema_version": "smaclite-ad-baseline-smoke-v2",
-            "status": "randomized_layout_small_budget_training_validation",
-            "formal_convergence_claim": False,
+            "schema_version": "smaclite-ad-baseline-v3",
+            "status": (
+                "formal_multi_seed_finetuning_protocol_executed"
+                if args.formal_evidence
+                else "randomized_layout_engineering_or_pilot_validation"
+            ),
+            "formal_convergence_claim": formal_convergence_claim,
+            "task_success_gates_passed": task_gates_passed,
+            "transfer_integrity_gates_passed": transfer_integrity_gates_passed,
+            "positive_transfer_benefit_claim": transfer_benefit_claim,
+            "git_provenance": args._git_provenance,
+            "formal_contract": args._formal_contract,
             "environment": "OpenSCORE/SMACliteAD-Asset-v0",
             "environment_provenance": {
                 "protocol_id": PROTOCOL_ID,
                 "upstream_commit": UPSTREAM_COMMIT,
-                "use_cpp_rvo2": False,
+                "use_cpp_rvo2": args.use_cpp_rvo2,
                 "environment_source_sha256": file_sha256(
                     Path(__file__).resolve().parents[1]
                     / "src"
@@ -814,7 +1865,16 @@ def main() -> None:
                 ),
             },
             "environment_roles": {"Red": "asset attacker", "Blue": "asset defender"},
+            "reward_contract": reward_contract(args),
             "shared_policy_across_ratios": True,
+            "episode_phase_in_actor_and_central_state": True,
+            "stock_transfer": {
+                "available": True,
+                "unsafe_strict_false_loading": False,
+                "fresh_optimizer_per_finetune": True,
+                "initialization_ablation": ablation,
+            },
+            "validation_plateau_stability": stability,
             "registered_ratios": [list(ratio) for ratio in args.ratios],
             "paired_evaluation": (
                 "same ordered randomized layouts within a split; validation and "
@@ -828,11 +1888,27 @@ def main() -> None:
                 ),
             },
             "rule_opponent_uses_primitive_actions_only": True,
+            "rule_opponent_information_contract": {
+                "scope": reference_opponent.information_scope,
+                "label": "privileged_full_state_threat",
+                "disclosure": (
+                    "The deterministic rule reads simulator unit slots directly; "
+                    "it is not constrained to the learned policy's local observation."
+                ),
+            },
             "rule_reference": {
                 "purpose": "solvability reference, not a learned baseline",
                 "controlled_policy": reference_controlled.name,
                 "opponent_policy": reference_opponent.name,
                 "evaluation": evaluation_dict(rule_reference, include_layouts=True),
+            },
+            "naive_rule_reference": {
+                "purpose": "naive lower-bound rule, not a solvability claim",
+                "controlled_policy": naive_controlled.name,
+                "opponent_policy": reference_opponent.name,
+                "evaluation": evaluation_dict(
+                    naive_rule_reference, include_layouts=True
+                ),
             },
             "device": str(device),
             "machine": {
@@ -853,6 +1929,7 @@ def main() -> None:
                     else value
                 )
                 for key, value in vars(args).items()
+                if not key.startswith("_")
             },
             "results": results,
             "interpretation": (

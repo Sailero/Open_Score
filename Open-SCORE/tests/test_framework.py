@@ -32,22 +32,33 @@ from open_score.stage4 import (
 
 def random_contract(batch=2, agents=4, entities=7):
     observation = TeamObservation(
-        entity_obs=torch.randn(batch, agents, entities, 12),
+        entity_obs=torch.randn(batch, agents, entities, HADStage1Adapter.ENTITY_DIM),
         entity_mask=torch.ones(batch, agents, entities, dtype=torch.bool),
-        self_obs=torch.randn(batch, agents, 10),
-        task_obs=torch.randn(batch, agents, 6),
+        self_obs=torch.randn(batch, agents, HADStage1Adapter.SELF_DIM),
+        task_obs=torch.randn(batch, agents, HADStage1Adapter.TASK_DIM),
         agent_mask=torch.ones(batch, agents, dtype=torch.bool),
-        avail_actions=torch.ones(batch, agents, 27, dtype=torch.bool),
+        avail_actions=torch.ones(
+            batch, agents, HADStage1Adapter.ACTION_DIM, dtype=torch.bool
+        ),
     )
     state = GlobalState(
-        entities=torch.randn(batch, entities, 11),
+        entities=torch.randn(batch, entities, HADStage1Adapter.STATE_ENTITY_DIM),
         entity_mask=torch.ones(batch, entities, dtype=torch.bool),
     )
     return observation, state
 
 
 def make_model():
-    return VariableScaleQMIX(12, 10, 6, 11, 27, agent_hidden_dim=32, mixer_hidden_dim=24, mixing_dim=12)
+    return VariableScaleQMIX(
+        HADStage1Adapter.ENTITY_DIM,
+        HADStage1Adapter.SELF_DIM,
+        HADStage1Adapter.TASK_DIM,
+        HADStage1Adapter.STATE_ENTITY_DIM,
+        HADStage1Adapter.ACTION_DIM,
+        agent_hidden_dim=32,
+        mixer_hidden_dim=24,
+        mixing_dim=12,
+    )
 
 
 def test_stage1_ignores_padded_entities():
