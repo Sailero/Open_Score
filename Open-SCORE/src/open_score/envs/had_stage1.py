@@ -82,14 +82,18 @@ class HADStage1Adapter:
         clearance_weight: float = 0.50,
         intercept_weight: float = 0.25,
         task_type: str = "Training",
+        allow_unregistered_roster: bool = False,
     ):
-        if not (1 <= red_attackers <= 4 and 1 <= blue_attackers <= 4):
-            raise ValueError("Stage-1 supports 1--4 agents on each side")
-        if red_attackers <= blue_attackers:
-            raise ValueError(
-                "HAD Stage-1 requires strict Red numerical superiority "
-                "(red_attackers > blue_attackers) because firing agents self-destruct"
-            )
+        if red_attackers < 1 or blue_attackers < 1:
+            raise ValueError("HAD Stage-1 requires at least one agent on each side")
+        if not allow_unregistered_roster:
+            if red_attackers > 4 or blue_attackers > 4:
+                raise ValueError("Stage-1 supports 1--4 agents on each side")
+            if red_attackers <= blue_attackers:
+                raise ValueError(
+                    "HAD Stage-1 requires strict Red numerical superiority "
+                    "(red_attackers > blue_attackers) because firing agents self-destruct"
+                )
         if len(target_region) != 3 or any(len(bounds) != 2 for bounds in target_region):
             raise ValueError("target_region must provide low/high bounds for x, y, z")
         if shaping_scale < 0.0 or clearance_weight < 0.0 or intercept_weight < 0.0:
@@ -113,6 +117,7 @@ class HADStage1Adapter:
         self.shaping_scale = shaping_scale
         self.clearance_weight = clearance_weight
         self.intercept_weight = intercept_weight
+        self.allow_unregistered_roster = bool(allow_unregistered_roster)
         self.step_count = 0
         self.rng = np.random.default_rng()
 

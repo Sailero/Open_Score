@@ -67,6 +67,20 @@ def test_had_rejects_balanced_and_red_outnumbered_rosters():
     ]
 
 
+def test_had_explicitly_allows_unregistered_rosters_for_ood_evaluation():
+    balanced = HADStage1Adapter(
+        2, 2, max_steps=2, allow_unregistered_roster=True
+    )
+    balanced_observation = balanced.reset(seed=17)["Red"]
+    assert balanced_observation["entity_obs"].shape[:2] == (2, 5)
+
+    large = HADStage1Factory(
+        max_steps=2, allow_unregistered_roster=True
+    ).create((6, 3))
+    large_observation = large.reset(seed=19)["Red"]
+    assert large_observation["entity_obs"].shape[:2] == (6, 10)
+
+
 def test_curriculum_forces_one_visit_to_each_newly_unlocked_had_scale():
     curriculum = LearningProgressCurriculum(episodes_per_stage=1)
     rng = np.random.default_rng(7)

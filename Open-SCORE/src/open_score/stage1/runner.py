@@ -213,6 +213,7 @@ class HADStage1Factory:
         shaping_scale: float = 0.10,
         clearance_weight: float = 0.50,
         intercept_weight: float = 0.25,
+        allow_unregistered_roster: bool = False,
     ):
         self.max_steps = max_steps
         self.target_region = target_region
@@ -220,6 +221,7 @@ class HADStage1Factory:
         self.shaping_scale = shaping_scale
         self.clearance_weight = clearance_weight
         self.intercept_weight = intercept_weight
+        self.allow_unregistered_roster = bool(allow_unregistered_roster)
         self.cache: Dict[Scale, HADStage1Adapter] = {}
 
     def create(self, scale: Scale) -> HADStage1Adapter:
@@ -232,6 +234,7 @@ class HADStage1Factory:
             shaping_scale=self.shaping_scale,
             clearance_weight=self.clearance_weight,
             intercept_weight=self.intercept_weight,
+            allow_unregistered_roster=self.allow_unregistered_roster,
         )
 
     def get(self, scale: Scale) -> HADStage1Adapter:
