@@ -7,3 +7,5 @@ Open-SCORE/scripts/epymarl_windows_site/sitecustomize.py text eol=lf
 Open-SCORE/tests/test_stock_reproduction.py text eol=lf
 Open-SCORE/docs/*.html text whitespace=-blank-at-eol
 Open-SCORE/upstream/patches/*.patch text eol=lf whitespace=-blank-at-eol
+# Result hashes refer to exact on-disk bytes; never normalize their line endings.
+Open-SCORE/outputs/round_01_mvp/** -text whitespace=cr-at-eol

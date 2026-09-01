@@ -1,7 +1,7 @@
-# Round-02 Stage-2: one arbitrary-roster Red-win and remaining-time evaluator.
+# Round-01 final Stage-2: arbitrary-roster Red-win and remaining-time evaluator.
 seed: 20260901
 device: cuda
-output_dir: outputs/round_02_stage2_dynamic
+output_dir: outputs/round_01_mvp/stage2/final
 stage1_checkpoint: outputs/round_01_mvp/stage1/checkpoints/refil_qmix_seed20260831_best.pt
 
 collection:

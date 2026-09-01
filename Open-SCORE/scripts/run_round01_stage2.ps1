@@ -18,12 +18,12 @@ conda activate torch310
 $env:PYTHONUTF8 = "1"
 
 Write-Host "Conda environment: $env:CONDA_DEFAULT_ENV" -ForegroundColor Cyan
-Write-Host "Stage 2 output: outputs\round_02_stage2_dynamic" -ForegroundColor Cyan
+Write-Host "Round-01 Stage 2 output: outputs\round_01_mvp\stage2\final" -ForegroundColor Cyan
 $stage2Args = @(
     "-u",
-    "scripts\run_stage2_round02.py",
+    "scripts\run_round01_stage2.py",
     "--config",
-    "configs\stage2_round02_dynamic.yaml"
+    "configs\stage2_round01_final.yaml"
 )
 if ($DryRun) {
     $stage2Args += "--dry-run"
@@ -34,5 +34,5 @@ if ($Smoke) {
 python @stage2Args
 
 if ($LASTEXITCODE -ne 0) {
-    throw "Stage 2 round-02 failed with exit code $LASTEXITCODE"
+    throw "Round 01 Stage 2 failed with exit code $LASTEXITCODE"
 }

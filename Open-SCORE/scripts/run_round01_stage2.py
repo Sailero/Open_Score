@@ -1,4 +1,4 @@
-"""Collect, train, evaluate and report the round-02 dynamic HAD evaluator."""
+"""Complete round-01 Stage 2 with dynamic HAD outcome-time evaluation."""
 
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--config",
         type=Path,
-        default=PROJECT / "configs" / "stage2_round02_dynamic.yaml",
+        default=PROJECT / "configs" / "stage2_round01_final.yaml",
     )
     parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default=None)
@@ -140,7 +140,7 @@ def _choose_device(name: str) -> torch.device:
 def _load_config(args: argparse.Namespace) -> Dict[str, object]:
     config = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
     if not isinstance(config, dict):
-        raise ValueError("Stage-2 round-02 config must be a mapping")
+        raise ValueError("Round-01 Stage-2 config must be a mapping")
     if args.device is not None:
         config["device"] = args.device
     if args.output_dir is not None:
@@ -160,7 +160,7 @@ def _load_config(args: argparse.Namespace) -> Dict[str, object]:
         training["minimum_epochs"] = 1
         training["patience"] = 2
         training["batch_size"] = 32
-        config["output_dir"] = "outputs/_smoke_stage2_round02"
+        config["output_dir"] = "outputs/_smoke_round01_stage2"
     return config
 
 
@@ -301,7 +301,7 @@ def _collect_dataset(
     if dataset.is_file() and manifest_path.is_file():
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         if manifest.get("dataset_sha256") != _sha256(dataset):
-            raise ValueError("existing round-02 dataset hash differs from its manifest")
+            raise ValueError("existing round-01 dataset hash differs from its manifest")
         log.write(
             f"[采集] 已有完整数据，跳过仿真：{manifest['episodes']:,}局，"
             f"{manifest['rows']:,}个态势"
@@ -450,7 +450,7 @@ def _collect_dataset(
     if state_path.exists():
         state_path.unlink()
     manifest = {
-        "schema_version": "round-02-dynamic-outcome-time-data-v1",
+        "schema_version": "round-01-dynamic-outcome-time-data-v1",
         "status": "completed",
         "episodes": len(schedule),
         "rows": total_rows,
@@ -497,7 +497,7 @@ def _read_rows(path: Path) -> list[Dict[str, object]]:
                 raise ValueError("one episode leaks across data splits")
             rows.append(row)
     if not rows:
-        raise ValueError("round-02 dataset is empty")
+        raise ValueError("round-01 dataset is empty")
     return rows
 
 
@@ -760,6 +760,10 @@ def _train(
     if metrics_path.is_file() and checkpoint_path.is_file():
         metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
         if metrics.get("dataset_sha256") == _sha256(dataset_path):
+            metrics["dataset"] = str(dataset_path)
+            metrics["checkpoint"] = str(checkpoint_path)
+            metrics["checkpoint_sha256"] = _sha256(checkpoint_path)
+            _write_json(metrics_path, metrics)
             log.write("[训练] 已有与当前数据匹配的完整模型，跳过重训")
             return checkpoint_path, metrics, rows
 
@@ -1146,7 +1150,7 @@ def _train(
         writer.writeheader()
         writer.writerows(history)
     metrics = {
-        "schema_version": "round-02-dynamic-outcome-time-model-v1",
+        "schema_version": "round-01-dynamic-outcome-time-model-v1",
         "status": "completed",
         "dataset": str(dataset_path),
         "dataset_sha256": _sha256(dataset_path),
@@ -1257,18 +1261,19 @@ def _number(value: object, digits: int = 3) -> str:
     return f"{float(value):.{digits}f}"
 
 
-def _report(
+def _stage2_report_lines(
     output_dir: Path,
     manifest: Mapping[str, object],
     metrics: Mapping[str, object],
     figures: Sequence[Path],
-) -> Path:
+) -> list[str]:
+    """Build the Stage-2 section without creating a second report file."""
     core = metrics["group_metrics"]["core_test"]
     sparse = metrics["group_metrics"]["sparse_test"]
     heldout = metrics["group_metrics"]["heldout_generalization"]
     baselines = metrics["baselines"]
     lines = [
-        "# Open-SCORE Stage 2 第二轮：任意规模胜率与剩余时间评估报告",
+        "# Open-SCORE 第一轮 Stage 2：任意规模胜率与剩余时间评估结果",
         "",
         f"> 生成时间：`{_now()}`  ",
         f"> 结果：**{'通过预设核心门槛' if metrics['acceptance']['all_passed'] else '训练完成，但有核心门槛未通过'}**  ",
@@ -1343,9 +1348,45 @@ def _report(
             f"模型参数量：`{metrics['parameter_count']:,}`；最佳epoch：`{metrics['best_epoch']}`；温度校准参数：`{metrics['temperature']:.3f}`；重新加载最大预测差：`{metrics['reload_max_prediction_difference']:.3g}`。",
         ]
     )
-    report = output_dir / "stage2_round02_report.md"
-    report.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    return report
+    return lines
+
+
+def _merge_round01_report() -> Path:
+    """Regenerate the one user-facing report for all round-01 work."""
+
+    from run_round01_remaining import write_report
+
+    round_root = PROJECT / "outputs" / "round_01_mvp"
+    return write_report(round_root, ())
+
+
+def _completed_pipeline_valid(
+    output_dir: Path, status: Mapping[str, object], expected_report: Path
+) -> bool:
+    """Check hashes before treating an existing round-01 run as complete."""
+
+    try:
+        dataset = output_dir / "data" / "dynamic_outcome_time.jsonl"
+        manifest_path = output_dir / "data" / "dataset_manifest.json"
+        checkpoint = output_dir / "model" / "dynamic_outcome_time_model.pt"
+        metrics_path = output_dir / "model" / "metrics.json"
+        required = (dataset, manifest_path, checkpoint, metrics_path, expected_report)
+        if not all(path.is_file() for path in required):
+            return False
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
+        return bool(
+            status.get("status") == "completed"
+            and Path(str(status.get("report", ""))).resolve()
+            == expected_report.resolve()
+            and manifest.get("status") == "completed"
+            and metrics.get("status") == "completed"
+            and str(manifest.get("dataset_sha256")) == _sha256(dataset)
+            and str(metrics.get("dataset_sha256")) == _sha256(dataset)
+            and str(metrics.get("checkpoint_sha256")) == _sha256(checkpoint)
+        )
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return False
 
 
 def main() -> None:
@@ -1366,7 +1407,10 @@ def main() -> None:
     completed_status = None
     if status_path.is_file():
         completed_status = json.loads(status_path.read_text(encoding="utf-8"))
-    if completed_status and completed_status.get("status") == "completed":
+    expected_report = PROJECT / "outputs" / "round_01_mvp" / "round_01_report.md"
+    if completed_status and _completed_pipeline_valid(
+        output_dir, completed_status, expected_report
+    ):
         log.write(f"[流水线] 已完成。报告：{completed_status['report']}")
         return
 
@@ -1383,7 +1427,7 @@ def main() -> None:
         },
     )
     log.write(
-        f"[流水线] 启动Stage 2第二轮 | device={device} | 共{len(schedule):,}局 | "
+        f"[流水线] 启动第一轮Stage 2补全 | device={device} | 共{len(schedule):,}局 | "
         f"core={group_counts['core']:,} sparse={group_counts['sparse']:,} "
         f"heldout={group_counts['heldout']:,}"
     )
@@ -1412,7 +1456,7 @@ def main() -> None:
             },
         )
         figures = _plots(output_dir, metrics)
-        report = _report(output_dir, manifest, metrics, figures)
+        report = _merge_round01_report()
         status = {
             "status": "completed",
             "stage": "completed",

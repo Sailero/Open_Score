@@ -1,10 +1,9 @@
-"""Run the remaining round-01 Stage-2 experiment, figures, and report.
+"""Build the one merged round-01 report from validated experiment artifacts.
 
-This is the single user-facing entry point for the work that follows the
-completed 1M-step Stage-1 run.  It deliberately delegates data collection and
-model fitting to their frozen formal scripts, streams every child-process line
-to the terminal, and then turns the machine-readable artifacts into four
-figures and one Chinese Markdown report.
+The user-facing Stage-2 collection/training entry point is
+``scripts/run_round01_stage2.ps1``. This module retains the first pilot's
+plot/report helpers for compatibility, but its command-line entry point never
+starts that superseded 7,200-episode win-only pipeline.
 """
 
 from __future__ import annotations
@@ -343,7 +342,204 @@ def _combined_validation_by_scale(evaluation: Mapping[str, object]) -> Dict[str,
     }
 
 
+def _write_final_round01_report(round_root: Path) -> Path:
+    """Write the sole round-01 report with the final outcome-time Stage 2."""
+
+    stage1 = _json(round_root / "stage1" / "summary.json")
+    heldout_rows = _read_csv(round_root / "evaluation" / "win_rate_by_scale.csv")
+    unseen = _json(round_root / "evaluation_unseen_scales" / "summary.json")
+    final_root = round_root / "stage2" / "final"
+    dataset = _json(final_root / "data" / "dataset_manifest.json")
+    metrics = _json(final_root / "model" / "metrics.json")
+    initial = stage1["initial_validation"]
+    best = stage1["best_validation"]
+    heldout = stage1["heldout_evaluation"]
+    initial_scale = _combined_validation_by_scale(initial)
+    best_scale = _combined_validation_by_scale(best)
+    stage1_checks = {
+        "至少100万环境步": int(stage1["environment_steps"]) >= 1_000_000,
+        "六种课程规模均参与训练": all(
+            int(stage1["scale_episodes"][scale]) > 0 for scale in SCALES
+        ),
+        "最佳验证胜率比初始至少提高0.15": float(best["win_rate"])
+        - float(initial["win_rate"])
+        >= 0.15,
+        "至少五种规模提高": sum(
+            best_scale[scale] > initial_scale[scale] for scale in SCALES
+        )
+        >= 5,
+        "最佳权重完成1200局独立评估": int(heldout["episodes"]) == 1200,
+    }
+    stage1_passed = all(stage1_checks.values())
+    stage2_passed = bool(metrics["acceptance"]["all_passed"])
+    core = metrics["group_metrics"]["core_test"]
+    sparse = metrics["group_metrics"]["sparse_test"]
+    generalization = metrics["group_metrics"]["heldout_generalization"]
+    baseline = metrics["baselines"]
+
+    def optional(value: object, digits: int = 2) -> str:
+        return "无法计算" if value is None else f"{float(value):.{digits}f}"
+
+    lines = [
+        "# Open-SCORE 第一轮 Stage 1 / Stage 2 完整实验报告",
+        "",
+        f"> 合并生成时间：`{_now()}`",
+        f"> 第一轮结论：**{'通过' if stage1_passed and stage2_passed else '完成，但有门槛未通过'}**",
+        f"> Stage 1：**{_yes_no(stage1_passed)}**；Stage 2最终版：**{_yes_no(stage2_passed)}**",
+        "> 本文是第一轮唯一正式报告。原胜率二分类器属于先导实现，以下Stage 2结果均以补全后的“胜率+剩余时间”联合模型为准。",
+        "",
+        "## 1. 第一轮到底完成了什么",
+        "",
+        "Stage 1在HAD中只训练Red防御方，Blue固定为`rush`或`split_rush`规则策略。一套REFIL-QMIX（HAD适配）权重用100万环境步学习动态人数决策。Stage 1冻结后，Stage 2从其推演轨迹采集全局态势，用一个不限制实体数量的Deep Sets网络同时预测Red最终胜率和距离胜利/失败还剩多少步。",
+        "",
+        "因此第一轮的最终交付不是两轮实验，而是一条连续流程：`动态规模策略训练 → 冻结策略测试 → 扩展规模压力测试 → 胜率/剩余时间监督学习 → 统一评估与报告`。",
+        "",
+        "## 2. Stage 1：动态规模决策策略",
+        "",
+        f"- 算法：`{stage1['algorithm']}`，参数量 `{int(stage1['parameter_count']):,}`。",
+        f"- 训练种子：`{stage1['seed']}`；环境步 `{int(stage1['environment_steps']):,}`；完成 `{int(stage1['episodes']):,}` 局；用时 `{float(stage1['elapsed_seconds']) / 3600.0:.2f}` 小时。",
+        f"- Validation由初始 {_pct(initial['win_rate'])} 提升到最佳 {_pct(best['win_rate'])}；最佳点位于 `{int(stage1['best_environment_steps']):,}` 步。",
+        f"- 最佳权重在1200局全新种子Test中的胜率为 **{_pct(heldout['win_rate'], 2)}**，平均零和收益 `{_number(heldout['mean_payoff'])}`。",
+        "",
+        "![Stage 1训练曲线](figures/01_stage1_training_curve.png)",
+        "",
+        "### 2.1 课程规模独立测试",
+        "",
+        "| 规模 | rush | split_rush | 合并胜率 | 95%区间 | 局数 |",
+        "|---|---:|---:|---:|---:|---:|",
+    ]
+    for row in heldout_rows:
+        lines.append(
+            f"| {row['scale']} | {_pct(row['win_rate_rush'])} | "
+            f"{_pct(row['win_rate_split_rush'])} | {_pct(row['combined_win_rate'])} | "
+            f"{_pct(row['ci95_low'])}–{_pct(row['ci95_high'])} | {row['episodes']} |"
+        )
+    lines.extend(
+        [
+            "",
+            "![Stage 1分规模胜率](figures/02_stage1_scale_win_rates.png)",
+            "",
+            "### 2.2 冻结策略的训练外人数压力测试",
+            "",
+            "这些测试不继续训练或调参，每个规模对两类规则对手各100局。它们是第一轮追加的泛化证据，但仍是单训练种子、事后选定规模。",
+            "",
+            "| 训练外规模 | rush | split_rush | 合并胜率 | 95%区间 | 局数 |",
+            "|---|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for row in unseen["scale_results"]:
+        lines.append(
+            f"| {row['scale']} | {_pct(row['win_rate_rush'])} | "
+            f"{_pct(row['win_rate_split_rush'])} | {_pct(row['combined_win_rate'])} | "
+            f"{_pct(row['ci95_low'])}–{_pct(row['ci95_high'])} | {row['episodes']} |"
+        )
+    lines.extend(
+        [
+            "",
+            "### 2.3 Stage 1验收",
+            "",
+            "| 门槛 | 结果 |",
+            "|---|---:|",
+        ]
+    )
+    for name, passed in stage1_checks.items():
+        lines.append(f"| {name} | {_yes_no(passed)} |")
+    lines.extend(
+        [
+            "",
+            "## 3. Stage 2最终版：任意规模胜率与剩余时间评估器",
+            "",
+            f"Stage 2最终数据共 `{int(dataset['episodes']):,}` 局、`{int(dataset['rows']):,}` 个态势。核心规模2v1至4v4使用每局1.0训练权重；5至6人扩展规模使用0.25低权重；5v1、6v3和7v3权重为0，完全不进入训练或选模。这样优先保护常用小规模效果，同时检验更大人数的接口与零样本泛化。",
+            "",
+            "### 3.1 输入、输出与方法",
+            "",
+            "输入由目标状态8维、任意行数Red实体表、任意行数Blue实体表和上下文5维组成。每个实体9维，包含相对位置、相对速度、生命值、存活与存在标记。批内只临时补齐到该批最大人数，并用mask排除补位，因此没有业务人数上限。",
+            "",
+            "网络采用[Deep Sets](https://papers.nips.cc/paper/2017/hash/f22e4747da1aa27e363d86d40ff442fe-Abstract.html)共享实体编码，并借鉴[DeepHit](https://ojs.aaai.org/index.php/AAAI/article/view/11842)的离散竞争风险思想输出20个联合概率：10个Red在各时间段获胜的概率和10个Blue获胜概率，每段5步。由此同时得到Red胜率、预计剩余步数、Red胜时剩余步数和Blue胜时剩余步数。本项目只是借鉴DeepHit式联合分布目标，不声称逐行复现DeepHit。",
+            "",
+            f"模型参数量 `{int(metrics['parameter_count']):,}`；最佳epoch `{metrics['best_epoch']}`，运行 `{metrics['epochs_run']}` 个epoch后提前停止；温度校准参数 `{float(metrics['temperature']):.3f}`；保存后重载最大预测差 `{float(metrics['reload_max_prediction_difference']):.3g}`。",
+            "",
+            "![Stage 2训练曲线](stage2/final/figures/01_training_curves.png)",
+            "",
+            "### 3.2 总体测试结果",
+            "",
+            "| 测试范围 | 局数 | Brier↓ | AUC↑ | 剩余时间MAE↓ | 条件胜负时间MAE↓ |",
+            "|---|---:|---:|---:|---:|---:|",
+            f"| 核心规模Test | {core['episodes']:,} | {_number(core['brier'])} | {_number(core['auc'])} | {float(core['time_mae_steps']):.2f}步 | {float(core['conditional_time_mae_steps']):.2f}步 |",
+            f"| 低权重扩展Test | {sparse['episodes']:,} | {_number(sparse['brier'])} | {_number(sparse['auc'])} | {float(sparse['time_mae_steps']):.2f}步 | {float(sparse['conditional_time_mae_steps']):.2f}步 |",
+            f"| 完全留出规模 | {generalization['episodes']:,} | {_number(generalization['brier'])} | {_number(generalization['auc'])} | {float(generalization['time_mae_steps']):.2f}步 | {float(generalization['conditional_time_mae_steps']):.2f}步 |",
+            "",
+            f"核心固定胜率基线Brier为 `{float(baseline['core_constant_brier']):.4f}`，模型为 `{float(core['brier']):.4f}`；固定中位时间基线MAE为 `{float(baseline['core_median_time_mae_steps']):.2f}` 步，模型为 `{float(core['time_mae_steps']):.2f}` 步。核心分规模初始胜率平均绝对误差为 `{float(metrics['core_mean_scale_win_rate_absolute_error']):.2%}`。",
+            "",
+            "### 3.3 所有规模的胜率与时间",
+            "",
+            "| 规模 | 数据角色 | 局数 | 真实Red胜率 | 预测Red胜率 | 胜率误差 | 时间MAE | Red胜时MAE | Blue胜时MAE |",
+            "|---|---|---:|---:|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for scale, value in metrics["per_scale"].items():
+        role = {"core": "核心", "sparse": "低权重", "heldout": "完全留出"}[
+            value["scale_group"]
+        ]
+        lines.append(
+            f"| {scale} | {role} | {value['episodes']:,} | "
+            f"{float(value['actual_start_win_rate']):.1%} | "
+            f"{float(value['predicted_start_win_rate']):.1%} | "
+            f"{float(value['start_win_rate_absolute_error']):.1%} | "
+            f"{float(value['time_mae_steps']):.2f}步 | "
+            f"{optional(value['red_win_time_mae_steps'])} | "
+            f"{optional(value['blue_win_time_mae_steps'])} |"
+        )
+    lines.extend(
+        [
+            "",
+            "![所有规模真实与预测胜率](stage2/final/figures/02_all_scale_win_rates.png)",
+            "",
+            "![所有规模剩余时间误差](stage2/final/figures/03_all_scale_time_mae.png)",
+            "",
+            "![核心规模概率校准](stage2/final/figures/04_core_calibration.png)",
+            "",
+            "### 3.4 Stage 2最终验收",
+            "",
+            "| 门槛 | 结果 |",
+            "|---|---:|",
+            f"| 核心Brier | {_yes_no(metrics['acceptance']['core_brier'])} |",
+            f"| 核心AUC | {_yes_no(metrics['acceptance']['core_auc'])} |",
+            f"| 核心剩余时间MAE | {_yes_no(metrics['acceptance']['core_time_mae'])} |",
+            f"| 核心分规模胜率误差 | {_yes_no(metrics['acceptance']['core_scale_win_rate_error'])} |",
+            f"| 四项全部满足 | **{_yes_no(stage2_passed)}** |",
+            "",
+            "## 4. 第一轮最终价值与限制",
+            "",
+            "1. 得到一套单权重、动态人数的REFIL-QMIX Red策略，并完成100万步训练与独立Test。",
+            "2. 冻结策略可直接运行训练外人数；均衡对抗仍更困难，不能把单种子压力测试当作算法优越性证明。",
+            "3. 得到一个不设固定人数上限的Stage 2联合评估器，核心Test AUC、概率误差和剩余时间误差均通过门槛。",
+            "4. 5v1、6v3、7v3完全留出；其中6v3胜率误差较大。低权重6v4误差也明显，是后续扩充数据或比较Set Transformer的重点。",
+            "5. 当前仍只有一个Stage 1训练种子和两类规则对手；跨种子稳定性、学习型Blue对手以及S3/S4不属于第一轮结论。",
+            "",
+            "## 5. 第一轮唯一结果入口",
+            "",
+            "- `stage1/summary.json`与`stage1/training_curves.csv`：Stage 1训练证据。",
+            "- `evaluation/`与`evaluation_unseen_scales/`：冻结策略正式与压力测试。",
+            "- `stage2/final/data/dataset_manifest.json`：Stage 2最终数据规模、权重与哈希。",
+            "- `stage2/final/model/dynamic_outcome_time_model.pt`：Stage 2最终模型。",
+            "- `stage2/final/model/metrics.json`：全部指标和分规模结果。",
+            "- `stage2/final/figures/`：Stage 2最终图表。",
+            "- `results_index.json`：第一轮正式与先导产物的路径、大小和SHA256索引。",
+            "- `stage2/preliminary/`：旧胜率二分类先导产物，仅供审计，不用于本报告结论。",
+            "",
+            f"Stage 1检查点SHA256：`{stage1['best_checkpoint_sha256']}`。Stage 2数据SHA256：`{metrics['dataset_sha256']}`。Stage 2模型SHA256：`{metrics['checkpoint_sha256']}`。",
+        ]
+    )
+    report = round_root / "round_01_report.md"
+    report.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return report
+
+
 def write_report(round_root: Path, figure_paths: Sequence[Path]) -> Path:
+    final_metrics = round_root / "stage2" / "final" / "model" / "metrics.json"
+    if final_metrics.is_file():
+        return _write_final_round01_report(round_root)
     stage1 = _json(round_root / "stage1" / "summary.json")
     dataset = _json(round_root / "stage2" / "data" / "dataset_summary.json")
     metrics = _json(round_root / "stage2" / "model" / "metrics.json")
@@ -567,7 +763,8 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
+def _legacy_preliminary_main() -> None:
+    """Historical win-only runner retained for artifact compatibility only."""
     args = parse_args()
     round_root = ROUND_ROOT
     status_path = round_root / "pipeline_status.json"
@@ -724,6 +921,22 @@ def main() -> None:
         for line in traceback.format_exc().splitlines():
             log.child_line(line)
         raise
+
+
+def main() -> None:
+    """Validate final artifacts and regenerate the sole round-01 report."""
+
+    _validate_stage1(ROUND_ROOT)
+    metrics_path = ROUND_ROOT / "stage2" / "final" / "model" / "metrics.json"
+    if not metrics_path.is_file():
+        raise FileNotFoundError(
+            "final Stage-2 metrics are missing; run scripts/run_round01_stage2.ps1"
+        )
+    metrics = _json(metrics_path)
+    if metrics.get("status") != "completed":
+        raise ValueError("final Stage-2 metrics are not marked completed")
+    report = write_report(ROUND_ROOT, ())
+    print(f"Round-01 merged report: {report}", flush=True)
 
 
 if __name__ == "__main__":

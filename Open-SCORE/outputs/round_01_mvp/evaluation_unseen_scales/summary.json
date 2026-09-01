@@ -1,0 +1,197 @@
+{
+  "schema_version": "round-01-posthoc-unseen-scale-evaluation-v1",
+  "status": "completed",
+  "claim_scope": "post-hoc OOD stress test; no training or fine-tuning",
+  "checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\round_01_mvp\\stage1\\checkpoints\\refil_qmix_seed20260831_best.pt",
+  "checkpoint_sha256": "15e861b770e9339f530386ebc6674d020686b1771697aa7aa8fff4c74ed6e355",
+  "device": "cuda",
+  "gpu": "NVIDIA GeForce RTX 5070 Ti",
+  "trained_scales": [
+    [
+      2,
+      1
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      3,
+      2
+    ],
+    [
+      4,
+      1
+    ],
+    [
+      4,
+      2
+    ],
+    [
+      4,
+      3
+    ]
+  ],
+  "tested_unseen_scales": [
+    [
+      2,
+      2
+    ],
+    [
+      3,
+      3
+    ],
+    [
+      5,
+      2
+    ],
+    [
+      5,
+      3
+    ],
+    [
+      6,
+      3
+    ]
+  ],
+  "opponents": [
+    "rush",
+    "split_rush"
+  ],
+  "scale_results": [
+    {
+      "scale": "2v2",
+      "win_rate_rush": 0.56,
+      "win_rate_split_rush": 0.44,
+      "combined_win_rate": 0.5,
+      "ci95_low": 0.43136085960389187,
+      "ci95_high": 0.5686391403961082,
+      "episodes": 200
+    },
+    {
+      "scale": "3v3",
+      "win_rate_rush": 0.41,
+      "win_rate_split_rush": 0.36,
+      "combined_win_rate": 0.385,
+      "ci95_low": 0.32033309726923215,
+      "ci95_high": 0.45400132779753916,
+      "episodes": 200
+    },
+    {
+      "scale": "5v2",
+      "win_rate_rush": 0.83,
+      "win_rate_split_rush": 0.8,
+      "combined_win_rate": 0.815,
+      "ci95_low": 0.7554293723884824,
+      "ci95_high": 0.8626980719938395,
+      "episodes": 200
+    },
+    {
+      "scale": "5v3",
+      "win_rate_rush": 0.62,
+      "win_rate_split_rush": 0.67,
+      "combined_win_rate": 0.645,
+      "ci95_low": 0.5765211307549043,
+      "ci95_high": 0.7080137245956883,
+      "episodes": 200
+    },
+    {
+      "scale": "6v3",
+      "win_rate_rush": 0.73,
+      "win_rate_split_rush": 0.69,
+      "combined_win_rate": 0.71,
+      "ci95_low": 0.6436252189922268,
+      "ci95_high": 0.7684597439293211,
+      "episodes": 200
+    }
+  ],
+  "evaluation": {
+    "episodes": 1000,
+    "episodes_per_scale_opponent": 100,
+    "mean_payoff": 0.222,
+    "win_rate": 0.611,
+    "mean_episode_length": 26.497,
+    "components": {
+      "rush": {
+        "episodes": 500,
+        "mean_payoff": 0.26,
+        "win_rate": 0.63,
+        "per_scale_payoff": {
+          "2v2": 0.12,
+          "3v3": -0.18,
+          "5v2": 0.66,
+          "5v3": 0.24,
+          "6v3": 0.46
+        },
+        "per_scale_win_rate": {
+          "2v2": 0.56,
+          "3v3": 0.41,
+          "5v2": 0.83,
+          "5v3": 0.62,
+          "6v3": 0.73
+        }
+      },
+      "split_rush": {
+        "episodes": 500,
+        "mean_payoff": 0.184,
+        "win_rate": 0.592,
+        "per_scale_payoff": {
+          "2v2": -0.12,
+          "3v3": -0.28,
+          "5v2": 0.6,
+          "5v3": 0.34,
+          "6v3": 0.38
+        },
+        "per_scale_win_rate": {
+          "2v2": 0.44,
+          "3v3": 0.36,
+          "5v2": 0.8,
+          "5v3": 0.67,
+          "6v3": 0.69
+        }
+      }
+    },
+    "selection_key": [
+      -0.28,
+      0.222
+    ],
+    "seed_base": 48260831
+  },
+  "git_provenance": {
+    "schema_version": "openscore-git-provenance-v1",
+    "git_available": true,
+    "git_executable": "D:\\Software\\Git\\cmd\\git.exe",
+    "repository_detected": true,
+    "repository_root": "E:\\Code\\Open_Score",
+    "head_commit": "69359f370b79493997304dde16bbec3ca4b40b45",
+    "branch": "master",
+    "detached_head": false,
+    "clean": false,
+    "status_porcelain": [
+      " D \"Open-SCORE/docs/03_\\346\\226\\271\\346\\263\\225\\347\\256\\200\\347\\211\\210.html\""
+    ],
+    "status_sha256": "0139187e3d93e5d7163d1cc1768e12a16ea35e08803d9b661504994daffd6cd1",
+    "worktree_fingerprint_sha256": "e05756b07161addef25775f6289d357c0def66363741353490f1ba4aee860a88",
+    "formal_eligible": false
+  },
+  "arguments": {
+    "checkpoint": "outputs\\round_01_mvp\\stage1\\checkpoints\\refil_qmix_seed20260831_best.pt",
+    "scales": [
+      "2v2",
+      "3v3",
+      "5v2",
+      "5v3",
+      "6v3"
+    ],
+    "opponents": [
+      "rush",
+      "split_rush"
+    ],
+    "episodes_per_cell": 100,
+    "seed_base": 48260831,
+    "max_steps": 50,
+    "batch_size": 8,
+    "device": "cuda",
+    "output_dir": "outputs\\round_01_mvp\\evaluation_unseen_scales"
+  }
+}

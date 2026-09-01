@@ -1,10 +1,11 @@
 # Open-SCORE：S1 / S2 可复现实验工程
 
-Open-SCORE 采用分轮实验方案：第 1 轮用 REFIL 式实体注意力 QMIX 训练 100 万 HAD 环境步，以一套权重覆盖六种人数规模，并用一套共享单位编码网络从动态规模全局态势预测 Red 最终胜率；第 2 轮增加随机种子并验证未见规模组合的泛化；第 3 轮才进入 SMAClite 原版和独立 AD 环境；多算法长预算比较留到第 4 轮。
+Open-SCORE 采用分轮实验方案。第 1 轮已经完成：用 REFIL 式实体注意力 QMIX 训练 100 万 HAD 环境步，以一套权重覆盖六种人数规模；随后用一套任意人数的共享实体网络，从全局态势联合预测 Red 最终胜率和距离胜利/失败的剩余步数。第 2 轮才增加训练随机种子并验证未见规模组合的稳定泛化；第 3 轮进入 SMAClite 原版和独立 AD 环境；多算法长预算比较留到第 4 轮。
 
 ## 阅读入口
 
 - **执行只看 [Stage 1 / Stage 2 分轮实验计划](docs/05_实验设计与预期证据.md)**：每一轮和每一步都写明类型、目标、输入、输出、固定参数、评价方法和预期结果。
+- **第一轮结果只看 `outputs/round_01_mvp/round_01_report.md`**：Stage 1、训练外规模压力测试、Stage 2胜率/时间评估和全部图表已合并在这一份报告中。
 - [方法说明](docs/03_方法简版.md)及其 [HTML 浏览版](docs/03_方法简版.html)只描述包含 PSRO、S3、S4 在内的长期研究路线；它们不定义本轮实验，也不能覆盖协议。
 
 若 README、背景文档、代码注释或历史记录与实验协议不一致，一律以 `docs/05_实验设计与预期证据.md` 为准。修改正式实验必须先修订该协议并留下 Git 记录，不能在运行过程中临时改变参数或验收口径。
@@ -27,3 +28,14 @@ D:\Software\Anaconda\envs\torch310\python.exe -m pytest -q
 ```
 
 旧的短测试和历史报告不属于本次结果。每轮只在对应的 `outputs/round_xx/` 中保留一份人工报告；原始数据、权重和机器可读证据留在同一轮目录中。
+
+## 第一轮统一入口
+
+Stage 1权重已经冻结。若第一轮Stage 2结果完整，以下命令会校验现有数据和权重并直接报告完成；若文件缺失，才会继续采集、训练、绘图并重建同一份第一轮报告：
+
+```powershell
+conda activate torch310
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run_round01_stage2.ps1
+```
+
+正式配置只有 `configs/stage2_round01_final.yaml`；最终Stage 2输出只有 `outputs/round_01_mvp/stage2/final/`。旧的7200局胜率二分类实验只作为先导证据保留，不是最终模型。

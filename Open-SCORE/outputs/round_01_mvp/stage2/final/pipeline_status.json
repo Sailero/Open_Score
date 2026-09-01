@@ -1,0 +1,17 @@
+{
+  "status": "completed",
+  "stage": "completed",
+  "completed_at": "2026-09-01T17:42:29+08:00",
+  "elapsed_seconds": 2.780941800097935,
+  "dataset": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\round_01_mvp\\stage2\\final\\data\\dynamic_outcome_time.jsonl",
+  "checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\round_01_mvp\\stage2\\final\\model\\dynamic_outcome_time_model.pt",
+  "metrics": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\round_01_mvp\\stage2\\final\\model\\metrics.json",
+  "report": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\round_01_mvp\\round_01_report.md",
+  "figures": [
+    "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\round_01_mvp\\stage2\\final\\figures\\01_training_curves.png",
+    "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\round_01_mvp\\stage2\\final\\figures\\02_all_scale_win_rates.png",
+    "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\round_01_mvp\\stage2\\final\\figures\\03_all_scale_time_mae.png",
+    "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\round_01_mvp\\stage2\\final\\figures\\04_core_calibration.png"
+  ],
+  "live_log": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\round_01_mvp\\stage2\\final\\live_progress.log"
+}
