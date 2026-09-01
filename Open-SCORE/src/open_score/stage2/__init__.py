@@ -1,7 +1,7 @@
 """Stage 2: strategy-conditioned local outcome-and-time prediction."""
 
 from .calibration import CalibratedRiskBound, TemperatureScaler
-from .canonical import HADCanonicalizer
+from .canonical import HADCanonicalizer, HADVariableSetState
 from .collectors import collect_had_records, iter_had_records, record_from_had_episode
 from .data import (
     FeatureNormalizer,
@@ -47,6 +47,7 @@ __all__ = [
     "DynamicHADWinNet",
     "FeatureNormalizer",
     "HADCanonicalizer",
+    "HADVariableSetState",
     "HADDeepSetOutcomeNet",
     "OutcomeTimeMLP",
     "PHYSICAL_REDUNDANT_RELATIONS",

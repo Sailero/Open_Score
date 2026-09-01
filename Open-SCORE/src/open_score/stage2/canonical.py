@@ -1,4 +1,4 @@
-"""Canonical fixed-width local state encoders used by Stage 2."""
+"""Canonical legacy-vector and variable-set HAD encoders used by Stage 2."""
 
 from __future__ import annotations
 
@@ -9,17 +9,29 @@ import numpy as np
 
 
 @dataclass(frozen=True)
+class HADVariableSetState:
+    """Target plus two variable-cardinality entity sets for Stage-2 inference."""
+
+    target: np.ndarray
+    red_entities: np.ndarray
+    blue_entities: np.ndarray
+    context: np.ndarray
+
+
+@dataclass(frozen=True)
 class HADCanonicalizer:
-    """Convert HAD global entities into a target-centred 4v4 vector.
+    """Convert HAD global entities into target-centred model inputs.
 
     HAD's state entity schema is ``position(3), velocity(3), health, alive,
     red, blue, target, remaining_horizon``.  Agents are sorted separately by
     distance to the target and lexicographic state features.  Consequently,
     permuting environment entity rows cannot change the result.
 
-    Slots retain a ``present`` bit distinct from ``alive``.  A destroyed
-    roster member is therefore distinguishable from padding, which is
-    essential for command-time casualty evaluation.
+    ``__call__`` retains the frozen round-01 4v4 serialization.  New inference
+    code uses ``to_entity_set``, which retains every Red and Blue roster member
+    and therefore has no configured cardinality ceiling.  Both forms preserve
+    a ``present`` bit distinct from ``alive`` so casualties remain
+    distinguishable from batch padding.
     """
 
     max_defenders: int = 4
@@ -56,10 +68,21 @@ class HADCanonicalizer:
             slots[index, 8] = 1.0
         return slots.reshape(-1)
 
-    def __call__(
+    @staticmethod
+    def _agent_set(agents: np.ndarray, target: np.ndarray) -> np.ndarray:
+        """Return every roster member without imposing a serialization capacity."""
+
+        relative_position = agents[:, :3] - target[:3]
+        relative_velocity = agents[:, 3:6] - target[3:6]
+        present = np.ones((len(agents), 1), dtype=np.float32)
+        return np.concatenate(
+            (relative_position, relative_velocity, agents[:, 6:8], present), axis=1
+        ).astype(np.float32, copy=False)
+
+    def _validated_entities(
         self,
         state_entities: np.ndarray,
-        state_mask: Optional[np.ndarray] = None,
+        state_mask: Optional[np.ndarray],
     ) -> np.ndarray:
         entities = np.asarray(state_entities, dtype=np.float32)
         if entities.ndim != 2 or entities.shape[1] not in {11, self.entity_dim}:
@@ -81,6 +104,14 @@ class HADCanonicalizer:
             entities = np.concatenate(
                 (entities, np.ones((len(entities), 1), dtype=np.float32)), axis=1
             )
+        return entities
+
+    def __call__(
+        self,
+        state_entities: np.ndarray,
+        state_mask: Optional[np.ndarray] = None,
+    ) -> np.ndarray:
+        entities = self._validated_entities(state_entities, state_mask)
 
         defender_rows = entities[:, 8] > 0.5
         attacker_rows = entities[:, 9] > 0.5
@@ -118,7 +149,61 @@ class HADCanonicalizer:
             raise RuntimeError("internal HAD canonical-state dimension error")
         return result
 
+    def to_entity_set(
+        self,
+        state_entities: np.ndarray,
+        state_mask: Optional[np.ndarray] = None,
+    ) -> HADVariableSetState:
+        """Encode all Red/Blue entities with no fixed roster-size ceiling.
+
+        Counts retain the round-01 scale convention (four agents is 1.0) so
+        the already-trained checkpoint sees exactly the same feature units.
+        Values above 1.0 are valid out-of-distribution counts, not padding.
+        """
+
+        entities = self._validated_entities(state_entities, state_mask)
+        defender_rows = entities[:, 8] > 0.5
+        attacker_rows = entities[:, 9] > 0.5
+        target_rows = entities[:, 10] > 0.5
+        if int(target_rows.sum()) != 1:
+            raise ValueError("canonical HAD state requires exactly one target")
+        defenders = entities[defender_rows]
+        attackers = entities[attacker_rows]
+        if len(defenders) < 1 or len(attackers) < 1:
+            raise ValueError("variable HAD state requires at least one agent per side")
+        target = entities[target_rows][0]
+        defenders = self._sort_agents(defenders, target)
+        attackers = self._sort_agents(attackers, target)
+        context = np.asarray(
+            [
+                len(defenders) / self.max_defenders,
+                len(attackers) / self.max_attackers,
+                float((defenders[:, 7] > 0.5).sum()) / self.max_defenders,
+                float((attackers[:, 7] > 0.5).sum()) / self.max_attackers,
+                target[11],
+            ],
+            dtype=np.float32,
+        )
+        return HADVariableSetState(
+            target=target[:8].astype(np.float32, copy=True),
+            red_entities=self._agent_set(defenders, target),
+            blue_entities=self._agent_set(attackers, target),
+            context=context,
+        )
+
     def from_observation(self, observation: Mapping[str, np.ndarray]) -> np.ndarray:
         if "state_entities" not in observation:
             raise ValueError("HAD observation lacks state_entities")
         return self(observation["state_entities"], observation.get("state_mask"))
+
+    def entity_set_from_observation(
+        self, observation: Mapping[str, np.ndarray]
+    ) -> HADVariableSetState:
+        if "state_entities" not in observation:
+            raise ValueError("HAD observation lacks state_entities")
+        return self.to_entity_set(
+            observation["state_entities"], observation.get("state_mask")
+        )
+
+
+__all__ = ["HADCanonicalizer", "HADVariableSetState"]

@@ -11,6 +11,7 @@ import pytest
 import torch
 import yaml
 
+from open_score.envs import HADStage1Adapter
 from open_score.stage2 import (
     BootstrapOutcomeEnsemble,
     CalibratedRiskBound,
@@ -60,6 +61,58 @@ def test_round01_dynamic_win_model_is_permutation_invariant_and_reloadable(tmp_p
     restored = DynamicHADWinNet(entity_hidden_dim=16, hidden_dim=24)
     restored.load_state_dict(torch.load(path, weights_only=True), strict=True)
     assert torch.equal(model(state), restored(state))
+
+
+def test_round01_dynamic_win_model_accepts_arbitrary_entity_counts():
+    torch.manual_seed(405)
+    model = DynamicHADWinNet(entity_hidden_dim=16, hidden_dim=24)
+    target = torch.randn(2, 8)
+    context = torch.randn(2, 5)
+    red = torch.randn(2, 6, 9)
+    blue = torch.randn(2, 3, 9)
+    red[..., 8] = 1.0
+    blue[..., 8] = 1.0
+    baseline = model.forward_entities(target, red, blue, context)
+
+    red_permuted = red[:, torch.tensor([5, 2, 0, 4, 1, 3])]
+    blue_permuted = blue[:, torch.tensor([2, 0, 1])]
+    assert torch.allclose(
+        baseline,
+        model.forward_entities(target, red_permuted, blue_permuted, context),
+        atol=1e-6,
+        rtol=1e-6,
+    )
+
+    padded_red = torch.cat((red, torch.randn(2, 4, 9)), dim=1)
+    red_mask = torch.zeros(2, 10, dtype=torch.bool)
+    red_mask[:, :6] = True
+    assert torch.allclose(
+        baseline,
+        model.forward_entities(
+            target, padded_red, blue, context, red_mask=red_mask
+        ),
+        atol=1e-6,
+        rtol=1e-6,
+    )
+
+
+def test_round01_canonicalizer_preserves_entities_beyond_legacy_capacity():
+    adapter = HADStage1Adapter(
+        6,
+        3,
+        max_steps=2,
+        shaping_scale=0.5,
+        allow_unregistered_roster=True,
+    )
+    observation = adapter.reset(seed=48_260_831)["Red"]
+    encoded = HADCanonicalizer().entity_set_from_observation(observation)
+    assert encoded.target.shape == (8,)
+    assert encoded.red_entities.shape == (6, 9)
+    assert encoded.blue_entities.shape == (3, 9)
+    assert encoded.context.shape == (5,)
+    assert encoded.context[0] == pytest.approx(1.5)
+    assert np.all(encoded.red_entities[:, 8] == 1.0)
+    assert np.all(encoded.blue_entities[:, 8] == 1.0)
 
 
 def test_stage2_contract_roundtrip_and_lineage_group_five_way_split(tmp_path):

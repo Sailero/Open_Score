@@ -98,6 +98,23 @@ def _round_fixture(root: Path) -> None:
                     "episodes": 200,
                 }
             )
+    _write_json(
+        root / "evaluation_unseen_scales" / "summary.json",
+        {
+            "scale_results": [
+                {
+                    "scale": scale,
+                    "win_rate_rush": rate,
+                    "win_rate_split_rush": rate - 0.02,
+                    "combined_win_rate": rate - 0.01,
+                    "ci95_low": rate - 0.08,
+                    "ci95_high": min(1.0, rate + 0.05),
+                    "episodes": 200,
+                }
+                for scale, rate in (("2v2", 0.51), ("3v3", 0.40), ("5v2", 0.82), ("5v3", 0.65), ("6v3", 0.72))
+            ]
+        },
+    )
     split = {
         "train": {"episodes": 5040, "wins": 4000, "losses": 1040, "rows": 40000},
         "validation": {"episodes": 1080, "wins": 850, "losses": 230, "rows": 8500},
@@ -154,4 +171,6 @@ def test_round01_figures_and_report_are_compact_and_complete(tmp_path):
     assert "Stage 1：**通过**" in text
     assert "Stage 2：**通过**" in text
     assert "4v3" in text
+    assert "训练外规模的冻结策略压力测试" in text
+    assert "6v3" in text
     assert text.count("![") == 4

@@ -349,6 +349,8 @@ def write_report(round_root: Path, figure_paths: Sequence[Path]) -> Path:
     metrics = _json(round_root / "stage2" / "model" / "metrics.json")
     heldout_rows = _read_csv(round_root / "evaluation" / "win_rate_by_scale.csv")
     heldout_by_scale = {row["scale"]: row for row in heldout_rows}
+    unseen_path = round_root / "evaluation_unseen_scales" / "summary.json"
+    unseen = _json(unseen_path) if unseen_path.is_file() else None
 
     initial = stage1["initial_validation"]
     best = stage1["best_validation"]
@@ -381,7 +383,7 @@ def write_report(round_root: Path, figure_paths: Sequence[Path]) -> Path:
         "",
         "第一阶段在 HAD 中只训练 Red 防御方，Blue 使用 `rush` 与 `split_rush` 两种固定规则策略。一个 REFIL-QMIX 权重同时处理 `2v1、3v1、3v2、4v1、4v2、4v3` 六种规模。第二阶段冻结最佳 Red 权重，采集不同时刻的全局态势，用同一个 Deep Sets 二分类网络预测 Red 最终获胜概率。",
         "",
-        "这是一轮单训练种子的初步验证。六种规模都参与了训练，因此结果证明的是一个网络覆盖训练分布中的六种规模，不是未见规模零样本泛化，也不是与 VDN、MAPPO 等算法的显著性比较。",
+        "这是一轮单训练种子的初步验证。六种正式规模都参与了训练；正式实验完成后，又按用户要求追加了五种未见规模的冻结权重压力测试。追加测试没有训练或调参，但属于事后探索结果，不替代后续的预注册留出规模实验，也不是与 VDN、MAPPO 等算法的显著性比较。",
         "",
         "## 2. Stage 1：动态规模决策策略",
         "",
@@ -412,8 +414,38 @@ def write_report(round_root: Path, figure_paths: Sequence[Path]) -> Path:
             "![Stage 1分规模胜率](figures/02_stage1_scale_win_rates.png)",
             "",
             "`4v1`和`3v1`最容易，合并胜率分别为96.5%和95.5%；`4v3`最困难，合并胜率54.5%。这说明动态规模接口和共享参数已经跑通，但接近人数均衡的高难场景仍是后续重点。",
+        ]
+    )
+    if unseen is not None:
+        lines.extend(
+            [
+                "",
+                "### 2.2 训练外规模的冻结策略压力测试（事后探索）",
+                "",
+                "最佳Stage 1权重保持冻结、探索率为0，没有继续训练或微调。测试覆盖`2v2、3v3、5v2、5v3、6v3`，每个规模分别对抗`rush`和`split_rush`各100局，共1000局。",
+                "",
+                "| 未见规模 | rush | split_rush | 合并胜率 | 95%区间 | 局数 |",
+                "|---|---:|---:|---:|---:|---:|",
+            ]
+        )
+        for row in unseen["scale_results"]:
+            lines.append(
+                f"| {row['scale']} | {_pct(row['win_rate_rush'])} | "
+                f"{_pct(row['win_rate_split_rush'])} | {_pct(row['combined_win_rate'])} | "
+                f"{_pct(row['ci95_low'])}–{_pct(row['ci95_high'])} | {row['episodes']} |"
+            )
+        lines.extend(
+            [
+                "",
+                "人数均衡时泛化较弱：`2v2`为50.0%，`3v3`为38.5%。保持Red数量优势并超过训练最大人数时仍能直接运行：`5v2、5v3、6v3`分别为81.5%、64.5%、71.0%。这支持实体网络具备训练外人数接口泛化能力，但测试是单训练种子、事后选择规模，不能替代多种子预注册泛化结论。",
+            ]
+        )
+
+    stage1_acceptance_number = "2.3" if unseen is not None else "2.2"
+    lines.extend(
+        [
             "",
-            "### 2.2 Stage 1验收",
+            f"### {stage1_acceptance_number} Stage 1验收",
             "",
             "| 门槛 | 结果 |",
             "|---|---:|",
@@ -427,7 +459,15 @@ def write_report(round_root: Path, figure_paths: Sequence[Path]) -> Path:
             "",
             "## 3. Stage 2：动态规模胜率评估器",
             "",
-            f"数据由最佳Stage 1权重产生，共 `{int(dataset['episodes']):,}` 局、`{int(dataset['rows']):,}` 个态势样本，输入维度为 `{dataset['state_dim']}`。同一局的全部时刻只属于一个划分，并通过 `sample_weight` 保证每局总权重为1。",
+            f"数据由最佳Stage 1权重产生，共 `{int(dataset['episodes']):,}` 局、`{int(dataset['rows']):,}` 个态势样本。第一轮数据文件为兼容冻结协议序列化成 `{dataset['state_dim']}` 维；模型核心现已提供Red/Blue可变长实体集合接口，部署时没有固定智能体数量上限。同一局的全部时刻只属于一个划分，并通过 `sample_weight` 保证每局总权重为1。",
+            "",
+            "### 3.1 任意数量智能体如何输入",
+            "",
+            "部署输入不是一条固定长度向量，而是四部分：目标状态8维；任意行数的Red实体表，每行9维；任意行数的Blue实体表，每行9维；人数、存活数和剩余时间等上下文5维。每个实体的9维含相对位置3维、相对速度3维、生命值、存活标记和存在标记。输出是一个标量，经Sigmoid后解释为当前态势下Red最终获胜的概率。",
+            "",
+            "网络采用Deep Sets形式：每个实体共享同一个 `9→32→32` 编码器；Red和Blue分别做求和与平均池化；再把目标、两方集合摘要和上下文拼接，送入 `141→64→64→1` 的预测头。集合顺序改变不会改变输出。批量推理时只临时补齐到该批次中人数最多的样本，并用mask忽略补位，因此不存在写死的4人、6人或其他业务上限。旧的85维入口仅用于原样读取第一轮冻结数据和检查点，不再是Stage 3部署接口。",
+            "",
+            "这一做法对应成熟的集合学习路线：[Deep Sets](https://papers.nips.cc/paper/2017/hash/f22e4747da1aa27e363d86d40ff442fe-Abstract.html)给出置换不变集合函数的基本形式；若下一轮需要更强的实体间两两关系，可换成[Set Transformer](https://proceedings.mlr.press/v97/lee19d.html)的注意力集合编码器。必须区分“代码能接收任意人数”和“任意人数上都预测准确”：第一轮监督数据只覆盖2至4个Red和1至3个Blue，因此当前检查点虽然可直接计算6v3等输入，但超过训练分布后的概率尚未校准，下一轮必须加入更宽人数范围的数据再正式验收。",
             "",
             "| 划分 | 局数 | 胜 | 负 | 状态行 |",
             "|---|---:|---:|---:|---:|",
@@ -447,7 +487,7 @@ def write_report(round_root: Path, figure_paths: Sequence[Path]) -> Path:
             "",
             f"评估器只有一个权重，参数量 `{int(metrics['parameter_count']):,}`；Validation Brier选择的最佳epoch为 `{metrics['best_epoch']}`，实际运行 `{metrics['epochs_run']}` 个epoch。模型保存后重新加载的最大预测差为 `{float(metrics['reload_max_prediction_difference']):.3g}`。",
             "",
-            "### 3.1 最终Test指标",
+            "### 3.2 最终Test指标",
             "",
             "| 指标 | 动态态势网络 | 参考值/解释 |",
             "|---|---:|---|",
@@ -458,7 +498,7 @@ def write_report(round_root: Path, figure_paths: Sequence[Path]) -> Path:
             f"| 只看规模Brier | {_number(baseline['scale_only_brier'])} | 只使用人数配置的基线 |",
             f"| 六规模平均胜率绝对误差 | {_pct(metrics['mean_per_scale_absolute_win_rate_error'])} | 要求不超过15% |",
             "",
-            "### 3.2 分规模真实胜率与预测概率",
+            "### 3.3 分规模真实胜率与预测概率",
             "",
             "| 规模 | Test真实胜率 | 平均预测概率 | 绝对误差 | AUC | Brier |",
             "|---|---:|---:|---:|---:|---:|",
@@ -477,7 +517,7 @@ def write_report(round_root: Path, figure_paths: Sequence[Path]) -> Path:
             "",
             "![Stage 2概率可靠性](figures/04_stage2_calibration.png)",
             "",
-            "### 3.3 Stage 2验收",
+            "### 3.4 Stage 2验收",
             "",
             "| 门槛 | 结果 |",
             "|---|---:|",
@@ -492,8 +532,8 @@ def write_report(round_root: Path, figure_paths: Sequence[Path]) -> Path:
             "",
             "1. 已得到一套能够直接接收六种HAD规模的Red策略，而不是为每种人数分别训练模型。",
             "2. 已用1200局独立测试量化各规模效果，并明确定位`4v3`为当前瓶颈。",
-            "3. 已把仿真轨迹转化为监督学习数据，并用一个动态规模网络输出直观的Red最终胜率。",
-            "4. 当前只有一个RL训练种子、两类固定规则对手，且六种规模都参与训练；因此结论是第一轮可用性证据，不是算法优越性、跨种子稳定性或未见规模泛化证明。",
+            "3. 已把仿真轨迹转化为监督学习数据，并用一个共享实体编码器和无固定人数上限的集合接口输出直观的Red最终胜率；第一轮校准证据仍只覆盖六种训练规模。",
+            "4. 当前只有一个RL训练种子、两类固定规则对手；五种训练外规模结果属于冻结权重的事后压力测试。因此结论是第一轮可用性与初步泛化证据，不是算法优越性或跨种子稳定性证明。",
             "5. 下一轮应优先增加两个训练种子，再做预注册的留出规模实验；不能因为本轮结果较好就跳过稳定性验证。",
             "",
             "## 5. 结果文件",
@@ -501,6 +541,11 @@ def write_report(round_root: Path, figure_paths: Sequence[Path]) -> Path:
             "- `stage1/summary.json`：Stage 1训练与最佳权重摘要。",
             "- `stage1/training_curves.csv`：训练曲线原始数据。",
             "- `evaluation/win_rate_by_scale.csv`：1200局分规模胜率与置信区间。",
+            *(
+                ["- `evaluation_unseen_scales/`：1000局训练外规模逐局结果、胜率和置信区间。"]
+                if unseen is not None
+                else []
+            ),
             "- `stage2/data/dataset_summary.json`：7200局数据摘要。",
             "- `stage2/model/metrics.json`：Stage 2全部指标与验收结果。",
             "- `stage2/model/dynamic_win_model.pt`：唯一动态规模胜率评估器。",
