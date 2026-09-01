@@ -60,6 +60,8 @@ class DisplayPlayer:
             return
 
         self.handle_events()
+        if not self.running:
+            return
 
         # 使用带透明度的图层绘制各类信息
         transparent_layer = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)

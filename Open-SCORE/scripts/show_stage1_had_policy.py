@@ -1,4 +1,4 @@
-"""Render one frozen round-01 REFIL policy episode in a pygame window."""
+"""Continuously render the frozen round-01 REFIL policy in a pygame window."""
 
 from __future__ import annotations
 
@@ -34,8 +34,13 @@ def parse_args() -> argparse.Namespace:
         "--opponent", choices=("rush", "split_rush"), default="split_rush"
     )
     parser.add_argument("--seed", type=int, default=48_260_831)
-    parser.add_argument("--fps", type=float, default=5.0)
-    parser.add_argument("--episodes", type=int, default=1)
+    parser.add_argument("--fps", type=float, default=30.0)
+    parser.add_argument(
+        "--episodes",
+        type=int,
+        default=0,
+        help="number of episodes to show; 0 keeps replaying until the window closes",
+    )
     parser.add_argument("--device", choices=("cpu", "cuda", "auto"), default="auto")
     return parser.parse_args()
 
@@ -81,17 +86,31 @@ def load_controller(checkpoint_path: Path, device: torch.device) -> QMixControll
     return QMixController(model, device, epsilon=0.0, name="round01_best_refil")
 
 
+def render_frame(adapter: HADStage1Adapter) -> bool:
+    """Render once and report whether the user left the window open."""
+
+    adapter.env.render()
+    import pygame
+
+    return bool(
+        pygame.get_init()
+        and pygame.display.get_init()
+        and pygame.display.get_surface() is not None
+    )
+
+
 def main() -> None:
     args = parse_args()
-    if args.fps <= 0.0 or args.episodes < 1:
-        raise ValueError("fps and episodes must be positive")
+    if args.fps <= 0.0 or args.episodes < 0:
+        raise ValueError("fps must be positive and episodes must be non-negative")
     red_count, blue_count = parse_scale(args.scale)
     device = choose_device(args.device)
     red = load_controller(args.checkpoint, device)
     blue = RuleBasedController(args.opponent)
     frame_delay = 1.0 / args.fps
 
-    for episode_index in range(args.episodes):
+    episode_index = 0
+    while args.episodes == 0 or episode_index < args.episodes:
         seed = args.seed + episode_index
         adapter = HADStage1Adapter(
             red_count,
@@ -106,7 +125,8 @@ def main() -> None:
         rng = np.random.default_rng(seed + 1_000_003)
         done = False
         info = {}
-        adapter.env.render()
+        if not render_frame(adapter):
+            return
         while not done:
             with torch.inference_mode():
                 red_actions = red.act(
@@ -114,7 +134,8 @@ def main() -> None:
                 )
             blue_actions = blue.act(adapter, "Blue", observations["Blue"], rng)
             observations, _, done, info = adapter.step(red_actions, blue_actions)
-            adapter.env.render()
+            if not render_frame(adapter):
+                return
             print(
                 f"episode={episode_index + 1} step={adapter.step_count:02d} "
                 f"red_alive={sum(agent.Health > 0 for agent in adapter.env.red_agents)} "
@@ -125,6 +146,7 @@ def main() -> None:
             time.sleep(frame_delay)
         outcome = "Red win" if info["outcome_red"] > 0 else "Blue win"
         print(f"episode={episode_index + 1} completed: {outcome}", flush=True)
+        episode_index += 1
 
     import pygame
 
