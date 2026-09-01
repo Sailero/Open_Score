@@ -1,0 +1,73 @@
+# Round-02 Stage-2: one arbitrary-roster Red-win and remaining-time evaluator.
+seed: 20260901
+device: cuda
+output_dir: outputs/round_02_stage2_dynamic
+stage1_checkpoint: outputs/round_01_mvp/stage1/checkpoints/refil_qmix_seed20260831_best.pt
+
+collection:
+  opponents: [rush, split_rush]
+  max_steps: 50
+  snapshot_steps: [0, 5, 10, 15, 20, 25, 30, 35, 40, 45]
+  batch_size: 16
+  seed_base: 52000000
+
+  # Main deployment range. These scales receive most samples and weight 1.0.
+  core_scales:
+    - [2, 1]
+    - [2, 2]
+    - [3, 1]
+    - [3, 2]
+    - [3, 3]
+    - [4, 1]
+    - [4, 2]
+    - [4, 3]
+    - [4, 4]
+  core_episodes_per_cell: 400
+  core_training_weight: 1.0
+
+  # Larger rosters participate sparsely so they do not overwhelm <=4v4.
+  sparse_scales:
+    - [5, 2]
+    - [5, 3]
+    - [5, 4]
+    - [5, 5]
+    - [6, 2]
+    - [6, 4]
+    - [6, 5]
+    - [6, 6]
+  sparse_episodes_per_cell: 120
+  sparse_training_weight: 0.25
+
+  # These scales are never used for fitting or model selection.
+  heldout_scales:
+    - [5, 1]
+    - [6, 3]
+    - [7, 3]
+  heldout_episodes_per_cell: 150
+
+  split:
+    train_fraction: 0.70
+    validation_fraction: 0.15
+
+training:
+  horizon_bins: 10
+  steps_per_bin: 5
+  entity_hidden_dim: 64
+  hidden_dim: 128
+  batch_size: 512
+  learning_rate: 0.001
+  weight_decay: 0.00001
+  max_epochs: 120
+  minimum_epochs: 25
+  patience: 18
+  gradient_clip: 5.0
+  outcome_bce_weight: 0.50
+  time_huber_weight: 0.50
+  selection_time_weight: 0.25
+  selection_nll_weight: 0.05
+
+acceptance:
+  core_brier_max: 0.16
+  core_auc_min: 0.70
+  core_time_mae_max_steps: 10.0
+  core_mean_scale_win_rate_error_max: 0.12

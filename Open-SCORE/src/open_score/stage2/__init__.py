@@ -25,6 +25,7 @@ from .metrics import evaluate_stage2_predictions, metric_definitions_zh
 from .win_model import DynamicHADWinNet
 from .outcome_model import (
     BootstrapOutcomeEnsemble,
+    DynamicHADOutcomeNet,
     HADDeepSetOutcomeNet,
     OutcomeTimeMLP,
     competing_risk_nll,
@@ -45,6 +46,7 @@ __all__ = [
     "BootstrapOutcomeEnsemble",
     "CalibratedRiskBound",
     "DynamicHADWinNet",
+    "DynamicHADOutcomeNet",
     "FeatureNormalizer",
     "HADCanonicalizer",
     "HADVariableSetState",

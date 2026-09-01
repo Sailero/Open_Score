@@ -15,6 +15,7 @@ from open_score.envs import HADStage1Adapter
 from open_score.stage2 import (
     BootstrapOutcomeEnsemble,
     CalibratedRiskBound,
+    DynamicHADOutcomeNet,
     DynamicHADWinNet,
     competing_risk_nll,
     collect_had_records,
@@ -113,6 +114,38 @@ def test_round01_canonicalizer_preserves_entities_beyond_legacy_capacity():
     assert encoded.context[0] == pytest.approx(1.5)
     assert np.all(encoded.red_entities[:, 8] == 1.0)
     assert np.all(encoded.blue_entities[:, 8] == 1.0)
+
+
+def test_dynamic_outcome_time_model_handles_unbounded_permutation_invariant_sets():
+    torch.manual_seed(406)
+    model = DynamicHADOutcomeNet(
+        horizon_bins=10, entity_hidden_dim=16, hidden_dim=24
+    )
+    target = torch.randn(3, 8)
+    context = torch.randn(3, 5)
+    red = torch.randn(3, 7, 9)
+    blue = torch.randn(3, 3, 9)
+    red[..., 8] = 1.0
+    blue[..., 8] = 1.0
+    logits = model(target, red, blue, context)
+    assert logits.shape == (3, 20)
+    probabilities = torch.softmax(logits, dim=-1)
+    summary = model.summarize_probabilities(probabilities, steps_per_bin=5)
+    assert torch.allclose(
+        summary["red_win_probability"] + summary["blue_win_probability"],
+        torch.ones(3),
+        atol=1e-6,
+    )
+    assert torch.all((summary["expected_remaining_steps"] > 0.0))
+    assert torch.all((summary["expected_remaining_steps"] <= 50.0))
+
+    permuted = model(
+        target,
+        red[:, torch.tensor([6, 1, 4, 0, 3, 5, 2])],
+        blue[:, torch.tensor([2, 0, 1])],
+        context,
+    )
+    assert torch.allclose(logits, permuted, atol=1e-6, rtol=1e-6)
 
 
 def test_stage2_contract_roundtrip_and_lineage_group_five_way_split(tmp_path):

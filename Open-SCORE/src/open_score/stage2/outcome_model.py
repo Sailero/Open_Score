@@ -147,6 +147,141 @@ class HADDeepSetOutcomeNet(OutcomeTimeMLP):
         return self.network(representation)
 
 
+class DynamicHADOutcomeNet(nn.Module):
+    """Deep-Sets competing-risk model with no configured roster-size limit.
+
+    The two event causes are Red success and Blue success.  Each cause has
+    ``horizon_bins`` discrete remaining-time bins.  Unlike the legacy
+    ``HADDeepSetOutcomeNet``, this class receives variable Red and Blue entity
+    tables directly; padding is only a per-batch implementation detail.
+    """
+
+    ENTITY_DIM = 9
+    TARGET_DIM = 8
+    CONTEXT_DIM = 5
+
+    def __init__(
+        self,
+        horizon_bins: int = 10,
+        entity_hidden_dim: int = 64,
+        hidden_dim: int = 128,
+    ):
+        super().__init__()
+        if horizon_bins < 1 or entity_hidden_dim < 1 or hidden_dim < 1:
+            raise ValueError("all DynamicHADOutcomeNet dimensions must be positive")
+        self.horizon_bins = int(horizon_bins)
+        self.entity_hidden_dim = int(entity_hidden_dim)
+        self.hidden_dim = int(hidden_dim)
+        self.entity_phi = nn.Sequential(
+            nn.Linear(self.ENTITY_DIM, entity_hidden_dim),
+            nn.ReLU(),
+            nn.Linear(entity_hidden_dim, entity_hidden_dim),
+            nn.ReLU(),
+        )
+        head_input = self.TARGET_DIM + 4 * entity_hidden_dim + self.CONTEXT_DIM
+        self.head = nn.Sequential(
+            nn.Linear(head_input, hidden_dim),
+            nn.ReLU(),
+            nn.LayerNorm(hidden_dim),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 2 * horizon_bins),
+        )
+
+    def _pool(self, entities: Tensor, mask: Tensor | None = None) -> Tensor:
+        if entities.shape[-1] != self.ENTITY_DIM:
+            raise ValueError("each dynamic HAD entity needs 9 state values")
+        presence = entities[..., 8:9].clamp(0.0, 1.0)
+        if mask is not None:
+            if mask.shape != entities.shape[:-1]:
+                raise ValueError("entity mask must match the entity-set shape")
+            presence = presence * mask.unsqueeze(-1).to(presence.dtype)
+        embedded = self.entity_phi(entities) * presence
+        summed = embedded.sum(dim=-2)
+        mean = summed / presence.sum(dim=-2).clamp_min(1.0)
+        return torch.cat((summed, mean), dim=-1)
+
+    def forward(
+        self,
+        target: Tensor,
+        red_entities: Tensor,
+        blue_entities: Tensor,
+        context: Tensor,
+        red_mask: Tensor | None = None,
+        blue_mask: Tensor | None = None,
+    ) -> Tensor:
+        if target.shape[-1] != self.TARGET_DIM:
+            raise ValueError("dynamic HAD target needs 8 state values")
+        if context.shape[-1] != self.CONTEXT_DIM:
+            raise ValueError("dynamic HAD context needs 5 state values")
+        if target.shape[:-1] != context.shape[:-1]:
+            raise ValueError("target and context batch dimensions must match")
+        if red_entities.shape[:-2] != target.shape[:-1]:
+            raise ValueError("Red entity-set batch dimensions must match target")
+        if blue_entities.shape[:-2] != target.shape[:-1]:
+            raise ValueError("Blue entity-set batch dimensions must match target")
+        features = torch.cat(
+            (
+                target,
+                self._pool(red_entities, red_mask),
+                self._pool(blue_entities, blue_mask),
+                context,
+            ),
+            dim=-1,
+        )
+        return self.head(features)
+
+    def probabilities(
+        self,
+        target: Tensor,
+        red_entities: Tensor,
+        blue_entities: Tensor,
+        context: Tensor,
+        red_mask: Tensor | None = None,
+        blue_mask: Tensor | None = None,
+        temperature: float | Tensor = 1.0,
+    ) -> Tensor:
+        if isinstance(temperature, (int, float)) and temperature <= 0.0:
+            raise ValueError("temperature must be positive")
+        logits = self(
+            target,
+            red_entities,
+            blue_entities,
+            context,
+            red_mask,
+            blue_mask,
+        )
+        return torch.softmax(logits / temperature, dim=-1)
+
+    def summarize_probabilities(
+        self, probabilities: Tensor, steps_per_bin: int = 5
+    ) -> Dict[str, Tensor]:
+        if probabilities.shape[-1] != 2 * self.horizon_bins:
+            raise ValueError("probability class dimension does not match horizon bins")
+        if steps_per_bin < 1:
+            raise ValueError("steps_per_bin must be positive")
+        k = self.horizon_bins
+        red = probabilities[..., :k]
+        blue = probabilities[..., k:]
+        bin_steps = (
+            torch.arange(k, device=probabilities.device, dtype=probabilities.dtype)
+            + 0.5
+        ) * steps_per_bin
+        red_probability = red.sum(-1)
+        blue_probability = blue.sum(-1)
+        red_time_mass = (red * bin_steps).sum(-1)
+        blue_time_mass = (blue * bin_steps).sum(-1)
+        return {
+            "red_win_probability": red_probability,
+            "blue_win_probability": blue_probability,
+            "expected_remaining_steps": red_time_mass + blue_time_mass,
+            "expected_steps_if_red_wins": red_time_mass
+            / red_probability.clamp_min(1e-8),
+            "expected_steps_if_blue_wins": blue_time_mass
+            / blue_probability.clamp_min(1e-8),
+        }
+
+
 def make_outcome_model(
     model_kind: str,
     input_dim: int,
@@ -295,6 +430,7 @@ def outcome_time_loss(logits: Tensor, terminal_class: Tensor) -> Tensor:
 
 __all__ = [
     "BootstrapOutcomeEnsemble",
+    "DynamicHADOutcomeNet",
     "HADDeepSetOutcomeNet",
     "OutcomeTimeMLP",
     "competing_risk_nll",
