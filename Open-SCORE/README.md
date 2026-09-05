@@ -9,7 +9,9 @@ Stage1 是冻结的局部控制器，Stage2 是冻结的结局/时间代理。�
 当前已合并历史证据、保留旧 identity 负结果，并实现新方法和正式流水线。新方法效果以报告中完成的注册结果为准；测试通过不代表已经达到 oracle 接近性门槛。
 
 - [论文研究主线与实验论证](paper/论文框架.md)
-- [完整建模、原计划漏洞、文献与协议](docs/09_BA-DIB_审查与完整建模.md)
+- [MVP 完整方法：研究背景、Stage1–3 建模与贡献边界](docs/07_MVP完整方法_S1-S3.md)
+- [MVP 实验协议：基线、执行设置、统计分析与现有证据](docs/08_S3实验执行与分析协议.md)
+- [原计划漏洞与建模修订记录](docs/09_BA-DIB_审查与完整建模.md)
 - [唯一 Stage1–3 实验报告](outputs/stage123_unknown_upper_v1/experiment_report.md)
 - [固定实验配置](configs/stage123_unknown_upper.yaml)
 
