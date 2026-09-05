@@ -22,3 +22,11 @@ Open-SCORE/outputs/**
 !Open-SCORE/outputs/v2_validation/**/comparison_summary.json
 !Open-SCORE/outputs/v2_validation/**/diagnostics.json
 !Open-SCORE/outputs/v2_validation/verification.json
+!Open-SCORE/outputs/v2_validation/tests.xml
+!Open-SCORE/outputs/v2_validation/**/manifest.json
+!Open-SCORE/outputs/v2_validation/**/evaluation_manifest.json
+!Open-SCORE/outputs/v2_validation/**/training.jsonl
+!Open-SCORE/outputs/v2_validation/**/evaluation.jsonl
+!Open-SCORE/outputs/v2_validation/executor_probe/report.json
+!Open-SCORE/outputs/v2_validation/**/trace_*.json
+!Open-SCORE/outputs/v2_validation/core_ready/**/diagnostics/**/*.json

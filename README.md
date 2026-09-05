@@ -2,6 +2,8 @@
 
 研究已知且完整策略固定的对手条件下，红方如何根据局内减员动态分组。红方下层冻结，上层学习选择需要调整的成员并重建合法编组；每局最多 50 个物理步。
 
-代码、运行入口和实验说明见 [Open-SCORE/README.md](Open-SCORE/README.md)。研究设计见 [固定对手下动态分组研究方案_v2.md](固定对手下动态分组研究方案_v2.md)，实现说明见 [method_v2.md](Open-SCORE/docs/method_v2.md)。
+代码和可直接运行的续训命令见 [Open-SCORE/README.md](Open-SCORE/README.md)，实际小预算验证见 [results_v2.md](Open-SCORE/docs/results_v2.md)。研究设计见 [固定对手下动态分组研究方案_v2.md](固定对手下动态分组研究方案_v2.md)，实现说明见 [method_v2.md](Open-SCORE/docs/method_v2.md)。
 
 先进入 `Open-SCORE` 目录，再按运行指南进行单算法最小验证。开发验证与正式多种子实验分别报告；实现完成不代表已经证明性能优势。
+
+[另一份研究讨论稿](固定对手下动态分组研究方案.md)按用户要求保留其新增修改；当前代码与实验以 v2 方案和项目说明为准。

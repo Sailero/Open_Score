@@ -1,0 +1,2454 @@
+{
+  "schema": "known-grouping-diagnostics-v2",
+  "requested_states": 3,
+  "requested_rollouts": 2,
+  "candidate_limit": 16,
+  "max_steps": 50,
+  "completed_states": 3,
+  "completed_physical_rollouts": 200,
+  "completed_physical_steps": 3481,
+  "state_records": [
+    {
+      "state_id": "state_000",
+      "kind": "natural",
+      "initial_scale": 4,
+      "remaining_red": 4,
+      "step": 5,
+      "controlled_removed_ids": [],
+      "state_hash": "d0a3ecd1e968c6309371fdee5f28ee41ffcc8c59a9d489c496c3cb64a5058d3f",
+      "snapshot": "states/state_000.pt"
+    },
+    {
+      "state_id": "state_001",
+      "kind": "controlled_light_casualty",
+      "initial_scale": 8,
+      "remaining_red": 7,
+      "step": 5,
+      "controlled_removed_ids": [
+        0
+      ],
+      "state_hash": "433cf3ff8c74080fd751bb705193ba24191af27b91fbe5be354915fb9d36bf70",
+      "snapshot": "states/state_001.pt"
+    },
+    {
+      "state_id": "state_002",
+      "kind": "controlled_severe_casualty",
+      "initial_scale": 4,
+      "remaining_red": 2,
+      "step": 5,
+      "controlled_removed_ids": [
+        0,
+        1
+      ],
+      "state_hash": "4980f44c1151850923273222af4125c99fa69bd840aa5fe70dbe28ffb87a8e05",
+      "snapshot": "states/state_002.pt"
+    }
+  ],
+  "e1": [
+    {
+      "state_id": "state_000",
+      "comparable": true,
+      "actions": [
+        {
+          "groups": [
+            {
+              "target": 0,
+              "members": [
+                0,
+                1
+              ]
+            },
+            {
+              "target": 1,
+              "members": [
+                2,
+                3
+              ]
+            }
+          ],
+          "reserve": []
+        },
+        {
+          "groups": [
+            {
+              "target": 0,
+              "members": [
+                0
+              ]
+            },
+            {
+              "target": 0,
+              "members": [
+                1
+              ]
+            },
+            {
+              "target": 1,
+              "members": [
+                2
+              ]
+            },
+            {
+              "target": 1,
+              "members": [
+                3
+              ]
+            }
+          ],
+          "reserve": []
+        }
+      ],
+      "pairs": [
+        {
+          "seed": 25270905,
+          "first_actions_differ": true,
+          "trajectory_differs": true,
+          "terminal_success_differs": false,
+          "returns": [
+            0.0,
+            0.0
+          ],
+          "trajectory_file": "e1/state_000_pair_0.json"
+        },
+        {
+          "seed": 25270906,
+          "first_actions_differ": true,
+          "trajectory_differs": true,
+          "terminal_success_differs": false,
+          "returns": [
+            0.0,
+            0.0
+          ],
+          "trajectory_file": "e1/state_000_pair_1.json"
+        }
+      ],
+      "same_assignment": true
+    },
+    {
+      "state_id": "state_001",
+      "comparable": true,
+      "actions": [
+        {
+          "groups": [
+            {
+              "target": 0,
+              "members": [
+                3,
+                5,
+                6,
+                7
+              ]
+            },
+            {
+              "target": 1,
+              "members": [
+                1,
+                2,
+                4
+              ]
+            }
+          ],
+          "reserve": []
+        },
+        {
+          "groups": [
+            {
+              "target": 0,
+              "members": [
+                3
+              ]
+            },
+            {
+              "target": 0,
+              "members": [
+                5
+              ]
+            },
+            {
+              "target": 0,
+              "members": [
+                6
+              ]
+            },
+            {
+              "target": 0,
+              "members": [
+                7
+              ]
+            },
+            {
+              "target": 1,
+              "members": [
+                1
+              ]
+            },
+            {
+              "target": 1,
+              "members": [
+                2
+              ]
+            },
+            {
+              "target": 1,
+              "members": [
+                4
+              ]
+            }
+          ],
+          "reserve": []
+        }
+      ],
+      "pairs": [
+        {
+          "seed": 25271005,
+          "first_actions_differ": true,
+          "trajectory_differs": true,
+          "terminal_success_differs": false,
+          "returns": [
+            0.0,
+            0.0
+          ],
+          "trajectory_file": "e1/state_001_pair_0.json"
+        },
+        {
+          "seed": 25271006,
+          "first_actions_differ": true,
+          "trajectory_differs": true,
+          "terminal_success_differs": false,
+          "returns": [
+            0.0,
+            0.0
+          ],
+          "trajectory_file": "e1/state_001_pair_1.json"
+        }
+      ],
+      "same_assignment": true
+    },
+    {
+      "state_id": "state_002",
+      "comparable": false,
+      "actions": [
+        {
+          "groups": [
+            {
+              "target": 0,
+              "members": [
+                3
+              ]
+            },
+            {
+              "target": 1,
+              "members": [
+                2
+              ]
+            }
+          ],
+          "reserve": []
+        },
+        {
+          "groups": [
+            {
+              "target": 0,
+              "members": [
+                3
+              ]
+            },
+            {
+              "target": 1,
+              "members": [
+                2
+              ]
+            }
+          ],
+          "reserve": []
+        }
+      ],
+      "pairs": [],
+      "same_assignment": true
+    }
+  ],
+  "e2": [
+    {
+      "state_id": "state_000",
+      "candidate_count": 16,
+      "candidates": [
+        {
+          "index": 0,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  0,
+                  1
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  2,
+                  3
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.0,
+          "team_change": 0.0,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 1,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  0
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  1
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  2
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  3
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.0,
+          "team_change": 0.3333333333333333,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 2,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.5,
+          "team_change": 0.6666666666666666,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 3,
+          "action": {
+            "groups": [
+              {
+                "target": 1,
+                "members": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.5,
+          "team_change": 0.6666666666666666,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 4,
+          "action": {
+            "groups": [],
+            "reserve": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "task_change": 1.0,
+          "team_change": 0.3333333333333333,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 5,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  0,
+                  2
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  3
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  1
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.75,
+          "team_change": 0.5,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 6,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  0
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  2
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  1
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  3
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.5,
+          "team_change": 0.3333333333333333,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 7,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  0,
+                  2
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  1,
+                  3
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.5,
+          "team_change": 0.6666666666666666,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 8,
+          "action": {
+            "groups": [
+              {
+                "target": 1,
+                "members": [
+                  0
+                ]
+              }
+            ],
+            "reserve": [
+              1,
+              2,
+              3
+            ]
+          },
+          "task_change": 1.0,
+          "team_change": 0.3333333333333333,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 9,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  0
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  1,
+                  3
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  2
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.25,
+          "team_change": 0.5,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 10,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  0,
+                  3
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  1,
+                  2
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.5,
+          "team_change": 0.6666666666666666,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 11,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  1,
+                  2
+                ]
+              }
+            ],
+            "reserve": [
+              0,
+              3
+            ]
+          },
+          "task_change": 0.75,
+          "team_change": 0.5,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 12,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  2
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  3
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  0
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  1
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 1.0,
+          "team_change": 0.3333333333333333,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 13,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  1
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  0,
+                  2,
+                  3
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.25,
+          "team_change": 0.5,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 14,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  0,
+                  1,
+                  2
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  3
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.25,
+          "team_change": 0.5,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 15,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  0,
+                  2,
+                  3
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  1
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.75,
+          "team_change": 0.5,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "proxy_scores": [
+        -2.802865440532994,
+        -4.281749857201968,
+        -3.9917196016215595,
+        -4.393648874978256,
+        -6.907755278982137,
+        -3.164763296297414,
+        -4.040583003030373,
+        -2.553592657543928,
+        -5.641081681768371,
+        -3.429412364276887,
+        -2.554185667603673,
+        -4.698832099662217,
+        -4.448170340984071,
+        -3.2337151672494215,
+        -3.348312573839956,
+        -2.7594403152281997
+      ],
+      "complete": true,
+      "continuation": "StaticPolicy: retain chosen groups and remove only dead IDs",
+      "screen_seeds": [
+        25280905,
+        25280906
+      ],
+      "final_seeds": [
+        25290905,
+        25290906
+      ],
+      "proxy_rank_correlation": null,
+      "screen_reference_index": 0,
+      "proxy_selected_index": 7,
+      "independent_reference_return": 0.0,
+      "independent_selected_return": 0.0,
+      "selected_gap": 0.0,
+      "final_returns": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "any_success": false,
+      "action_values_vary": false,
+      "high_return_candidate_indices": [],
+      "high_return_min_task_change": null,
+      "high_return_min_team_change": null
+    },
+    {
+      "state_id": "state_001",
+      "candidate_count": 16,
+      "candidates": [
+        {
+          "index": 0,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  3,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  1,
+                  2,
+                  4
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.0,
+          "team_change": 0.0,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 1,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  3
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  5
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  6
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  7
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  1
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  2
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  4
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.0,
+          "team_change": 0.42857142857142855,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 2,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  3,
+                  5
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  6,
+                  7
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  1,
+                  2
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  4
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.0,
+          "team_change": 0.2857142857142857,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 3,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  3,
+                  5,
+                  6
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  7
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  1,
+                  2,
+                  4
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.0,
+          "team_change": 0.14285714285714285,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 4,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  1,
+                  2,
+                  3,
+                  4
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  5,
+                  6,
+                  7
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.42857142857142855,
+          "team_change": 0.2857142857142857,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 5,
+          "action": {
+            "groups": [
+              {
+                "target": 1,
+                "members": [
+                  1,
+                  2,
+                  3,
+                  4
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  5,
+                  6,
+                  7
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.5714285714285714,
+          "team_change": 0.2857142857142857,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 6,
+          "action": {
+            "groups": [],
+            "reserve": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ]
+          },
+          "task_change": 1.0,
+          "team_change": 0.42857142857142855,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 7,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  1,
+                  2,
+                  4,
+                  5
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  3,
+                  6
+                ]
+              }
+            ],
+            "reserve": [
+              7
+            ]
+          },
+          "task_change": 0.8571428571428571,
+          "team_change": 0.38095238095238093,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 8,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  5
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  6
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  7
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  1
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  2
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  3
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  4
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.14285714285714285,
+          "team_change": 0.42857142857142855,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 9,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  1,
+                  2
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  6
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  3,
+                  7
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  4,
+                  5
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.7142857142857143,
+          "team_change": 0.38095238095238093,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 10,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  1,
+                  2,
+                  5,
+                  7
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  3,
+                  4
+                ]
+              }
+            ],
+            "reserve": [
+              6
+            ]
+          },
+          "task_change": 0.5714285714285714,
+          "team_change": 0.5714285714285714,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 11,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  4
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  5
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  6
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  1
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  2
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  3
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  7
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.42857142857142855,
+          "team_change": 0.42857142857142855,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 12,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  1,
+                  2
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  5,
+                  7
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  3
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  4,
+                  6
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.5714285714285714,
+          "team_change": 0.38095238095238093,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 13,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  2,
+                  7
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  4,
+                  5
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  6
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  1,
+                  3
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.42857142857142855,
+          "team_change": 0.5714285714285714,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 14,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  1
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  2
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  5
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  6
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  7
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  3
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  4
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.42857142857142855,
+          "team_change": 0.42857142857142855,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 15,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  1,
+                  2,
+                  3,
+                  7
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  4,
+                  5,
+                  6
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.5714285714285714,
+          "team_change": 0.5714285714285714,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "proxy_scores": [
+        -7.995852836803641,
+        -8.064938418088675,
+        -5.426397586388729,
+        -7.642989437758149,
+        -7.712779503493837,
+        -8.429715919410599,
+        -13.815510557964274,
+        -8.66692391725191,
+        -8.179177301970498,
+        -5.272707202170404,
+        -8.5384315283546,
+        -7.415396244147676,
+        -4.851686888612044,
+        -6.902531486684159,
+        -8.179177301970498,
+        -8.249239101408083
+      ],
+      "complete": true,
+      "continuation": "StaticPolicy: retain chosen groups and remove only dead IDs",
+      "screen_seeds": [
+        25281005,
+        25281006
+      ],
+      "final_seeds": [
+        25291005,
+        25291006
+      ],
+      "proxy_rank_correlation": null,
+      "screen_reference_index": 0,
+      "proxy_selected_index": 12,
+      "independent_reference_return": 0.0,
+      "independent_selected_return": 0.0,
+      "selected_gap": 0.0,
+      "final_returns": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "any_success": false,
+      "action_values_vary": false,
+      "high_return_candidate_indices": [],
+      "high_return_min_task_change": null,
+      "high_return_min_team_change": null
+    },
+    {
+      "state_id": "state_002",
+      "candidate_count": 10,
+      "candidates": [
+        {
+          "index": 0,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  3
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  2
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.0,
+          "team_change": 0.0,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 1,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  2,
+                  3
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.5,
+          "team_change": 1.0,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 2,
+          "action": {
+            "groups": [
+              {
+                "target": 1,
+                "members": [
+                  2,
+                  3
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.5,
+          "team_change": 1.0,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 3,
+          "action": {
+            "groups": [],
+            "reserve": [
+              2,
+              3
+            ]
+          },
+          "task_change": 1.0,
+          "team_change": 0.0,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 4,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  2
+                ]
+              },
+              {
+                "target": 0,
+                "members": [
+                  3
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.5,
+          "team_change": 0.0,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 5,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  2
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  3
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 1.0,
+          "team_change": 0.0,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 6,
+          "action": {
+            "groups": [
+              {
+                "target": 1,
+                "members": [
+                  3
+                ]
+              }
+            ],
+            "reserve": [
+              2
+            ]
+          },
+          "task_change": 1.0,
+          "team_change": 0.0,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 7,
+          "action": {
+            "groups": [
+              {
+                "target": 1,
+                "members": [
+                  2
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  3
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "task_change": 0.5,
+          "team_change": 0.0,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 8,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  2
+                ]
+              }
+            ],
+            "reserve": [
+              3
+            ]
+          },
+          "task_change": 1.0,
+          "team_change": 0.0,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "index": 9,
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  3
+                ]
+              }
+            ],
+            "reserve": [
+              2
+            ]
+          },
+          "task_change": 0.5,
+          "team_change": 0.0,
+          "screen_returns": [
+            0.0,
+            0.0
+          ],
+          "final_returns": [
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "proxy_scores": [
+        -4.340222624072829,
+        -4.994272139771453,
+        -4.534373569694655,
+        -6.907755278982137,
+        -5.696428943134336,
+        -4.135523478850054,
+        -5.346849814697855,
+        -5.548578129504863,
+        -5.696428943134336,
+        -5.699399773550104
+      ],
+      "complete": true,
+      "continuation": "StaticPolicy: retain chosen groups and remove only dead IDs",
+      "screen_seeds": [
+        25281105,
+        25281106
+      ],
+      "final_seeds": [
+        25291105,
+        25291106
+      ],
+      "proxy_rank_correlation": null,
+      "screen_reference_index": 0,
+      "proxy_selected_index": 5,
+      "independent_reference_return": 0.0,
+      "independent_selected_return": 0.0,
+      "selected_gap": 0.0,
+      "final_returns": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "any_success": false,
+      "action_values_vary": false,
+      "high_return_candidate_indices": [],
+      "high_return_min_task_change": null,
+      "high_return_min_team_change": null
+    }
+  ],
+  "e3": [
+    {
+      "state_id": "state_000",
+      "release_count": 2,
+      "matched_count": [
+        {
+          "mode": "selective",
+          "released_ids": [
+            2,
+            3
+          ],
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  0,
+                  1
+                ]
+              }
+            ],
+            "reserve": [
+              2,
+              3
+            ]
+          },
+          "encoding_seconds": 0.0019948999397456646,
+          "selection_scoring_seconds": 0.0010142999235540628,
+          "repair_scoring_seconds": 0.0011783998925238848,
+          "decision_seconds": 0.005395899992436171,
+          "task_change": 0.5,
+          "team_change": 0.16666666666666666,
+          "returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "mode": "full",
+          "released_ids": [
+            0,
+            3
+          ],
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  1,
+                  3
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  2
+                ]
+              }
+            ],
+            "reserve": [
+              0
+            ]
+          },
+          "encoding_seconds": 0.0019165000412613153,
+          "selection_scoring_seconds": 0.0,
+          "repair_scoring_seconds": 0.0016682001296430826,
+          "decision_seconds": 0.004489900078624487,
+          "task_change": 0.5,
+          "team_change": 0.5,
+          "returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "mode": "random",
+          "released_ids": [
+            0,
+            3
+          ],
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  1,
+                  3
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  2
+                ]
+              }
+            ],
+            "reserve": [
+              0
+            ]
+          },
+          "encoding_seconds": 0.001837400021031499,
+          "selection_scoring_seconds": 0.0,
+          "repair_scoring_seconds": 0.002272999845445156,
+          "decision_seconds": 0.005095599917694926,
+          "task_change": 0.5,
+          "team_change": 0.5,
+          "returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "mode": "rule",
+          "released_ids": [
+            0,
+            1
+          ],
+          "action": {
+            "groups": [
+              {
+                "target": 1,
+                "members": [
+                  1,
+                  2,
+                  3
+                ]
+              }
+            ],
+            "reserve": [
+              0
+            ]
+          },
+          "encoding_seconds": 0.002235699910670519,
+          "selection_scoring_seconds": 0.0,
+          "repair_scoring_seconds": 0.0013143999967724085,
+          "decision_seconds": 0.004383500199764967,
+          "task_change": 0.5,
+          "team_change": 0.5,
+          "returns": [
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "normal_release": [
+        {
+          "mode": "selective",
+          "released_count": 0,
+          "release_ratio": 0.0,
+          "encoding_seconds": 0.0010394998826086521,
+          "selection_scoring_seconds": 0.0007654998917132616,
+          "repair_scoring_seconds": 0.0,
+          "decision_seconds": 0.0024047999177128077,
+          "task_change": 0.0,
+          "team_change": 0.0
+        },
+        {
+          "mode": "full",
+          "released_count": 4,
+          "release_ratio": 1.0,
+          "encoding_seconds": 0.0018536997959017754,
+          "selection_scoring_seconds": 0.0,
+          "repair_scoring_seconds": 0.001169299939647317,
+          "decision_seconds": 0.0037607999984174967,
+          "task_change": 1.0,
+          "team_change": 0.3333333333333333
+        }
+      ]
+    },
+    {
+      "state_id": "state_001",
+      "release_count": 3,
+      "matched_count": [
+        {
+          "mode": "selective",
+          "released_ids": [
+            5,
+            6,
+            7
+          ],
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  3,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  1,
+                  2,
+                  4
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "encoding_seconds": 0.002356400014832616,
+          "selection_scoring_seconds": 0.0011730999685823917,
+          "repair_scoring_seconds": 0.0024652001447975636,
+          "decision_seconds": 0.007436600048094988,
+          "task_change": 0.0,
+          "team_change": 0.0,
+          "returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "mode": "full",
+          "released_ids": [
+            7,
+            4,
+            2
+          ],
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  3,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  1,
+                  2,
+                  4
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "encoding_seconds": 0.001267799874767661,
+          "selection_scoring_seconds": 0.0,
+          "repair_scoring_seconds": 0.0011884996201843023,
+          "decision_seconds": 0.0032416998874396086,
+          "task_change": 0.0,
+          "team_change": 0.0,
+          "returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "mode": "random",
+          "released_ids": [
+            7,
+            4,
+            2
+          ],
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  3,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              {
+                "target": 1,
+                "members": [
+                  1,
+                  2,
+                  4
+                ]
+              }
+            ],
+            "reserve": []
+          },
+          "encoding_seconds": 0.0020375000312924385,
+          "selection_scoring_seconds": 0.0,
+          "repair_scoring_seconds": 0.002101799938827753,
+          "decision_seconds": 0.005593199981376529,
+          "task_change": 0.0,
+          "team_change": 0.0,
+          "returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "mode": "rule",
+          "released_ids": [
+            1,
+            2,
+            4
+          ],
+          "action": {
+            "groups": [
+              {
+                "target": 0,
+                "members": [
+                  3,
+                  5,
+                  6,
+                  7
+                ]
+              }
+            ],
+            "reserve": [
+              1,
+              2,
+              4
+            ]
+          },
+          "encoding_seconds": 0.001675100065767765,
+          "selection_scoring_seconds": 0.0,
+          "repair_scoring_seconds": 0.001061700051650405,
+          "decision_seconds": 0.00342399999499321,
+          "task_change": 0.42857142857142855,
+          "team_change": 0.14285714285714285,
+          "returns": [
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "normal_release": [
+        {
+          "mode": "selective",
+          "released_count": 0,
+          "release_ratio": 0.0,
+          "encoding_seconds": 0.0010857998859137297,
+          "selection_scoring_seconds": 0.0003152999561280012,
+          "repair_scoring_seconds": 0.0,
+          "decision_seconds": 0.0018516997806727886,
+          "task_change": 0.0,
+          "team_change": 0.0
+        },
+        {
+          "mode": "full",
+          "released_count": 7,
+          "release_ratio": 1.0,
+          "encoding_seconds": 0.0011689001694321632,
+          "selection_scoring_seconds": 0.0,
+          "repair_scoring_seconds": 0.0022165002301335335,
+          "decision_seconds": 0.004626099951565266,
+          "task_change": 1.0,
+          "team_change": 0.42857142857142855
+        }
+      ]
+    },
+    {
+      "state_id": "state_002",
+      "release_count": 1,
+      "matched_count": [
+        {
+          "mode": "selective",
+          "released_ids": [
+            3
+          ],
+          "action": {
+            "groups": [
+              {
+                "target": 1,
+                "members": [
+                  2
+                ]
+              }
+            ],
+            "reserve": [
+              3
+            ]
+          },
+          "encoding_seconds": 0.0010743001475930214,
+          "selection_scoring_seconds": 0.00024649989791214466,
+          "repair_scoring_seconds": 0.0002810000441968441,
+          "decision_seconds": 0.0020405000541359186,
+          "task_change": 0.5,
+          "team_change": 0.0,
+          "returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "mode": "full",
+          "released_ids": [
+            3
+          ],
+          "action": {
+            "groups": [
+              {
+                "target": 1,
+                "members": [
+                  2
+                ]
+              }
+            ],
+            "reserve": [
+              3
+            ]
+          },
+          "encoding_seconds": 0.00137670012190938,
+          "selection_scoring_seconds": 0.0,
+          "repair_scoring_seconds": 0.00039760000072419643,
+          "decision_seconds": 0.002182499971240759,
+          "task_change": 0.5,
+          "team_change": 0.0,
+          "returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "mode": "random",
+          "released_ids": [
+            3
+          ],
+          "action": {
+            "groups": [
+              {
+                "target": 1,
+                "members": [
+                  2
+                ]
+              }
+            ],
+            "reserve": [
+              3
+            ]
+          },
+          "encoding_seconds": 0.0018176999874413013,
+          "selection_scoring_seconds": 0.0,
+          "repair_scoring_seconds": 0.0006397999823093414,
+          "decision_seconds": 0.0030847000889480114,
+          "task_change": 0.5,
+          "team_change": 0.0,
+          "returns": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "mode": "rule",
+          "released_ids": [
+            3
+          ],
+          "action": {
+            "groups": [
+              {
+                "target": 1,
+                "members": [
+                  2
+                ]
+              }
+            ],
+            "reserve": [
+              3
+            ]
+          },
+          "encoding_seconds": 0.0018055001273751259,
+          "selection_scoring_seconds": 0.0,
+          "repair_scoring_seconds": 0.0005952999927103519,
+          "decision_seconds": 0.002934599993750453,
+          "task_change": 0.5,
+          "team_change": 0.0,
+          "returns": [
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "normal_release": [
+        {
+          "mode": "selective",
+          "released_count": 0,
+          "release_ratio": 0.0,
+          "encoding_seconds": 0.001882700016722083,
+          "selection_scoring_seconds": 0.0003871999215334654,
+          "repair_scoring_seconds": 0.0,
+          "decision_seconds": 0.0027805999852716923,
+          "task_change": 0.0,
+          "team_change": 0.0
+        },
+        {
+          "mode": "full",
+          "released_count": 2,
+          "release_ratio": 1.0,
+          "encoding_seconds": 0.0016709000337868929,
+          "selection_scoring_seconds": 0.0,
+          "repair_scoring_seconds": 0.0011226001661270857,
+          "decision_seconds": 0.003591099986806512,
+          "task_change": 1.0,
+          "team_change": 0.0
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Saved controlled-casualty states are diagnostic interventions, not evaluation samples.",
+    "Reference values condition on the current candidate pool and fixed static continuation, not Q*.",
+    "Equal-release-count E3 full is a restricted diagnostic; normal full release is reported separately.",
+    "Selection/repair sub-times cover score computations; total decision time includes encoding, sampling and masks.",
+    "These small probes may find no effect and do not establish algorithm superiority."
+  ],
+  "e3_policy_status": "checkpoint:selective",
+  "elapsed_seconds": 21.420937299961224,
+  "requested_seconds": 120.0,
+  "completed_e1_pairs": 4,
+  "completed_e2_states": 3,
+  "completed_e3_modes": 12,
+  "status": "complete"
+}

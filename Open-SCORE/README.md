@@ -8,7 +8,17 @@
 
 在本目录执行。当前机器可用解释器为 `D:\Software\Anaconda\envs\torch310\python.exe`；默认 Anaconda Python 没有 Torch。该环境已有 CUDA 版 Torch 及项目依赖。其他机器需要 Python 3.10 或更新版本，先安装适合硬件的 Torch，再执行 `python -m pip install -e ".[test]"`。
 
-首次验证只训练 B4，设置最多 2,000 个物理交互步及 5 分钟训练预算，以先达到者为准；评估另行执行：
+已交付验证结果及其限制见 [小预算验证报告](docs/results_v2.md)。这些结果用于检查训练和评估链路，当前不能支持算法优势。继续训练已交付的 B4 checkpoint：
+
+```powershell
+.\scripts\run_main_algorithm.ps1 -TrainMinutes 20 -TrainSteps 0 -EvalEpisodes 100 -EvalMinutes 4 -Output outputs/v2_validation/main_ready -Resume
+```
+
+该命令从已完成恢复验证的最新模型（2,204 个物理步、11 次更新）**新增 20 分钟训练**，之后自动评估；`TrainSteps 0` 表示只按时间限制，不设置额外交互步数上限。预计整条命令约 21–25 分钟，取决于实际决策和评估耗时；这是一段追加预算，不是收敛保证。任务时限始终为 50 步。
+
+评估为训练前模型、训练后模型和“训练后相同初始编组、随后保持”的静态对照，每个策略计划 100 局。评估另有 4 分钟预算，只比较完整配对单元并公开实际完成数。旧步数的评估目录保留，训练日志追加；`latest.pt`、当前状态及最新报告索引更新。按需保存的编号快照用于回看历史模型。
+
+要从头创建独立的小预算验证，使用新输出目录，最多训练 2,000 个物理交互步及 5 分钟，以先达到者为准：
 
 ```powershell
 .\scripts\run_main_algorithm.ps1 -Python 'D:\Software\Anaconda\envs\torch310\python.exe' -TrainMinutes 5 -TrainSteps 2000 -EvalEpisodes 20 -Output outputs/v2_main
@@ -22,7 +32,7 @@
 
 已有输出目录继续训练时，在上述命令末尾增加 `-Resume` 或 `--resume`。恢复读取最近完成更新的模型和优化器，从新回合继续；未完成的采样批次不恢复。源代码、配置和冻结资产哈希必须一致。修改实现后使用新的输出目录，不能混用已有结果。
 
-依据最小验证的实际吞吐与学习曲线再追加预算。例如训练 20 分钟且仅按时间限制，可使用 `-TrainMinutes 20 -TrainSteps 0`；已有目录追加训练时同时加 `-Resume`。时间预算在安全计算边界检查，记录实际耗时和超时量，不能当作硬实时保证。训练预算与评估预算分开，不通过缩短 50 步任务时限赶进度。
+时间预算在安全计算边界检查，记录实际耗时和超时量，不能当作硬实时保证。后续训练规模与总预算根据诊断、吞吐和学习曲线确定；训练时间与评估时间分别记录。
 
 `train`、`evaluate`、`diagnose`、`compare`、`report` 可单独运行，完整选项查看：
 

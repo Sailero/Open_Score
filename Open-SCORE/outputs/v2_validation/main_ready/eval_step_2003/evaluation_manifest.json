@@ -1,0 +1,15 @@
+{
+  "identity_hash": "acac875ef25f5f3eeff0da4534d5437b33bed5be138709c84924696b8b35e622",
+  "checkpoints": {
+    "initialized": "8b883d89e57504adf0727b137e92be55acd33fb11fcd7f6dbc87fb5c98a34738",
+    "trained": "c95ddd339a3b34eeb9aa3852d45bd7d139cc25d24bdd826b84c69dd21fb596d8",
+    "static_matched": "c95ddd339a3b34eeb9aa3852d45bd7d139cc25d24bdd826b84c69dd21fb596d8"
+  },
+  "opponent": "reactive",
+  "max_steps": 50,
+  "command_interval": 5,
+  "scales": [
+    8
+  ],
+  "evaluation_seed_base": 23260905
+}

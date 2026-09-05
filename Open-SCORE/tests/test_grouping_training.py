@@ -107,6 +107,8 @@ def test_real_training_reload_pair_evaluation_and_fresh_episode_resume(tmp_path,
     assert resumed["invocation_steps"] >= 10 and resumed["updates"] > result["updates"]
     assert reset_seeds[invocation_resets] == config["seed"] + 100000 + result["next_episode"]
     assert resumed["next_episode"] > result["next_episode"]
+    archived = torch.load(output / 'snapshots' / f"step_{result['physical_steps']}.pt", map_location='cpu', weights_only=False)
+    assert archived['counters']['physical_steps'] == result['physical_steps']
     rows = read_jsonl(output / "training.jsonl")
     assert [row["physical_steps"] for row in rows] == sorted(row["physical_steps"] for row in rows)
 
@@ -115,6 +117,11 @@ def test_real_training_reload_pair_evaluation_and_fresh_episode_resume(tmp_path,
         training.train(dict(config, command_interval=3), output, steps=1, wall_seconds=60, resume=True)
     monkeypatch.setattr(training, "provenance", lambda: {**copy.deepcopy(evidence), "source_hash": "modified-source"})
     with pytest.raises(ValueError, match="source code differs"):
+        training.train(config, output, steps=1, wall_seconds=60, resume=True)
+    replaced = copy.deepcopy(evidence)
+    replaced['assets']['lcl']['sha256'] = 'different-frozen-executor'
+    monkeypatch.setattr(training, 'provenance', lambda: copy.deepcopy(replaced))
+    with pytest.raises(ValueError, match='frozen assets differ'):
         training.train(config, output, steps=1, wall_seconds=60, resume=True)
     assert sha256(output / "latest.pt") == checkpoint_hash
 

@@ -149,6 +149,9 @@ def train(config, output, *, steps=2000, wall_seconds=300.0, resume=False):
             raise ValueError('Resume configuration differs from the trained task/method')
         if payload['provenance']['source_hash'] != evidence['source_hash']:
             raise ValueError('Resume source code differs; preserve this run and choose a new output directory')
+        if payload['provenance']['assets'] != evidence['assets']:
+            raise ValueError('Resume frozen assets differ from the checkpoint provenance')
+        atomic_checkpoint(output / 'snapshots' / f"step_{payload['counters']['physical_steps']}.pt", payload)
         policy.load_state_dict(payload['model'])
         if optimizer is not None:
             optimizer.load_state_dict(payload['optimizer'])

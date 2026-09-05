@@ -1,0 +1,61 @@
+{
+  "complete_pairs": 20,
+  "incomplete_pairs": 0,
+  "table": [
+    {
+      "scale": 8,
+      "method": "initialized",
+      "episodes": 20,
+      "successes": 0,
+      "success_rate": 0.0,
+      "wilson_low": 0.0,
+      "wilson_high": 0.16113012549493322,
+      "decision_median_ms": 6.9838500348851085,
+      "decision_p95_ms": 11.010099959094077,
+      "release_ratio": 0.4771376133786848,
+      "task_change": 0.3307330404383976,
+      "team_change": 0.16509783635676495,
+      "red_survivors": 3.6,
+      "physical_steps": 25.7,
+      "constraint_violations": 0
+    },
+    {
+      "scale": 8,
+      "method": "trained",
+      "episodes": 20,
+      "successes": 1,
+      "success_rate": 0.05,
+      "wilson_low": 0.008881219432873136,
+      "wilson_high": 0.23613589351256675,
+      "decision_median_ms": 5.015900009311736,
+      "decision_p95_ms": 10.357724910136312,
+      "release_ratio": 0.2677593378843379,
+      "task_change": 0.14344023238666095,
+      "team_change": 0.07071308651665793,
+      "red_survivors": 4.0,
+      "physical_steps": 25.2,
+      "constraint_violations": 0
+    },
+    {
+      "scale": 8,
+      "method": "static_matched",
+      "episodes": 20,
+      "successes": 0,
+      "success_rate": 0.0,
+      "wilson_low": 0.0,
+      "wilson_high": 0.16113012549493322,
+      "decision_median_ms": 0.052900053560733795,
+      "decision_p95_ms": 0.09559991303831339,
+      "release_ratio": 0.0,
+      "task_change": 0.0,
+      "team_change": 0.0,
+      "red_survivors": 4.35,
+      "physical_steps": 24.3,
+      "constraint_violations": 0
+    }
+  ],
+  "planned_pairs": 20,
+  "elapsed_seconds": 18.63698189985007,
+  "requested_seconds": 300.0,
+  "interpretation": "Single training seed; episode uncertainty is not across-training-seed uncertainty."
+}

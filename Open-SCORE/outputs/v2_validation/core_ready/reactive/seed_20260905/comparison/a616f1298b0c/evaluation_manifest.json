@@ -1,0 +1,21 @@
+{
+  "identity_hash": "2b88c0aa9fcff51e4016c7deaa329c01279791ecb5a00c8ae1efa07f2d47757c",
+  "checkpoints": {
+    "selective": "0596b787d96d7cd30ae36bf251ab6d7ced2a0cec406c50cbea9a283aa3f542ca",
+    "full": "55a9bc128a27f8861acd7e872267415c2306ade7138ffa08b5c189dd33b5a49a",
+    "random": "0dba1fce819fb6d812494dc840082d1be3e708e5a857d89daae942089fd0e574",
+    "rule": "0e239f4dc4164639b89abad7dcf1e90d6008ff296198b6d75e1854f7ea0450b6",
+    "alma": "1c8cb0baa6ea99f9265934e801d3b373addab762d78e8a9ab2c109a6c1a7d565",
+    "static": "ca36ce1b2f76a95e14fc0c849bd08e1a1ec82da49092ba4e2e990982a37d77a6",
+    "dlom": "6978178906ba4aa8d8f94aec9c64266456e80bcf5ad6a8697e0b2759c4a5700a"
+  },
+  "opponent": "reactive",
+  "max_steps": 50,
+  "command_interval": 5,
+  "scales": [
+    8,
+    12,
+    16
+  ],
+  "evaluation_seed_base": 23260905
+}

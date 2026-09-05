@@ -97,7 +97,8 @@ def provenance():
         actual = sha256(ROOT / 'assets/frozen' / manifest[name]['file'])
         if actual != manifest[name]['sha256']:
             raise ValueError(f'Frozen {name} asset hash mismatch')
-    source = {str(p.relative_to(ROOT)): sha256(p)
+    source = {p.relative_to(ROOT).as_posix(): hashlib.sha256(
+                  p.read_text(encoding='utf-8-sig').replace('\r\n', '\n').encode('utf-8')).hexdigest()
               for folder in ('src', 'configs')
               for p in sorted((ROOT / folder).rglob('*'))
               if p.is_file() and p.suffix in ('.py', '.yaml')}

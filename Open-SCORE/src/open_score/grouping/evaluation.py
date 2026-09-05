@@ -177,7 +177,7 @@ def summarize(rows, methods):
             center = (p + z*z/(2*n)) / (1+z*z/n)
             half = z * math.sqrt(p*(1-p)/n + z*z/(4*n*n)) / (1+z*z/n)
             table.append({'scale': scale, 'method': method, 'episodes': n, 'successes': successes,
-                          'success_rate': p, 'wilson_low': center-half, 'wilson_high': center+half,
+                          'success_rate': p, 'wilson_low': max(0., center-half), 'wilson_high': min(1., center+half),
                           'decision_median_ms': float(np.median(times))*1000,
                           'decision_p95_ms': float(np.quantile(times, .95))*1000,
                           **{key: float(np.mean([row[key] for row in selected]))
@@ -218,7 +218,7 @@ def write_report(output, summary=None):
         import matplotlib
         matplotlib.use('Agg')
         import matplotlib.pyplot as plt
-        fig, axes = plt.subplots(1, 2, figsize=(10, 3.6))
+        fig, axes = plt.subplots(1, 2, figsize=(max(10, len(table) * .8), 3.6))
         valid = [row for row in training if row.get('recent_success_rate') is not None]
         axes[0].plot([r['physical_steps'] for r in valid], [r['recent_success_rate'] for r in valid], marker='.')
         axes[0].set(xlabel='Physical training steps', ylabel='Last 20 training episodes: success', ylim=(-.05, 1.05))

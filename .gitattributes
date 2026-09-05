@@ -1,11 +1,8 @@
-Open-SCORE/configs/stock_reproduction/*.json text eol=lf
-Open-SCORE/scripts/collect_stock_results.py text eol=lf
-Open-SCORE/scripts/run_stock_reproduction.ps1 text eol=lf
-Open-SCORE/scripts/run_stock_reproduction_parallel.py text eol=lf
-Open-SCORE/scripts/stock_runtime_probe.py text eol=lf
-Open-SCORE/scripts/epymarl_windows_site/sitecustomize.py text eol=lf
-Open-SCORE/tests/test_stock_reproduction.py text eol=lf
-Open-SCORE/docs/*.html text whitespace=-blank-at-eol
-Open-SCORE/upstream/patches/*.patch text eol=lf whitespace=-blank-at-eol
-# Result hashes refer to exact on-disk bytes; never normalize their line endings.
-Open-SCORE/outputs/round_01_mvp/** -text whitespace=cr-at-eol
+* text=auto
+*.py text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.ps1 text eol=lf
+*.pt -text
+*.png -text

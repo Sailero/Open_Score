@@ -59,6 +59,10 @@ def test_real_diagnostics_complete_with_independent_screening_and_same_repair(tm
                for key in ("screen_returns", "final_returns") for value in row[key])
     reference, selected = e2["screen_reference_index"], e2["proxy_selected_index"]
     np.testing.assert_allclose(e2["selected_gap"], e2["final_returns"][reference] - e2["final_returns"][selected])
+    if not any(e2['final_returns']):
+        assert not e2['any_success'] and not e2['action_values_vary']
+        assert e2['high_return_min_task_change'] is None
+        assert e2['high_return_min_team_change'] is None
     e3 = result["e3"][0]
     assert {row["mode"] for row in e3["matched_count"]} == {"full", "random", "rule", "selective"}
     assert all(len(row["released_ids"]) == e3["release_count"] for row in e3["matched_count"])

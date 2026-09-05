@@ -1,0 +1,52 @@
+{
+  "physical_steps": 2004,
+  "upper_events": 701,
+  "decode_steps": 2195,
+  "episodes": 78,
+  "updates": 11,
+  "next_episode": 79,
+  "training_seconds": 39.07661739992909,
+  "elapsed_seconds": 39.095872699981555,
+  "invocation_steps": 2004,
+  "steps_per_second": 51.25860766374312,
+  "parameter_change_l2": 1.3615846381793992,
+  "change_from_initial_l2": 1.3615846381793992,
+  "requested_steps": 2000,
+  "requested_seconds": 300.0,
+  "time_overrun_seconds": 0.0,
+  "status": "complete",
+  "latest_checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v2_validation\\core_ready\\reactive\\seed_20260905\\random\\latest.pt",
+  "release_counts": {
+    "2": 84,
+    "1": 101,
+    "4": 61,
+    "5": 53,
+    "3": 70,
+    "8": 5,
+    "0": 190,
+    "6": 36,
+    "7": 18,
+    "10": 1,
+    "9": 3
+  },
+  "metrics": {
+    "loss": 0.04452386808892091,
+    "policy_loss": 0.042956908543904625,
+    "value_loss": 0.0031339137349277735,
+    "entropy": 2.9814066886901855,
+    "approx_kl": 0.03787119189898173,
+    "clip_fraction": 0.125,
+    "gradient_norm": 2.367127299308777,
+    "clip_fraction_by_release_count": {
+      "0": 0.0,
+      "4": 0.25,
+      "2": 0.4,
+      "8": 0.0,
+      "1": 0.0,
+      "6": 0.25,
+      "5": 0.0,
+      "3": 0.0,
+      "12": 1.0
+    }
+  }
+}

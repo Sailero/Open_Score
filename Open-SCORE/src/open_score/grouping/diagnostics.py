@@ -272,14 +272,15 @@ def run_diagnostics(config, output, checkpoint=None, states=3, rollouts=2, wall_
                 final = [float(np.mean(row["final_returns"])) for row in e2["candidates"]]
                 reference, selected = int(np.argmax(screening)), int(np.argmax(scores))
                 best = max(final)
-                high = [row for row, value in zip(e2["candidates"], final) if value >= best - .05]
+                high = [row for row, value in zip(e2["candidates"], final) if best > 0 and value >= best - .05]
                 e2.update(complete=True, proxy_rank_correlation=_rank_correlation(scores, final),
                           screen_reference_index=reference, proxy_selected_index=selected,
                           independent_reference_return=final[reference], independent_selected_return=final[selected],
                           selected_gap=final[reference] - final[selected], final_returns=final,
+                          any_success=best > 0, action_values_vary=len(set(final)) > 1,
                           high_return_candidate_indices=[row["index"] for row in high],
-                          high_return_min_task_change=min(row["task_change"] for row in high),
-                          high_return_min_team_change=min(row["team_change"] for row in high))
+                          high_return_min_task_change=min((row["task_change"] for row in high), default=None),
+                          high_return_min_team_change=min((row["team_change"] for row in high), default=None))
                 if q_reference is not None:
                     with torch.no_grad():
                         q_scores = q_reference.q([state] * len(pool), pool).cpu().tolist()
@@ -346,6 +347,10 @@ def _write_report(output: Path, result: dict):
              "参考动作由筛选集选出，差距由独立评价集估计；固定 StaticPolicy 续行，因此不是全任务最优 Q*。", ""]
     for row in result["e2"]:
         if row["complete"]:
+            if not row.get("any_success", any(row.get("final_returns", []))):
+                lines.append(f"- {row['state_id']}：候选 {row['candidate_count']}，所有独立续行均失败；"
+                             "无法识别有效候选、评价排序或所需最小调整量，零参考差距不构成方法有效的证据。")
+                continue
             lines.append(f"- {row['state_id']}：候选 {row['candidate_count']}，DLOM 排序相关 "
                          f"{row['proxy_rank_correlation']}，独立评价参考减去 DLOM 选择收益 "
                          f"{row['selected_gap']:.3f}；高收益候选最少任务修改 {row['high_return_min_task_change']:.3f}，"

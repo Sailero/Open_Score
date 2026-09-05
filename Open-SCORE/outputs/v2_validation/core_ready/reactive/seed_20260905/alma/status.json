@@ -1,0 +1,41 @@
+{
+  "physical_steps": 2003,
+  "upper_events": 709,
+  "decode_steps": 42656,
+  "episodes": 81,
+  "updates": 44,
+  "next_episode": 82,
+  "training_seconds": 98.52293529990129,
+  "elapsed_seconds": 99.0216131999623,
+  "invocation_steps": 2003,
+  "steps_per_second": 20.227907173711472,
+  "parameter_change_l2": 2.042663317689388,
+  "change_from_initial_l2": 2.042663317689388,
+  "requested_steps": 2000,
+  "requested_seconds": 300.0,
+  "time_overrun_seconds": 0.0,
+  "status": "complete",
+  "latest_checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v2_validation\\core_ready\\reactive\\seed_20260905\\alma\\latest.pt",
+  "release_counts": {
+    "7": 106,
+    "6": 69,
+    "5": 79,
+    "4": 54,
+    "11": 48,
+    "10": 39,
+    "8": 102,
+    "3": 34,
+    "1": 1,
+    "9": 34,
+    "12": 48,
+    "2": 13
+  },
+  "metrics": {
+    "q_loss": 0.00029668805655092,
+    "proposal_nll": 0.0013072984293103218,
+    "replay_size": 704,
+    "updates": 44,
+    "winner_traces": 16,
+    "observed_transitions": 704
+  }
+}

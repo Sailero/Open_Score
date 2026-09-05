@@ -11,8 +11,8 @@ import torch
 import yaml
 
 from .evaluation import evaluate, write_report
-from .storage import ROOT, atomic_json, read_jsonl
-from .training import METHODS, train
+from .storage import ROOT, atomic_json, fingerprint, read_jsonl, sha256, provenance
+from .training import METHODS, contract, train
 
 
 def parser():
@@ -101,20 +101,48 @@ def comparison(config, args):
                     if release_distribution is None:
                         raise ValueError('B3 comparison requires B4 training in the same invocation to freeze release counts')
                     current['release_distribution'] = release_distribution
-                status = train(current, base / method, steps=config['steps'],
-                               wall_seconds=config.get('train_seconds'), resume=args.resume)
+                target_dir = base / method
+                prior = target_dir / 'latest.pt'
+                remaining_steps, remaining_seconds = config['steps'], config.get('train_seconds')
+                status = None
+                if args.resume and prior.exists():
+                    payload = torch.load(prior, map_location='cpu', weights_only=False)
+                    evidence = provenance()
+                    if (payload['config_hash'] != fingerprint(contract(current))
+                            or payload['provenance']['source_hash'] != evidence['source_hash']
+                            or payload['provenance']['assets'] != evidence['assets']):
+                        raise ValueError('Comparison resume task, source or frozen assets differ')
+                    counts = payload['counters']
+                    remaining_steps = None if config['steps'] is None else max(0, config['steps'] - counts['physical_steps'])
+                    remaining_seconds = None if config.get('train_seconds') is None else max(0., config['train_seconds'] - counts['training_seconds'])
+                    if remaining_steps == 0 or remaining_seconds == 0:
+                        status = {**counts, 'release_counts': payload['release_counts']}
+                        print(f'[compare] retain completed {opponent}/{seed}/{method}', flush=True)
+                if status is None:
+                    status = train(current, target_dir, steps=remaining_steps,
+                                   wall_seconds=remaining_seconds, resume=args.resume)
                 checkpoints[method] = base / method / 'latest.pt'
                 if method == 'selective':
                     release_distribution = status['release_counts'] or {0: 1}
             for method in selected_methods:
                 if method in ('static', 'dlom'):
                     checkpoints[method] = None
-            summary = evaluate(run_config, checkpoints, base / 'comparison', scales=config['eval_scales'],
+            evaluation_id = fingerprint({name: sha256(path) if path else name for name, path in checkpoints.items()})[:12]
+            evaluation_dir = base / 'comparison' / evaluation_id
+            summary = evaluate(run_config, checkpoints, evaluation_dir, scales=config['eval_scales'],
                                episodes=config['eval_episodes'], wall_seconds=config.get('eval_seconds'), matched_static=False)
-            results.append({'seed': seed, 'opponent': opponent, **summary})
-            run_diagnostics(run_config, base / 'diagnostics', checkpoint=checkpoints.get('selective'),
-                            states=args.diagnostic_states, rollouts=args.diagnostic_rollouts,
-                            wall_seconds=args.diagnostic_seconds)
+            results.append({'seed': seed, 'opponent': opponent, 'evaluation_directory': str(evaluation_dir), **summary})
+            diagnostic_dir = base / 'diagnostics' / evaluation_id
+            previous_diagnostic = diagnostic_dir / 'diagnostics.json'
+            reuse_diagnostic = False
+            if args.resume and previous_diagnostic.exists():
+                stored = json.loads(previous_diagnostic.read_text(encoding='utf-8'))
+                reuse_diagnostic = (stored['status'] == 'complete' and stored['requested_states'] == args.diagnostic_states
+                                    and stored['requested_rollouts'] == args.diagnostic_rollouts)
+            if not reuse_diagnostic:
+                run_diagnostics(run_config, diagnostic_dir, checkpoint=checkpoints.get('selective'),
+                                states=args.diagnostic_states, rollouts=args.diagnostic_rollouts,
+                                wall_seconds=args.diagnostic_seconds)
             atomic_json(args.output / 'comparison_runs.json', results)
     aggregate_comparison(args.output, results)
     return results
