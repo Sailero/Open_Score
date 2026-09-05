@@ -40,6 +40,28 @@
 & D:\Software\Anaconda\envs\torch310\python.exe -m open_score --help
 ```
 
+## 三个种子、四个并发任务：B4 与 B6
+
+以下专用脚本只训练主算法 `selective` 和规则释放 `rule`。三个种子共六个独立任务，最多同时运行四个；每个进程使用一个 CPU 计算线程。空槽自动启动后续任务，训练后按种子并行进行配对评估并汇总。
+
+```powershell
+& 'D:\Software\Anaconda\envs\torch310\python.exe' scripts/run_parallel_comparison.py --seeds 20260905 20260906 20260907 --workers 4 --steps 150000 --checkpoint-every 25000 --train-minutes 80 --eval-minutes 10 --eval-episodes 100 --total-minutes 180 --output outputs/v2_parallel_3seeds --resume
+```
+
+默认混合 8v8/12v12 训练，在 8v8、12v12、16v16 上每方法每种子计划评估 100 局。每局最多 50 步。B6 以规则选择释放成员，但重建器仍训练；红方下层与完整对手始终冻结。
+
+当前 i7-14700KF、32 GB 内存机器的四进程短试跑测得每任务约 36–52 物理步/秒。15 万步是依据该吞吐和时间窗口选取的请求上限，不是收敛要求；按短跑速度外推整轮约 1.7–2.5 小时，尚未实测完整长训练。以完成步数为主，不在 120 分钟截停。每任务最多累计 80 分钟，整个调用以 180 分钟兜底，提前预留评估和收尾时间。达到调度截止时只停止该脚本启动的子进程；已完成更新保留。
+
+每 25,000 步保存一个固定预算节点，节点之间从新回合继续。若有模型未到请求上限，所有模型统一使用共同完成的最高节点评估，例如全部采用 125,000 步节点；禁止把不同训练预算的最新模型直接混入对照。图中训练曲线也截至统一评估节点。单次宏观转移使实际步数最多多出 4 步，报告同时公开实际节点与请求上限。
+
+`progress.json` 显示阶段、统一评估步数和完成情况；`logs/` 保存各任务日志，`scheduler_events.jsonl` 记录进程启动/结束。汇总见 `comparison_report.md`、`comparison_summary.json` 和 `paired_differences.json`，各种子的曲线及评估图自动生成。三种子的结果属于探索证据，不自动判定方法有效。`--resume` 补齐相同设置下未完成的任务，不重复训练已完成节点；如需改变预算或设置，使用新输出目录。`--dry-run` 可只显示配置。
+
+当前 `batch_size: 16` 是一次 PPO 优化使用的上层事件数；每次采样 64 个上层事件。实现逐事件调用 `evaluate_action` 后合并损失，尚未把环境和变长解码整理为批量张量。因此增大该数值主要改变梯度统计和更新次数，不能保证 GPU 吞吐提升。128 维、2 层、4 头来自根目录 v2 方案的第一版建议；这些参数尚未调优，也不能保证大规模策略质量。
+
+2026-09-06 在本机 RTX 5070 Ti 上对主算法进行约 1,024 步的顺序短测：batch 16 时 CPU 约 63 物理步/秒，上层 CUDA/下层 CPU 约 43，两者 CUDA 约 48；batch 64 时依次约 60、28、25。该测量是当前逐事件实现的短时吞吐，不是收敛比较或并行性能保证。复测速率可运行 `python scripts/benchmark_training_devices.py --output outputs/device_benchmark_new --steps 1024`，结果写入 `benchmark.json`，独立于正式训练输出。后续 GPU 优化应先批量化编码、采样和解码，再评估较大 rollout、minibatch 和网络的效果。
+
+Windows 写入 checkpoint 或 JSON 时，对文件替换的 WinError 5/32/33 增加有限退避重试，始终保留上一份有效文件。仅对本次保存重试修复，`python scripts/repair_windows_checkpoint_run.py --output <旧并行输出目录>` 可迁移旧版运行后再 `--resume`；脚本限定精确的新旧源码哈希，备份原文件，并核对模型、优化器、随机状态和计数器全部不变。它不允许跨训练逻辑或配置变更恢复。
+
 ## 方法与验证范围
 
 | 编号 | CLI 方法名 | 用途 |

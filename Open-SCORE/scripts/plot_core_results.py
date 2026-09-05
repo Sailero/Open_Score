@@ -26,6 +26,8 @@ def read_training(path):
 
 def plot(csv_path):
     evaluation = csv_path.parent
+    budget_path = evaluation / "training_budget.json"
+    budget = json.loads(budget_path.read_text(encoding="utf-8"))["requested_steps"] if budget_path.exists() else None
     run_root = evaluation.parent.parent if evaluation.parent.name == "comparison" else evaluation.parent
     with csv_path.open(encoding="utf-8-sig", newline="") as stream:
         results = list(csv.DictReader(stream))
@@ -33,6 +35,9 @@ def plot(csv_path):
         raise ValueError(f"No complete evaluation rows: {csv_path}")
     curves = {method: read_training(run_root / method / "training.jsonl")
               for method in METHODS[:5] if (run_root / method / "training.jsonl").exists()}
+    if budget is not None:
+        curves = {method: [row for row in rows if row["physical_steps"] <= budget + 4]
+                  for method, rows in curves.items()}
     curves = {method: rows for method, rows in curves.items() if rows}
     if not curves:
         raise ValueError(f"No actual training curves below {run_root}")
@@ -99,7 +104,8 @@ def plot(csv_path):
     fig.text(.065, .856, "A  Observed training curves", fontsize=12, weight="bold")
     fig.text(.065, .505, "B  Independent paired evaluation by initial team size", fontsize=12, weight="bold")
     counts = str(episode_counts[0]) if len(episode_counts) == 1 else "/".join(map(str, episode_counts))
-    fig.text(.065, .055, f"Training points: logged success over the last up to 20 completed episodes; no added smoothing.\n"
+    budget_label = f"Checkpoint budget: {budget:,} physical steps (+0 to 4 at event boundary). " if budget is not None else ""
+    fig.text(.065, .055, f"{budget_label}Training points: recent episode success; no added smoothing.\n"
              f"Evaluation: {counts} episodes per method and scale; labels show successes/episodes. "
              "Whiskers: 95% Wilson episode intervals.\n"
              "Single training seed: these intervals do not describe variation across independently trained models.",

@@ -30,3 +30,5 @@ Open-SCORE/outputs/**
 !Open-SCORE/outputs/v2_validation/executor_probe/report.json
 !Open-SCORE/outputs/v2_validation/**/trace_*.json
 !Open-SCORE/outputs/v2_validation/core_ready/**/diagnostics/**/*.json
+!Open-SCORE/outputs/v2_validation/parallel_runner/*.json
+!Open-SCORE/outputs/v2_validation/parallel_runner/tests.xml

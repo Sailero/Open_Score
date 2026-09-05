@@ -6,6 +6,7 @@ import json
 import os
 import random
 import subprocess
+import time
 from pathlib import Path
 
 import numpy as np
@@ -27,12 +28,30 @@ def fingerprint(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
+def replace_file(temporary, path, *, attempts=9):
+    """Retry transient Windows file locks without removing the last good file.
+
+    Serialization has already closed its handle. Antivirus/indexers/readers can
+    briefly deny rename/delete access even when both paths are writable. Other
+    failures propagate immediately; a persistent lock remains an explicit error.
+    The total default backoff is 4.55 seconds and does not consume training RNG.
+    """
+    for attempt in range(attempts):
+        try:
+            os.replace(temporary, path)
+            return
+        except OSError as error:
+            if getattr(error, 'winerror', None) not in (5, 32, 33) or attempt == attempts - 1:
+                raise
+            time.sleep(min(.05 * 2**attempt, 1.0))
+
+
 def atomic_json(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + '.tmp')
     temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False), encoding='utf-8')
-    os.replace(temporary, path)
+    replace_file(temporary, path)
 
 
 def append_jsonl(path, value):
@@ -66,7 +85,7 @@ def atomic_checkpoint(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix('.tmp')
     torch.save(value, temporary)
-    os.replace(temporary, path)
+    replace_file(temporary, path)
 
 
 def seed_everything(seed):

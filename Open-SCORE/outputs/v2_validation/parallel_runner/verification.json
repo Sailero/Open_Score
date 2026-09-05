@@ -1,0 +1,594 @@
+{
+  "hardware": {
+    "cpu": "Intel Core i7-14700KF",
+    "physical_cores": 20,
+    "logical_processors": 28,
+    "ram_gib": 31.8,
+    "free_ram_gib_at_check": 10.6,
+    "gpu": "NVIDIA GeForce RTX 5070 Ti",
+    "gpu_memory_mib": 16303,
+    "gpu_free_mib_at_check": 6641,
+    "torch": "2.13.0+cu130"
+  },
+  "isolated_four_worker_cpu_benchmark": {
+    "workers": 4,
+    "device": "cpu",
+    "wall_seconds": 58.89190739998594,
+    "runs": [
+      {
+        "seed": 20260905,
+        "method": "selective",
+        "physical_steps": 2002,
+        "training_seconds": 45.97190980007872,
+        "steps_per_second": 43.53280971312348,
+        "wall_seconds": 49.25237079989165
+      },
+      {
+        "seed": 20260905,
+        "method": "rule",
+        "physical_steps": 2003,
+        "training_seconds": 46.567972799995914,
+        "steps_per_second": 42.99300489207898,
+        "wall_seconds": 49.80112570011988
+      },
+      {
+        "seed": 20260906,
+        "method": "selective",
+        "physical_steps": 2001,
+        "training_seconds": 55.726617499953136,
+        "steps_per_second": 35.90002715441779,
+        "wall_seconds": 58.88787050009705
+      },
+      {
+        "seed": 20260906,
+        "method": "rule",
+        "physical_steps": 2001,
+        "training_seconds": 38.80473480001092,
+        "steps_per_second": 51.539032523518955,
+        "wall_seconds": 42.13065019994974
+      }
+    ]
+  },
+  "full_tests": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "0",
+    "tests": "81",
+    "time": "35.938",
+    "timestamp": "2026-09-06T00:00:05.674095+08:00",
+    "hostname": "Salieron"
+  },
+  "six_job_smoke": {
+    "progress": {
+      "status": "complete",
+      "common_training_steps": 2000,
+      "target_training_steps": 2000,
+      "target_training_complete": true,
+      "evaluated_seeds": [
+        20260905,
+        20260906,
+        20260907
+      ],
+      "invocation_seconds": 117.93799999984913,
+      "peak_workers": 4,
+      "deadline_reached": false
+    },
+    "planned_eval_episodes": 90,
+    "completed_pairs": 45,
+    "completed_eval_episodes": 90,
+    "training": {
+      "reactive\\seed_20260905\\rule": {
+        "physical_steps": 2000,
+        "upper_events": 723,
+        "decode_steps": 4335,
+        "episodes": 77,
+        "updates": 12,
+        "next_episode": 79,
+        "training_seconds": 47.8876670000609,
+        "elapsed_seconds": 22.73363670008257,
+        "invocation_steps": 997,
+        "steps_per_second": 43.85571974924623,
+        "parameter_change_l2": 0.5756790734047185,
+        "change_from_initial_l2": 1.2362000736453223,
+        "requested_steps": 997,
+        "requested_seconds": 93.5736567999702,
+        "time_overrun_seconds": 0.0,
+        "status": "complete",
+        "latest_checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\parallel_runner_smoke\\reactive\\seed_20260905\\rule\\latest.pt",
+        "release_counts": {
+          "7": 74,
+          "6": 47,
+          "5": 37,
+          "4": 124,
+          "8": 81,
+          "11": 45,
+          "3": 20,
+          "1": 3,
+          "10": 33,
+          "9": 16,
+          "12": 31,
+          "2": 7,
+          "0": 126
+        },
+        "metrics": {
+          "loss": -0.08181123932202657,
+          "policy_loss": -0.08245235681533813,
+          "value_loss": 0.0012822274196272094,
+          "entropy": 5.714054107666016,
+          "approx_kl": 0.047278632720311485,
+          "clip_fraction": 0.1111111111111111,
+          "gradient_norm": 4.161693255106608,
+          "clip_fraction_by_release_count": {
+            "11": 0.0,
+            "0": 0.0,
+            "7": 0.0,
+            "8": 0.14285714285714285,
+            "10": 0.0,
+            "9": 0.0,
+            "6": 0.0,
+            "4": 0.0,
+            "12": 0.5
+          }
+        }
+      },
+      "reactive\\seed_20260905\\selective": {
+        "physical_steps": 2002,
+        "upper_events": 707,
+        "decode_steps": 4170,
+        "episodes": 78,
+        "updates": 12,
+        "next_episode": 80,
+        "training_seconds": 49.56000369973481,
+        "elapsed_seconds": 23.94782739994116,
+        "invocation_steps": 1001,
+        "steps_per_second": 41.799198870226505,
+        "parameter_change_l2": 0.9506415776845448,
+        "change_from_initial_l2": 1.5332069042470156,
+        "requested_steps": 999,
+        "requested_seconds": 93.10507629998028,
+        "time_overrun_seconds": 0.0,
+        "status": "complete",
+        "latest_checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\parallel_runner_smoke\\reactive\\seed_20260905\\selective\\latest.pt",
+        "release_counts": {
+          "0": 198,
+          "1": 114,
+          "3": 67,
+          "6": 31,
+          "7": 18,
+          "5": 49,
+          "4": 50,
+          "2": 84,
+          "9": 3,
+          "8": 6,
+          "10": 4,
+          "12": 3
+        },
+        "metrics": {
+          "loss": -0.07206471380777657,
+          "policy_loss": -0.07374552513162295,
+          "value_loss": 0.0033616302728963396,
+          "entropy": 5.077298164367676,
+          "approx_kl": 0.02670326953132947,
+          "clip_fraction": 0.22916666666666666,
+          "gradient_norm": 2.8438233931859336,
+          "clip_fraction_by_release_count": {
+            "1": 0.21428571428571427,
+            "12": 0.6666666666666666,
+            "3": 0.5,
+            "2": 0.1,
+            "0": 0.1111111111111111,
+            "8": 0.5,
+            "4": 0.5
+          }
+        }
+      },
+      "reactive\\seed_20260906\\rule": {
+        "physical_steps": 2000,
+        "upper_events": 696,
+        "decode_steps": 3349,
+        "episodes": 80,
+        "updates": 12,
+        "next_episode": 82,
+        "training_seconds": 44.33203810011037,
+        "elapsed_seconds": 25.298914399929345,
+        "invocation_steps": 996,
+        "steps_per_second": 39.36927823285499,
+        "parameter_change_l2": 0.8585928698404045,
+        "change_from_initial_l2": 1.229722526436916,
+        "requested_steps": 996,
+        "requested_seconds": 99.66543829999864,
+        "time_overrun_seconds": 0.0,
+        "status": "complete",
+        "latest_checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\parallel_runner_smoke\\reactive\\seed_20260906\\rule\\latest.pt",
+        "release_counts": {
+          "3": 18,
+          "2": 10,
+          "0": 210,
+          "4": 108,
+          "7": 64,
+          "8": 83,
+          "6": 40,
+          "5": 31,
+          "9": 17,
+          "12": 11,
+          "10": 11,
+          "11": 11
+        },
+        "metrics": {
+          "loss": -0.006267862394452095,
+          "policy_loss": -0.007804958149790764,
+          "value_loss": 0.0030741889495402575,
+          "entropy": 10.373558521270752,
+          "approx_kl": 0.02564359735697508,
+          "clip_fraction": 0.17427884615384615,
+          "gradient_norm": 3.442820370197296,
+          "clip_fraction_by_release_count": {
+            "8": 0.2222222222222222,
+            "6": 0.25,
+            "0": 0.0,
+            "12": 0.4,
+            "7": 0.0,
+            "9": 0.125,
+            "11": 0.0,
+            "2": 0.0
+          }
+        }
+      },
+      "reactive\\seed_20260906\\selective": {
+        "physical_steps": 2000,
+        "upper_events": 687,
+        "decode_steps": 6843,
+        "episodes": 81,
+        "updates": 12,
+        "next_episode": 83,
+        "training_seconds": 57.48416959983297,
+        "elapsed_seconds": 29.237260799854994,
+        "invocation_steps": 999,
+        "steps_per_second": 34.168727598618084,
+        "parameter_change_l2": 0.6845730153369626,
+        "change_from_initial_l2": 1.2271718294303375,
+        "requested_steps": 999,
+        "requested_seconds": 90.49633929994889,
+        "time_overrun_seconds": 0.0,
+        "status": "complete",
+        "latest_checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\parallel_runner_smoke\\reactive\\seed_20260906\\selective\\latest.pt",
+        "release_counts": {
+          "7": 63,
+          "0": 54,
+          "1": 58,
+          "4": 61,
+          "12": 5,
+          "3": 62,
+          "10": 17,
+          "9": 25,
+          "6": 77,
+          "5": 87,
+          "2": 46,
+          "11": 8,
+          "8": 41
+        },
+        "metrics": {
+          "loss": 0.17356422264128923,
+          "policy_loss": 0.170718751847744,
+          "value_loss": 0.005690933438017964,
+          "entropy": 18.119911193847656,
+          "approx_kl": 0.018183416686952114,
+          "clip_fraction": 0.234375,
+          "gradient_norm": 7.927953541278839,
+          "clip_fraction_by_release_count": {
+            "3": 0.5,
+            "8": 0.25,
+            "5": 0.0,
+            "6": 0.0,
+            "7": 0.16666666666666666,
+            "4": 0.16666666666666666,
+            "10": 0.5,
+            "12": 0.5
+          }
+        }
+      },
+      "reactive\\seed_20260907\\rule": {
+        "physical_steps": 2001,
+        "upper_events": 713,
+        "decode_steps": 2244,
+        "episodes": 79,
+        "updates": 12,
+        "next_episode": 81,
+        "training_seconds": 33.723031900124624,
+        "elapsed_seconds": 15.288815800100565,
+        "invocation_steps": 1001,
+        "steps_per_second": 65.47269671424884,
+        "parameter_change_l2": 0.8023261999458153,
+        "change_from_initial_l2": 1.2634898028354482,
+        "requested_steps": 1000,
+        "requested_seconds": 100.42548190010712,
+        "time_overrun_seconds": 0.0,
+        "status": "complete",
+        "latest_checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\parallel_runner_smoke\\reactive\\seed_20260907\\rule\\latest.pt",
+        "release_counts": {
+          "8": 41,
+          "7": 39,
+          "3": 24,
+          "2": 7,
+          "5": 6,
+          "6": 15,
+          "1": 3,
+          "4": 119,
+          "9": 3,
+          "10": 3,
+          "0": 364,
+          "12": 5,
+          "11": 3
+        },
+        "metrics": {
+          "loss": 0.008914376050233841,
+          "policy_loss": 0.008836272358894347,
+          "value_loss": 0.00015620860212948174,
+          "entropy": 0.7507087469100953,
+          "approx_kl": 0.024432700499892233,
+          "clip_fraction": 0.1125,
+          "gradient_norm": 1.258029818534851,
+          "clip_fraction_by_release_count": {
+            "8": 0.25,
+            "4": 0.42857142857142855,
+            "0": 0.0,
+            "12": 0.3333333333333333,
+            "7": 0.5
+          }
+        }
+      },
+      "reactive\\seed_20260907\\selective": {
+        "physical_steps": 2001,
+        "upper_events": 680,
+        "decode_steps": 5056,
+        "episodes": 81,
+        "updates": 12,
+        "next_episode": 83,
+        "training_seconds": 49.90445670019835,
+        "elapsed_seconds": 25.208279800135642,
+        "invocation_steps": 998,
+        "steps_per_second": 39.59016671953276,
+        "parameter_change_l2": 0.8847784127664656,
+        "change_from_initial_l2": 1.426850858603167,
+        "requested_steps": 997,
+        "requested_seconds": 94.13448270014487,
+        "time_overrun_seconds": 0.0,
+        "status": "complete",
+        "latest_checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\parallel_runner_smoke\\reactive\\seed_20260907\\selective\\latest.pt",
+        "release_counts": {
+          "2": 93,
+          "0": 77,
+          "4": 62,
+          "3": 76,
+          "1": 136,
+          "7": 32,
+          "9": 8,
+          "8": 17,
+          "5": 48,
+          "6": 31,
+          "10": 10,
+          "11": 5,
+          "12": 2
+        },
+        "metrics": {
+          "loss": -0.02442220829834696,
+          "policy_loss": -0.024527748780591274,
+          "value_loss": 0.0002110813875333406,
+          "entropy": 16.935856819152832,
+          "approx_kl": 0.010143795050680637,
+          "clip_fraction": 0.10714285714285714,
+          "gradient_norm": 3.11035019159317,
+          "clip_fraction_by_release_count": {
+            "5": 0.0,
+            "8": 0.25,
+            "1": 0.0,
+            "2": 0.0,
+            "0": 0.0,
+            "4": 0.0,
+            "11": 0.0,
+            "7": 0.5,
+            "10": 0.5,
+            "3": 0.0,
+            "12": 0.0
+          }
+        }
+      }
+    },
+    "note": "The full test suite ran alongside part of this smoke run; use the separate four-worker benchmark for throughput estimates."
+  },
+  "resume_and_common_milestone_fallback_test": "passed; completed models/evaluation rows unchanged on resume; all six evaluated at 32 steps when one 64-step milestone was unavailable",
+  "owned_process_cleanup_tests": "passed for deadline and worker failure",
+  "long_training_started": false,
+  "source_hash": "dd4bdae705a542244e32bc78f6b796ce8d404a22f6fd6ff8f30fafa3e6665271",
+  "runner_sha256": "3747923efdee88446d6bd7814c89c7d314bedab0548475516892303cfca1575b",
+  "plotter_sha256": "2508fc1004344c2064c15c35409ef0b1fff699ac2fb79f47c67a6d364b07930a",
+  "recommended_run": {
+    "steps_per_model": 150000,
+    "checkpoint_every": 25000,
+    "seeds": [
+      20260905,
+      20260906,
+      20260907
+    ],
+    "workers": 4,
+    "train_minutes_per_model_cap": 80,
+    "total_minutes_fallback": 180,
+    "eval_minutes_cap": 10,
+    "eval_episodes_per_method_seed_scale": 100,
+    "estimated_hours": [
+      1.7,
+      2.5
+    ],
+    "basis": "Four concurrent CPU tasks measured 35.90-51.54 physical steps/s; no full-length run performed."
+  },
+  "validation_note": "Full suite passed after common-budget plot metadata change; final default budgets were then updated per user and checked with --dry-run.",
+  "windows_checkpoint_fix": {
+    "source_hash": "f91e928e1cbd709f0c1f67842fe8d0a77a4af2f30a6eacc71ba11230b8efad39",
+    "changed_source_file": "src/open_score/grouping/storage.py",
+    "tests": "Transient Windows lock retry, persistent failure preserves previous file, unrelated errors propagate, training/resume/full parallel runner suite",
+    "migration_backup": "outputs/v2_parallel_100k_w3_new/recovery/windows_checkpoint_io",
+    "migrated_checkpoints": 23,
+    "training_state_checked_unchanged": true
+  },
+  "device_benchmark_1024": {
+    "torch": "2.13.0+cu130",
+    "gpu": "NVIDIA GeForce RTX 5070 Ti",
+    "requested_steps": 1024,
+    "seconds_cap": 90.0,
+    "results": [
+      {
+        "name": "cpu_cpu_batch16",
+        "device": "cpu",
+        "executor_device": "cpu",
+        "batch_size": 16,
+        "physical_steps": 1028,
+        "updates": 6,
+        "total_seconds": 17.13644009991549,
+        "total_steps_per_second": 59.98912224511961,
+        "training_steps_per_second": 63.22000233719367,
+        "peak_cuda_mib": 0
+      },
+      {
+        "name": "cuda_cpu_batch16",
+        "device": "cuda",
+        "executor_device": "cpu",
+        "batch_size": 16,
+        "physical_steps": 1024,
+        "updates": 6,
+        "total_seconds": 23.681308000115678,
+        "total_steps_per_second": 43.24085477014184,
+        "training_steps_per_second": 43.382629175848415,
+        "peak_cuda_mib": 80.013671875
+      },
+      {
+        "name": "cuda_cuda_batch16",
+        "device": "cuda",
+        "executor_device": "cuda",
+        "batch_size": 16,
+        "physical_steps": 1024,
+        "updates": 6,
+        "total_seconds": 21.214060300029814,
+        "total_steps_per_second": 48.26987316513666,
+        "training_steps_per_second": 48.42786182431701,
+        "peak_cuda_mib": 81.1728515625
+      },
+      {
+        "name": "cpu_cpu_batch64",
+        "device": "cpu",
+        "executor_device": "cpu",
+        "batch_size": 64,
+        "physical_steps": 1027,
+        "updates": 6,
+        "total_seconds": 17.219188400078565,
+        "total_steps_per_second": 59.642764579735605,
+        "training_steps_per_second": 59.85682643488678,
+        "peak_cuda_mib": 0
+      },
+      {
+        "name": "cuda_cpu_batch64",
+        "device": "cuda",
+        "executor_device": "cpu",
+        "batch_size": 64,
+        "physical_steps": 1026,
+        "updates": 6,
+        "total_seconds": 36.58975040004589,
+        "total_steps_per_second": 28.040639490088278,
+        "training_steps_per_second": 28.096776141336573,
+        "peak_cuda_mib": 98.54345703125
+      },
+      {
+        "name": "cuda_cuda_batch64",
+        "device": "cuda",
+        "executor_device": "cuda",
+        "batch_size": 64,
+        "physical_steps": 1026,
+        "updates": 6,
+        "total_seconds": 41.02564949984662,
+        "total_steps_per_second": 25.008744834224643,
+        "training_steps_per_second": 25.05890974769105,
+        "peak_cuda_mib": 98.54345703125
+      }
+    ],
+    "note": "Short sequential throughput probe; initializations and numerical trajectories differ. Not a convergence or parallel scaling test."
+  },
+  "scale_shape_probe": {
+    "note": "One initial decision and one physical macro transition only; no large-scale performance claim.",
+    "rows": [
+      {
+        "scale": 16,
+        "parameters": 493573,
+        "initial_decision_ms": 8.609900018200278,
+        "groups": 0,
+        "delta": 1,
+        "legal": true
+      },
+      {
+        "scale": 32,
+        "parameters": 493573,
+        "initial_decision_ms": 11.19800005108118,
+        "groups": 0,
+        "delta": 1,
+        "legal": true
+      },
+      {
+        "scale": 64,
+        "parameters": 493573,
+        "initial_decision_ms": 19.860999891534448,
+        "groups": 0,
+        "delta": 1,
+        "legal": true
+      }
+    ],
+    "warning": "The greedy initial action in these three probes put all members in reserve; do not interpret legal shapes/fast timings as successful large-scale grouping."
+  },
+  "initial_action_diagnostic": {
+    "training_seed": 20260905,
+    "training_steps": 100000,
+    "note": "Initial stochastic actions only; not full episode evaluation. Separate diagnostic seeds.",
+    "rows": [
+      {
+        "method": "selective",
+        "scale": 8,
+        "episodes": 10,
+        "all_reserve": 10,
+        "mean_reserve_fraction": 1.0
+      },
+      {
+        "method": "selective",
+        "scale": 12,
+        "episodes": 10,
+        "all_reserve": 10,
+        "mean_reserve_fraction": 1.0
+      },
+      {
+        "method": "selective",
+        "scale": 16,
+        "episodes": 10,
+        "all_reserve": 10,
+        "mean_reserve_fraction": 1.0
+      },
+      {
+        "method": "rule",
+        "scale": 8,
+        "episodes": 10,
+        "all_reserve": 0,
+        "mean_reserve_fraction": 0.0
+      },
+      {
+        "method": "rule",
+        "scale": 12,
+        "episodes": 10,
+        "all_reserve": 0,
+        "mean_reserve_fraction": 0.0
+      },
+      {
+        "method": "rule",
+        "scale": 16,
+        "episodes": 10,
+        "all_reserve": 0,
+        "mean_reserve_fraction": 0.0
+      }
+    ]
+  }
+}
