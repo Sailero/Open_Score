@@ -55,13 +55,25 @@ class DisplayPlayer:
         self.transparent_layer = pygame.Surface((ScreenLength, ScreenWidth), pygame.SRCALPHA)
 
     def update(self, agent_info_list, game_result):
-        targets_info_n, red_agents_info_n, blue_agents_info_n = agent_info_list
         if not self.running:
             return
 
         self.handle_events()
         if not self.running:
             return
+
+        self.draw(agent_info_list, game_result)
+        pygame.display.flip()
+        self.wait_for_result(game_result)
+
+    def draw(self, agent_info_list, game_result):
+        """Draw one frame without processing events or flipping a display.
+
+        This is the reusable rendering primitive for both the pygame window
+        and off-screen scientific episode viewers.
+        """
+
+        targets_info_n, red_agents_info_n, blue_agents_info_n = agent_info_list
 
         # 使用带透明度的图层绘制各类信息
         transparent_layer = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
@@ -81,8 +93,6 @@ class DisplayPlayer:
         self.draw_borders()
 
         self.display_result(game_result)
-        pygame.display.flip()
-        self.wait_for_result(game_result)
 
     def handle_events(self):
         """Handle user input events like quitting."""

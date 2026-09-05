@@ -1,0 +1,124 @@
+schema_version: open-score-stage3-identity-cs-bbg-v5
+seed: 20260904
+device: cuda
+output_dir: outputs/mvp/stage23_identity_blotto_v5/stage3
+
+artifacts:
+  stage1_checkpoint: outputs/round_01_mvp/stage1/checkpoints/refil_qmix_seed20260831_best.pt
+  stage1_sha256: AUTO
+  stage2_checkpoint: outputs/mvp/stage23_identity_blotto_v5/stage2/model/dynamic_outcome_time_model.pt
+  stage2_sha256: AUTO
+  stage2_dataset: outputs/mvp/stage23_identity_blotto_v5/stage2/data/dynamic_outcome_time.jsonl
+  stage2_dataset_sha256: AUTO
+
+game:
+  name: identity_coalition_structured_blotto_with_battlefield_games
+  abbreviation: ID-CS-BBG
+  zero_sum: true
+  simultaneous_upper_actions: true
+  action_representation: labelled_agent_target_channel_partition
+  identity_level: true
+  fixed_targets_per_episode: true
+  repeated_target_groups: true
+  group_size_support: [1, 2, 3, 4]
+  hard_cap_at_four: true
+  red_reserve_enabled: true
+  blue_reserve_enabled: false
+  red_reserve_instant_utility: 0.0
+  public_matching_mechanism: target_channel
+  channel_symmetry_breaking: nonincreasing_group_size_per_target
+  local_utility: joint_survival_log_probability
+  risk_epsilon: 0.000001
+  payoff_normalization: analytic_absolute_bound_M_times_live_blue
+  conditional_group_independence: true
+  native_any_target_breach_terminal: true
+  lower_red_policy: frozen_round01_refil_qmix
+  blue_type_model: known_finite_lower_policy_library
+  blue_types:
+    - {name: rush, lower_style: rush}
+    - {name: split_rush, lower_style: split_rush}
+  blue_library_scope:
+    known_in_this_mvp: true
+    claims_complete_real_strategy_space: false
+    open_set_discovery_enabled: false
+
+candidate_domain:
+  complete_domain_max_agents_per_side: 8
+  spatial_neighborhood_size: 6
+  peer_count: 3
+  scalable_active_channels: size4_concentration_and_blue_singleton_cover
+  all_singletons_in_every_slot: true
+  seed_coalitions_always_retained: true
+  blue_exact_cover_seed_required: true
+  red_all_reserve_action_required: true
+  large_scale_guarantee: exact_best_response_inside_registered_candidate_columns
+
+solver:
+  method: double_oracle_with_set_partitioning_milp_best_responses
+  tolerance: 0.01
+  max_iterations: 12
+  oracle_time_limit_seconds: 1.0
+  oracle_mip_relative_gap: 0.01
+  payoff_batch_size: 1024
+  verbose: false
+
+solver_evaluation:
+  exact_small_game:
+    red: 3
+    blue: 3
+    targets: 2
+    scenarios: 20
+  planner_benchmarks:
+    - {label: "30", red: 18, blue: 12, targets: 2, repeats: 5}
+    - {label: "40", red: 24, blue: 16, targets: 4, repeats: 5}
+    - {label: "50", red: 30, blue: 20, targets: 5, repeats: 5}
+
+physical_evaluation:
+  enabled: true
+  max_steps: 50
+  smoke_max_steps: 12
+  command_interval: 5
+  replan_on_casualty: true
+  blue_split_spacing: 180.0
+  reserve_patrol:
+    standoff_distance: 350.0
+    lateral_spacing: 90.0
+    distance_scale: 1000.0
+  episodes_per_cell: 10
+  progress_every_episodes: 5
+  scenarios:
+    - {label: had30_fixed_t2, red: 18, blue: 12, targets: 2, layout: moderate_jittered}
+    - {label: had40_fixed_t4, red: 24, blue: 16, targets: 4, layout: moderate_jittered}
+    - {label: had50_fixed_t5, red: 30, blue: 20, targets: 5, layout: moderate_jittered}
+  layout_generator:
+    x_center: -2100.0
+    z: 100.0
+    target_y_spacing: 650.0
+    target_y_jitter: 50.0
+  red_commanders:
+    - balanced_identity
+    - identity_blotto
+    - revealed_blue_br
+  blue_lower_styles: [rush, split_rush]
+  blue_upper_policy: identity_blotto_equilibrium
+
+comparison:
+  previous_run_summary: outputs/mvp/stage23_bayesian_adaptive_v3/stage3/analysis/summary.json
+  previous_stage2_metrics: outputs/mvp/stage23_bayesian_adaptive_v3/stage2/model/metrics.json
+  interpretation: historical_unpaired_because_action_and_data_protocols_changed
+
+acceptance:
+  small_game_value_error_max: 0.000001
+  small_game_exploitability_max: 0.000001
+  require_full_game_certificate_for_small_game: true
+  require_candidate_domain_certificate_large: false
+  candidate_domain_normalized_exploitability_max: 0.10
+  require_all_groups_at_most_four: true
+  require_fixed_target_count: true
+  require_red_active_or_reserve_partition_exact: true
+  require_blue_partition_exact: true
+  planning_p95_seconds:
+    "30": 8.0
+    "40": 12.0
+    "50": 25.0
+  paired_identity_vs_balanced_min_improvement: -0.05

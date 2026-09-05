@@ -103,7 +103,7 @@ class Env(World):
         flying_action_n = [(np.array(action_n[i]) * self.agents[i].aMax).tolist() for i in range(len(action_n))]
         super().step(flying_action_n)
 
-    def render(self):
+    def _render_information(self):
         targets_info_n, red_agents_info_n, blue_agents_info_n = [], [], []
         for target in self.targets:
             position = [(target.position[0] - AeroPoint[0][0]) / (AeroPoint[0][1] - AeroPoint[0][0]),
@@ -134,7 +134,27 @@ class Env(World):
                 "alive": blue_agent.Health > 0
             })
 
-        agent_info_list = targets_info_n, red_agents_info_n, blue_agents_info_n
+        return targets_info_n, red_agents_info_n, blue_agents_info_n
+
+    def render_rgb_array(self, include_result=True):
+        """Return one native HAD frame as an ``H x W x 3`` RGB array."""
+
+        pygame.init()
+        pygame.font.init()
+        surface = pygame.Surface(
+            (int(ScreenLength), int(ScreenWidth + ScreenHeight))
+        )
+        surface.fill(SurfaceColor)
+        player = DisplayPlayer(surface)
+        player.draw(
+            self._render_information(),
+            self.is_terminal() if include_result else 0,
+        )
+        # pygame exposes W x H x C; Matplotlib and image writers expect H x W x C.
+        return np.transpose(pygame.surfarray.array3d(surface), (1, 0, 2)).copy()
+
+    def render(self):
+        agent_info_list = self._render_information()
 
         # 可视化设置与接口调用
         pygame.init()

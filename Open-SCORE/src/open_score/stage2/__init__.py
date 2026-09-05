@@ -1,6 +1,7 @@
 """Stage 2: strategy-conditioned local outcome-and-time prediction."""
 
 from .calibration import CalibratedRiskBound, TemperatureScaler
+from .shape import project_roster_probability_surface
 from .canonical import HADCanonicalizer, HADVariableSetState
 from .collectors import collect_had_records, iter_had_records, record_from_had_episode
 from .data import (
@@ -64,6 +65,7 @@ __all__ = [
     "Stage2System",
     "Stage2TrainingConfig",
     "TemperatureScaler",
+    "project_roster_probability_surface",
     "TabularBaselineResult",
     "collect_had_records",
     "iter_had_records",

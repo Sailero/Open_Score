@@ -6,13 +6,14 @@ build-backend = "setuptools.build_meta"
 name = "open-score"
 version = "0.1.0"
 description = "Four-stage open-population attack-defense research scaffold"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
   "numpy>=1.23",
   "scipy>=1.11.4",
   "torch>=1.13",
   "PyYAML>=6.0",
   "pygame>=2.5",
+  "psutil>=5.9",
 ]
 
 [project.optional-dependencies]
@@ -23,6 +24,9 @@ stage2 = [
 test = [
   "pytest==8.4.2",
 ]
+
+[project.scripts]
+open-score-stage3-view = "open_score.stage3.viewer:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
