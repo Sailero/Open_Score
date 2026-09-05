@@ -14,3 +14,14 @@ Thumbs.db
 # Network-failed upstream clone remnants are documented but not versioned.
 **/_incomplete_spectra_clone_20260827/
 **/upstream/failed_clone_empty/
+
+# Formal evidence: data, checkpoints, raw episodes and progress stay local.
+Open-SCORE/outputs/**
+!Open-SCORE/outputs/stage123_unknown_upper_v1/
+!Open-SCORE/outputs/stage123_unknown_upper_v1/manifest.json
+!Open-SCORE/outputs/stage123_unknown_upper_v1/experiment_report.md
+!Open-SCORE/outputs/stage123_unknown_upper_v1/figures/
+!Open-SCORE/outputs/stage123_unknown_upper_v1/figures/*.png
+!Open-SCORE/outputs/stage123_unknown_upper_v1/stage2/
+!Open-SCORE/outputs/stage123_unknown_upper_v1/stage2/data/
+!Open-SCORE/outputs/stage123_unknown_upper_v1/stage2/data/dataset_manifest.json
