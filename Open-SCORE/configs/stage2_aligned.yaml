@@ -1,8 +1,8 @@
 schema_version: open-score-stage2-identity-local-value-v4
 seed: 20260904
 device: cuda
-output_dir: outputs/mvp/stage23_identity_blotto_v5/stage2
-stage1_checkpoint: outputs/round_01_mvp/stage1/checkpoints/refil_qmix_seed20260831_best.pt
+output_dir: outputs/stage123_unknown_upper_v1/stage3/baselines/stage2_reproduction
+stage1_checkpoint: outputs/stage123_unknown_upper_v1/stage1/checkpoints/refil_qmix_seed20260831_best.pt
 
 # One record now represents one actual local group pair. It is never first
 # collapsed into a target total and then split by a Stage3 heuristic.

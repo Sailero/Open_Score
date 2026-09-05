@@ -22,11 +22,7 @@ if (-not (Test-Path -LiteralPath $Python -PathType Leaf)) {
 }
 
 if (-not $RunRoot) {
-    if ($Mode -eq "Formal") {
-        $RunRoot = "outputs\mvp\stage23_identity_blotto_v5"
-    } else {
-        $RunRoot = "outputs\_stage23_aligned_smoke_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
-    }
+    throw "Historical runner: specify -RunRoot explicitly. Current experiments use run_stage123_unknown_upper.ps1."
 }
 $ResolvedRoot = [System.IO.Path]::GetFullPath((Join-Path $ProjectRoot $RunRoot))
 New-Item -ItemType Directory -Path $ResolvedRoot -Force | Out-Null

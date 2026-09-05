@@ -34,7 +34,7 @@ from .runtime import (
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CSV_CANDIDATES = (
     REPOSITORY_ROOT
-    / "outputs/mvp/stage23_identity_blotto_v5/stage3/raw/physical_identity_episodes.csv",
+    / "outputs/stage123_unknown_upper_v1/stage3/baselines/legacy_idb/raw/physical_identity_episodes.csv",
 )
 
 # This is deliberately the viewer's consumer contract, rather than every

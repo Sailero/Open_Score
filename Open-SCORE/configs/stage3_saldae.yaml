@@ -1,14 +1,14 @@
 schema_version: open-score-stage3-saldae-do-v1
 seed: 20260904
 device: cuda
-output_dir: outputs/mvp/stage3_saldae_do_v1
+output_dir: outputs/stage123_unknown_upper_v1/stage3/baselines/saldae/reproduction
 
 artifacts:
-  stage1_checkpoint: outputs/round_01_mvp/stage1/checkpoints/refil_qmix_seed20260831_best.pt
+  stage1_checkpoint: outputs/stage123_unknown_upper_v1/stage1/checkpoints/refil_qmix_seed20260831_best.pt
   stage1_sha256: AUTO
-  stage2_checkpoint: outputs/mvp/stage23_identity_blotto_v5/stage2/model/dynamic_outcome_time_model.pt
+  stage2_checkpoint: outputs/stage123_unknown_upper_v1/stage2/model/dynamic_outcome_time_model.pt
   stage2_sha256: AUTO
-  stage2_dataset: outputs/mvp/stage23_identity_blotto_v5/stage2/data/dynamic_outcome_time.jsonl
+  stage2_dataset: outputs/stage123_unknown_upper_v1/stage2/data/dynamic_outcome_time.jsonl
   stage2_dataset_sha256: AUTO
 
 method:
@@ -126,5 +126,5 @@ acceptance:
 
 comparison:
   direct_baseline: same_state_same_stage2_spatial_candidate_milp_do
-  previous_formal_summary: outputs/mvp/stage23_identity_blotto_v5/stage3/analysis/summary.json
+  previous_formal_summary: outputs/stage123_unknown_upper_v1/stage3/baselines/legacy_idb/analysis/summary.json
   primary_claim_rule: improvement_requires_measured_proxy_or_physical_gain

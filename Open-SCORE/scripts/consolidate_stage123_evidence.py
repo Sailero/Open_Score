@@ -34,9 +34,11 @@ def migrate():
     manifest_path = ROOT / "manifest.json"
     if manifest_path.exists():
         manifest = json.loads(manifest_path.read_text(encoding="utf8"))
-        for item in manifest["retained_files"]:
+        for item in manifest["retained_files"] + manifest.get("recovered_from_git", []):
             if sha(ROOT / item["path"]) != item["sha256"]:
                 raise ValueError(f"Migrated evidence changed: {item['path']}")
+        if sha(ROOT / "stage3/baselines/source_reports.json") != manifest["source_reports_archive_sha256"]:
+            raise ValueError("Archived original reports changed")
         print("Existing migration verified; no source deletion performed.")
         return
     inventory = [{"path": p.relative_to(OUTPUTS).as_posix(), "bytes": p.stat().st_size,

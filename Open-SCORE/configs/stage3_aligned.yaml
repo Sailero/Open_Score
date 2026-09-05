@@ -1,14 +1,14 @@
 schema_version: open-score-stage3-identity-cs-bbg-v5
 seed: 20260904
 device: cuda
-output_dir: outputs/mvp/stage23_identity_blotto_v5/stage3
+output_dir: outputs/stage123_unknown_upper_v1/stage3/baselines/legacy_idb/reproduction
 
 artifacts:
-  stage1_checkpoint: outputs/round_01_mvp/stage1/checkpoints/refil_qmix_seed20260831_best.pt
+  stage1_checkpoint: outputs/stage123_unknown_upper_v1/stage1/checkpoints/refil_qmix_seed20260831_best.pt
   stage1_sha256: AUTO
-  stage2_checkpoint: outputs/mvp/stage23_identity_blotto_v5/stage2/model/dynamic_outcome_time_model.pt
+  stage2_checkpoint: outputs/stage123_unknown_upper_v1/stage2/model/dynamic_outcome_time_model.pt
   stage2_sha256: AUTO
-  stage2_dataset: outputs/mvp/stage23_identity_blotto_v5/stage2/data/dynamic_outcome_time.jsonl
+  stage2_dataset: outputs/stage123_unknown_upper_v1/stage2/data/dynamic_outcome_time.jsonl
   stage2_dataset_sha256: AUTO
 
 game:
@@ -103,8 +103,8 @@ physical_evaluation:
   blue_upper_policy: identity_blotto_equilibrium
 
 comparison:
-  previous_run_summary: outputs/mvp/stage23_bayesian_adaptive_v3/stage3/analysis/summary.json
-  previous_stage2_metrics: outputs/mvp/stage23_bayesian_adaptive_v3/stage2/model/metrics.json
+  previous_run_summary: outputs/stage123_unknown_upper_v1/stage3/baselines/count_bayesian_v3/analysis/summary.json
+  previous_stage2_metrics: outputs/stage123_unknown_upper_v1/stage3/baselines/count_bayesian_v3/stage2_metrics.json
   interpretation: historical_unpaired_because_action_and_data_protocols_changed
 
 acceptance:

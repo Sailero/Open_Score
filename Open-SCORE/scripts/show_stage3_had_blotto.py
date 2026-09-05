@@ -39,7 +39,7 @@ def parse_args() -> argparse.Namespace:
         "--config",
         type=Path,
         default=PROJECT
-        / "outputs/mvp/stage23_identity_blotto_v5/resolved_stage3_config.yaml",
+        / "configs/stage3_aligned.yaml",
     )
     parser.add_argument("--targets", type=int, choices=(3, 5), default=5)
     parser.add_argument("--blue-style", choices=("rush", "split_rush"), default="split_rush")

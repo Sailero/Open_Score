@@ -338,11 +338,10 @@ def main() -> None:
         raise FileNotFoundError(python)
     if args.run_root:
         root = args.run_root.resolve()
-    elif args.mode == "smoke":
-        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        root = PROJECT / f"outputs/_stage23_aligned_smoke_{stamp}"
     else:
-        root = PROJECT / "outputs/mvp/stage23_identity_blotto_v5"
+        raise ValueError("Historical runner: specify --run-root explicitly. Current experiments use run_stage123_unknown_upper.ps1")
+    if root == PROJECT / "outputs/stage123_unknown_upper_v1":
+        raise ValueError("Historical runner cannot overwrite the consolidated frozen evidence")
     root.mkdir(parents=True, exist_ok=True)
     previous_failure = preserve_previous_failure(root) if args.reuse_stage2 else None
     log = PipelineLog(root / "pipeline.log")

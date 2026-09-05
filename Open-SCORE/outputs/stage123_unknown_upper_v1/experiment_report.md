@@ -80,18 +80,31 @@ SALDAE − MILP 胜率差 6.7%，95% CI [-10.0%, 23.3%]。置信区间包含 0�
 | milp_do | 20.0% | 53.3% | 36.7% |
 | saldae_do | 33.3% | 53.3% | 43.3% |
 
-匿名/count Bayesian v3 的原始逐局记录、汇总和配置保存于 `stage3/baselines/count_bayesian_v3/`。其对手、动作与 Stage2 协议不同，只作历史证据，不与上述或新协议胜率作配对因果解释。
+### 匿名人数分配 Bayesian v3（历史协议）
+
+此协议的对手、动作、局部上限与 Stage2 均不同，不与 identity 或新协议合并估计。以下是各自历史单元按局数加权的胜率。
+
+| 人数分配方法 | rush | split_rush | 总胜率 |
+|---|---:|---:|---:|
+| clairvoyant_count_oracle | 56.3% | 57.4% | 56.9% |
+| double_oracle | 41.5% | 35.6% | 38.5% |
+| eta_greedy | 30.7% | 27.0% | 28.9% |
+| known_blue_1v1_2v1 | 64.8% | 61.5% | 63.1% |
+| s2_greedy | 33.0% | 28.5% | 30.7% |
+| stage1_balanced | 35.6% | 31.9% | 33.7% |
 
 ## Stage3：未知上层策略的统一协议
 
-**尚未运行。** 不能据旧 identity、SALDAE 或单元测试推断 BA-DIB 接近已知上层 oracle。
+论文主问题是未知上层意图下的长期身份分组，以及相对已知上层 oracle 的差距。Stage1/2 是全方法共用的冻结实验条件，不作为本轮新增贡献。
+
+**正式未知策略评估尚未完成。** 不能据旧 identity、SALDAE 或单元测试推断 BA-DIB 接近已知上层 oracle。
 
 注册比较：balanced_identity、legacy_idb、event_risk_idb、finite_type_bbr、qom_bbr、qom_mcp、known_upper_mcp、revealed_blue_action_br。
 
-3 个规模 × 2 个已知底层 × 5 个隐藏上层 × 8 个 Red 方法 × 10 个共同种子 = 2,400 局。正文报告胜率、oracle gap、分配推断与 open-set 检测、规划时间；约束、校准、恢复和候选域诊断保存为 JSON/CSV。
+3 个规模 × 2 个已知底层 × 4 个整局固定的隐藏上层 × 8 个 Red 方法 × 10 个共同种子 = 1,920 局。另注册 finite_type_mcp、prior_mcp 两个同预算机制消融，共 480 局；物理评估共 2,400 局。不包含局中策略类型切换或开放集检测，扩展中间诊断默认关闭。正文报告胜率、oracle gap、分配推断、规划时间；其他记录保存为 JSON/CSV。
 
 ## 失败归因与 Stage4 决策
 
-目前不能判定未知上层目标达成，也不建议以现有历史结果直接推进 Stage4。需分别检查公开轨迹识别、候选覆盖、5 步代理排序和带终局估值的长期规划。信息 oracle 是同预算经验参照，有限搜索的物理胜率不保证单调；不宣称完整指数动作空间的全局 Nash 证书。
+目前不能判定未知上层目标达成，不以现有证据直接推进 Stage4。需分别检查公开轨迹识别、候选覆盖、5 步代理排序和长期规划。信息 oracle 是同预算经验参照，有限搜索的物理胜率不保证单调；不宣称完整指数动作空间的全局 Nash 证书。
 
 可复核入口：`manifest.json`、`stage1/`、`stage2/model/metrics.json`、`stage3/baselines/`、`stage3/unknown_upper/`、`pipeline.log`、`status.json`。旧报告文字按原哈希保存在 `stage3/baselines/source_reports.json`。

@@ -1,6 +1,7 @@
 """One report for frozen stages and explicitly labelled protocol comparisons."""
 from __future__ import annotations
 import argparse
+import csv
 import json
 from pathlib import Path
 
@@ -68,21 +69,37 @@ def build(root=ROOT):
     for method, styles in sal["physical_evaluation"]["win_rate_by_method_style_targets"].items():
         means = [sum(row["win_rate"] for row in styles[style].values()) / len(styles[style]) for style in ["rush", "split_rush"]]
         lines.append(f"| {method} | {pct(means[0])} | {pct(means[1])} | {pct(sum(means)/2)} |")
-    lines += ["", "匿名/count Bayesian v3 的原始逐局记录、汇总和配置保存于 `stage3/baselines/count_bayesian_v3/`。"
-              "其对手、动作与 Stage2 协议不同，只作历史证据，不与上述或新协议胜率作配对因果解释。",
-              "", "## Stage3：未知上层策略的统一协议", ""]
+    lines += ["", "### 匿名人数分配 Bayesian v3（历史协议）", "",
+              "此协议的对手、动作、局部上限与 Stage2 均不同，不与 identity 或新协议合并估计。以下是各自历史单元按局数加权的胜率。", "",
+              "| 人数分配方法 | rush | split_rush | 总胜率 |", "|---|---:|---:|---:|"]
+    with (root / "stage3/baselines/count_bayesian_v3/analysis/physical_summary.csv").open(encoding="utf8") as stream:
+        records = list(csv.DictReader(stream))
+    for method in sorted({r["red_commander"] for r in records}):
+        rates = []
+        for lower in ["rush", "split_rush"]:
+            subset = [r for r in records if r["red_commander"] == method and r["blue_lower_style"] == lower]
+            rates.append(sum(int(r["episodes"])*float(r["red_win_rate"]) for r in subset)/sum(int(r["episodes"]) for r in subset))
+        subset = [r for r in records if r["red_commander"] == method]
+        overall = sum(int(r["episodes"])*float(r["red_win_rate"]) for r in subset)/sum(int(r["episodes"]) for r in subset)
+        lines.append(f"| {method} | {pct(rates[0])} | {pct(rates[1])} | {pct(overall)} |")
+    lines += ["", "## Stage3：未知上层策略的统一协议", "",
+              "论文主问题是未知上层意图下的长期身份分组，以及相对已知上层 oracle 的差距。Stage1/2 是全方法共用的冻结实验条件，不作为本轮新增贡献。", ""]
     result_path = root / "stage3/unknown_upper/summary.json"
+    ready = False
     if result_path.exists():
         new = read("stage3/unknown_upper/summary.json")
         lines.extend(new["report_lines"])
+        ready = bool(new["all_passed"])
+        lines += ["", "![未知上层的同协议胜率](figures/unknown_upper_win_rates.png)"]
     else:
-        lines += ["**尚未运行。** 不能据旧 identity、SALDAE 或单元测试推断 BA-DIB 接近已知上层 oracle。",
+        lines += ["**正式未知策略评估尚未完成。** 不能据旧 identity、SALDAE 或单元测试推断 BA-DIB 接近已知上层 oracle。",
                   "", "注册比较：balanced_identity、legacy_idb、event_risk_idb、finite_type_bbr、qom_bbr、qom_mcp、known_upper_mcp、revealed_blue_action_br。",
-                  "", "3 个规模 × 2 个已知底层 × 5 个隐藏上层 × 8 个 Red 方法 × 10 个共同种子 = 2,400 局。"
-                  "正文报告胜率、oracle gap、分配推断与 open-set 检测、规划时间；约束、校准、恢复和候选域诊断保存为 JSON/CSV。"]
+                  "", "3 个规模 × 2 个已知底层 × 4 个整局固定的隐藏上层 × 8 个 Red 方法 × 10 个共同种子 = 1,920 局。"
+                  "另注册 finite_type_mcp、prior_mcp 两个同预算机制消融，共 480 局；物理评估共 2,400 局。"
+                  "不包含局中策略类型切换或开放集检测，扩展中间诊断默认关闭。正文报告胜率、oracle gap、分配推断、规划时间；其他记录保存为 JSON/CSV。"]
     lines += ["", "## 失败归因与 Stage4 决策", "",
-              "目前不能判定未知上层目标达成，也不建议以现有历史结果直接推进 Stage4。"
-              "需分别检查公开轨迹识别、候选覆盖、5 步代理排序和带终局估值的长期规划。"
+              ("本轮预注册效果门槛已通过，可评估后续扩展；论文投稿前仍需跨训练种子及更强候选域 oracle 检查。" if ready else
+               "目前不能判定未知上层目标达成，不以现有证据直接推进 Stage4。需分别检查公开轨迹识别、候选覆盖、5 步代理排序和长期规划。")+
               "信息 oracle 是同预算经验参照，有限搜索的物理胜率不保证单调；不宣称完整指数动作空间的全局 Nash 证书。",
               "", "可复核入口：`manifest.json`、`stage1/`、`stage2/model/metrics.json`、`stage3/baselines/`、"
               "`stage3/unknown_upper/`、`pipeline.log`、`status.json`。旧报告文字按原哈希保存在 `stage3/baselines/source_reports.json`。", ""]

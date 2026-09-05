@@ -367,6 +367,58 @@ class FrozenStage2Payoff:
     def centered_utility(self, *args, **kwargs) -> np.ndarray:
         return 2.0 * self.predict_red_win(*args, **kwargs) - 1.0
 
+    def predict_joint_outcome_time(
+        self, states: Sequence[HADVariableSetState], *,
+        styles: Optional[Sequence[str]] = None,
+        rosters: Optional[Sequence[tuple[int, int]]] = None,
+        batch_size: int = 512,
+    ) -> np.ndarray:
+        """Return [batch, Red/Blue, remaining-time-bin] probabilities.
+
+        The frozen marginal style correction is applied by rescaling each
+        outcome's conditional time distribution. No refitting or interpolation
+        inside a bin is performed. Five-step risk is Blue bin zero only when
+        ``steps_per_bin == 5``. This is a local outcome proxy, not a calibrated
+        global shared-world breach probability.
+        """
+        if batch_size < 1:
+            raise ValueError("batch_size must be positive")
+        if styles is not None and len(styles) != len(states):
+            raise ValueError("styles must align with states")
+        if rosters is not None and len(rosters) != len(states):
+            raise ValueError("rosters must align with states")
+        k = self.model.horizon_bins
+        if not states:
+            return np.empty((0, 2, k), dtype=np.float32)
+        result = []
+        conditional_times = []
+        with torch.inference_mode():
+            for start in range(0, len(states), batch_size):
+                batch = states[start:start + batch_size]
+                target = torch.as_tensor(np.stack([x.target for x in batch]), device=self.device)
+                context = torch.as_tensor(np.stack([x.context for x in batch]), device=self.device)
+                red, red_mask = self._pad(batch, "red_entities")
+                blue, blue_mask = self._pad(batch, "blue_entities")
+                if self.temperature <= 0:
+                    raise ValueError("temperature must be positive")
+                logits = self.model(target.float(), red.to(self.device), blue.to(self.device),
+                                    context.float(), red_mask.to(self.device), blue_mask.to(self.device)).double()/self.temperature
+                result.append(logits.softmax(-1).reshape(-1,2,k).cpu().numpy())
+                # Keep each cause's time distribution even when its total
+                # probability underflows before marginal style correction.
+                conditional_times.append(logits.reshape(-1,2,k).softmax(-1).cpu().numpy())
+        joint = np.concatenate(result).astype(np.float64)
+        conditional_times = np.concatenate(conditional_times)
+        if self.style_calibration is not None and styles is not None:
+            if rosters is None:
+                rosters = [(len(x.red_entities), len(x.blue_entities)) for x in states]
+            for index, (style, roster) in enumerate(zip(styles, rosters)):
+                marginal = joint[index].sum(axis=1)
+                calibrated = self.style_calibration.adjust(marginal[0], style, *roster)
+                for outcome, mass in enumerate([calibrated, 1.0-calibrated]):
+                    joint[index, outcome] = conditional_times[index,outcome] * mass
+        return joint.astype(np.float32)
+
     def predict_roster_surface(
         self,
         states: Sequence[HADVariableSetState],
