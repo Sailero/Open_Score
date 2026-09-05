@@ -150,6 +150,12 @@ def canonical_blue(state, action):
 
 
 def match(state, red, blue):
+    """Neutral matching with a bounded cache of public-state geometry."""
+    from .geometry import geometry_for
+    return geometry_for(state).match(red, blue)
+
+
+def reference_match(state, red, blue):
     """Target, intended physical IDs, ETA, centroid, IDs; no virtual channel.
 
     Intents are preferences, not a claim to know Blue's true coalition. The

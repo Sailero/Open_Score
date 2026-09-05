@@ -633,7 +633,8 @@ class HADStage3Adapter:
             self._decode_acceleration(action_by_id[int(agent.Id)])
             for agent in self.env.agents
         ]
-        self.env.step(physical_actions)
+        # This adapter supplies its own observations, events and task reward.
+        self.env.step_physics(physical_actions)
         self.env.update_alive_agents()
         self.step_count += 1
         terminal_sign = self._terminal_sign()

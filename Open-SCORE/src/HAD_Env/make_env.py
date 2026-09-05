@@ -37,3 +37,7 @@ class HADEnv(Env):
         info = self.get_info()
 
         return obs_n, world_alive_n, global_state, reward_n, done_n, info
+
+    def step_physics(self, action_n):
+        """Advance identical physics without unused legacy observation/reward arrays."""
+        super().step(action_n)

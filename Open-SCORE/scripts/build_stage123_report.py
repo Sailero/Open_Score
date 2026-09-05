@@ -2,15 +2,65 @@
 from __future__ import annotations
 import argparse
 import csv
+import gzip
+import hashlib
 import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1] / "outputs/stage123_unknown_upper_v1"
 
+OLD_NAMES = {
+    "balanced_identity":"均分防守", "legacy_idb":"旧版分组", "event_risk_idb":"短期稳健防守",
+    "finite_type_bbr":"规则推断＋短期防守", "qom_bbr":"学习推断＋短期防守",
+    "qom_mcp":"学习推断＋多步规划（旧主方法）", "known_upper_mcp":"知道策略的多步参照",
+    "revealed_blue_action_br":"看见当前分组的短期参照",
+}
+HISTORICAL_NAMES = {**OLD_NAMES, "identity_blotto":"旧版身份分组", "revealed_blue_br":"读取当前完整分组的参照",
+                    "milp_do":"混合整数求解器", "saldae_do":"联盟搜索改进求解器（SALDAE）",
+                    "clairvoyant_count_oracle":"读取目标人数的参照", "double_oracle":"人数博弈求解",
+                    "eta_greedy":"按到达时间贪心分配", "known_blue_1v1_2v1":"已知对手的固定小组规则",
+                    "s2_greedy":"按局部预测贪心分配", "stage1_balanced":"均分人数并用底层执行"}
+
+
+def stopped_evidence(root):
+    """Only complete matched cells from the superseded run enter this table."""
+    rows=[]
+    for path in sorted((root/"stage3/unknown_upper/units").glob("*.json.gz")):
+        with gzip.open(path,"rt",encoding="utf-8") as stream:
+            envelope=json.load(stream)
+        row=envelope["result"]
+        raw=json.dumps(row,ensure_ascii=False,sort_keys=True,separators=(",",":"),allow_nan=False).encode("utf-8")
+        if hashlib.sha256(raw).hexdigest()!=envelope["result_sha256"]:
+            raise ValueError(f"Historical result hash mismatch: {path}")
+        rows.append(row)
+    grouped={}
+    for row in rows:
+        c=row["cell"]
+        grouped.setdefault((c["scenario"]["label"],c["lower"],c["upper"]),[]).append(row)
+    complete=[]
+    for key, group in sorted(grouped.items()):
+        seeds=[{r["cell"]["seed"] for r in group if r["cell"]["method"]==m} for m in OLD_NAMES]
+        if len(group)==80 and all(len(s)==10 and s==seeds[0] for s in seeds):
+            complete.append((key,group))
+    lines=["### 已停止的学习推断方案：保留负结果", "",
+           f"旧长时实验已停止，保存 {len(rows)} 个通过内容哈希检查的结果；其中 {len(complete)} 个条件完成了全部八方法的十个共同种子。"
+           "下面只比较这些完整条件，不把未配齐的记录混入总胜率。这不是完整 30/40/50 人结论。", ""]
+    for (scenario,lower,upper), group in complete:
+        types={"balanced":"均衡攻击", "concentrated_nearest":"集中攻击最近有利目标"}
+        lines += [f"条件：`{scenario}`，底层 `{lower}`，上层 {types.get(upper,upper)}。", "",
+                  "| 方法 | 获胜局数 | 平均决策秒数 |", "|---|---:|---:|"]
+        for method,name in OLD_NAMES.items():
+            chosen=[r for r in group if r["cell"]["method"]==method]
+            times=[e["planning_seconds"] for r in chosen for e in r["events"]]
+            lines.append(f"| {name} | {sum(r['red_win'] for r in chosen)}/10 | {sum(times)/len(times):.2f} |")
+    lines += ["", "这些局部结果尚未支持旧主方法接近知情参照，或稳定优于旧版分组。"
+              "它的额外计算成本同样属于负结果。知情参照知道整局规则，但看不到当前随机动作；它仍是有限候选与有限计算下的经验参照。", ""]
+    return lines
+
 
 def build(root=ROOT):
     def read(name):
-        return json.loads((root / name).read_text(encoding="utf8"))
+        return json.loads((root / name).read_text(encoding="utf-8-sig"))
     def pct(value):
         return f"{100 * value:.1f}%"
     s1 = read("stage1/summary.json")
@@ -51,9 +101,9 @@ def build(root=ROOT):
     old = read("stage3/baselines/legacy_idb/analysis/summary.json")
     for method, styles in old["physical_evaluation"]["win_rate_by_commander_style_targets"].items():
         means = [sum(row["episodes"] * row["win_rate"] for row in styles[style].values()) / sum(row["episodes"] for row in styles[style].values()) for style in ["rush", "split_rush"]]
-        lines.append(f"| {method} | {pct(means[0])} | {pct(means[1])} | {pct(sum(means)/2)} |")
+        lines.append(f"| {HISTORICAL_NAMES.get(method,method)} | {pct(means[0])} | {pct(means[1])} | {pct(sum(means)/2)} |")
     effect = old["physical_evaluation"]["identity_vs_balanced_paired"]
-    lines += ["", f"identity − balanced：**{pct(effect['mean_improvement'])}**，配对 95% CI [{pct(effect['ci95_low'])}, {pct(effect['ci95_high'])}]。负结果保留；原验收未通过。",
+    lines += ["", f"旧版身份分组 − 均分防守：**{100*effect['mean_improvement']:.1f} 个百分点**，配对 95% 区间 [{100*effect['ci95_low']:.1f}, {100*effect['ci95_high']:.1f}] 个百分点。负结果保留；原验收未通过。",
               "", "| 总人数 | P95 规划秒数 |", "|---|---:|"]
     for size, row in old["planner_scaling"].items():
         value = row.get("planning_seconds_p95", row.get("p95_planning_seconds"))
@@ -63,12 +113,12 @@ def build(root=ROOT):
     sal = read("stage3/baselines/saldae/analysis/summary.json")
     effect = sal["physical_evaluation"]["saldae_vs_milp_paired"]
     lines += ["", "### SALDAE 求解器消融（60 局，30 对）", "",
-              f"SALDAE − MILP 胜率差 {pct(effect['mean_improvement'])}，95% CI [{pct(effect['ci95_low'])}, {pct(effect['ci95_high'])}]。"
+              f"联盟搜索改进 − 混合整数求解器：胜率差 {100*effect['mean_improvement']:.1f} 个百分点，95% 区间 [{100*effect['ci95_low']:.1f}, {100*effect['ci95_high']:.1f}] 个百分点。"
               "置信区间包含 0；只支持发现候选域外响应、物理胜率点估计上升，不支持统计显著改善。",
               "", "| 求解器 | rush | split_rush | 总胜率 |", "|---|---:|---:|---:|"]
     for method, styles in sal["physical_evaluation"]["win_rate_by_method_style_targets"].items():
         means = [sum(row["win_rate"] for row in styles[style].values()) / len(styles[style]) for style in ["rush", "split_rush"]]
-        lines.append(f"| {method} | {pct(means[0])} | {pct(means[1])} | {pct(sum(means)/2)} |")
+        lines.append(f"| {HISTORICAL_NAMES.get(method,method)} | {pct(means[0])} | {pct(means[1])} | {pct(sum(means)/2)} |")
     lines += ["", "### 匿名人数分配 Bayesian v3（历史协议）", "",
               "此协议的对手、动作、局部上限与 Stage2 均不同，不与 identity 或新协议合并估计。以下是各自历史单元按局数加权的胜率。", "",
               "| 人数分配方法 | rush | split_rush | 总胜率 |", "|---|---:|---:|---:|"]
@@ -81,12 +131,32 @@ def build(root=ROOT):
             rates.append(sum(int(r["episodes"])*float(r["red_win_rate"]) for r in subset)/sum(int(r["episodes"]) for r in subset))
         subset = [r for r in records if r["red_commander"] == method]
         overall = sum(int(r["episodes"])*float(r["red_win_rate"]) for r in subset)/sum(int(r["episodes"]) for r in subset)
-        lines.append(f"| {method} | {pct(rates[0])} | {pct(rates[1])} | {pct(overall)} |")
+        lines.append(f"| {HISTORICAL_NAMES.get(method,method)} | {pct(rates[0])} | {pct(rates[1])} | {pct(overall)} |")
     lines += ["", "## Stage3：未知上层策略的统一协议", "",
               "论文主问题是未知上层意图下的长期身份分组，以及相对已知上层 oracle 的差距。Stage1/2 是全方法共用的冻结实验条件，不作为本轮新增贡献。", ""]
     result_path = root / "stage3/unknown_upper/summary.json"
     ready = False
-    if result_path.exists():
+    fast_path = root / "stage3/fast_compare_v2"
+    if (root/"stage3/unknown_upper/superseded_run.json").exists():
+        lines.extend(stopped_evidence(root))
+        if (fast_path/"summary.json").exists():
+            new=read("stage3/fast_compare_v2/summary.json")
+            lines.extend(new["report_lines"])
+            ready=new["all_identity_valid"] and any(all(g.values()) for g in new["acceptance"].values())
+        else:
+            lines += ["### 当前验证：两个轻量方案，共六种方法", "",
+                      "**新的胜率结果尚未完成，不能把运行加速当作防守能力改善。**", "",
+                      "均分防守是唯一简单规则基线；旧版分组在公开的快速求解预算下重跑。"
+                      "方案一根据公开运动推断蓝方，再模拟短期结果；方案二再考虑下一次观察后的重新分组。"
+                      "两种方案各有一个知道蓝方规则的参照，使用对应的候选规则与计算预算。", "",
+                      "3 个规模 × 2 种已知底层 × 4 种整局固定上层 × 5 个共同种子 × 6 方法 = **720 局**。"
+                      "每种方法都跑完同样的 120 个条件与种子。蓝方分配可随公开状态变化，但整局不切换规则类型。", "",
+                      "这是重新登记的集中验证版本，替代旧长时实验；不将缩小后的 720 局表述为完成原 2,400 局验收。"
+                      "两种新方案不训练新模型，Stage1/2 保持冻结。软决策预算为 2.5 秒，在计算段之间检查；"
+                      "超时与退回初选动作均记录。启动后实际进度见 `status.json`。", "",
+                      "判断顺序：先看是否比两个基线更能守住目标，再看与对应知情参照的差距，最后检查较慢决策时间。"
+                      "胜率差用百分点表示；配对 95% 区间跨过零时不宣称稳定提升。两种蓝方底层分别报告。"]
+    elif result_path.exists():
         new = read("stage3/unknown_upper/summary.json")
         lines.extend(new["report_lines"])
         ready = bool(new["all_passed"])
@@ -102,7 +172,7 @@ def build(root=ROOT):
                "目前不能判定未知上层目标达成，不以现有证据直接推进 Stage4。需分别检查公开轨迹识别、候选覆盖、5 步代理排序和长期规划。")+
               "信息 oracle 是同预算经验参照，有限搜索的物理胜率不保证单调；不宣称完整指数动作空间的全局 Nash 证书。",
               "", "可复核入口：`manifest.json`、`stage1/`、`stage2/model/metrics.json`、`stage3/baselines/`、"
-              "`stage3/unknown_upper/`、`pipeline.log`、`status.json`。旧报告文字按原哈希保存在 `stage3/baselines/source_reports.json`。", ""]
+              "`stage3/unknown_upper/`、`stage3/fast_compare_v2/`、`pipeline.log`、`status.json`。旧报告文字按原哈希保存在 `stage3/baselines/source_reports.json`。", ""]
     (root / "experiment_report.md").write_text("\n".join(lines), encoding="utf8")
     print(root / "experiment_report.md")
 

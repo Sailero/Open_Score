@@ -2,7 +2,7 @@
   "schema_version": "stage123-unknown-upper-evidence-v1",
   "snapshot_commit": "ea6cec1d3298e47f669f62d907155d3bcee2ec7e",
   "historical_evidence_only": true,
-  "unknown_upper_results": "not_run",
+  "unknown_upper_results": "v1_superseded_partial; v2_ready_to_run",
   "stage2_retrained": false,
   "stage2_episodes": 19200,
   "stage2_rows": 101366,
@@ -1612,5 +1612,19 @@
     }
   ],
   "source_reports_archive_sha256": "54a65b57c172bce8943c928d4e372c9ba9383d901a01e8421c25b3c0301a1a6b",
-  "deletion_policy": "Delete obsolete source roots only after all migrated hashes pass. Distinct legacy Stage2 data is obsolete, not a byte duplicate. Raw historical physical evidence is preserved, including negative results."
+  "deletion_policy": "Delete obsolete source roots only after all migrated hashes pass. Distinct legacy Stage2 data is obsolete, not a byte duplicate. Raw historical physical evidence is preserved, including negative results.",
+  "superseded_stage3": {
+    "version": "unknown_upper_v1",
+    "retained_physical_units": 160,
+    "fully_matched_eight_method_conditions": 1,
+    "stop_record": "stage3/unknown_upper/superseded_run.json"
+  },
+  "active_stage3": {
+    "version": "stage3-fast-paired-v2",
+    "status": "ready_to_run",
+    "expected_episodes": 720,
+    "config": "configs/stage3_fast_compare.yaml",
+    "config_sha256": "0c37b70cce9299569e62c66f1b37a8912fbd6ee038051ff0eca83486a63ca860",
+    "protocol": "stage3/fast_compare_v2/protocol.json"
+  }
 }
