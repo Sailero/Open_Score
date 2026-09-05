@@ -1,0 +1,139 @@
+{
+  "status": "verified",
+  "source_hash": "2d30bdee991e4b045bfc7cf2508e3ef4f0228a0918325f8bf66cb7f99b067ab5",
+  "production_model_pilot": [
+    {
+      "route": "ppo_structured",
+      "actual_steps": 4107,
+      "training_seconds": 174.68800000008196,
+      "parameters": 2269442,
+      "updates": 2,
+      "optimizer_steps": 56,
+      "teacher_simulation_steps": 0,
+      "teacher_examples": 0,
+      "parameter_change_l2": 2.7358543900504397,
+      "training_source_hash": "50a88fae86e04e449a60fc01009b4cc061c336c489424e8528a3b17338e7b5f5",
+      "complete_pairs": 15,
+      "planned_pairs": 15,
+      "evaluation_seconds": 64.70502059999853
+    },
+    {
+      "route": "ppo_teacher",
+      "actual_steps": 4107,
+      "training_seconds": 197.875,
+      "parameters": 2269442,
+      "updates": 39,
+      "optimizer_steps": 48,
+      "teacher_simulation_steps": 4823,
+      "teacher_examples": 44,
+      "parameter_change_l2": 5.444105519421066,
+      "training_source_hash": "50a88fae86e04e449a60fc01009b4cc061c336c489424e8528a3b17338e7b5f5",
+      "complete_pairs": 15,
+      "planned_pairs": 15,
+      "evaluation_seconds": 61.56524490006268
+    },
+    {
+      "route": "candidate_q",
+      "actual_steps": 4099,
+      "training_seconds": 283.9220000000205,
+      "parameters": 2269442,
+      "updates": 156,
+      "optimizer_steps": 156,
+      "teacher_simulation_steps": 0,
+      "teacher_examples": 0,
+      "parameter_change_l2": 3.54396999353257,
+      "training_source_hash": "50a88fae86e04e449a60fc01009b4cc061c336c489424e8528a3b17338e7b5f5",
+      "complete_pairs": 15,
+      "planned_pairs": 15,
+      "evaluation_seconds": 63.58017880003899
+    }
+  ],
+  "production_peak_workers": 3,
+  "production_invocation_seconds": 352.90600000019185,
+  "sequential_device_benchmark": {
+    "note": "Sequential production model training-only throughput; validation disabled only for this isolated benchmark. Different floating-point trajectories, not performance evaluation.",
+    "rows": [
+      {
+        "device": "cpu",
+        "elapsed": 76.6936449999921,
+        "steps": 1541,
+        "events": 648,
+        "updates": 1,
+        "optimizer_steps": 24,
+        "parameters": 2269442,
+        "cuda_peak_mib": 0,
+        "steps_per_second": 20.092929472841703
+      },
+      {
+        "device": "cuda",
+        "elapsed": 51.167701799888164,
+        "steps": 1538,
+        "events": 632,
+        "updates": 1,
+        "optimizer_steps": 20,
+        "parameters": 2269442,
+        "cuda_peak_mib": 631.51123046875,
+        "steps_per_second": 30.058023829465046
+      }
+    ]
+  },
+  "scope": "Short execution/learning validation; not eight-hour completion or proof of learned superiority.",
+  "full_tests": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "0",
+    "tests": "148",
+    "time": "52.133",
+    "timestamp": "2026-09-06T01:24:49.200171+08:00",
+    "hostname": "Salieron"
+  },
+  "final_smoke": {
+    "status": "complete",
+    "peak_workers": 3,
+    "invocation_seconds": 15.015999999828637,
+    "routes": [
+      {
+        "route": "ppo_structured",
+        "status": "complete",
+        "steps": 256,
+        "parameters": 116098,
+        "pairs": 4,
+        "planned": 4
+      },
+      {
+        "route": "ppo_teacher",
+        "status": "complete",
+        "steps": 259,
+        "parameters": 116098,
+        "pairs": 4,
+        "planned": 4
+      },
+      {
+        "route": "candidate_q",
+        "status": "complete",
+        "steps": 258,
+        "parameters": 116098,
+        "pairs": 4,
+        "planned": 4
+      }
+    ]
+  },
+  "completed_resume": {
+    "exit_code": 0,
+    "checkpoints_and_raw_evaluations_unchanged": true,
+    "file_count": 6
+  },
+  "training_proof_scope": "Production-size 3-route pilot preceded log/resume/report refinements; final-source smoke and full tests verify those refinements. Eight-hour effectiveness remains to be measured.",
+  "night_command_checked": {
+    "workers": 3,
+    "device": "cuda",
+    "steps": 0,
+    "train_seconds_per_route": 25200,
+    "eval_seconds_per_route": 2700,
+    "total_seconds": 28800,
+    "reserve_seconds": 900,
+    "dry_run_exit_code": 0,
+    "launched_formal_overnight": false
+  }
+}

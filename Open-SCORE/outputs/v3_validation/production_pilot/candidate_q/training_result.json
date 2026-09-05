@@ -1,0 +1,16 @@
+{
+  "physical_steps": 4099,
+  "upper_events": 1752,
+  "episodes": 150,
+  "wins": 21,
+  "updates": 156,
+  "optimizer_steps": 156,
+  "next_episode": 158,
+  "training_seconds": 283.9220000000205,
+  "teacher_simulation_steps": 0,
+  "teacher_examples": 0,
+  "teacher_seconds": 0.0,
+  "stopped": false,
+  "best_validation_score": 0.1111111111111111,
+  "parameters": 2269442
+}

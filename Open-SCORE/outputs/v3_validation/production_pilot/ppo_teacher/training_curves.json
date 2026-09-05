@@ -1,0 +1,1324 @@
+{
+  "schema": "overnight-training-curves-v1",
+  "native_success": [
+    {
+      "physical_steps": 32,
+      "episode": 1,
+      "success": false,
+      "phase": "simulation_teacher",
+      "rolling_success_rate": 0.0,
+      "rolling_count": 1
+    },
+    {
+      "physical_steps": 50,
+      "episode": 2,
+      "success": false,
+      "phase": "simulation_teacher",
+      "rolling_success_rate": 0.0,
+      "rolling_count": 2
+    },
+    {
+      "physical_steps": 75,
+      "episode": 3,
+      "success": false,
+      "phase": "simulation_teacher",
+      "rolling_success_rate": 0.0,
+      "rolling_count": 3
+    },
+    {
+      "physical_steps": 104,
+      "episode": 4,
+      "success": false,
+      "phase": "simulation_teacher",
+      "rolling_success_rate": 0.0,
+      "rolling_count": 4
+    },
+    {
+      "physical_steps": 121,
+      "episode": 5,
+      "success": false,
+      "phase": "simulation_teacher",
+      "rolling_success_rate": 0.0,
+      "rolling_count": 5
+    },
+    {
+      "physical_steps": 145,
+      "episode": 6,
+      "success": false,
+      "phase": "simulation_teacher",
+      "rolling_success_rate": 0.0,
+      "rolling_count": 6
+    },
+    {
+      "physical_steps": 170,
+      "episode": 7,
+      "success": false,
+      "phase": "simulation_teacher",
+      "rolling_success_rate": 0.0,
+      "rolling_count": 7
+    },
+    {
+      "physical_steps": 191,
+      "episode": 8,
+      "success": false,
+      "phase": "simulation_teacher",
+      "rolling_success_rate": 0.0,
+      "rolling_count": 8
+    },
+    {
+      "physical_steps": 218,
+      "episode": 9,
+      "success": false,
+      "phase": "simulation_teacher",
+      "rolling_success_rate": 0.0,
+      "rolling_count": 9
+    },
+    {
+      "physical_steps": 234,
+      "episode": 10,
+      "success": true,
+      "phase": "simulation_teacher",
+      "rolling_success_rate": 0.1,
+      "rolling_count": 10
+    },
+    {
+      "physical_steps": 428,
+      "episode": 11,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.0,
+      "rolling_count": 1
+    },
+    {
+      "physical_steps": 441,
+      "episode": 12,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.0,
+      "rolling_count": 2
+    },
+    {
+      "physical_steps": 459,
+      "episode": 13,
+      "success": true,
+      "phase": "training",
+      "rolling_success_rate": 0.3333333333333333,
+      "rolling_count": 3
+    },
+    {
+      "physical_steps": 466,
+      "episode": 14,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.25,
+      "rolling_count": 4
+    },
+    {
+      "physical_steps": 494,
+      "episode": 15,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.2,
+      "rolling_count": 5
+    },
+    {
+      "physical_steps": 505,
+      "episode": 16,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.16666666666666666,
+      "rolling_count": 6
+    },
+    {
+      "physical_steps": 527,
+      "episode": 17,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.14285714285714285,
+      "rolling_count": 7
+    },
+    {
+      "physical_steps": 530,
+      "episode": 18,
+      "success": true,
+      "phase": "training",
+      "rolling_success_rate": 0.25,
+      "rolling_count": 8
+    },
+    {
+      "physical_steps": 580,
+      "episode": 19,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.2222222222222222,
+      "rolling_count": 9
+    },
+    {
+      "physical_steps": 645,
+      "episode": 20,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.2,
+      "rolling_count": 10
+    },
+    {
+      "physical_steps": 693,
+      "episode": 21,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.18181818181818182,
+      "rolling_count": 11
+    },
+    {
+      "physical_steps": 735,
+      "episode": 22,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.16666666666666666,
+      "rolling_count": 12
+    },
+    {
+      "physical_steps": 747,
+      "episode": 23,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.15384615384615385,
+      "rolling_count": 13
+    },
+    {
+      "physical_steps": 752,
+      "episode": 24,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.14285714285714285,
+      "rolling_count": 14
+    },
+    {
+      "physical_steps": 761,
+      "episode": 25,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.13333333333333333,
+      "rolling_count": 15
+    },
+    {
+      "physical_steps": 780,
+      "episode": 26,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.125,
+      "rolling_count": 16
+    },
+    {
+      "physical_steps": 787,
+      "episode": 27,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.11764705882352941,
+      "rolling_count": 17
+    },
+    {
+      "physical_steps": 799,
+      "episode": 28,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.1111111111111111,
+      "rolling_count": 18
+    },
+    {
+      "physical_steps": 876,
+      "episode": 29,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.10526315789473684,
+      "rolling_count": 19
+    },
+    {
+      "physical_steps": 931,
+      "episode": 30,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.1,
+      "rolling_count": 20
+    },
+    {
+      "physical_steps": 954,
+      "episode": 31,
+      "success": true,
+      "phase": "training",
+      "rolling_success_rate": 0.14285714285714285,
+      "rolling_count": 21
+    },
+    {
+      "physical_steps": 969,
+      "episode": 32,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.13636363636363635,
+      "rolling_count": 22
+    },
+    {
+      "physical_steps": 977,
+      "episode": 33,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.13043478260869565,
+      "rolling_count": 23
+    },
+    {
+      "physical_steps": 1004,
+      "episode": 34,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.125,
+      "rolling_count": 24
+    },
+    {
+      "physical_steps": 1010,
+      "episode": 35,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.12,
+      "rolling_count": 25
+    },
+    {
+      "physical_steps": 1017,
+      "episode": 36,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.11538461538461539,
+      "rolling_count": 26
+    },
+    {
+      "physical_steps": 1033,
+      "episode": 37,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.1111111111111111,
+      "rolling_count": 27
+    },
+    {
+      "physical_steps": 1122,
+      "episode": 38,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.10714285714285714,
+      "rolling_count": 28
+    },
+    {
+      "physical_steps": 1152,
+      "episode": 39,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.10344827586206896,
+      "rolling_count": 29
+    },
+    {
+      "physical_steps": 1185,
+      "episode": 40,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.1,
+      "rolling_count": 30
+    },
+    {
+      "physical_steps": 1194,
+      "episode": 41,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.0967741935483871,
+      "rolling_count": 31
+    },
+    {
+      "physical_steps": 1220,
+      "episode": 42,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.09375,
+      "rolling_count": 32
+    },
+    {
+      "physical_steps": 1230,
+      "episode": 43,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.09090909090909091,
+      "rolling_count": 33
+    },
+    {
+      "physical_steps": 1283,
+      "episode": 44,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.08823529411764706,
+      "rolling_count": 34
+    },
+    {
+      "physical_steps": 1298,
+      "episode": 45,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.08571428571428572,
+      "rolling_count": 35
+    },
+    {
+      "physical_steps": 1307,
+      "episode": 46,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.08333333333333333,
+      "rolling_count": 36
+    },
+    {
+      "physical_steps": 1336,
+      "episode": 47,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.08108108108108109,
+      "rolling_count": 37
+    },
+    {
+      "physical_steps": 1375,
+      "episode": 48,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.07894736842105263,
+      "rolling_count": 38
+    },
+    {
+      "physical_steps": 1378,
+      "episode": 49,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.07692307692307693,
+      "rolling_count": 39
+    },
+    {
+      "physical_steps": 1402,
+      "episode": 50,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.075,
+      "rolling_count": 40
+    },
+    {
+      "physical_steps": 1484,
+      "episode": 51,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.07317073170731707,
+      "rolling_count": 41
+    },
+    {
+      "physical_steps": 1511,
+      "episode": 52,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.07142857142857142,
+      "rolling_count": 42
+    },
+    {
+      "physical_steps": 1517,
+      "episode": 53,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06976744186046512,
+      "rolling_count": 43
+    },
+    {
+      "physical_steps": 1521,
+      "episode": 54,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06818181818181818,
+      "rolling_count": 44
+    },
+    {
+      "physical_steps": 1530,
+      "episode": 55,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06666666666666667,
+      "rolling_count": 45
+    },
+    {
+      "physical_steps": 1541,
+      "episode": 56,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06521739130434782,
+      "rolling_count": 46
+    },
+    {
+      "physical_steps": 1569,
+      "episode": 57,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06382978723404255,
+      "rolling_count": 47
+    },
+    {
+      "physical_steps": 1637,
+      "episode": 58,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.0625,
+      "rolling_count": 48
+    },
+    {
+      "physical_steps": 1685,
+      "episode": 59,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.061224489795918366,
+      "rolling_count": 49
+    },
+    {
+      "physical_steps": 1717,
+      "episode": 60,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06,
+      "rolling_count": 50
+    },
+    {
+      "physical_steps": 1722,
+      "episode": 61,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.058823529411764705,
+      "rolling_count": 51
+    },
+    {
+      "physical_steps": 1728,
+      "episode": 62,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.057692307692307696,
+      "rolling_count": 52
+    },
+    {
+      "physical_steps": 1736,
+      "episode": 63,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.05660377358490566,
+      "rolling_count": 53
+    },
+    {
+      "physical_steps": 1748,
+      "episode": 64,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.05555555555555555,
+      "rolling_count": 54
+    },
+    {
+      "physical_steps": 1782,
+      "episode": 65,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.05454545454545454,
+      "rolling_count": 55
+    },
+    {
+      "physical_steps": 1842,
+      "episode": 66,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.05357142857142857,
+      "rolling_count": 56
+    },
+    {
+      "physical_steps": 1871,
+      "episode": 67,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.05263157894736842,
+      "rolling_count": 57
+    },
+    {
+      "physical_steps": 1876,
+      "episode": 68,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.05172413793103448,
+      "rolling_count": 58
+    },
+    {
+      "physical_steps": 1903,
+      "episode": 69,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.05084745762711865,
+      "rolling_count": 59
+    },
+    {
+      "physical_steps": 1959,
+      "episode": 70,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.05,
+      "rolling_count": 60
+    },
+    {
+      "physical_steps": 2001,
+      "episode": 71,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.04918032786885246,
+      "rolling_count": 61
+    },
+    {
+      "physical_steps": 2011,
+      "episode": 72,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.04838709677419355,
+      "rolling_count": 62
+    },
+    {
+      "physical_steps": 2028,
+      "episode": 73,
+      "success": true,
+      "phase": "training",
+      "rolling_success_rate": 0.06349206349206349,
+      "rolling_count": 63
+    },
+    {
+      "physical_steps": 2035,
+      "episode": 74,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.0625,
+      "rolling_count": 64
+    },
+    {
+      "physical_steps": 2043,
+      "episode": 75,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06153846153846154,
+      "rolling_count": 65
+    },
+    {
+      "physical_steps": 2075,
+      "episode": 76,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06060606060606061,
+      "rolling_count": 66
+    },
+    {
+      "physical_steps": 2142,
+      "episode": 77,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.05970149253731343,
+      "rolling_count": 67
+    },
+    {
+      "physical_steps": 2161,
+      "episode": 78,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.058823529411764705,
+      "rolling_count": 68
+    },
+    {
+      "physical_steps": 2210,
+      "episode": 79,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.057971014492753624,
+      "rolling_count": 69
+    },
+    {
+      "physical_steps": 2213,
+      "episode": 80,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.05714285714285714,
+      "rolling_count": 70
+    },
+    {
+      "physical_steps": 2259,
+      "episode": 81,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.056338028169014086,
+      "rolling_count": 71
+    },
+    {
+      "physical_steps": 2263,
+      "episode": 82,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.05555555555555555,
+      "rolling_count": 72
+    },
+    {
+      "physical_steps": 2288,
+      "episode": 83,
+      "success": true,
+      "phase": "training",
+      "rolling_success_rate": 0.0684931506849315,
+      "rolling_count": 73
+    },
+    {
+      "physical_steps": 2291,
+      "episode": 84,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06756756756756757,
+      "rolling_count": 74
+    },
+    {
+      "physical_steps": 2301,
+      "episode": 85,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06666666666666667,
+      "rolling_count": 75
+    },
+    {
+      "physical_steps": 2329,
+      "episode": 86,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06578947368421052,
+      "rolling_count": 76
+    },
+    {
+      "physical_steps": 2398,
+      "episode": 87,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06493506493506493,
+      "rolling_count": 77
+    },
+    {
+      "physical_steps": 2422,
+      "episode": 88,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.0641025641025641,
+      "rolling_count": 78
+    },
+    {
+      "physical_steps": 2479,
+      "episode": 89,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06329113924050633,
+      "rolling_count": 79
+    },
+    {
+      "physical_steps": 2484,
+      "episode": 90,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.0625,
+      "rolling_count": 80
+    },
+    {
+      "physical_steps": 2519,
+      "episode": 91,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06172839506172839,
+      "rolling_count": 81
+    },
+    {
+      "physical_steps": 2521,
+      "episode": 92,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06097560975609756,
+      "rolling_count": 82
+    },
+    {
+      "physical_steps": 2557,
+      "episode": 93,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.060240963855421686,
+      "rolling_count": 83
+    },
+    {
+      "physical_steps": 2620,
+      "episode": 94,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.05952380952380952,
+      "rolling_count": 84
+    },
+    {
+      "physical_steps": 2645,
+      "episode": 95,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.058823529411764705,
+      "rolling_count": 85
+    },
+    {
+      "physical_steps": 2661,
+      "episode": 96,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.05813953488372093,
+      "rolling_count": 86
+    },
+    {
+      "physical_steps": 2667,
+      "episode": 97,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.05747126436781609,
+      "rolling_count": 87
+    },
+    {
+      "physical_steps": 2673,
+      "episode": 98,
+      "success": true,
+      "phase": "training",
+      "rolling_success_rate": 0.06818181818181818,
+      "rolling_count": 88
+    },
+    {
+      "physical_steps": 2722,
+      "episode": 99,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06741573033707865,
+      "rolling_count": 89
+    },
+    {
+      "physical_steps": 2734,
+      "episode": 100,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06666666666666667,
+      "rolling_count": 90
+    },
+    {
+      "physical_steps": 2735,
+      "episode": 101,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06593406593406594,
+      "rolling_count": 91
+    },
+    {
+      "physical_steps": 2750,
+      "episode": 102,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06521739130434782,
+      "rolling_count": 92
+    },
+    {
+      "physical_steps": 2854,
+      "episode": 103,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06451612903225806,
+      "rolling_count": 93
+    },
+    {
+      "physical_steps": 2859,
+      "episode": 104,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06382978723404255,
+      "rolling_count": 94
+    },
+    {
+      "physical_steps": 2860,
+      "episode": 105,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.06315789473684211,
+      "rolling_count": 95
+    },
+    {
+      "physical_steps": 2886,
+      "episode": 106,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.0625,
+      "rolling_count": 96
+    },
+    {
+      "physical_steps": 2900,
+      "episode": 107,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.061855670103092786,
+      "rolling_count": 97
+    },
+    {
+      "physical_steps": 2950,
+      "episode": 108,
+      "success": true,
+      "phase": "training",
+      "rolling_success_rate": 0.07142857142857142,
+      "rolling_count": 98
+    },
+    {
+      "physical_steps": 2996,
+      "episode": 109,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.0707070707070707,
+      "rolling_count": 99
+    },
+    {
+      "physical_steps": 3037,
+      "episode": 110,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.07,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3048,
+      "episode": 111,
+      "success": true,
+      "phase": "training",
+      "rolling_success_rate": 0.08,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3050,
+      "episode": 112,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.08,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3054,
+      "episode": 113,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.07,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3124,
+      "episode": 114,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.07,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3128,
+      "episode": 115,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.07,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3154,
+      "episode": 116,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.07,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3195,
+      "episode": 117,
+      "success": true,
+      "phase": "training",
+      "rolling_success_rate": 0.08,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3219,
+      "episode": 118,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.07,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3253,
+      "episode": 119,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.07,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3295,
+      "episode": 120,
+      "success": true,
+      "phase": "training",
+      "rolling_success_rate": 0.08,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3302,
+      "episode": 121,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.08,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3320,
+      "episode": 122,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.08,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3327,
+      "episode": 123,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.08,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3344,
+      "episode": 124,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.08,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3358,
+      "episode": 125,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.08,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3406,
+      "episode": 126,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.08,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3473,
+      "episode": 127,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.08,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3501,
+      "episode": 128,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.08,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3504,
+      "episode": 129,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.08,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3531,
+      "episode": 130,
+      "success": true,
+      "phase": "training",
+      "rolling_success_rate": 0.09,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3535,
+      "episode": 131,
+      "success": true,
+      "phase": "training",
+      "rolling_success_rate": 0.09,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3570,
+      "episode": 132,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.09,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3583,
+      "episode": 133,
+      "success": true,
+      "phase": "training",
+      "rolling_success_rate": 0.1,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3616,
+      "episode": 134,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.1,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3623,
+      "episode": 135,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.1,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3703,
+      "episode": 136,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.1,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3730,
+      "episode": 137,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.1,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3742,
+      "episode": 138,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.1,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3749,
+      "episode": 139,
+      "success": true,
+      "phase": "training",
+      "rolling_success_rate": 0.11,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3768,
+      "episode": 140,
+      "success": true,
+      "phase": "training",
+      "rolling_success_rate": 0.12,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3789,
+      "episode": 141,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.12,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3825,
+      "episode": 142,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.12,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3875,
+      "episode": 143,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.12,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3921,
+      "episode": 144,
+      "success": true,
+      "phase": "training",
+      "rolling_success_rate": 0.13,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3930,
+      "episode": 145,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.13,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3937,
+      "episode": 146,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.13,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3981,
+      "episode": 147,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.13,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 3997,
+      "episode": 148,
+      "success": true,
+      "phase": "training",
+      "rolling_success_rate": 0.14,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 4009,
+      "episode": 149,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.14,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 4030,
+      "episode": 150,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.14,
+      "rolling_count": 100
+    },
+    {
+      "physical_steps": 4076,
+      "episode": 151,
+      "success": false,
+      "phase": "training",
+      "rolling_success_rate": 0.14,
+      "rolling_count": 100
+    }
+  ],
+  "validation": [
+    {
+      "physical_steps": 4107,
+      "mean_success_rate": 0.08333333333333333,
+      "per_scale": [
+        {
+          "scale": 8,
+          "success_rate": 0.25,
+          "episodes": 12
+        },
+        {
+          "scale": 16,
+          "success_rate": 0.0,
+          "episodes": 12
+        },
+        {
+          "scale": 32,
+          "success_rate": 0.0,
+          "episodes": 12
+        }
+      ]
+    }
+  ],
+  "metrics": {
+    "loss": [
+      {
+        "updates": 38,
+        "value": 0.04703110782429576,
+        "phase": "training",
+        "physical_steps": 2729
+      },
+      {
+        "updates": 39,
+        "value": 0.06477899742977959,
+        "phase": "training",
+        "physical_steps": 4107
+      }
+    ],
+    "actor_loss": [
+      {
+        "updates": 38,
+        "value": 0.01040787622332573,
+        "phase": "training",
+        "physical_steps": 2729
+      },
+      {
+        "updates": 39,
+        "value": 0.02640106635434287,
+        "phase": "training",
+        "physical_steps": 4107
+      }
+    ],
+    "value_loss": [
+      {
+        "updates": 38,
+        "value": 0.10754270292818546,
+        "phase": "training",
+        "physical_steps": 2729
+      },
+      {
+        "updates": 39,
+        "value": 0.09935943675892693,
+        "phase": "training",
+        "physical_steps": 4107
+      }
+    ],
+    "entropy": [
+      {
+        "updates": 38,
+        "value": 2.2389509677886963,
+        "phase": "training",
+        "physical_steps": 2729
+      },
+      {
+        "updates": 39,
+        "value": 2.2603574139731273,
+        "phase": "training",
+        "physical_steps": 4107
+      }
+    ],
+    "q_mean": [],
+    "target_mean": [],
+    "teacher_loss": [
+      {
+        "updates": 38,
+        "value": 1.0902522206306458,
+        "phase": "training",
+        "physical_steps": 2729
+      },
+      {
+        "updates": 39,
+        "value": 0.0,
+        "phase": "training",
+        "physical_steps": 4107
+      }
+    ]
+  },
+  "episodes_read": 151,
+  "updates_read": 2,
+  "skipped_validation_records": 0,
+  "best_validation": {
+    "physical_steps": 4107,
+    "score": 0.08333333333333333,
+    "matched_logged_validation": true
+  },
+  "notes": [
+    "Success uses native terminal wins, not shaped reward.",
+    "Rolling success uses up to 100 episodes within each phase; early windows use available episodes.",
+    "Validation is for checkpoint selection; held-out test results are excluded.",
+    "The x axis uses physical steps or recorded cumulative updates, never lagging training_seconds."
+  ]
+}

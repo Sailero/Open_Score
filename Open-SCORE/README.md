@@ -1,4 +1,20 @@
-# Open-SCORE v2.0：已知对手下的动态分组
+# Open-SCORE v3.0：已知对手下的动态分组
+
+当前推荐入口是基于失败诊断重建的三路线过夜训练。详细设计、明确预算与已验证范围见 [v3 过夜方案](../固定对手下动态分组研究方案_v3_过夜训练.md)。下方原 v2 说明作为历史版本保留；旧检查点不能跨新增源码直接 `--resume`，重现原 v2 应使用对应历史提交和独立输出。
+
+在此目录执行下面这一条命令即可同时启动三个独立候选方案。上层使用 GPU，原冻结下层使用 CPU；每路最多 7 小时训练，45 分钟评估，总上限 8 小时，`--steps 0` 不在十万步提前结束。
+
+```powershell
+& 'D:\Software\Anaconda\envs\torch310\python.exe' scripts/run_overnight_portfolio.py --device cuda --workers 3 --steps 0 --train-hours 7 --eval-minutes 45 --total-hours 8 --output outputs/v3_overnight
+```
+
+三路线是 `ppo_structured`、`ppo_teacher`、`candidate_q`，均为一个训练种子；这是算法路线筛选，不是三种子显著性研究。每路使用相同已知 `reactive` 对手、50 步任务、`count_clip3` 下层输入适配和最多 24 个候选动作。只更新上层模型参数；物理世界和所有蓝方实体不变。
+
+汇总文件为 `outputs/v3_overnight/portfolio_report.md` 和 `portfolio_results.csv`。各种子的术语不用于这里：每个路线目录保存 `latest.pt`、验证集选优的 `best.pt`、训练曲线、原始日志、配对测试报告和分组轨迹。测试包括 8/12/16/24/32，对照包含四种无需训练的规则策略。
+
+意外中断时用同一命令加 `--resume`，保留全部参数和输出路径。若从头重跑，改为新输出目录。只查看配置可加 `--dry-run`；短链路检查可运行 `python scripts/run_overnight_portfolio.py --smoke --device cuda --output outputs/v3_smoke_new`。当前交付的短测和诊断不等于已经完成七小时训练或证明上层优势。
+
+## 原 v2 研究与运行记录
 
 本项目研究：在对手完整规则已知、红方下层执行器冻结的条件下，如何利用当前物理态势与已有编组，学习成员减员后的长期分组决策。主方法 B4 依次选择需要释放的成员，再通过合法掩码重建编组，使用真实共享环境的最终成功回报进行 PPO 训练。
 

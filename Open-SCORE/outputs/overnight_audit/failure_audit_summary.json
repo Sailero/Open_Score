@@ -1,0 +1,549 @@
+{
+  "lcl": {
+    "protocol": "OpenSCORE-S1S2-REFIL-1M-v2",
+    "architecture": "REFIL-QMIX-HAD-v1",
+    "environment_steps": 950120,
+    "episode_count": 38688,
+    "train_side": "Red"
+  },
+  "source_support": [
+    [
+      2,
+      1
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      3,
+      2
+    ],
+    [
+      4,
+      1
+    ],
+    [
+      4,
+      2
+    ],
+    [
+      4,
+      3
+    ]
+  ],
+  "checkpoint_selection": {
+    "episodes": 120,
+    "episodes_per_scale_opponent": 10,
+    "mean_payoff": 0.6333333333333333,
+    "win_rate": 0.8166666666666667,
+    "mean_episode_length": 20.158333333333335,
+    "components": {
+      "rush": {
+        "episodes": 60,
+        "mean_payoff": 0.5333333333333333,
+        "win_rate": 0.7666666666666667,
+        "per_scale_payoff": {
+          "2v1": 0.8,
+          "3v1": 1.0,
+          "3v2": 0.6,
+          "4v1": 0.8,
+          "4v2": -0.2,
+          "4v3": 0.2
+        },
+        "per_scale_win_rate": {
+          "2v1": 0.9,
+          "3v1": 1.0,
+          "3v2": 0.8,
+          "4v1": 0.9,
+          "4v2": 0.4,
+          "4v3": 0.6
+        }
+      },
+      "split_rush": {
+        "episodes": 60,
+        "mean_payoff": 0.7333333333333333,
+        "win_rate": 0.8666666666666667,
+        "per_scale_payoff": {
+          "2v1": 0.8,
+          "3v1": 1.0,
+          "3v2": 0.6,
+          "4v1": 0.8,
+          "4v2": 1.0,
+          "4v3": 0.2
+        },
+        "per_scale_win_rate": {
+          "2v1": 0.9,
+          "3v1": 1.0,
+          "3v2": 0.8,
+          "4v1": 0.9,
+          "4v2": 1.0,
+          "4v3": 0.6
+        }
+      }
+    },
+    "selection_key": [
+      -0.2,
+      0.6333333333333333
+    ],
+    "seed_base": 28260831
+  },
+  "evaluations": {
+    "execution": {
+      "elapsed_seconds": 238.64000000013039,
+      "rows": 900,
+      "groups": {
+        "8v8|static|all": {
+          "episodes": 30,
+          "wins": 0,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.0,
+          "mean_steps": 24.433333333333334
+        },
+        "8v8|reserve|all": {
+          "episodes": 30,
+          "wins": 2,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.06666666666666667,
+          "mean_steps": 24.9
+        },
+        "8v8|compact|all": {
+          "episodes": 30,
+          "wins": 0,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.0,
+          "mean_steps": 24.433333333333334
+        },
+        "8v8|threat|all": {
+          "episodes": 30,
+          "wins": 0,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.0,
+          "mean_steps": 24.466666666666665
+        },
+        "8v8|pairs|all": {
+          "episodes": 30,
+          "wins": 1,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.03333333333333333,
+          "mean_steps": 23.566666666666666
+        },
+        "8v8|static|nearest3": {
+          "episodes": 30,
+          "wins": 2,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.06666666666666667,
+          "mean_steps": 25.666666666666668
+        },
+        "8v8|reserve|nearest3": {
+          "episodes": 30,
+          "wins": 2,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.06666666666666667,
+          "mean_steps": 24.9
+        },
+        "8v8|compact|nearest3": {
+          "episodes": 30,
+          "wins": 3,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.1,
+          "mean_steps": 26.433333333333334
+        },
+        "8v8|threat|nearest3": {
+          "episodes": 30,
+          "wins": 0,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.0,
+          "mean_steps": 25.5
+        },
+        "8v8|pairs|nearest3": {
+          "episodes": 30,
+          "wins": 1,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.03333333333333333,
+          "mean_steps": 25.6
+        },
+        "12v12|static|all": {
+          "episodes": 30,
+          "wins": 0,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.0,
+          "mean_steps": 24.166666666666668
+        },
+        "12v12|reserve|all": {
+          "episodes": 30,
+          "wins": 2,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.06666666666666667,
+          "mean_steps": 24.466666666666665
+        },
+        "12v12|compact|all": {
+          "episodes": 30,
+          "wins": 0,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.0,
+          "mean_steps": 23.333333333333332
+        },
+        "12v12|threat|all": {
+          "episodes": 30,
+          "wins": 0,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.0,
+          "mean_steps": 23.566666666666666
+        },
+        "12v12|pairs|all": {
+          "episodes": 30,
+          "wins": 0,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.0,
+          "mean_steps": 23.9
+        },
+        "12v12|static|nearest3": {
+          "episodes": 30,
+          "wins": 0,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.0,
+          "mean_steps": 24.866666666666667
+        },
+        "12v12|reserve|nearest3": {
+          "episodes": 30,
+          "wins": 2,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.06666666666666667,
+          "mean_steps": 24.466666666666665
+        },
+        "12v12|compact|nearest3": {
+          "episodes": 30,
+          "wins": 4,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.13333333333333333,
+          "mean_steps": 27.7
+        },
+        "12v12|threat|nearest3": {
+          "episodes": 30,
+          "wins": 0,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.0,
+          "mean_steps": 25.6
+        },
+        "12v12|pairs|nearest3": {
+          "episodes": 30,
+          "wins": 1,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.03333333333333333,
+          "mean_steps": 24.9
+        },
+        "16v16|static|all": {
+          "episodes": 30,
+          "wins": 0,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.0,
+          "mean_steps": 24.2
+        },
+        "16v16|reserve|all": {
+          "episodes": 30,
+          "wins": 3,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.1,
+          "mean_steps": 26.166666666666668
+        },
+        "16v16|compact|all": {
+          "episodes": 30,
+          "wins": 0,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.0,
+          "mean_steps": 24.266666666666666
+        },
+        "16v16|threat|all": {
+          "episodes": 30,
+          "wins": 0,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.0,
+          "mean_steps": 24.333333333333332
+        },
+        "16v16|pairs|all": {
+          "episodes": 30,
+          "wins": 0,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.0,
+          "mean_steps": 24.3
+        },
+        "16v16|static|nearest3": {
+          "episodes": 30,
+          "wins": 6,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.2,
+          "mean_steps": 26.633333333333333
+        },
+        "16v16|reserve|nearest3": {
+          "episodes": 30,
+          "wins": 3,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.1,
+          "mean_steps": 26.166666666666668
+        },
+        "16v16|compact|nearest3": {
+          "episodes": 30,
+          "wins": 6,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.2,
+          "mean_steps": 27.066666666666666
+        },
+        "16v16|threat|nearest3": {
+          "episodes": 30,
+          "wins": 4,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.13333333333333333,
+          "mean_steps": 26.3
+        },
+        "16v16|pairs|nearest3": {
+          "episodes": 30,
+          "wins": 4,
+          "validation_episodes": 0,
+          "validation_wins": 0,
+          "success_rate": 0.13333333333333333,
+          "mean_steps": 26.766666666666666
+        }
+      }
+    },
+    "compact_confirmation": {
+      "elapsed_seconds": 247.82800000021234,
+      "rows": 900,
+      "groups": {
+        "8v8|compact|all": {
+          "episodes": 100,
+          "wins": 1,
+          "validation_episodes": 70,
+          "validation_wins": 1,
+          "success_rate": 0.01,
+          "mean_steps": 25.04
+        },
+        "8v8|compact|nearest3": {
+          "episodes": 100,
+          "wins": 18,
+          "validation_episodes": 70,
+          "validation_wins": 15,
+          "success_rate": 0.18,
+          "mean_steps": 27.0
+        },
+        "8v8|compact|support": {
+          "episodes": 100,
+          "wins": 17,
+          "validation_episodes": 70,
+          "validation_wins": 14,
+          "success_rate": 0.17,
+          "mean_steps": 27.06
+        },
+        "12v12|compact|all": {
+          "episodes": 100,
+          "wins": 1,
+          "validation_episodes": 70,
+          "validation_wins": 1,
+          "success_rate": 0.01,
+          "mean_steps": 24.19
+        },
+        "12v12|compact|nearest3": {
+          "episodes": 100,
+          "wins": 11,
+          "validation_episodes": 70,
+          "validation_wins": 7,
+          "success_rate": 0.11,
+          "mean_steps": 26.21
+        },
+        "12v12|compact|support": {
+          "episodes": 100,
+          "wins": 13,
+          "validation_episodes": 70,
+          "validation_wins": 9,
+          "success_rate": 0.13,
+          "mean_steps": 25.82
+        },
+        "16v16|compact|all": {
+          "episodes": 100,
+          "wins": 0,
+          "validation_episodes": 70,
+          "validation_wins": 0,
+          "success_rate": 0.0,
+          "mean_steps": 23.85
+        },
+        "16v16|compact|nearest3": {
+          "episodes": 100,
+          "wins": 19,
+          "validation_episodes": 70,
+          "validation_wins": 13,
+          "success_rate": 0.19,
+          "mean_steps": 26.64
+        },
+        "16v16|compact|support": {
+          "episodes": 100,
+          "wins": 15,
+          "validation_episodes": 70,
+          "validation_wins": 11,
+          "success_rate": 0.15,
+          "mean_steps": 26.41
+        }
+      }
+    },
+    "rule_executor": {
+      "elapsed_seconds": 67.0930000001099,
+      "rows": 450,
+      "groups": {
+        "8v8|nearest|changed_rule_executor": {
+          "episodes": 50,
+          "wins": 0,
+          "validation_episodes": 20,
+          "validation_wins": 0,
+          "success_rate": 0.0,
+          "mean_steps": 24.38
+        },
+        "8v8|assignment|changed_rule_executor": {
+          "episodes": 50,
+          "wins": 3,
+          "validation_episodes": 20,
+          "validation_wins": 3,
+          "success_rate": 0.06,
+          "mean_steps": 24.98
+        },
+        "8v8|pursuit|changed_rule_executor": {
+          "episodes": 50,
+          "wins": 0,
+          "validation_episodes": 20,
+          "validation_wins": 0,
+          "success_rate": 0.0,
+          "mean_steps": 22.72
+        },
+        "12v12|nearest|changed_rule_executor": {
+          "episodes": 50,
+          "wins": 0,
+          "validation_episodes": 20,
+          "validation_wins": 0,
+          "success_rate": 0.0,
+          "mean_steps": 23.66
+        },
+        "12v12|assignment|changed_rule_executor": {
+          "episodes": 50,
+          "wins": 2,
+          "validation_episodes": 20,
+          "validation_wins": 2,
+          "success_rate": 0.04,
+          "mean_steps": 24.86
+        },
+        "12v12|pursuit|changed_rule_executor": {
+          "episodes": 50,
+          "wins": 1,
+          "validation_episodes": 20,
+          "validation_wins": 0,
+          "success_rate": 0.02,
+          "mean_steps": 21.38
+        },
+        "16v16|nearest|changed_rule_executor": {
+          "episodes": 50,
+          "wins": 1,
+          "validation_episodes": 20,
+          "validation_wins": 0,
+          "success_rate": 0.02,
+          "mean_steps": 23.4
+        },
+        "16v16|assignment|changed_rule_executor": {
+          "episodes": 50,
+          "wins": 2,
+          "validation_episodes": 20,
+          "validation_wins": 0,
+          "success_rate": 0.04,
+          "mean_steps": 24.96
+        },
+        "16v16|pursuit|changed_rule_executor": {
+          "episodes": 50,
+          "wins": 0,
+          "validation_episodes": 20,
+          "validation_wins": 0,
+          "success_rate": 0.0,
+          "mean_steps": 23.3
+        }
+      }
+    },
+    "count_ablation": {
+      "elapsed_seconds": 121.5930000001099,
+      "rows": 420,
+      "groups": {
+        "8v8|compact|full_clamped_count": {
+          "episodes": 70,
+          "wins": 17,
+          "validation_episodes": 70,
+          "validation_wins": 17,
+          "success_rate": 0.24285714285714285,
+          "mean_steps": 27.928571428571427
+        },
+        "8v8|compact|nearest3_full_count": {
+          "episodes": 70,
+          "wins": 2,
+          "validation_episodes": 70,
+          "validation_wins": 2,
+          "success_rate": 0.02857142857142857,
+          "mean_steps": 25.985714285714284
+        },
+        "12v12|compact|full_clamped_count": {
+          "episodes": 70,
+          "wins": 13,
+          "validation_episodes": 70,
+          "validation_wins": 13,
+          "success_rate": 0.18571428571428572,
+          "mean_steps": 26.67142857142857
+        },
+        "12v12|compact|nearest3_full_count": {
+          "episodes": 70,
+          "wins": 2,
+          "validation_episodes": 70,
+          "validation_wins": 2,
+          "success_rate": 0.02857142857142857,
+          "mean_steps": 24.4
+        },
+        "16v16|compact|full_clamped_count": {
+          "episodes": 70,
+          "wins": 16,
+          "validation_episodes": 70,
+          "validation_wins": 16,
+          "success_rate": 0.22857142857142856,
+          "mean_steps": 26.771428571428572
+        },
+        "16v16|compact|nearest3_full_count": {
+          "episodes": 70,
+          "wins": 0,
+          "validation_episodes": 70,
+          "validation_wins": 0,
+          "success_rate": 0.0,
+          "mean_steps": 23.571428571428573
+        }
+      }
+    }
+  }
+}

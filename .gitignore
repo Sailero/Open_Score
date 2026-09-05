@@ -32,3 +32,16 @@ Open-SCORE/outputs/**
 !Open-SCORE/outputs/v2_validation/core_ready/**/diagnostics/**/*.json
 !Open-SCORE/outputs/v2_validation/parallel_runner/*.json
 !Open-SCORE/outputs/v2_validation/parallel_runner/tests.xml
+!Open-SCORE/outputs/overnight_audit/
+!Open-SCORE/outputs/overnight_audit/*.py
+!Open-SCORE/outputs/overnight_audit/*.json
+!Open-SCORE/outputs/overnight_ppo_audit/
+!Open-SCORE/outputs/overnight_ppo_audit/old_training_metrics.json
+!Open-SCORE/outputs/v3_validation/
+!Open-SCORE/outputs/v3_validation/**/
+!Open-SCORE/outputs/v3_validation/**/*.json
+!Open-SCORE/outputs/v3_validation/**/*.jsonl
+!Open-SCORE/outputs/v3_validation/**/*.csv
+!Open-SCORE/outputs/v3_validation/**/*.md
+!Open-SCORE/outputs/v3_validation/**/*.png
+!Open-SCORE/outputs/v3_validation/tests.xml
