@@ -8,7 +8,30 @@ from open_score.envs import (
     HADStage1Adapter,
     HADStage3Adapter,
 )
-from open_score.stage1.runner import RuleBasedController
+
+class RuleBasedController:
+    """Frozen small-world rule reference for physical compatibility tests."""
+    def __init__(self, style):
+        self.style = style
+
+    def reset(self):
+        pass
+
+    def act(self, adapter, side, observation, rng):
+        agents = adapter.env.red_agents if side == 'Red' else adapter.env.blue_agents
+        target = adapter.env.targets[0]
+        result = []
+        for index, agent in enumerate(agents):
+            if agent.Health <= 0:
+                result.append(0)
+                continue
+            destination = np.asarray(target.position).copy()
+            if self.style == 'split_rush':
+                destination[1] += (index - (len(agents) - 1) / 2.0) * 180.0
+            direction = destination - np.asarray(agent.position, dtype=np.float32)
+            norm = np.linalg.norm(direction)
+            result.append(0 if norm < 1e-8 else int(np.argmax(adapter.action_vectors @ (direction / norm))))
+        return np.asarray(result, dtype=np.int64)
 
 
 TARGETS = (

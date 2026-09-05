@@ -1,13 +1,10 @@
-__pycache__/
+﻿__pycache__/
 *.py[cod]
 .pytest_cache/
 .coverage
-# The repository-level allowlist selects only formal reports and manifests.
 checkpoints/
 runs/
 *.pt
 *.pth
-upstream/external/
-upstream/_external/
-upstream/wheels/
-upstream/LOCKS.local.md
+!assets/frozen/lcl.pt
+!assets/frozen/dlom.pt

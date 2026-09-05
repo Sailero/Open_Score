@@ -1,4 +1,4 @@
-__pycache__/
+﻿__pycache__/
 *.py[cod]
 .pytest_cache/
 .mypy_cache/
@@ -10,18 +10,15 @@ build/
 dist/
 .DS_Store
 Thumbs.db
-
-# Network-failed upstream clone remnants are documented but not versioned.
-**/_incomplete_spectra_clone_20260827/
-**/upstream/failed_clone_empty/
-
-# Formal evidence: data, checkpoints, raw episodes and progress stay local.
 Open-SCORE/outputs/**
-!Open-SCORE/outputs/stage123_unknown_upper_v1/
-!Open-SCORE/outputs/stage123_unknown_upper_v1/manifest.json
-!Open-SCORE/outputs/stage123_unknown_upper_v1/experiment_report.md
-!Open-SCORE/outputs/stage123_unknown_upper_v1/figures/
-!Open-SCORE/outputs/stage123_unknown_upper_v1/figures/*.png
-!Open-SCORE/outputs/stage123_unknown_upper_v1/stage2/
-!Open-SCORE/outputs/stage123_unknown_upper_v1/stage2/data/
-!Open-SCORE/outputs/stage123_unknown_upper_v1/stage2/data/dataset_manifest.json
+!Open-SCORE/outputs/v2_validation/
+!Open-SCORE/outputs/v2_validation/**/
+!Open-SCORE/outputs/v2_validation/*.md
+!Open-SCORE/outputs/v2_validation/**/*.md
+!Open-SCORE/outputs/v2_validation/**/*.csv
+!Open-SCORE/outputs/v2_validation/**/*.png
+!Open-SCORE/outputs/v2_validation/**/status.json
+!Open-SCORE/outputs/v2_validation/**/evaluation_summary.json
+!Open-SCORE/outputs/v2_validation/**/comparison_summary.json
+!Open-SCORE/outputs/v2_validation/**/diagnostics.json
+!Open-SCORE/outputs/v2_validation/verification.json

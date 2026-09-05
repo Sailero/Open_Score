@@ -1,0 +1,57 @@
+schema_version: known-opponent-grouping-v2
+seed: 20260905
+opponent: reactive
+method: selective
+device: cpu
+executor_device: cpu
+torch_threads: 1
+max_steps: 50
+command_interval: 5
+model:
+  hidden_dim: 128
+  heads: 4
+  layers: 2
+ppo:
+  learning_rate: 0.0003
+  gamma: 1.0
+  gae_lambda: 0.95
+  clip: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.0
+  target_kl: 0.05
+  rollout_events: 64
+  epochs: 2
+  batch_size: 16
+profiles:
+  smoke:
+    train_scales: [4]
+    eval_scales: [4]
+    steps: 64
+    train_seconds: 60
+    eval_episodes: 2
+    eval_seconds: 60
+  briefing:
+    train_scales: [8]
+    eval_scales: [8]
+    steps: 2000
+    train_seconds: 300
+    eval_episodes: 20
+    eval_seconds: 300
+  minimal:
+    train_scales: [8, 12]
+    eval_scales: [8, 12, 16]
+    steps: 2000
+    train_seconds: 300
+    eval_episodes: 20
+    eval_seconds: 300
+  formal:
+    train_scales: [8, 12]
+    eval_scales: [8, 12, 16]
+    # An adjustable one-hour increment, not a claim about convergence.
+    steps: null
+    train_seconds: 3600
+    eval_episodes: 200
+    eval_seconds: null
+    training_seeds: [20260905, 20260906, 20260907, 20260908, 20260909]
+    review_opponents: [concentrated, balanced]
+    review_methods: [dlom, full, selective]

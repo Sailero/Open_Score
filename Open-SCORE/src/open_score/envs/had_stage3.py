@@ -72,8 +72,8 @@ class HADStage3Adapter:
 
     Blue's *lower* policy is a known ``rush`` or ``split_rush`` rule.  Its
     target choice is not part of that rule: it is supplied independently via
-    :meth:`set_assignments`, so a Stage-3 solver can treat the Blue allocation
-    as a simultaneous Colonel-Blotto action.  Red target assignments define
+    :meth:`set_assignments`, with both commands produced from the same
+    decision-before-commit state. Red target assignments define
     target-centric policy views; Red acceleration actions are supplied by the
     caller (normally a frozen Stage-1 controller).
 
@@ -101,7 +101,7 @@ class HADStage3Adapter:
         blue_attackers: int,
         targets: int,
         *,
-        max_steps: int = 300,
+        max_steps: int = 50,
         target_region: Sequence[Sequence[float]] = (
             (-2300.0, -1900.0),
             (-1200.0, 1200.0),
@@ -248,7 +248,7 @@ class HADStage3Adapter:
         """Reset physical state and install complete command assignments.
 
         When no allocation is supplied, IDs are assigned round-robin.  This is
-        only a deterministic smoke-test default; a Blotto solver should always
+        only a deterministic smoke-test default; the upper policy must always
         submit both allocations explicitly at command time.
         """
 

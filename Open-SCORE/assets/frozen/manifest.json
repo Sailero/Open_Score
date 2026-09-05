@@ -1,0 +1,19 @@
+{
+  "schema": "open-score-frozen-v2",
+  "source_commit": "f1cdc06",
+  "lcl": {
+    "file": "lcl.pt",
+    "sha256": "15e861b770e9339f530386ebc6674d020686b1771697aa7aa8fff4c74ed6e355",
+    "architecture": "REFIL-QMIX-HAD-v1",
+    "training_seed": 20260831,
+    "role": "Frozen Red local executor; training is outside v2 scope. Entity inputs permit variable Blue counts; competence at larger contact counts is diagnosed, not assumed."
+  },
+  "dlom": {
+    "file": "dlom.pt",
+    "sha256": "7baa7110dfb00798493e44c26a8a1c0e9a475190b264fc210450eda52991585f",
+    "architecture": "DynamicHADOutcomeNet",
+    "horizon_bins": 10,
+    "steps_per_bin": 5,
+    "role": "Frozen local continuation proxy for B1, trained on 1..4 Red versus 1..4 Blue. Not a global action value or a regrouping counterfactual model."
+  }
+}

@@ -1,4 +1,4 @@
-"""Tensor contracts shared by environments and all four research stages."""
+"""Tensor contracts retained for the frozen local executor."""
 
 from dataclasses import dataclass
 from typing import Optional

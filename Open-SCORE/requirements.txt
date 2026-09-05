@@ -1,6 +1,7 @@
-# Install the CUDA or CPU build of torch from https://pytorch.org first.
-numpy>=1.23
+﻿numpy>=1.23
 scipy>=1.11.4
+torch>=2.0
 PyYAML>=6.0
 pygame>=2.5
-pytest>=7.0
+matplotlib>=3.7
+pytest==8.4.2
