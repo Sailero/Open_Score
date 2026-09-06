@@ -1,0 +1,8 @@
+﻿{
+    "desktop_error":  "Windows input desktop access denied (5), foreground=0, LogonUI active; user can unlock and press Ctrl+Shift+B to attach monitor.",
+    "started":  "2026-09-06T20:40:11.7502994+08:00",
+    "pid":  46072,
+    "method_commit":  "b3ef7d3cf2bb175fb8e387bb5a963a9b408ee929",
+    "vscode_visible":  false,
+    "mode":  "background_training_pending_vscode_monitor"
+}

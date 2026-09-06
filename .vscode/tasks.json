@@ -4,11 +4,10 @@
     {
       "label": "Open-SCORE v5.1: 启动或恢复六任务",
       "type": "process",
-      "command": "D:\\Software\\Anaconda\\envs\\torch310\\python.exe",
+      "command": "powershell.exe",
       "args": [
-        "-X", "utf8", "-u", "-m", "open_score.research_v5.orchestrate",
-        "run-all", "--run-dir", "outputs/v5_parallel/v5_20260907_main",
-        "--parallel-tasks", "6"
+        "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+        "${workspaceFolder}\\.vscode\\start-v5.ps1"
       ],
       "options": {
         "cwd": "${workspaceFolder}\\Open-SCORE"

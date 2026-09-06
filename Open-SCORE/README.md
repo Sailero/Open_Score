@@ -31,7 +31,7 @@ T1 为 rollout，T2 为 MCTS，T3 为候选/AR 两臂 PPO，T4 为 ExIt 风格�
 & 'D:\Software\Anaconda\envs\torch310\python.exe' -u scripts/run_research_v5.py watch --run-dir outputs/v5_parallel/v5_20260907_main
 ```
 
-本工作区 VS Code 默认构建任务为“v5.1 启动或恢复六任务”，按 `Ctrl+Shift+B` 可在本地集成终端运行；通过 Tasks: Run Task 可打开独立的仅监控任务。监控显示的 ETA 是当前阶段估计，正式任务没有墙钟截止时间。
+本工作区 VS Code 默认构建任务为“v5.1 启动或恢复六任务”，按 `Ctrl+Shift+B` 可在本地集成终端运行。启动脚本先核验运行锁及其进程：已有运行器则只连接监控；没有运行器则启动或恢复。通过 Tasks: Run Task 也可打开独立的仅监控任务。监控显示的 ETA 是当前阶段估计，正式任务没有墙钟截止时间。
 
 输出包含 `shared/budget_manifest.json`、每任务的模型/训练记录/诊断、`comparison.csv`、`comparison_summary.json`、`final_report.md`。逐局评估保存在 `T*/evaluations/<method>/<split>/<checkpoint>/episodes.jsonl`；完整事件、候选和分支使用同目录 `families/*.jsonl.gz` 按回合原子分片，首行是回合指标，其余行带 `record_type`。
 
