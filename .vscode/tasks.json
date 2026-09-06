@@ -2,12 +2,13 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Open-SCORE: 完成第一轮 Stage 2 与报告",
+      "label": "Open-SCORE v5.1: 启动或恢复六任务",
       "type": "process",
       "command": "D:\\Software\\Anaconda\\envs\\torch310\\python.exe",
       "args": [
-        "-u",
-        "${workspaceFolder}\\Open-SCORE\\scripts\\run_round01_remaining.py"
+        "-X", "utf8", "-u", "-m", "open_score.research_v5.orchestrate",
+        "run-all", "--run-dir", "outputs/v5_parallel/v5_20260907_main",
+        "--parallel-tasks", "6"
       ],
       "options": {
         "cwd": "${workspaceFolder}\\Open-SCORE"
@@ -20,7 +21,7 @@
         "reveal": "always",
         "focus": true,
         "panel": "dedicated",
-        "clear": true,
+        "clear": false,
         "showReuseMessage": true
       },
       "problemMatcher": [],
@@ -28,6 +29,16 @@
         "instanceLimit": 1,
         "instancePolicy": "warn"
       }
+    },
+    {
+      "label": "Open-SCORE v5.1: 实时进度（仅监控）",
+      "type": "process",
+      "command": "D:\\Software\\Anaconda\\envs\\torch310\\python.exe",
+      "args": ["-X", "utf8", "-u", "-m", "open_score.research_v5.orchestrate", "watch", "--run-dir", "outputs/v5_parallel/v5_20260907_main"],
+      "options": {"cwd": "${workspaceFolder}\\Open-SCORE"},
+      "presentation": {"reveal": "always", "focus": true, "panel": "dedicated", "clear": false},
+      "problemMatcher": [],
+      "runOptions": {"instanceLimit": 1}
     }
   ]
 }

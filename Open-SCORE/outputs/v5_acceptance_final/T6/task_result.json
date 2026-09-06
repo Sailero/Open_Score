@@ -1,0 +1,475 @@
+{
+  "complete": true,
+  "task_id": "T6",
+  "finished": "2026-09-06T12:32:14.733303+00:00",
+  "elapsed_seconds": 82.45299999997951,
+  "result": {
+    "task": "T6",
+    "status": "complete",
+    "adaptation_scope": "same_data_absolute_BCE_vs_paired_advantage_with_empirical_rule_gate",
+    "training": {
+      "bce": {
+        "kind": "bce",
+        "epochs": 2,
+        "updates": 4,
+        "training_seconds": 0.6410000000614673,
+        "checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_acceptance_final\\T6\\bce\\latest.pt",
+        "selection": "final_epoch",
+        "training_labels": {
+          "families": 4,
+          "states": 4,
+          "candidates": 16,
+          "all_zero_states": 3,
+          "all_tie_states": 3,
+          "non_tie_states": 1,
+          "positive_difference_states": 0,
+          "negative_difference_states": 1,
+          "zero_difference_states": 3,
+          "positive_difference_branches": 0,
+          "zero_difference_branches": 28,
+          "negative_difference_branches": 4
+        }
+      },
+      "adv": {
+        "kind": "adv",
+        "epochs": 2,
+        "updates": 4,
+        "training_seconds": 0.21899999980814755,
+        "checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_acceptance_final\\T6\\adv\\latest.pt",
+        "selection": "final_epoch",
+        "training_labels": {
+          "families": 4,
+          "states": 4,
+          "candidates": 16,
+          "all_zero_states": 3,
+          "all_tie_states": 3,
+          "non_tie_states": 1,
+          "positive_difference_states": 0,
+          "negative_difference_states": 1,
+          "zero_difference_states": 3,
+          "positive_difference_branches": 0,
+          "zero_difference_branches": 28,
+          "negative_difference_branches": 4
+        }
+      }
+    },
+    "offline_sim_steps": 1531,
+    "gate": 0.02,
+    "evaluation": {
+      "t6_bce": {
+        "method_id": "t6_bce",
+        "checkpoint_id": "final_epoch",
+        "split": "test",
+        "training_seed": 20260907,
+        "protocol_hash": "5dbab2ed80db39e963faf0e11b6c70615d2b62f866280d5a9fd44c03051bee44",
+        "wins": 0,
+        "episodes": 3,
+        "success_rate": 0.0,
+        "complete": true,
+        "expected_episodes": 3,
+        "groups": [
+          {
+            "red_count": 8,
+            "blue_count": 4,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          },
+          {
+            "red_count": 12,
+            "blue_count": 9,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          },
+          {
+            "red_count": 16,
+            "blue_count": 16,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          }
+        ],
+        "never_deployed_rate": 0.0,
+        "path": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_acceptance_final\\T6\\evaluations\\t6_bce\\test\\final_epoch"
+      },
+      "t6_adv": {
+        "method_id": "t6_adv",
+        "checkpoint_id": "final_epoch",
+        "split": "test",
+        "training_seed": 20260907,
+        "protocol_hash": "5dbab2ed80db39e963faf0e11b6c70615d2b62f866280d5a9fd44c03051bee44",
+        "wins": 1,
+        "episodes": 3,
+        "success_rate": 0.3333333333333333,
+        "complete": true,
+        "expected_episodes": 3,
+        "groups": [
+          {
+            "red_count": 8,
+            "blue_count": 4,
+            "wins": 1,
+            "episodes": 1,
+            "success_rate": 1.0,
+            "wilson95": [
+              0.20654931437723745,
+              1.0
+            ]
+          },
+          {
+            "red_count": 12,
+            "blue_count": 9,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          },
+          {
+            "red_count": 16,
+            "blue_count": 16,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          }
+        ],
+        "never_deployed_rate": 0.0,
+        "path": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_acceptance_final\\T6\\evaluations\\t6_adv\\test\\final_epoch"
+      },
+      "t6_adv_gated": {
+        "method_id": "t6_adv_gated",
+        "checkpoint_id": "final_epoch",
+        "split": "test",
+        "training_seed": 20260907,
+        "protocol_hash": "5dbab2ed80db39e963faf0e11b6c70615d2b62f866280d5a9fd44c03051bee44",
+        "wins": 1,
+        "episodes": 3,
+        "success_rate": 0.3333333333333333,
+        "complete": true,
+        "expected_episodes": 3,
+        "groups": [
+          {
+            "red_count": 8,
+            "blue_count": 4,
+            "wins": 1,
+            "episodes": 1,
+            "success_rate": 1.0,
+            "wilson95": [
+              0.20654931437723745,
+              1.0
+            ]
+          },
+          {
+            "red_count": 12,
+            "blue_count": 9,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          },
+          {
+            "red_count": 16,
+            "blue_count": 16,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          }
+        ],
+        "never_deployed_rate": 0.0,
+        "path": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_acceptance_final\\T6\\evaluations\\t6_adv_gated\\test\\final_epoch"
+      }
+    },
+    "diagnostics": {
+      "t6_bce": {
+        "diagnostic": {
+          "method_id": "t6_bce",
+          "state_set": "diagnostic",
+          "states": 3,
+          "families": 3,
+          "label_classes": {
+            "all_zero": 1,
+            "all_one": 0,
+            "other_tie": 0,
+            "non_tie": 2
+          },
+          "selected_vs_rule_verification_gain": 0.16666666666666666,
+          "teacher_minus_method_verification_gap": 0.0,
+          "simulated_physical_steps": 2656,
+          "complete": true,
+          "non_tie_pairs": 37,
+          "ranking_accuracy": 0.6486486486486487,
+          "paired_advantage_mse": 0.11122510079668237,
+          "ranking_weighting": "non-tie candidate pairs; prediction ties receive half credit",
+          "probability_brier": 0.12222715501740374,
+          "probability_ece": 0.21496385106673607,
+          "calibration_bins": [
+            {
+              "count": 0,
+              "prediction_sum": 0.0,
+              "outcome_sum": 0.0
+            },
+            {
+              "count": 0,
+              "prediction_sum": 0.0,
+              "outcome_sum": 0.0
+            },
+            {
+              "count": 0,
+              "prediction_sum": 0.0,
+              "outcome_sum": 0.0
+            },
+            {
+              "count": 26,
+              "prediction_sum": 10.089060127735138,
+              "outcome_sum": 4.5
+            },
+            {
+              "count": 0,
+              "prediction_sum": 0.0,
+              "outcome_sum": 0.0
+            },
+            {
+              "count": 0,
+              "prediction_sum": 0.0,
+              "outcome_sum": 0.0
+            },
+            {
+              "count": 0,
+              "prediction_sum": 0.0,
+              "outcome_sum": 0.0
+            },
+            {
+              "count": 0,
+              "prediction_sum": 0.0,
+              "outcome_sum": 0.0
+            },
+            {
+              "count": 0,
+              "prediction_sum": 0.0,
+              "outcome_sum": 0.0
+            },
+            {
+              "count": 0,
+              "prediction_sum": 0.0,
+              "outcome_sum": 0.0
+            }
+          ],
+          "probability_weighting": "state-equal Brier; candidate-equal ECE"
+        }
+      },
+      "t6_adv": {
+        "diagnostic": {
+          "method_id": "t6_adv",
+          "state_set": "diagnostic",
+          "states": 3,
+          "families": 3,
+          "label_classes": {
+            "all_zero": 1,
+            "all_one": 0,
+            "other_tie": 0,
+            "non_tie": 2
+          },
+          "selected_vs_rule_verification_gain": 0.0,
+          "teacher_minus_method_verification_gap": 0.16666666666666666,
+          "simulated_physical_steps": 2554,
+          "complete": true,
+          "non_tie_pairs": 37,
+          "ranking_accuracy": 0.5135135135135135,
+          "paired_advantage_mse": 0.22840953129591401,
+          "ranking_weighting": "non-tie candidate pairs; prediction ties receive half credit"
+        },
+        "onpolicy_diagnostic": {
+          "method_id": "t6_adv",
+          "state_set": "onpolicy_diagnostic",
+          "states": 1,
+          "families": 1,
+          "label_classes": {
+            "all_zero": 0,
+            "all_one": 0,
+            "other_tie": 0,
+            "non_tie": 1
+          },
+          "selected_vs_rule_verification_gain": 0.0,
+          "teacher_minus_method_verification_gap": -0.5,
+          "simulated_physical_steps": 907,
+          "complete": true,
+          "non_tie_pairs": 18,
+          "ranking_accuracy": 0.16666666666666666,
+          "paired_advantage_mse": 0.06012396665710256,
+          "ranking_weighting": "non-tie candidate pairs; prediction ties receive half credit"
+        }
+      },
+      "t6_adv_gated": {
+        "diagnostic": {
+          "method_id": "t6_adv_gated",
+          "state_set": "diagnostic",
+          "states": 3,
+          "families": 3,
+          "label_classes": {
+            "all_zero": 1,
+            "all_one": 0,
+            "other_tie": 0,
+            "non_tie": 2
+          },
+          "selected_vs_rule_verification_gain": 0.0,
+          "teacher_minus_method_verification_gap": 0.16666666666666666,
+          "simulated_physical_steps": 2554,
+          "complete": true,
+          "non_tie_pairs": 37,
+          "ranking_accuracy": 0.5135135135135135,
+          "paired_advantage_mse": 0.22840953129591401,
+          "ranking_weighting": "non-tie candidate pairs; prediction ties receive half credit"
+        }
+      }
+    },
+    "calibration_ranking": {
+      "bce": {
+        "kind": "bce",
+        "families": 3,
+        "states": 3,
+        "candidates": 12,
+        "all_zero_states": 2,
+        "all_tie_states": 2,
+        "non_tie_states": 1,
+        "positive_difference_states": 0,
+        "negative_difference_states": 1,
+        "zero_difference_states": 2,
+        "positive_difference_branches": 0,
+        "zero_difference_branches": 21,
+        "negative_difference_branches": 3,
+        "advantage_mse": 0.062491657414710744,
+        "non_tie_pairs": 3,
+        "ranking_accuracy": 0.6666666666666666,
+        "empirical_candidate_regret": 0.16666666666666666,
+        "brier": 0.13945972671111426,
+        "calibration_bins": [
+          {
+            "lower": 0.3,
+            "upper": 0.4,
+            "count": 12,
+            "prediction": 0.38860999296108883,
+            "observed": 0.041666666666666664
+          }
+        ],
+        "ece": 0.34694332629442215,
+        "by_cell": {
+          "8v4": {
+            "states": 1,
+            "non_tie_states": 0,
+            "all_zero_states": 1,
+            "non_tie_pairs": 0,
+            "ranking_accuracy": null,
+            "advantage_mse": 7.578430540888803e-07,
+            "empirical_candidate_regret": 0.0,
+            "brier": 0.14537832140922546,
+            "ece": 0.3812844082713127
+          },
+          "12v9": {
+            "states": 1,
+            "non_tie_states": 1,
+            "all_zero_states": 0,
+            "non_tie_pairs": 3,
+            "ranking_accuracy": 0.6666666666666666,
+            "advantage_mse": 0.187473863363266,
+            "empirical_candidate_regret": 0.5,
+            "brier": 0.11660481244325638,
+            "ece": 0.2640763744711876
+          },
+          "16v16": {
+            "states": 1,
+            "non_tie_states": 0,
+            "all_zero_states": 1,
+            "non_tie_pairs": 0,
+            "ranking_accuracy": null,
+            "advantage_mse": 3.5103781215184426e-07,
+            "empirical_candidate_regret": 0.0,
+            "brier": 0.1563960462808609,
+            "ece": 0.39546919614076614
+          }
+        },
+        "weighting": "state_equal_losses_and_Brier; candidate_weighted_ECE; non_tie_pair_weighted_ranking"
+      },
+      "adv": {
+        "kind": "adv",
+        "families": 3,
+        "states": 3,
+        "candidates": 12,
+        "all_zero_states": 2,
+        "all_tie_states": 2,
+        "non_tie_states": 1,
+        "positive_difference_states": 0,
+        "negative_difference_states": 1,
+        "zero_difference_states": 2,
+        "positive_difference_branches": 0,
+        "zero_difference_branches": 21,
+        "negative_difference_branches": 3,
+        "advantage_mse": 0.04578161922593912,
+        "non_tie_pairs": 3,
+        "ranking_accuracy": 1.0,
+        "empirical_candidate_regret": 0.0,
+        "brier": null,
+        "calibration_bins": [],
+        "ece": null,
+        "by_cell": {
+          "8v4": {
+            "states": 1,
+            "non_tie_states": 0,
+            "all_zero_states": 1,
+            "non_tie_pairs": 0,
+            "ranking_accuracy": null,
+            "advantage_mse": 0.04839043319225311,
+            "empirical_candidate_regret": 0.0,
+            "brier": null
+          },
+          "12v9": {
+            "states": 1,
+            "non_tie_states": 1,
+            "all_zero_states": 0,
+            "non_tie_pairs": 3,
+            "ranking_accuracy": 1.0,
+            "advantage_mse": 0.07139338552951813,
+            "empirical_candidate_regret": 0.0,
+            "brier": null
+          },
+          "16v16": {
+            "states": 1,
+            "non_tie_states": 0,
+            "all_zero_states": 1,
+            "non_tie_pairs": 0,
+            "ranking_accuracy": null,
+            "advantage_mse": 0.017561038956046104,
+            "empirical_candidate_regret": 0.0,
+            "brier": null
+          }
+        },
+        "weighting": "state_equal_losses_and_Brier; candidate_weighted_ECE; non_tie_pair_weighted_ranking"
+      }
+    },
+    "interpretation": "One training seed; validation gate is not a guaranteed policy improvement bound."
+  }
+}

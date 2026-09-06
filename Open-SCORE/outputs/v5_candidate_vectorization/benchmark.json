@@ -1,0 +1,62 @@
+{
+  "phases": [
+    {
+      "kind": "scalar_reference",
+      "repeat": 0,
+      "wall_s": 7.612401599995792,
+      "loss": 3.5108530521392822,
+      "peak_cuda_bytes": 289755136,
+      "batch_states": 128,
+      "candidates_per_state": 32,
+      "red_counts": [
+        8,
+        16,
+        32
+      ]
+    },
+    {
+      "kind": "scalar_reference",
+      "repeat": 1,
+      "wall_s": 7.345941900042817,
+      "loss": 3.3187406063079834,
+      "peak_cuda_bytes": 292691968,
+      "batch_states": 128,
+      "candidates_per_state": 32,
+      "red_counts": [
+        8,
+        16,
+        32
+      ]
+    },
+    {
+      "kind": "vectorized",
+      "repeat": 0,
+      "wall_s": 0.27334369998425245,
+      "loss": 3.5108530521392822,
+      "peak_cuda_bytes": 319497216,
+      "batch_states": 128,
+      "candidates_per_state": 32,
+      "red_counts": [
+        8,
+        16,
+        32
+      ]
+    },
+    {
+      "kind": "vectorized",
+      "repeat": 1,
+      "wall_s": 0.21892639994621277,
+      "loss": 3.3187406063079834,
+      "peak_cuda_bytes": 322434048,
+      "batch_states": 128,
+      "candidates_per_state": 32,
+      "red_counts": [
+        8,
+        16,
+        32
+      ]
+    }
+  ],
+  "gpu_wait_s": 0.0,
+  "note": "Matched production actor update only; two repeats include first-call/Adam initialization. GPU lock acquired; not a replacement for joint six-task calibration."
+}

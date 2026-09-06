@@ -1,0 +1,2210 @@
+{
+  "schema": "v5-production-phase-calibration-v1",
+  "directory": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_parallel\\v5_20260907_main\\calibration\\20260906T120134",
+  "requested_seconds": 900.0,
+  "elapsed_seconds": 1315.9441542625427,
+  "benchmark_exits": {
+    "T5": 0,
+    "T3": 0,
+    "T6": 0,
+    "T4": 0,
+    "T1": 0,
+    "T2": 0
+  },
+  "cycles": {
+    "T1": 2,
+    "T2": 2,
+    "T3": 26,
+    "T4": 9,
+    "T5": 94,
+    "T6": 23
+  },
+  "source_stable": false,
+  "source_before": {
+    "git_commit": "dc6445e4ce0917cb918bfe88401c376b8e8cec5f",
+    "source_hash": "8e11b5d2a6c4054d7218be7b579770490d46f0811b81c9da8e324004e8c1c258",
+    "source_files": {
+      "configs/research_v5/smoke.yaml": "7b00ebfb98e8812b449b0d6f47c9ee10d1c3bcf9a54d9a954ff9fd3a48f6de14",
+      "configs/research_v5/standard.yaml": "94d55bb4285ec420bf8a3ed7217373febc6aed2e33722b9306a49581fa416739",
+      "scripts/benchmark_training_devices.py": "47b25bdc73e4a9fad01db9a1026da12d99cf6a9609d4d94b888b9d29b5b94ad7",
+      "scripts/plot_core_results.py": "2508fc1004344c2064c15c35409ef0b1fff699ac2fb79f47c67a6d364b07930a",
+      "scripts/repair_windows_checkpoint_run.py": "d99d87f79fb24e9aebe130be62547e1fcf04db5f0b687992f3cef261678502c0",
+      "scripts/run_main_algorithm.ps1": "11c2aaad7a49a185fb29c8e033c2234d780a66c96c9efdab7590314cb067bd17",
+      "scripts/run_overnight_portfolio.py": "2756c4068d46b6c46bbcacbdefca99dd4d88e193ed27257801b8cfd3af42f489",
+      "scripts/run_parallel_comparison.py": "6cc0c06fe922391157e48f0a30ca2902c19b12018d0b94f63a0e18b507ca28f6",
+      "scripts/run_research_comparison.py": "89d883dd1c524aeae72c11243034a1951cc49e7bc52f29237293772a6844e03f",
+      "scripts/run_research_v5.py": "e8a62ecdbe54b433f07ac1d2017e8107d9bbcdcd79760a093486fa964fb882aa",
+      "src/HAD_Env/__init__.py": "fd2d5816e3dd9b6cc7dc79d6e2221d98e1b2f911e1878233c7adc0f5c10f13c8",
+      "src/HAD_Env/agents/__init__.py": "77171c4ae77009f9c73f2cce214a6f056cc73ba17ee880db136491732e1a487d",
+      "src/HAD_Env/agents/attack.py": "8022d9d8d3610cadd42c3b0c685e7aeb455a15f7b15816b4d9adbc7d94d8b981",
+      "src/HAD_Env/agents/base.py": "a8d3b421b74302a10b69c305e241540b35b03e19201f6cec531850379a065aca",
+      "src/HAD_Env/agents/disturb.py": "3838b5c5ce261bb2cfd7ae335f76c2f8c60ad0bcf1753b9767e46cb5f8961df3",
+      "src/HAD_Env/agents/scout.py": "79d215a7718e6a8e79f59ef01cdc9569d8e7124cf8c883042cbef86c94bef077",
+      "src/HAD_Env/config.py": "94ac1ba14a5515b2c161da616c5d7095441d5a0767efae47eaa6331529408002",
+      "src/HAD_Env/env/__init__.py": "e96739322f5560a3e3cedffa5426e2dfab05168c3e0526732f3802b850c83adc",
+      "src/HAD_Env/env/env.py": "80e6add532aae92207c66c889aea66d9dd85997e950bc047742b9a0404ce0a86",
+      "src/HAD_Env/env/world.py": "f757851e61b8dbeadf0ebd4c55fa4c4cedcb2497a40cc0c97562ef3a76e11b01",
+      "src/HAD_Env/function/__init__.py": "09733558d4bce38636cce3365dc765806b45252ede94e48f6b9cffb9a7be7958",
+      "src/HAD_Env/function/Function.py": "fbf84d34bed1fcc0e6ee6d64ba63ffcd6a7575ac1d0648937a13782538055a3b",
+      "src/HAD_Env/make_env.py": "fe0ce653260aee81210bb0b3877d4fb1abb98410088170c5254ef010fa6a081b",
+      "src/HAD_Env/render/__init__.py": "98f8dd3c8a8623a6ee7b52df7c75bb813ac941930d4d9e80bc401fec8e075fa3",
+      "src/HAD_Env/render/render.py": "19d2e8e62f53209e42bc5724301973837a2af7cddfa9c09ad0756cba4d83a205",
+      "src/open_score/__init__.py": "a16c0b27cc5fb546a981cd937b93b9f5f8490117c8699c03d062f60d7dde8a84",
+      "src/open_score/__main__.py": "c7617442eb9339f26629c47cd97087076a0d857dc6e0be5d56fbac2f335d6e39",
+      "src/open_score/contracts.py": "4dd74782551a4ab7331b9e0372be13b27ebcda147012944ce2433f55db1a2202",
+      "src/open_score/envs/__init__.py": "7ec63122eb67a46838546972e8e8ed1feb67edb5c2aaceb26c73db8bd61965c5",
+      "src/open_score/envs/had_stage1.py": "9e3c719a9c3f6dffe879d993101d4e2005c59b7049fca2fa96cee244ed85b00f",
+      "src/open_score/envs/had_stage3.py": "9afe106ffee464842ad33b32855620b679549f9b3068c723b228d6c74ded3042",
+      "src/open_score/grouping/__init__.py": "4f01d85783ce9f3f686dc718efac0419ed5a3a64b3186a19ac956fdafdaa7e5c",
+      "src/open_score/grouping/baselines.py": "dc761a2ededf8d161fa4ea54f8fb244d974972db003e0f3863cb8c194af6d91e",
+      "src/open_score/grouping/cli.py": "8548fc16c1b4b7ca8ea419c5fd895d96a96ec6be4e98cffd3eb728fb26a2b800",
+      "src/open_score/grouping/diagnostics.py": "a1b277dfe58f656cbf3ae2dec5162d3e6c7c4007ce129751ed35aaed78675f3f",
+      "src/open_score/grouping/domain.py": "a511060340c8b3717f56e419cb2b32270a56bdd06e99a66b4c215c6e33814a2a",
+      "src/open_score/grouping/environment.py": "f40cb243a27ec4c367c7647d6ce6f3f5515bfa83dfeacb1d2c5666dcea0091ea",
+      "src/open_score/grouping/evaluation.py": "bada698763cf2b986f3b2ac7b46bb10a167582ed78887903406b9a797aba19e9",
+      "src/open_score/grouping/frozen.py": "5c5867e7033d0935b2f15b44318f2833a02420263e5173b39c56acf7955c6694",
+      "src/open_score/grouping/opponents.py": "ecb0bac8e4f1419d11a6a6eca0d457409452ac84907ecdcd9d3d0ebc9a47c682",
+      "src/open_score/grouping/policy.py": "2e916bf6e60a162162857f3199bf02c57dfd719516edfc23c9494d11bd0633a3",
+      "src/open_score/grouping/storage.py": "0d7027a9483410cf4299a646a62cbd08b193800c91789e22f25b9d21a541693e",
+      "src/open_score/grouping/training.py": "2ea46316b0b98765568bb293fa46832d3f5014fda1344fc3af4b8a36190d6bfd",
+      "src/open_score/nn.py": "0f8affad169076f5221cde688ad56b794db95a83771c4e5ccca79f3cba88fffc",
+      "src/open_score/overnight/__init__.py": "c56130831868336926b88ff9cda73d83d375ad1348ce967e91bf7890e2c97ec5",
+      "src/open_score/overnight/actions.py": "fc72bf74818b109c7740b706cda85cb9c843cee73550735a105fcaed0ad4a79d",
+      "src/open_score/overnight/cli.py": "3d8350a8b2d983b4658bb0e8d4d0410bb567a1d3bc00513765993c2aeb0da962",
+      "src/open_score/overnight/config.py": "fd38721f7b2c2f6d023fb3a1f8ef9b4dddc68c820c74ceed3cdfc93d644ea105",
+      "src/open_score/overnight/environment.py": "e6b6eb0c4c8b39fe795af1bac6598ff4b79e2e6ad11e2b1733593b433d02e14d",
+      "src/open_score/overnight/evaluation.py": "3b6d06ce5f9c05875232b352c76818b4194cbd0483c3bd8c174fd6bf29d14b2a",
+      "src/open_score/overnight/learning.py": "62b579ffd2a55dfce95bbe8db57a6c6496d8965e3956225b289f7dfb51509a71",
+      "src/open_score/overnight/policy.py": "cab99580136c3908ce1c57ec6250328fa49ff31d7747ce0b407eefb227f74019",
+      "src/open_score/overnight/reporting.py": "16b28a98dcaec805d784b7dd12ee4647313bea6e03a5a870bedaa849be39d78a",
+      "src/open_score/overnight/rewards.py": "e6056244903dcd819d0de80f949cfe9b0d27aacab4b3331c6c9c1fa0d03b67fa",
+      "src/open_score/overnight/training.py": "430fe27995d7af339c62134637f8553d2a9a38e1be2d572d5d8635c42b9843e4",
+      "src/open_score/research_v4/__init__.py": "51d9b350ed26859319c69e4404c4fb3650cdd24fb8f05029f8b4e1c227e7fef1",
+      "src/open_score/research_v4/actions.py": "253a4a9ad181bc1cb3b0d9d8931d5ab2aa2992e88d050967630cc73e0b52aed0",
+      "src/open_score/research_v4/cli.py": "de3ba2cb41b9be4adba7f200bb187a36066402786458ab94428f1cf7d8701d9e",
+      "src/open_score/research_v4/config.py": "7c9b070bc78d42ef79db8e14e4ead745d8f066dd08c60c4da97eafdb5811382c",
+      "src/open_score/research_v4/data.py": "53daf06229a7a4bb94142584626a994e04177c36a285c018eb62e2bd94f3965c",
+      "src/open_score/research_v4/diagnostics.py": "df6d428f4883b36db647b38b6f5d15b9e6214df592e0e030cde53c2c694ef69a",
+      "src/open_score/research_v4/environment.py": "5394e6cec6065e361235b3dd26ca059e5a1a82590c90ec660f17f2b9f8bb0375",
+      "src/open_score/research_v4/evaluation.py": "0c781187cbc1c4dd8c1e729adc70969ea40c1ee652912343528d0aa5a61b23ab",
+      "src/open_score/research_v4/learning.py": "5441ebb87e23892600aa96d41ba61070b627312ca77e1d27e62cd6e56855a5c2",
+      "src/open_score/research_v4/outcomes.py": "0719105bfaa017059af44fcc0b652650d49b9ce4d3b166643958caa2464ad840",
+      "src/open_score/research_v4/policies.py": "8af1fec174afb87a804969c64e9be31d99694b8257982257c1db572c5cf12174",
+      "src/open_score/research_v4/reporting.py": "b94e62084690bb479865f8ee537063c7d5797eb78221753c019c631c6de4b075",
+      "src/open_score/research_v4/runner.py": "1fb2afda399ee5b32051d6f0ef6c47bd454dd5b61c7cd4c84c968d2cba76c8ea",
+      "src/open_score/research_v4/training.py": "48906fc49e3201cd7f76115f21264349ae0bb3376825df2f4a7a1e0bc6d74276",
+      "src/open_score/research_v5/__init__.py": "8e160c216cca87fb63096866094e4d6081f86744b2a972123cf5a09a14d97630",
+      "src/open_score/research_v5/archive.py": "47c836b5331d2132e15b77eb269e2d7ebcacf1385ffa9c41a4bf19c80439b8d9",
+      "src/open_score/research_v5/calibration.py": "c820d9e863c73a77d112f0e204e08a8d57dcafc3597ec6b47738ef1c8b8f98cd",
+      "src/open_score/research_v5/diagnostics.py": "20cf9fd3f80fbfbdadd8482d090369a53bc15d9dfbfd8f347b68683954cea959",
+      "src/open_score/research_v5/evaluate.py": "a1d92e52f839e1604e73d8aa8c75914067e728804f1a052b8226614d1e60c277",
+      "src/open_score/research_v5/latency.py": "1db9c09e185355ea8bff1577ebe79355934603278d41f8e4e062617fcfd763d6",
+      "src/open_score/research_v5/neural.py": "95b862d5e02c9a2332e972e8d7989b62ee152de65f88b3fbe374520db19f28b7",
+      "src/open_score/research_v5/orchestrate.py": "9f8b694e30d566788a44028dac6ecebf22f16e3d5a941b8453d7ff34cf5dbb4b",
+      "src/open_score/research_v5/paired.py": "6eeb2b9437ae028030656dccc4ba2e3f15da53ff040e0e2c68e6393d158d6a8f",
+      "src/open_score/research_v5/planning.py": "24ab6e6a0bf2256d388f6c53305b730616b3cc7a43e725a8d36c349547c21819",
+      "src/open_score/research_v5/protocol.py": "963a39039dbfef6a06faf42765e2127893ccaadd6caac8cea83bf78f8a82c2b1",
+      "src/open_score/research_v5/references.py": "0afc34594221febe4bb815388a2c172e0ab4a3193fb1d5e54bb50c779876f7dc",
+      "src/open_score/research_v5/reporting.py": "94fc920530aff0813e48155a27521dc5031c2f9516694618b78fde39fe9c934c",
+      "src/open_score/research_v5/runtime.py": "c3e1596452a2a1409251428920ec61fcdeab54d8328ed7b172bd72a1cf16892b",
+      "src/open_score/research_v5/simulator.py": "d8624cd717eae5b8f9cad33c2936e509cc0ba6fa6636bd21e97492d43d58b18b",
+      "src/open_score/research_v5/tasks/__init__.py": "c82c3c88e1aeeef15dc484a567f7ce879c85956d4614d252bfaa5b49526ccbc0",
+      "src/open_score/research_v5/tasks/t1_rollout.py": "b21008960b59dde97dfbca38226a34eac0fa6fc4b47c5d63bb396be3a2c584f3",
+      "src/open_score/research_v5/tasks/t2_mcts.py": "9b9f9487e247522746870944424bf7f8b285e23c373827861ac0357e7e9d2413",
+      "src/open_score/research_v5/tasks/t3_ppo.py": "217a5351257d039a2d90ee78dfecbd50665b331d616fa4cc25937e1cedbef691",
+      "src/open_score/research_v5/tasks/t4_exit.py": "7ce0a109ae8f39f656f1bd46d789e9b32f3d2f46d96b594c2ad33491eb2839c6",
+      "src/open_score/research_v5/tasks/t5_bridge_grouping.py": "14b58710ddeb76674725f654d8f8b5e8c8277388b9e62fe75dedba18b88addfe",
+      "src/open_score/research_v5/tasks/t6_paired_value.py": "c968783a5c1b135c0a2e81b919ea010781b6ba474b6ddccb4e8aacbe49341c62",
+      "src/open_score/stage1/__init__.py": "3a4fce1e08582d553b153025697733f819eb07d0725480ec4fcc1f42be4d4114",
+      "src/open_score/stage1/entity_qmix.py": "6c4f188a10f0cb396cb67566898741d48d169bec2ebdbef8585de8ab89319772",
+      "src/open_score/stage2/__init__.py": "1493ef9b543570b8f8e251ab821fac0dd5b6216b99cde121851f717fd0ab3b86",
+      "src/open_score/stage2/canonical.py": "a87590e5c08ef42b9da3887ef84eda3787f0e6a400726cdd7f469ac1aff758b9",
+      "src/open_score/stage2/outcome_model.py": "fa4883eb6453841ca37189f0ce1b5ef6c8ae7bc440c6b2e66215c9fc06932b59"
+    }
+  },
+  "source_after": {
+    "git_commit": "dc6445e4ce0917cb918bfe88401c376b8e8cec5f",
+    "source_hash": "3642d4a42927f9249fbb9bac0d3894405e4344934f4f705ad5bcc50d9eede1ac",
+    "source_files": {
+      "configs/research_v5/smoke.yaml": "7b00ebfb98e8812b449b0d6f47c9ee10d1c3bcf9a54d9a954ff9fd3a48f6de14",
+      "configs/research_v5/standard.yaml": "94d55bb4285ec420bf8a3ed7217373febc6aed2e33722b9306a49581fa416739",
+      "scripts/benchmark_training_devices.py": "47b25bdc73e4a9fad01db9a1026da12d99cf6a9609d4d94b888b9d29b5b94ad7",
+      "scripts/plot_core_results.py": "2508fc1004344c2064c15c35409ef0b1fff699ac2fb79f47c67a6d364b07930a",
+      "scripts/repair_windows_checkpoint_run.py": "d99d87f79fb24e9aebe130be62547e1fcf04db5f0b687992f3cef261678502c0",
+      "scripts/run_main_algorithm.ps1": "11c2aaad7a49a185fb29c8e033c2234d780a66c96c9efdab7590314cb067bd17",
+      "scripts/run_overnight_portfolio.py": "2756c4068d46b6c46bbcacbdefca99dd4d88e193ed27257801b8cfd3af42f489",
+      "scripts/run_parallel_comparison.py": "6cc0c06fe922391157e48f0a30ca2902c19b12018d0b94f63a0e18b507ca28f6",
+      "scripts/run_research_comparison.py": "89d883dd1c524aeae72c11243034a1951cc49e7bc52f29237293772a6844e03f",
+      "scripts/run_research_v5.py": "e8a62ecdbe54b433f07ac1d2017e8107d9bbcdcd79760a093486fa964fb882aa",
+      "src/HAD_Env/__init__.py": "fd2d5816e3dd9b6cc7dc79d6e2221d98e1b2f911e1878233c7adc0f5c10f13c8",
+      "src/HAD_Env/agents/__init__.py": "77171c4ae77009f9c73f2cce214a6f056cc73ba17ee880db136491732e1a487d",
+      "src/HAD_Env/agents/attack.py": "8022d9d8d3610cadd42c3b0c685e7aeb455a15f7b15816b4d9adbc7d94d8b981",
+      "src/HAD_Env/agents/base.py": "a8d3b421b74302a10b69c305e241540b35b03e19201f6cec531850379a065aca",
+      "src/HAD_Env/agents/disturb.py": "3838b5c5ce261bb2cfd7ae335f76c2f8c60ad0bcf1753b9767e46cb5f8961df3",
+      "src/HAD_Env/agents/scout.py": "79d215a7718e6a8e79f59ef01cdc9569d8e7124cf8c883042cbef86c94bef077",
+      "src/HAD_Env/config.py": "94ac1ba14a5515b2c161da616c5d7095441d5a0767efae47eaa6331529408002",
+      "src/HAD_Env/env/__init__.py": "e96739322f5560a3e3cedffa5426e2dfab05168c3e0526732f3802b850c83adc",
+      "src/HAD_Env/env/env.py": "80e6add532aae92207c66c889aea66d9dd85997e950bc047742b9a0404ce0a86",
+      "src/HAD_Env/env/world.py": "f757851e61b8dbeadf0ebd4c55fa4c4cedcb2497a40cc0c97562ef3a76e11b01",
+      "src/HAD_Env/function/__init__.py": "09733558d4bce38636cce3365dc765806b45252ede94e48f6b9cffb9a7be7958",
+      "src/HAD_Env/function/Function.py": "fbf84d34bed1fcc0e6ee6d64ba63ffcd6a7575ac1d0648937a13782538055a3b",
+      "src/HAD_Env/make_env.py": "fe0ce653260aee81210bb0b3877d4fb1abb98410088170c5254ef010fa6a081b",
+      "src/HAD_Env/render/__init__.py": "98f8dd3c8a8623a6ee7b52df7c75bb813ac941930d4d9e80bc401fec8e075fa3",
+      "src/HAD_Env/render/render.py": "19d2e8e62f53209e42bc5724301973837a2af7cddfa9c09ad0756cba4d83a205",
+      "src/open_score/__init__.py": "a16c0b27cc5fb546a981cd937b93b9f5f8490117c8699c03d062f60d7dde8a84",
+      "src/open_score/__main__.py": "c7617442eb9339f26629c47cd97087076a0d857dc6e0be5d56fbac2f335d6e39",
+      "src/open_score/contracts.py": "4dd74782551a4ab7331b9e0372be13b27ebcda147012944ce2433f55db1a2202",
+      "src/open_score/envs/__init__.py": "7ec63122eb67a46838546972e8e8ed1feb67edb5c2aaceb26c73db8bd61965c5",
+      "src/open_score/envs/had_stage1.py": "9e3c719a9c3f6dffe879d993101d4e2005c59b7049fca2fa96cee244ed85b00f",
+      "src/open_score/envs/had_stage3.py": "9afe106ffee464842ad33b32855620b679549f9b3068c723b228d6c74ded3042",
+      "src/open_score/grouping/__init__.py": "4f01d85783ce9f3f686dc718efac0419ed5a3a64b3186a19ac956fdafdaa7e5c",
+      "src/open_score/grouping/baselines.py": "dc761a2ededf8d161fa4ea54f8fb244d974972db003e0f3863cb8c194af6d91e",
+      "src/open_score/grouping/cli.py": "8548fc16c1b4b7ca8ea419c5fd895d96a96ec6be4e98cffd3eb728fb26a2b800",
+      "src/open_score/grouping/diagnostics.py": "a1b277dfe58f656cbf3ae2dec5162d3e6c7c4007ce129751ed35aaed78675f3f",
+      "src/open_score/grouping/domain.py": "a511060340c8b3717f56e419cb2b32270a56bdd06e99a66b4c215c6e33814a2a",
+      "src/open_score/grouping/environment.py": "f40cb243a27ec4c367c7647d6ce6f3f5515bfa83dfeacb1d2c5666dcea0091ea",
+      "src/open_score/grouping/evaluation.py": "bada698763cf2b986f3b2ac7b46bb10a167582ed78887903406b9a797aba19e9",
+      "src/open_score/grouping/frozen.py": "5c5867e7033d0935b2f15b44318f2833a02420263e5173b39c56acf7955c6694",
+      "src/open_score/grouping/opponents.py": "ecb0bac8e4f1419d11a6a6eca0d457409452ac84907ecdcd9d3d0ebc9a47c682",
+      "src/open_score/grouping/policy.py": "2e916bf6e60a162162857f3199bf02c57dfd719516edfc23c9494d11bd0633a3",
+      "src/open_score/grouping/storage.py": "0d7027a9483410cf4299a646a62cbd08b193800c91789e22f25b9d21a541693e",
+      "src/open_score/grouping/training.py": "2ea46316b0b98765568bb293fa46832d3f5014fda1344fc3af4b8a36190d6bfd",
+      "src/open_score/nn.py": "0f8affad169076f5221cde688ad56b794db95a83771c4e5ccca79f3cba88fffc",
+      "src/open_score/overnight/__init__.py": "c56130831868336926b88ff9cda73d83d375ad1348ce967e91bf7890e2c97ec5",
+      "src/open_score/overnight/actions.py": "fc72bf74818b109c7740b706cda85cb9c843cee73550735a105fcaed0ad4a79d",
+      "src/open_score/overnight/cli.py": "3d8350a8b2d983b4658bb0e8d4d0410bb567a1d3bc00513765993c2aeb0da962",
+      "src/open_score/overnight/config.py": "fd38721f7b2c2f6d023fb3a1f8ef9b4dddc68c820c74ceed3cdfc93d644ea105",
+      "src/open_score/overnight/environment.py": "e6b6eb0c4c8b39fe795af1bac6598ff4b79e2e6ad11e2b1733593b433d02e14d",
+      "src/open_score/overnight/evaluation.py": "3b6d06ce5f9c05875232b352c76818b4194cbd0483c3bd8c174fd6bf29d14b2a",
+      "src/open_score/overnight/learning.py": "62b579ffd2a55dfce95bbe8db57a6c6496d8965e3956225b289f7dfb51509a71",
+      "src/open_score/overnight/policy.py": "cab99580136c3908ce1c57ec6250328fa49ff31d7747ce0b407eefb227f74019",
+      "src/open_score/overnight/reporting.py": "16b28a98dcaec805d784b7dd12ee4647313bea6e03a5a870bedaa849be39d78a",
+      "src/open_score/overnight/rewards.py": "e6056244903dcd819d0de80f949cfe9b0d27aacab4b3331c6c9c1fa0d03b67fa",
+      "src/open_score/overnight/training.py": "430fe27995d7af339c62134637f8553d2a9a38e1be2d572d5d8635c42b9843e4",
+      "src/open_score/research_v4/__init__.py": "51d9b350ed26859319c69e4404c4fb3650cdd24fb8f05029f8b4e1c227e7fef1",
+      "src/open_score/research_v4/actions.py": "253a4a9ad181bc1cb3b0d9d8931d5ab2aa2992e88d050967630cc73e0b52aed0",
+      "src/open_score/research_v4/cli.py": "de3ba2cb41b9be4adba7f200bb187a36066402786458ab94428f1cf7d8701d9e",
+      "src/open_score/research_v4/config.py": "7c9b070bc78d42ef79db8e14e4ead745d8f066dd08c60c4da97eafdb5811382c",
+      "src/open_score/research_v4/data.py": "53daf06229a7a4bb94142584626a994e04177c36a285c018eb62e2bd94f3965c",
+      "src/open_score/research_v4/diagnostics.py": "df6d428f4883b36db647b38b6f5d15b9e6214df592e0e030cde53c2c694ef69a",
+      "src/open_score/research_v4/environment.py": "5394e6cec6065e361235b3dd26ca059e5a1a82590c90ec660f17f2b9f8bb0375",
+      "src/open_score/research_v4/evaluation.py": "0c781187cbc1c4dd8c1e729adc70969ea40c1ee652912343528d0aa5a61b23ab",
+      "src/open_score/research_v4/learning.py": "5441ebb87e23892600aa96d41ba61070b627312ca77e1d27e62cd6e56855a5c2",
+      "src/open_score/research_v4/outcomes.py": "0719105bfaa017059af44fcc0b652650d49b9ce4d3b166643958caa2464ad840",
+      "src/open_score/research_v4/policies.py": "8af1fec174afb87a804969c64e9be31d99694b8257982257c1db572c5cf12174",
+      "src/open_score/research_v4/reporting.py": "b94e62084690bb479865f8ee537063c7d5797eb78221753c019c631c6de4b075",
+      "src/open_score/research_v4/runner.py": "1fb2afda399ee5b32051d6f0ef6c47bd454dd5b61c7cd4c84c968d2cba76c8ea",
+      "src/open_score/research_v4/training.py": "48906fc49e3201cd7f76115f21264349ae0bb3376825df2f4a7a1e0bc6d74276",
+      "src/open_score/research_v5/__init__.py": "8e160c216cca87fb63096866094e4d6081f86744b2a972123cf5a09a14d97630",
+      "src/open_score/research_v5/archive.py": "47c836b5331d2132e15b77eb269e2d7ebcacf1385ffa9c41a4bf19c80439b8d9",
+      "src/open_score/research_v5/calibration.py": "c820d9e863c73a77d112f0e204e08a8d57dcafc3597ec6b47738ef1c8b8f98cd",
+      "src/open_score/research_v5/diagnostics.py": "20cf9fd3f80fbfbdadd8482d090369a53bc15d9dfbfd8f347b68683954cea959",
+      "src/open_score/research_v5/evaluate.py": "a1d92e52f839e1604e73d8aa8c75914067e728804f1a052b8226614d1e60c277",
+      "src/open_score/research_v5/latency.py": "1db9c09e185355ea8bff1577ebe79355934603278d41f8e4e062617fcfd763d6",
+      "src/open_score/research_v5/neural.py": "2c084e8d264511feac632bc1bb20ffe7ed98aa407f7f348ded13c2ea947bac5f",
+      "src/open_score/research_v5/orchestrate.py": "9f8b694e30d566788a44028dac6ecebf22f16e3d5a941b8453d7ff34cf5dbb4b",
+      "src/open_score/research_v5/paired.py": "6eeb2b9437ae028030656dccc4ba2e3f15da53ff040e0e2c68e6393d158d6a8f",
+      "src/open_score/research_v5/planning.py": "24ab6e6a0bf2256d388f6c53305b730616b3cc7a43e725a8d36c349547c21819",
+      "src/open_score/research_v5/protocol.py": "963a39039dbfef6a06faf42765e2127893ccaadd6caac8cea83bf78f8a82c2b1",
+      "src/open_score/research_v5/references.py": "0afc34594221febe4bb815388a2c172e0ab4a3193fb1d5e54bb50c779876f7dc",
+      "src/open_score/research_v5/reporting.py": "94fc920530aff0813e48155a27521dc5031c2f9516694618b78fde39fe9c934c",
+      "src/open_score/research_v5/runtime.py": "c3e1596452a2a1409251428920ec61fcdeab54d8328ed7b172bd72a1cf16892b",
+      "src/open_score/research_v5/simulator.py": "d8624cd717eae5b8f9cad33c2936e509cc0ba6fa6636bd21e97492d43d58b18b",
+      "src/open_score/research_v5/tasks/__init__.py": "c82c3c88e1aeeef15dc484a567f7ce879c85956d4614d252bfaa5b49526ccbc0",
+      "src/open_score/research_v5/tasks/t1_rollout.py": "b21008960b59dde97dfbca38226a34eac0fa6fc4b47c5d63bb396be3a2c584f3",
+      "src/open_score/research_v5/tasks/t2_mcts.py": "9b9f9487e247522746870944424bf7f8b285e23c373827861ac0357e7e9d2413",
+      "src/open_score/research_v5/tasks/t3_ppo.py": "439cef1a88f3242b10aeb95e5f3a9b7265f65997adfc89214f7ac3a89552461c",
+      "src/open_score/research_v5/tasks/t4_exit.py": "7ce0a109ae8f39f656f1bd46d789e9b32f3d2f46d96b594c2ad33491eb2839c6",
+      "src/open_score/research_v5/tasks/t5_bridge_grouping.py": "14b58710ddeb76674725f654d8f8b5e8c8277388b9e62fe75dedba18b88addfe",
+      "src/open_score/research_v5/tasks/t6_paired_value.py": "c968783a5c1b135c0a2e81b919ea010781b6ba474b6ddccb4e8aacbe49341c62",
+      "src/open_score/stage1/__init__.py": "3a4fce1e08582d553b153025697733f819eb07d0725480ec4fcc1f42be4d4114",
+      "src/open_score/stage1/entity_qmix.py": "6c4f188a10f0cb396cb67566898741d48d169bec2ebdbef8585de8ab89319772",
+      "src/open_score/stage2/__init__.py": "1493ef9b543570b8f8e251ab821fac0dd5b6216b99cde121851f717fd0ab3b86",
+      "src/open_score/stage2/canonical.py": "a87590e5c08ef42b9da3887ef84eda3787f0e6a400726cdd7f469ac1aff758b9",
+      "src/open_score/stage2/outcome_model.py": "fa4883eb6453841ca37189f0ce1b5ef6c8ae7bc440c6b2e66215c9fc06932b59"
+    }
+  },
+  "phase_totals": {
+    "T1": {
+      "plan_decision": {
+        "samples": 2,
+        "wall_seconds": 96.79602300003171,
+        "worker_seconds": 185.87587309908122,
+        "units": 18.0,
+        "decisions": 18.0,
+        "simulation_physical_steps": 16593.0,
+        "terminal_branches": 1152.0
+      },
+      "rule_collection": {
+        "samples": 2,
+        "wall_seconds": 6.257807500194758,
+        "units": 18.0,
+        "episodes": 18.0,
+        "real_physical_steps": 471.0,
+        "parallel_episode_pool": false
+      },
+      "evaluation_main": {
+        "samples": 2,
+        "wall_seconds": 1077.7438996001147,
+        "units": 24.0,
+        "episodes": 24.0,
+        "real_physical_steps": 545.0,
+        "simulation_physical_steps": 215804.0,
+        "command_events": 243.0,
+        "worker_decision_seconds": 3052.8137165023945,
+        "worker_quota": 8.0,
+        "parallel_episode_pool": true
+      },
+      "evaluation_rule": {
+        "samples": 2,
+        "wall_seconds": 6.596710300073028,
+        "units": 24.0,
+        "episodes": 24.0,
+        "real_physical_steps": 572.0,
+        "simulation_physical_steps": 0.0,
+        "command_events": 259.0,
+        "worker_decision_seconds": 0.24096550210379064,
+        "worker_quota": 8.0,
+        "parallel_episode_pool": true
+      },
+      "evaluation_grand": {
+        "samples": 2,
+        "wall_seconds": 6.442452699877322,
+        "units": 24.0,
+        "episodes": 24.0,
+        "real_physical_steps": 515.0,
+        "simulation_physical_steps": 0.0,
+        "command_events": 246.0,
+        "worker_decision_seconds": 0.18736119871027768,
+        "worker_quota": 8.0,
+        "parallel_episode_pool": true
+      },
+      "evaluation_singleton": {
+        "samples": 2,
+        "wall_seconds": 7.20841610012576,
+        "units": 24.0,
+        "episodes": 24.0,
+        "real_physical_steps": 620.0,
+        "simulation_physical_steps": 0.0,
+        "command_events": 279.0,
+        "worker_decision_seconds": 0.33837060281075537,
+        "worker_quota": 8.0,
+        "parallel_episode_pool": true
+      },
+      "evaluation_frozen_b1": {
+        "samples": 2,
+        "wall_seconds": 15.77718809992075,
+        "units": 24.0,
+        "episodes": 24.0,
+        "real_physical_steps": 561.0,
+        "simulation_physical_steps": 0.0,
+        "command_events": 265.0,
+        "worker_decision_seconds": 28.14859070139937,
+        "worker_quota": 8.0,
+        "parallel_episode_pool": true
+      },
+      "evaluation_frozen_b3": {
+        "samples": 2,
+        "wall_seconds": 18.66365319979377,
+        "units": 24.0,
+        "episodes": 24.0,
+        "real_physical_steps": 596.0,
+        "simulation_physical_steps": 0.0,
+        "command_events": 206.0,
+        "worker_decision_seconds": 11.34370560082607,
+        "worker_quota": 8.0,
+        "parallel_episode_pool": true
+      }
+    },
+    "T2": {
+      "plan_decision": {
+        "samples": 2,
+        "wall_seconds": 137.0816999997478,
+        "worker_seconds": 246.8416745008435,
+        "units": 18.0,
+        "decisions": 18.0,
+        "simulation_physical_steps": 16335.0,
+        "terminal_branches": 768.0
+      },
+      "rule_collection": {
+        "samples": 2,
+        "wall_seconds": 7.360679400153458,
+        "units": 18.0,
+        "episodes": 18.0,
+        "real_physical_steps": 453.0,
+        "parallel_episode_pool": false
+      },
+      "evaluation_main": {
+        "samples": 2,
+        "wall_seconds": 1176.9947424002457,
+        "units": 24.0,
+        "episodes": 24.0,
+        "real_physical_steps": 510.0,
+        "simulation_physical_steps": 196711.0,
+        "command_events": 246.0,
+        "worker_decision_seconds": 3443.71813619975,
+        "worker_quota": 8.0,
+        "parallel_episode_pool": true
+      }
+    },
+    "T3": {
+      "candidate_sampling": {
+        "samples": 26,
+        "wall_seconds": 190.95399999897927,
+        "units": 7618.0,
+        "real_physical_steps": 7618.0,
+        "events": 3328.0
+      },
+      "candidate_update": {
+        "samples": 26,
+        "wall_seconds": 260.75199999986216,
+        "units": 3328.0,
+        "optimizer_steps": 0.0,
+        "examples": 3328.0
+      },
+      "autoregressive_sampling": {
+        "samples": 26,
+        "wall_seconds": 171.27800000016578,
+        "units": 7358.0,
+        "real_physical_steps": 7358.0,
+        "events": 3328.0
+      },
+      "autoregressive_update": {
+        "samples": 26,
+        "wall_seconds": 29.299999999813735,
+        "units": 3328.0,
+        "optimizer_steps": 0.0,
+        "examples": 3328.0
+      },
+      "evaluation_candidate": {
+        "samples": 26,
+        "wall_seconds": 138.3586614993401,
+        "units": 156.0,
+        "episodes": 156.0,
+        "real_physical_steps": 3662.0,
+        "simulation_physical_steps": 0.0,
+        "command_events": 1769.0,
+        "worker_decision_seconds": 35.629662500927225,
+        "worker_quota": 52.0,
+        "parallel_episode_pool": true
+      },
+      "evaluation_autoregressive": {
+        "samples": 26,
+        "wall_seconds": 133.2370138000697,
+        "units": 156.0,
+        "episodes": 156.0,
+        "real_physical_steps": 4104.0,
+        "simulation_physical_steps": 0.0,
+        "command_events": 1885.0,
+        "worker_decision_seconds": 20.18460510089062,
+        "worker_quota": 52.0,
+        "parallel_episode_pool": true
+      }
+    },
+    "T4": {
+      "teacher_label": {
+        "samples": 9,
+        "wall_seconds": 910.484999999404,
+        "units": 27.0,
+        "states": 27.0,
+        "simulation_physical_steps": 43083.0,
+        "branches": 1728.0
+      },
+      "distill_update": {
+        "samples": 9,
+        "wall_seconds": 16.156999999890104,
+        "units": 144.0,
+        "examples": 144.0,
+        "optimizer_steps": 9.0
+      },
+      "evaluation_candidate": {
+        "samples": 9,
+        "wall_seconds": 56.848563299747184,
+        "units": 81.0,
+        "episodes": 81.0,
+        "real_physical_steps": 1977.0,
+        "simulation_physical_steps": 0.0,
+        "command_events": 900.0,
+        "worker_decision_seconds": 9.452217903686687,
+        "worker_quota": 27.0,
+        "parallel_episode_pool": true
+      }
+    },
+    "T5": {
+      "state_collection": {
+        "samples": 94,
+        "wall_s": 128.5929999994114,
+        "simulation_physical_steps": 3504.0,
+        "states": 282.0,
+        "units": 282.0,
+        "optimizer_steps": 0.0,
+        "wall_seconds": 128.5929999994114
+      },
+      "potential_simulation": {
+        "samples": 94,
+        "wall_s": 465.87599999969825,
+        "simulation_physical_steps": 67834.0,
+        "candidate_rows": 1272.0,
+        "states": 282.0,
+        "units": 1272.0,
+        "optimizer_steps": 0.0,
+        "construction_episodes": 282.0,
+        "internal_transitions": 1216.0,
+        "mean_internal_transitions": 405.3333333333333,
+        "mean_unique_potentials": 424.0,
+        "mean_merges": 329.99999999999994,
+        "wall_seconds": 465.87599999969825
+      },
+      "model_setup": {
+        "samples": 94,
+        "wall_s": 1.85799999977462,
+        "units": 94.0,
+        "parameters": 78376542.0,
+        "optimizer_steps": 0.0,
+        "wall_seconds": 1.85799999977462
+      },
+      "optimization": {
+        "samples": 94,
+        "wall_s": 134.28200000082143,
+        "optimizer_steps": 188.0,
+        "batches": 188.0,
+        "batch_size": 12032.0,
+        "units": 188.0,
+        "simulation_physical_steps": 0.0,
+        "wall_seconds": 134.28200000082143
+      },
+      "evaluation": {
+        "samples": 94,
+        "wall_s": 181.85400000214577,
+        "episodes": 282.0,
+        "units": 282.0,
+        "real_physical_steps": 7024.0,
+        "command_events": 3210.0,
+        "optimizer_steps": 0.0,
+        "wall_seconds": 181.85400000214577
+      }
+    },
+    "T6": {
+      "state_collection": {
+        "samples": 23,
+        "wall_s": 30.95299999974668,
+        "simulation_physical_steps": 857.0,
+        "states": 69.0,
+        "units": 69.0,
+        "optimizer_steps": 0.0,
+        "wall_seconds": 30.95299999974668
+      },
+      "label_collection": {
+        "samples": 23,
+        "wall_s": 753.719000000041,
+        "simulation_physical_steps": 115953.0,
+        "candidate_rows": 547.0,
+        "states": 69.0,
+        "units": 69.0,
+        "optimizer_steps": 0.0,
+        "wall_seconds": 753.719000000041
+      },
+      "train_bce": {
+        "samples": 23,
+        "wall_s": 22.53400000021793,
+        "optimizer_steps": 23.0,
+        "batches": 23.0,
+        "batch_size": 368.0,
+        "states": 368.0,
+        "units": 23.0,
+        "simulation_physical_steps": 0.0,
+        "parameters": 15288238.0,
+        "wall_seconds": 22.53400000021793
+      },
+      "train_adv": {
+        "samples": 23,
+        "wall_s": 4.575999999884516,
+        "optimizer_steps": 23.0,
+        "batches": 23.0,
+        "batch_size": 368.0,
+        "states": 368.0,
+        "units": 23.0,
+        "simulation_physical_steps": 0.0,
+        "parameters": 15288238.0,
+        "wall_seconds": 4.575999999884516
+      },
+      "evaluation": {
+        "samples": 23,
+        "wall_s": 114.96899999980815,
+        "episodes": 69.0,
+        "units": 69.0,
+        "real_physical_steps": 1678.0,
+        "command_events": 772.0,
+        "optimizer_steps": 0.0,
+        "search_budget": 1472.0,
+        "wall_seconds": 114.96899999980815
+      }
+    }
+  },
+  "gpu_wait_seconds_by_task": {
+    "T1": 0.0,
+    "T2": 0.0,
+    "T3": 0.0779999999795109,
+    "T4": 12.718999999808148,
+    "T5": 117.79799999995157,
+    "T6": 17.390999999828637
+  },
+  "estimates": [
+    {
+      "multiplier": 0.5,
+      "complete": true,
+      "missing_measurements": [],
+      "task_seconds": {
+        "T1": 91584.94680859856,
+        "T2": 97878.51748986887,
+        "T3": 203873.44416162846,
+        "T4": 53737.25496999104,
+        "T5": 24055.559003732527,
+        "T6": 47400.955248166174
+      },
+      "components": {
+        "T1": {
+          "online_test": {
+            "units": 1500.0,
+            "seconds_per_unit": 44.90599581667144,
+            "estimated_seconds": 67358.99372500717
+          },
+          "baseline_rule": {
+            "units": 1500.0,
+            "seconds_per_unit": 0.2748629291697095,
+            "estimated_seconds": 412.2943937545642
+          },
+          "baseline_grand": {
+            "units": 1500.0,
+            "seconds_per_unit": 0.26843552916155505,
+            "estimated_seconds": 402.6532937423326
+          },
+          "baseline_singleton": {
+            "units": 1500.0,
+            "seconds_per_unit": 0.3003506708385733,
+            "estimated_seconds": 450.52600625786
+          },
+          "baseline_frozen_b1": {
+            "units": 1500.0,
+            "seconds_per_unit": 0.6573828374966979,
+            "estimated_seconds": 986.0742562450469
+          },
+          "baseline_frozen_b3": {
+            "units": 1500.0,
+            "seconds_per_unit": 0.7776522166580738,
+            "estimated_seconds": 1166.4783249871107
+          },
+          "common_selection_verification": {
+            "units": 69120.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 11152.552385944873
+          },
+          "common_online_choices": {
+            "units": 120.0,
+            "seconds_per_unit": 10.326437394393402,
+            "estimated_seconds": 1239.1724873272083
+          },
+          "own_rollout_collection": {
+            "units": 30.0,
+            "seconds_per_unit": 179.62398326668577,
+            "estimated_seconds": 5388.719498000573
+          },
+          "own_verification": {
+            "units": 1920.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 309.79312183180207
+          },
+          "continuous_control": {
+            "units": 60.0,
+            "seconds_per_unit": 44.90599581667144,
+            "estimated_seconds": 2694.3597490002867
+          },
+          "frozen_control": {
+            "units": 30.0,
+            "seconds_per_unit": 0.7776522166580738,
+            "estimated_seconds": 23.329566499742214
+          }
+        },
+        "T2": {
+          "online_test": {
+            "units": 1500.0,
+            "seconds_per_unit": 49.04144760001024,
+            "estimated_seconds": 73562.17140001536
+          },
+          "budget_curve_searches": {
+            "units": 960.0,
+            "seconds_per_unit": 13.713426361157973,
+            "estimated_seconds": 13164.889306711653
+          },
+          "budget_verification": {
+            "units": 30720.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 4956.689949308833
+          },
+          "own_collection": {
+            "units": 30.0,
+            "seconds_per_unit": 196.16579040004095,
+            "estimated_seconds": 5884.973712001229
+          },
+          "own_verification": {
+            "units": 1920.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 309.79312183180207
+          }
+        },
+        "T3": {
+          "candidate_real_sampling": {
+            "units": 500000.0,
+            "seconds_per_unit": 0.02506615909674183,
+            "estimated_seconds": 12533.079548370915
+          },
+          "candidate_ppo_updates": {
+            "units": 873720.1365187713,
+            "seconds_per_unit": 0.07835096153842012,
+            "estimated_seconds": 68456.81281172542
+          },
+          "candidate_bc": {
+            "units": 16810.0,
+            "seconds_per_unit": 0.07835096153842012,
+            "estimated_seconds": 1317.0796634608423
+          },
+          "candidate_test_validation": {
+            "units": 2400.0,
+            "seconds_per_unit": 0.8869144967906416,
+            "estimated_seconds": 2128.5947922975397
+          },
+          "candidate_diagnostics": {
+            "units": 302400.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 48792.41668850883
+          },
+          "candidate_own_collection": {
+            "units": 30.0,
+            "seconds_per_unit": 0.8869144967906416,
+            "estimated_seconds": 26.60743490371925
+          },
+          "autoregressive_real_sampling": {
+            "units": 500000.0,
+            "seconds_per_unit": 0.02327779287852212,
+            "estimated_seconds": 11638.896439261061
+          },
+          "autoregressive_ppo_updates": {
+            "units": 904593.6395759718,
+            "seconds_per_unit": 0.00880408653840557,
+            "estimated_seconds": 7964.120684918113
+          },
+          "autoregressive_bc": {
+            "units": 16810.0,
+            "seconds_per_unit": 0.00880408653840557,
+            "estimated_seconds": 147.9966947105976
+          },
+          "autoregressive_test_validation": {
+            "units": 2400.0,
+            "seconds_per_unit": 0.8540834217953185,
+            "estimated_seconds": 2049.8002123087645
+          },
+          "autoregressive_diagnostics": {
+            "units": 302400.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 48792.41668850883
+          },
+          "autoregressive_own_collection": {
+            "units": 30.0,
+            "seconds_per_unit": 0.8540834217953185,
+            "estimated_seconds": 25.622502653859556
+          }
+        },
+        "T4": {
+          "rule_first_teacher": {
+            "units": 9600.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 1548.9656091590102
+          },
+          "neural_teacher": {
+            "units": 450.0,
+            "seconds_per_unit": 33.72166666664459,
+            "estimated_seconds": 15174.749999990065
+          },
+          "state_collection": {
+            "units": 600.0,
+            "seconds_per_unit": 2.105502344435081,
+            "estimated_seconds": 1263.3014066610485
+          },
+          "distillation": {
+            "units": 28810.0,
+            "seconds_per_unit": 0.11220138888812572,
+            "estimated_seconds": 3232.522013866902
+          },
+          "student_test_validation": {
+            "units": 2220.0,
+            "seconds_per_unit": 0.7018341148116937,
+            "estimated_seconds": 1558.0717348819599
+          },
+          "teacher_online_validation": {
+            "units": 1360.7692307692307,
+            "seconds_per_unit": 11.240555555548196,
+            "estimated_seconds": 15295.802136742122
+          },
+          "teacher_verification": {
+            "units": 120.0,
+            "seconds_per_unit": 33.72166666664459,
+            "estimated_seconds": 4046.5999999973506
+          },
+          "final_diagnostics": {
+            "units": 72000.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 11617.242068692576
+          }
+        },
+        "T5": {
+          "state_collection": {
+            "units": 150.0,
+            "seconds_per_unit": 0.45600354609720356,
+            "estimated_seconds": 68.40053191458054
+          },
+          "potential_labels": {
+            "units": 8119.148936170212,
+            "seconds_per_unit": 0.36625471698089485,
+            "estimated_seconds": 2973.6765957427547
+          },
+          "td_updates": {
+            "units": 7634.702127659575,
+            "seconds_per_unit": 0.7142659574511778,
+            "estimated_seconds": 5453.207825067311
+          },
+          "online_test": {
+            "units": 1500.0,
+            "seconds_per_unit": 0.214957446811047,
+            "estimated_seconds": 322.43617021657053
+          },
+          "quarterly_validation": {
+            "units": 600.0,
+            "seconds_per_unit": 0.214957446811047,
+            "estimated_seconds": 128.9744680866282
+          },
+          "diagnostics": {
+            "units": 93600.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 15102.41468930035
+          },
+          "own_collection": {
+            "units": 30.0,
+            "seconds_per_unit": 0.214957446811047,
+            "estimated_seconds": 6.44872340433141
+          }
+        },
+        "T6": {
+          "state_collection": {
+            "units": 900.0,
+            "seconds_per_unit": 0.44859420289487945,
+            "estimated_seconds": 403.7347826053915
+          },
+          "label_collection": {
+            "units": 900.0,
+            "seconds_per_unit": 10.923463768116536,
+            "estimated_seconds": 9831.117391304882
+          },
+          "bce_train_validation": {
+            "units": 2280.0,
+            "seconds_per_unit": 0.9797391304442578,
+            "estimated_seconds": 2233.8052174129075
+          },
+          "adv_train_validation": {
+            "units": 2280.0,
+            "seconds_per_unit": 0.19895652173410938,
+            "estimated_seconds": 453.6208695537694
+          },
+          "online_tests_and_gate": {
+            "units": 5100.0,
+            "seconds_per_unit": 0.8331086956507837,
+            "estimated_seconds": 4248.854347818997
+          },
+          "diagnostics": {
+            "units": 187200.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 30204.8293786007
+          },
+          "own_collection": {
+            "units": 30.0,
+            "seconds_per_unit": 0.8331086956507837,
+            "estimated_seconds": 24.99326086952351
+          }
+        }
+      },
+      "prepared_seconds": 115.10899999993853,
+      "exclusive_latency_components": {
+        "T1_rollout": {
+          "states": 30,
+          "seconds_per_state": 10.326437394393402,
+          "estimated_seconds": 309.79312183180207
+        },
+        "T2_mcts": {
+          "states": 30,
+          "seconds_per_state": 13.713426361157973,
+          "estimated_seconds": 411.40279083473916
+        },
+        "rule": {
+          "states": 30,
+          "seconds_per_state": 0.10187969575402359,
+          "estimated_seconds": 3.0563908726207076
+        },
+        "grand": {
+          "states": 30,
+          "seconds_per_state": 0.10475532845328979,
+          "estimated_seconds": 3.1426598535986936
+        },
+        "singleton": {
+          "states": 30,
+          "seconds_per_state": 0.10334646738531555,
+          "estimated_seconds": 3.1003940215594668
+        },
+        "frozen_b1": {
+          "states": 30,
+          "seconds_per_state": 0.23814623547050187,
+          "estimated_seconds": 7.144387064115056
+        },
+        "frozen_b3": {
+          "states": 30,
+          "seconds_per_state": 0.3624010330057043,
+          "estimated_seconds": 10.87203099017113
+        },
+        "T3_candidate": {
+          "states": 30,
+          "seconds_per_state": 0.15642584680535906,
+          "estimated_seconds": 4.692775404160772
+        },
+        "T3_autoregressive": {
+          "states": 30,
+          "seconds_per_state": 0.14136553188336307,
+          "estimated_seconds": 4.240965956500892
+        },
+        "T4_exit": {
+          "states": 30,
+          "seconds_per_state": 0.18949521099915728,
+          "estimated_seconds": 5.684856329974719
+        },
+        "T5_bridge": {
+          "states": 30,
+          "seconds_per_state": 0.056652336449266594,
+          "estimated_seconds": 1.6995700934779978
+        },
+        "T6_bce": {
+          "states": 30,
+          "seconds_per_state": 0.14892357512928517,
+          "estimated_seconds": 4.467707253878555
+        },
+        "T6_adv": {
+          "states": 30,
+          "seconds_per_state": 0.14892357512928517,
+          "estimated_seconds": 4.467707253878555
+        },
+        "T6_adv_gated": {
+          "states": 30,
+          "seconds_per_state": 0.14892357512928517,
+          "estimated_seconds": 4.467707253878555
+        }
+      },
+      "exclusive_latency_seconds": 778.2330650143564,
+      "exclusive_latency_decisions": 420,
+      "raw_makespan_seconds": 204766.78622664275,
+      "estimated_total_seconds": 247036.08762623384,
+      "safety_factor": 1.2,
+      "expected_formal_test_executions": 21000,
+      "config": {
+        "version": "known-rule-mixed-v5.1",
+        "seed": 20260907,
+        "smoke": false,
+        "multiplier": 0.5,
+        "cells": [
+          [
+            8,
+            4
+          ],
+          [
+            8,
+            6
+          ],
+          [
+            8,
+            8
+          ],
+          [
+            12,
+            6
+          ],
+          [
+            12,
+            9
+          ],
+          [
+            12,
+            12
+          ],
+          [
+            16,
+            8
+          ],
+          [
+            16,
+            12
+          ],
+          [
+            16,
+            16
+          ],
+          [
+            24,
+            12
+          ],
+          [
+            24,
+            18
+          ],
+          [
+            24,
+            24
+          ],
+          [
+            32,
+            16
+          ],
+          [
+            32,
+            24
+          ],
+          [
+            32,
+            32
+          ]
+        ],
+        "opponent": "reactive",
+        "executor": "rule_group_v1",
+        "max_steps": 50,
+        "command_interval": 5,
+        "gamma": 1.0,
+        "device": "auto",
+        "threads": 1,
+        "cpu_quotas": {
+          "T1": 4,
+          "T2": 4,
+          "T3": 2,
+          "T4": 3,
+          "T5": 3,
+          "T6": 2
+        },
+        "model": {
+          "hidden_dim": 128,
+          "layers": 2,
+          "heads": 4
+        },
+        "eval_per_cell": 100,
+        "validation_per_cell": 10,
+        "bc_episodes": 300,
+        "bc_epochs": 5,
+        "diagnostic_states": 120,
+        "own_diagnostic_states": 30,
+        "selection_branches": 16,
+        "verification_branches": 32,
+        "latency_states": 30,
+        "teacher_validation_episodes": 30,
+        "t1": {
+          "candidates": 8,
+          "branches": 8,
+          "control_episodes": 30
+        },
+        "t2": {
+          "iterations": 64,
+          "depth": 3,
+          "k_action": 1.5,
+          "alpha_action": 0.5,
+          "k_state": 1.0,
+          "alpha_state": 0.5,
+          "exploration": 1.0
+        },
+        "t3": {
+          "steps": 500000,
+          "rollout": 1024,
+          "batch_size": 128,
+          "epochs": 4,
+          "learning_rate": 0.0003,
+          "gae_lambda": 0.95,
+          "clip": 0.2,
+          "max_gradient_norm": 0.5,
+          "target_kl": 0.03,
+          "entropy_start": 0.02,
+          "entropy_end": 0.005,
+          "candidates": 32,
+          "validation_fractions": [
+            0.0,
+            0.1,
+            0.25,
+            0.5,
+            0.75,
+            1.0
+          ]
+        },
+        "t4": {
+          "rounds": 4,
+          "states_per_round": 150,
+          "candidates": 8,
+          "branches": 8,
+          "epochs": 10,
+          "batch_size": 16,
+          "learning_rate": 0.0003
+        },
+        "t5": {
+          "states": 150,
+          "episodes": 1200,
+          "branches": 4,
+          "batch_size": 128,
+          "buffer_size": 10000,
+          "target_interval": 100,
+          "learning_rate": 0.0003,
+          "max_gradient_norm": 40.0,
+          "epsilon_steps": 10000,
+          "epsilon_end": 0.01
+        },
+        "t6": {
+          "train_states": 600,
+          "validation_states": 300,
+          "candidates": 8,
+          "branches": 16,
+          "epochs": 40,
+          "batch_size": 16,
+          "learning_rate": 0.0003,
+          "search_budget": 64,
+          "thresholds": [
+            0.0,
+            0.005,
+            0.01,
+            0.02
+          ]
+        },
+        "calibration": {
+          "report": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_parallel\\v5_20260907_main\\calibration_report.json",
+          "usable": false,
+          "selected_multiplier": 0.5,
+          "estimated_total_seconds": null,
+          "source_hash": "1d049a6ee19fbeaf4ea87570639664f09e83fdf596cd8f77b717cc09d01b9857"
+        }
+      },
+      "assumptions": [
+        "All six workers were benchmarked concurrently; phase wall times include observed contention and GPU waiting.",
+        "Formal phases are summed within each task; tasks overlap, so makespan uses the slowest task.",
+        "Four T5 quarterly validation passes are included; all fourteen exclusive deployment latency probes run afterward and are added serially.",
+        "T5/T6 serial evaluation benchmarks scale by CPU quota; measured speedup is not guaranteed.",
+        "Diagnostic distinct-candidate upper bounds and no cross-episode T5 cache savings are conservative.",
+        "PPO update cost scales by consumed state examples; BC uses the same update cost as a conservative proxy.",
+        "T6 validation forward cost is bounded using measured full update cost.",
+        "A global 20% margin covers phase imbalance, checkpoint/logging overhead and episode-length variation.",
+        "This is a throughput estimate, not a convergence or performance guarantee."
+      ]
+    },
+    {
+      "multiplier": 1.0,
+      "complete": true,
+      "missing_measurements": [],
+      "task_seconds": {
+        "T1": 91584.94680859856,
+        "T2": 97878.51748986887,
+        "T3": 304466.353645904,
+        "T4": 73070.68865245867,
+        "T5": 32641.55573305347,
+        "T6": 55968.659595997
+      },
+      "components": {
+        "T1": {
+          "online_test": {
+            "units": 1500.0,
+            "seconds_per_unit": 44.90599581667144,
+            "estimated_seconds": 67358.99372500717
+          },
+          "baseline_rule": {
+            "units": 1500.0,
+            "seconds_per_unit": 0.2748629291697095,
+            "estimated_seconds": 412.2943937545642
+          },
+          "baseline_grand": {
+            "units": 1500.0,
+            "seconds_per_unit": 0.26843552916155505,
+            "estimated_seconds": 402.6532937423326
+          },
+          "baseline_singleton": {
+            "units": 1500.0,
+            "seconds_per_unit": 0.3003506708385733,
+            "estimated_seconds": 450.52600625786
+          },
+          "baseline_frozen_b1": {
+            "units": 1500.0,
+            "seconds_per_unit": 0.6573828374966979,
+            "estimated_seconds": 986.0742562450469
+          },
+          "baseline_frozen_b3": {
+            "units": 1500.0,
+            "seconds_per_unit": 0.7776522166580738,
+            "estimated_seconds": 1166.4783249871107
+          },
+          "common_selection_verification": {
+            "units": 69120.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 11152.552385944873
+          },
+          "common_online_choices": {
+            "units": 120.0,
+            "seconds_per_unit": 10.326437394393402,
+            "estimated_seconds": 1239.1724873272083
+          },
+          "own_rollout_collection": {
+            "units": 30.0,
+            "seconds_per_unit": 179.62398326668577,
+            "estimated_seconds": 5388.719498000573
+          },
+          "own_verification": {
+            "units": 1920.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 309.79312183180207
+          },
+          "continuous_control": {
+            "units": 60.0,
+            "seconds_per_unit": 44.90599581667144,
+            "estimated_seconds": 2694.3597490002867
+          },
+          "frozen_control": {
+            "units": 30.0,
+            "seconds_per_unit": 0.7776522166580738,
+            "estimated_seconds": 23.329566499742214
+          }
+        },
+        "T2": {
+          "online_test": {
+            "units": 1500.0,
+            "seconds_per_unit": 49.04144760001024,
+            "estimated_seconds": 73562.17140001536
+          },
+          "budget_curve_searches": {
+            "units": 960.0,
+            "seconds_per_unit": 13.713426361157973,
+            "estimated_seconds": 13164.889306711653
+          },
+          "budget_verification": {
+            "units": 30720.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 4956.689949308833
+          },
+          "own_collection": {
+            "units": 30.0,
+            "seconds_per_unit": 196.16579040004095,
+            "estimated_seconds": 5884.973712001229
+          },
+          "own_verification": {
+            "units": 1920.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 309.79312183180207
+          }
+        },
+        "T3": {
+          "candidate_real_sampling": {
+            "units": 1000000.0,
+            "seconds_per_unit": 0.02506615909674183,
+            "estimated_seconds": 25066.15909674183
+          },
+          "candidate_ppo_updates": {
+            "units": 1747440.2730375426,
+            "seconds_per_unit": 0.07835096153842012,
+            "estimated_seconds": 136913.62562345085
+          },
+          "candidate_bc": {
+            "units": 16810.0,
+            "seconds_per_unit": 0.07835096153842012,
+            "estimated_seconds": 1317.0796634608423
+          },
+          "candidate_test_validation": {
+            "units": 2400.0,
+            "seconds_per_unit": 0.8869144967906416,
+            "estimated_seconds": 2128.5947922975397
+          },
+          "candidate_diagnostics": {
+            "units": 302400.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 48792.41668850883
+          },
+          "candidate_own_collection": {
+            "units": 30.0,
+            "seconds_per_unit": 0.8869144967906416,
+            "estimated_seconds": 26.60743490371925
+          },
+          "autoregressive_real_sampling": {
+            "units": 1000000.0,
+            "seconds_per_unit": 0.02327779287852212,
+            "estimated_seconds": 23277.792878522123
+          },
+          "autoregressive_ppo_updates": {
+            "units": 1809187.2791519435,
+            "seconds_per_unit": 0.00880408653840557,
+            "estimated_seconds": 15928.241369836225
+          },
+          "autoregressive_bc": {
+            "units": 16810.0,
+            "seconds_per_unit": 0.00880408653840557,
+            "estimated_seconds": 147.9966947105976
+          },
+          "autoregressive_test_validation": {
+            "units": 2400.0,
+            "seconds_per_unit": 0.8540834217953185,
+            "estimated_seconds": 2049.8002123087645
+          },
+          "autoregressive_diagnostics": {
+            "units": 302400.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 48792.41668850883
+          },
+          "autoregressive_own_collection": {
+            "units": 30.0,
+            "seconds_per_unit": 0.8540834217953185,
+            "estimated_seconds": 25.622502653859556
+          }
+        },
+        "T4": {
+          "rule_first_teacher": {
+            "units": 19200.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 3097.9312183180205
+          },
+          "neural_teacher": {
+            "units": 900.0,
+            "seconds_per_unit": 33.72166666664459,
+            "estimated_seconds": 30349.49999998013
+          },
+          "state_collection": {
+            "units": 1200.0,
+            "seconds_per_unit": 2.105502344435081,
+            "estimated_seconds": 2526.602813322097
+          },
+          "distillation": {
+            "units": 40810.0,
+            "seconds_per_unit": 0.11220138888812572,
+            "estimated_seconds": 4578.938680524411
+          },
+          "student_test_validation": {
+            "units": 2220.0,
+            "seconds_per_unit": 0.7018341148116937,
+            "estimated_seconds": 1558.0717348819599
+          },
+          "teacher_online_validation": {
+            "units": 1360.7692307692307,
+            "seconds_per_unit": 11.240555555548196,
+            "estimated_seconds": 15295.802136742122
+          },
+          "teacher_verification": {
+            "units": 120.0,
+            "seconds_per_unit": 33.72166666664459,
+            "estimated_seconds": 4046.5999999973506
+          },
+          "final_diagnostics": {
+            "units": 72000.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 11617.242068692576
+          }
+        },
+        "T5": {
+          "state_collection": {
+            "units": 300.0,
+            "seconds_per_unit": 0.45600354609720356,
+            "estimated_seconds": 136.80106382916108
+          },
+          "potential_labels": {
+            "units": 16238.297872340425,
+            "seconds_per_unit": 0.36625471698089485,
+            "estimated_seconds": 5947.353191485509
+          },
+          "td_updates": {
+            "units": 15396.40425531915,
+            "seconds_per_unit": 0.7142659574511778,
+            "estimated_seconds": 10997.127426730922
+          },
+          "online_test": {
+            "units": 1500.0,
+            "seconds_per_unit": 0.214957446811047,
+            "estimated_seconds": 322.43617021657053
+          },
+          "quarterly_validation": {
+            "units": 600.0,
+            "seconds_per_unit": 0.214957446811047,
+            "estimated_seconds": 128.9744680866282
+          },
+          "diagnostics": {
+            "units": 93600.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 15102.41468930035
+          },
+          "own_collection": {
+            "units": 30.0,
+            "seconds_per_unit": 0.214957446811047,
+            "estimated_seconds": 6.44872340433141
+          }
+        },
+        "T6": {
+          "state_collection": {
+            "units": 1500.0,
+            "seconds_per_unit": 0.44859420289487945,
+            "estimated_seconds": 672.8913043423191
+          },
+          "label_collection": {
+            "units": 1500.0,
+            "seconds_per_unit": 10.923463768116536,
+            "estimated_seconds": 16385.195652174803
+          },
+          "bce_train_validation": {
+            "units": 3760.0,
+            "seconds_per_unit": 0.9797391304442578,
+            "estimated_seconds": 3683.819130470409
+          },
+          "adv_train_validation": {
+            "units": 3760.0,
+            "seconds_per_unit": 0.19895652173410938,
+            "estimated_seconds": 748.0765217202513
+          },
+          "online_tests_and_gate": {
+            "units": 5100.0,
+            "seconds_per_unit": 0.8331086956507837,
+            "estimated_seconds": 4248.854347818997
+          },
+          "diagnostics": {
+            "units": 187200.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 30204.8293786007
+          },
+          "own_collection": {
+            "units": 30.0,
+            "seconds_per_unit": 0.8331086956507837,
+            "estimated_seconds": 24.99326086952351
+          }
+        }
+      },
+      "prepared_seconds": 115.10899999993853,
+      "exclusive_latency_components": {
+        "T1_rollout": {
+          "states": 30,
+          "seconds_per_state": 10.326437394393402,
+          "estimated_seconds": 309.79312183180207
+        },
+        "T2_mcts": {
+          "states": 30,
+          "seconds_per_state": 13.713426361157973,
+          "estimated_seconds": 411.40279083473916
+        },
+        "rule": {
+          "states": 30,
+          "seconds_per_state": 0.10187969575402359,
+          "estimated_seconds": 3.0563908726207076
+        },
+        "grand": {
+          "states": 30,
+          "seconds_per_state": 0.10475532845328979,
+          "estimated_seconds": 3.1426598535986936
+        },
+        "singleton": {
+          "states": 30,
+          "seconds_per_state": 0.10334646738531555,
+          "estimated_seconds": 3.1003940215594668
+        },
+        "frozen_b1": {
+          "states": 30,
+          "seconds_per_state": 0.23814623547050187,
+          "estimated_seconds": 7.144387064115056
+        },
+        "frozen_b3": {
+          "states": 30,
+          "seconds_per_state": 0.3624010330057043,
+          "estimated_seconds": 10.87203099017113
+        },
+        "T3_candidate": {
+          "states": 30,
+          "seconds_per_state": 0.15642584680535906,
+          "estimated_seconds": 4.692775404160772
+        },
+        "T3_autoregressive": {
+          "states": 30,
+          "seconds_per_state": 0.14136553188336307,
+          "estimated_seconds": 4.240965956500892
+        },
+        "T4_exit": {
+          "states": 30,
+          "seconds_per_state": 0.18949521099915728,
+          "estimated_seconds": 5.684856329974719
+        },
+        "T5_bridge": {
+          "states": 30,
+          "seconds_per_state": 0.056652336449266594,
+          "estimated_seconds": 1.6995700934779978
+        },
+        "T6_bce": {
+          "states": 30,
+          "seconds_per_state": 0.14892357512928517,
+          "estimated_seconds": 4.467707253878555
+        },
+        "T6_adv": {
+          "states": 30,
+          "seconds_per_state": 0.14892357512928517,
+          "estimated_seconds": 4.467707253878555
+        },
+        "T6_adv_gated": {
+          "states": 30,
+          "seconds_per_state": 0.14892357512928517,
+          "estimated_seconds": 4.467707253878555
+        }
+      },
+      "exclusive_latency_seconds": 778.2330650143564,
+      "exclusive_latency_decisions": 420,
+      "raw_makespan_seconds": 305359.6957109183,
+      "estimated_total_seconds": 367747.57900736446,
+      "safety_factor": 1.2,
+      "expected_formal_test_executions": 21000,
+      "config": {
+        "version": "known-rule-mixed-v5.1",
+        "seed": 20260907,
+        "smoke": false,
+        "multiplier": 1.0,
+        "cells": [
+          [
+            8,
+            4
+          ],
+          [
+            8,
+            6
+          ],
+          [
+            8,
+            8
+          ],
+          [
+            12,
+            6
+          ],
+          [
+            12,
+            9
+          ],
+          [
+            12,
+            12
+          ],
+          [
+            16,
+            8
+          ],
+          [
+            16,
+            12
+          ],
+          [
+            16,
+            16
+          ],
+          [
+            24,
+            12
+          ],
+          [
+            24,
+            18
+          ],
+          [
+            24,
+            24
+          ],
+          [
+            32,
+            16
+          ],
+          [
+            32,
+            24
+          ],
+          [
+            32,
+            32
+          ]
+        ],
+        "opponent": "reactive",
+        "executor": "rule_group_v1",
+        "max_steps": 50,
+        "command_interval": 5,
+        "gamma": 1.0,
+        "device": "auto",
+        "threads": 1,
+        "cpu_quotas": {
+          "T1": 4,
+          "T2": 4,
+          "T3": 2,
+          "T4": 3,
+          "T5": 3,
+          "T6": 2
+        },
+        "model": {
+          "hidden_dim": 128,
+          "layers": 2,
+          "heads": 4
+        },
+        "eval_per_cell": 100,
+        "validation_per_cell": 10,
+        "bc_episodes": 300,
+        "bc_epochs": 5,
+        "diagnostic_states": 120,
+        "own_diagnostic_states": 30,
+        "selection_branches": 16,
+        "verification_branches": 32,
+        "latency_states": 30,
+        "teacher_validation_episodes": 30,
+        "t1": {
+          "candidates": 8,
+          "branches": 8,
+          "control_episodes": 30
+        },
+        "t2": {
+          "iterations": 64,
+          "depth": 3,
+          "k_action": 1.5,
+          "alpha_action": 0.5,
+          "k_state": 1.0,
+          "alpha_state": 0.5,
+          "exploration": 1.0
+        },
+        "t3": {
+          "steps": 1000000,
+          "rollout": 1024,
+          "batch_size": 128,
+          "epochs": 4,
+          "learning_rate": 0.0003,
+          "gae_lambda": 0.95,
+          "clip": 0.2,
+          "max_gradient_norm": 0.5,
+          "target_kl": 0.03,
+          "entropy_start": 0.02,
+          "entropy_end": 0.005,
+          "candidates": 32,
+          "validation_fractions": [
+            0.0,
+            0.1,
+            0.25,
+            0.5,
+            0.75,
+            1.0
+          ]
+        },
+        "t4": {
+          "rounds": 4,
+          "states_per_round": 300,
+          "candidates": 8,
+          "branches": 8,
+          "epochs": 10,
+          "batch_size": 16,
+          "learning_rate": 0.0003
+        },
+        "t5": {
+          "states": 300,
+          "episodes": 2400,
+          "branches": 4,
+          "batch_size": 128,
+          "buffer_size": 10000,
+          "target_interval": 100,
+          "learning_rate": 0.0003,
+          "max_gradient_norm": 40.0,
+          "epsilon_steps": 10000,
+          "epsilon_end": 0.01
+        },
+        "t6": {
+          "train_states": 1200,
+          "validation_states": 300,
+          "candidates": 8,
+          "branches": 16,
+          "epochs": 40,
+          "batch_size": 16,
+          "learning_rate": 0.0003,
+          "search_budget": 64,
+          "thresholds": [
+            0.0,
+            0.005,
+            0.01,
+            0.02
+          ]
+        },
+        "calibration": {
+          "report": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_parallel\\v5_20260907_main\\calibration_report.json",
+          "usable": false,
+          "selected_multiplier": 0.5,
+          "estimated_total_seconds": null,
+          "source_hash": "1d049a6ee19fbeaf4ea87570639664f09e83fdf596cd8f77b717cc09d01b9857"
+        }
+      },
+      "assumptions": [
+        "All six workers were benchmarked concurrently; phase wall times include observed contention and GPU waiting.",
+        "Formal phases are summed within each task; tasks overlap, so makespan uses the slowest task.",
+        "Four T5 quarterly validation passes are included; all fourteen exclusive deployment latency probes run afterward and are added serially.",
+        "T5/T6 serial evaluation benchmarks scale by CPU quota; measured speedup is not guaranteed.",
+        "Diagnostic distinct-candidate upper bounds and no cross-episode T5 cache savings are conservative.",
+        "PPO update cost scales by consumed state examples; BC uses the same update cost as a conservative proxy.",
+        "T6 validation forward cost is bounded using measured full update cost.",
+        "A global 20% margin covers phase imbalance, checkpoint/logging overhead and episode-length variation.",
+        "This is a throughput estimate, not a convergence or performance guarantee."
+      ]
+    },
+    {
+      "multiplier": 2.0,
+      "complete": true,
+      "missing_measurements": [],
+      "task_seconds": {
+        "T1": 91584.94680859856,
+        "T2": 97878.51748986887,
+        "T3": 505652.172614455,
+        "T4": 111737.55601739393,
+        "T5": 49813.54919169536,
+        "T6": 73151.2161177458
+      },
+      "components": {
+        "T1": {
+          "online_test": {
+            "units": 1500.0,
+            "seconds_per_unit": 44.90599581667144,
+            "estimated_seconds": 67358.99372500717
+          },
+          "baseline_rule": {
+            "units": 1500.0,
+            "seconds_per_unit": 0.2748629291697095,
+            "estimated_seconds": 412.2943937545642
+          },
+          "baseline_grand": {
+            "units": 1500.0,
+            "seconds_per_unit": 0.26843552916155505,
+            "estimated_seconds": 402.6532937423326
+          },
+          "baseline_singleton": {
+            "units": 1500.0,
+            "seconds_per_unit": 0.3003506708385733,
+            "estimated_seconds": 450.52600625786
+          },
+          "baseline_frozen_b1": {
+            "units": 1500.0,
+            "seconds_per_unit": 0.6573828374966979,
+            "estimated_seconds": 986.0742562450469
+          },
+          "baseline_frozen_b3": {
+            "units": 1500.0,
+            "seconds_per_unit": 0.7776522166580738,
+            "estimated_seconds": 1166.4783249871107
+          },
+          "common_selection_verification": {
+            "units": 69120.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 11152.552385944873
+          },
+          "common_online_choices": {
+            "units": 120.0,
+            "seconds_per_unit": 10.326437394393402,
+            "estimated_seconds": 1239.1724873272083
+          },
+          "own_rollout_collection": {
+            "units": 30.0,
+            "seconds_per_unit": 179.62398326668577,
+            "estimated_seconds": 5388.719498000573
+          },
+          "own_verification": {
+            "units": 1920.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 309.79312183180207
+          },
+          "continuous_control": {
+            "units": 60.0,
+            "seconds_per_unit": 44.90599581667144,
+            "estimated_seconds": 2694.3597490002867
+          },
+          "frozen_control": {
+            "units": 30.0,
+            "seconds_per_unit": 0.7776522166580738,
+            "estimated_seconds": 23.329566499742214
+          }
+        },
+        "T2": {
+          "online_test": {
+            "units": 1500.0,
+            "seconds_per_unit": 49.04144760001024,
+            "estimated_seconds": 73562.17140001536
+          },
+          "budget_curve_searches": {
+            "units": 960.0,
+            "seconds_per_unit": 13.713426361157973,
+            "estimated_seconds": 13164.889306711653
+          },
+          "budget_verification": {
+            "units": 30720.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 4956.689949308833
+          },
+          "own_collection": {
+            "units": 30.0,
+            "seconds_per_unit": 196.16579040004095,
+            "estimated_seconds": 5884.973712001229
+          },
+          "own_verification": {
+            "units": 1920.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 309.79312183180207
+          }
+        },
+        "T3": {
+          "candidate_real_sampling": {
+            "units": 2000000.0,
+            "seconds_per_unit": 0.02506615909674183,
+            "estimated_seconds": 50132.31819348366
+          },
+          "candidate_ppo_updates": {
+            "units": 3494880.546075085,
+            "seconds_per_unit": 0.07835096153842012,
+            "estimated_seconds": 273827.2512469017
+          },
+          "candidate_bc": {
+            "units": 16810.0,
+            "seconds_per_unit": 0.07835096153842012,
+            "estimated_seconds": 1317.0796634608423
+          },
+          "candidate_test_validation": {
+            "units": 2400.0,
+            "seconds_per_unit": 0.8869144967906416,
+            "estimated_seconds": 2128.5947922975397
+          },
+          "candidate_diagnostics": {
+            "units": 302400.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 48792.41668850883
+          },
+          "candidate_own_collection": {
+            "units": 30.0,
+            "seconds_per_unit": 0.8869144967906416,
+            "estimated_seconds": 26.60743490371925
+          },
+          "autoregressive_real_sampling": {
+            "units": 2000000.0,
+            "seconds_per_unit": 0.02327779287852212,
+            "estimated_seconds": 46555.585757044246
+          },
+          "autoregressive_ppo_updates": {
+            "units": 3618374.558303887,
+            "seconds_per_unit": 0.00880408653840557,
+            "estimated_seconds": 31856.48273967245
+          },
+          "autoregressive_bc": {
+            "units": 16810.0,
+            "seconds_per_unit": 0.00880408653840557,
+            "estimated_seconds": 147.9966947105976
+          },
+          "autoregressive_test_validation": {
+            "units": 2400.0,
+            "seconds_per_unit": 0.8540834217953185,
+            "estimated_seconds": 2049.8002123087645
+          },
+          "autoregressive_diagnostics": {
+            "units": 302400.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 48792.41668850883
+          },
+          "autoregressive_own_collection": {
+            "units": 30.0,
+            "seconds_per_unit": 0.8540834217953185,
+            "estimated_seconds": 25.622502653859556
+          }
+        },
+        "T4": {
+          "rule_first_teacher": {
+            "units": 38400.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 6195.862436636041
+          },
+          "neural_teacher": {
+            "units": 1800.0,
+            "seconds_per_unit": 33.72166666664459,
+            "estimated_seconds": 60698.99999996026
+          },
+          "state_collection": {
+            "units": 2400.0,
+            "seconds_per_unit": 2.105502344435081,
+            "estimated_seconds": 5053.205626644194
+          },
+          "distillation": {
+            "units": 64810.0,
+            "seconds_per_unit": 0.11220138888812572,
+            "estimated_seconds": 7271.772013839428
+          },
+          "student_test_validation": {
+            "units": 2220.0,
+            "seconds_per_unit": 0.7018341148116937,
+            "estimated_seconds": 1558.0717348819599
+          },
+          "teacher_online_validation": {
+            "units": 1360.7692307692307,
+            "seconds_per_unit": 11.240555555548196,
+            "estimated_seconds": 15295.802136742122
+          },
+          "teacher_verification": {
+            "units": 120.0,
+            "seconds_per_unit": 33.72166666664459,
+            "estimated_seconds": 4046.5999999973506
+          },
+          "final_diagnostics": {
+            "units": 72000.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 11617.242068692576
+          }
+        },
+        "T5": {
+          "state_collection": {
+            "units": 600.0,
+            "seconds_per_unit": 0.45600354609720356,
+            "estimated_seconds": 273.60212765832216
+          },
+          "potential_labels": {
+            "units": 32476.59574468085,
+            "seconds_per_unit": 0.36625471698089485,
+            "estimated_seconds": 11894.706382971019
+          },
+          "td_updates": {
+            "units": 30919.8085106383,
+            "seconds_per_unit": 0.7142659574511778,
+            "estimated_seconds": 22084.96663005814
+          },
+          "online_test": {
+            "units": 1500.0,
+            "seconds_per_unit": 0.214957446811047,
+            "estimated_seconds": 322.43617021657053
+          },
+          "quarterly_validation": {
+            "units": 600.0,
+            "seconds_per_unit": 0.214957446811047,
+            "estimated_seconds": 128.9744680866282
+          },
+          "diagnostics": {
+            "units": 93600.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 15102.41468930035
+          },
+          "own_collection": {
+            "units": 30.0,
+            "seconds_per_unit": 0.214957446811047,
+            "estimated_seconds": 6.44872340433141
+          }
+        },
+        "T6": {
+          "state_collection": {
+            "units": 2700.0,
+            "seconds_per_unit": 0.44859420289487945,
+            "estimated_seconds": 1211.2043478161745
+          },
+          "label_collection": {
+            "units": 2700.0,
+            "seconds_per_unit": 10.923463768116536,
+            "estimated_seconds": 29493.352173914645
+          },
+          "bce_train_validation": {
+            "units": 6760.0,
+            "seconds_per_unit": 0.9797391304442578,
+            "estimated_seconds": 6623.036521803182
+          },
+          "adv_train_validation": {
+            "units": 6760.0,
+            "seconds_per_unit": 0.19895652173410938,
+            "estimated_seconds": 1344.9460869225795
+          },
+          "online_tests_and_gate": {
+            "units": 5100.0,
+            "seconds_per_unit": 0.8331086956507837,
+            "estimated_seconds": 4248.854347818997
+          },
+          "diagnostics": {
+            "units": 187200.0,
+            "seconds_per_unit": 0.1613505842873969,
+            "estimated_seconds": 30204.8293786007
+          },
+          "own_collection": {
+            "units": 30.0,
+            "seconds_per_unit": 0.8331086956507837,
+            "estimated_seconds": 24.99326086952351
+          }
+        }
+      },
+      "prepared_seconds": 115.10899999993853,
+      "exclusive_latency_components": {
+        "T1_rollout": {
+          "states": 30,
+          "seconds_per_state": 10.326437394393402,
+          "estimated_seconds": 309.79312183180207
+        },
+        "T2_mcts": {
+          "states": 30,
+          "seconds_per_state": 13.713426361157973,
+          "estimated_seconds": 411.40279083473916
+        },
+        "rule": {
+          "states": 30,
+          "seconds_per_state": 0.10187969575402359,
+          "estimated_seconds": 3.0563908726207076
+        },
+        "grand": {
+          "states": 30,
+          "seconds_per_state": 0.10475532845328979,
+          "estimated_seconds": 3.1426598535986936
+        },
+        "singleton": {
+          "states": 30,
+          "seconds_per_state": 0.10334646738531555,
+          "estimated_seconds": 3.1003940215594668
+        },
+        "frozen_b1": {
+          "states": 30,
+          "seconds_per_state": 0.23814623547050187,
+          "estimated_seconds": 7.144387064115056
+        },
+        "frozen_b3": {
+          "states": 30,
+          "seconds_per_state": 0.3624010330057043,
+          "estimated_seconds": 10.87203099017113
+        },
+        "T3_candidate": {
+          "states": 30,
+          "seconds_per_state": 0.15642584680535906,
+          "estimated_seconds": 4.692775404160772
+        },
+        "T3_autoregressive": {
+          "states": 30,
+          "seconds_per_state": 0.14136553188336307,
+          "estimated_seconds": 4.240965956500892
+        },
+        "T4_exit": {
+          "states": 30,
+          "seconds_per_state": 0.18949521099915728,
+          "estimated_seconds": 5.684856329974719
+        },
+        "T5_bridge": {
+          "states": 30,
+          "seconds_per_state": 0.056652336449266594,
+          "estimated_seconds": 1.6995700934779978
+        },
+        "T6_bce": {
+          "states": 30,
+          "seconds_per_state": 0.14892357512928517,
+          "estimated_seconds": 4.467707253878555
+        },
+        "T6_adv": {
+          "states": 30,
+          "seconds_per_state": 0.14892357512928517,
+          "estimated_seconds": 4.467707253878555
+        },
+        "T6_adv_gated": {
+          "states": 30,
+          "seconds_per_state": 0.14892357512928517,
+          "estimated_seconds": 4.467707253878555
+        }
+      },
+      "exclusive_latency_seconds": 778.2330650143564,
+      "exclusive_latency_decisions": 420,
+      "raw_makespan_seconds": 506545.5146794693,
+      "estimated_total_seconds": 609170.5617696256,
+      "safety_factor": 1.2,
+      "expected_formal_test_executions": 21000,
+      "config": {
+        "version": "known-rule-mixed-v5.1",
+        "seed": 20260907,
+        "smoke": false,
+        "multiplier": 2.0,
+        "cells": [
+          [
+            8,
+            4
+          ],
+          [
+            8,
+            6
+          ],
+          [
+            8,
+            8
+          ],
+          [
+            12,
+            6
+          ],
+          [
+            12,
+            9
+          ],
+          [
+            12,
+            12
+          ],
+          [
+            16,
+            8
+          ],
+          [
+            16,
+            12
+          ],
+          [
+            16,
+            16
+          ],
+          [
+            24,
+            12
+          ],
+          [
+            24,
+            18
+          ],
+          [
+            24,
+            24
+          ],
+          [
+            32,
+            16
+          ],
+          [
+            32,
+            24
+          ],
+          [
+            32,
+            32
+          ]
+        ],
+        "opponent": "reactive",
+        "executor": "rule_group_v1",
+        "max_steps": 50,
+        "command_interval": 5,
+        "gamma": 1.0,
+        "device": "auto",
+        "threads": 1,
+        "cpu_quotas": {
+          "T1": 4,
+          "T2": 4,
+          "T3": 2,
+          "T4": 3,
+          "T5": 3,
+          "T6": 2
+        },
+        "model": {
+          "hidden_dim": 128,
+          "layers": 2,
+          "heads": 4
+        },
+        "eval_per_cell": 100,
+        "validation_per_cell": 10,
+        "bc_episodes": 300,
+        "bc_epochs": 5,
+        "diagnostic_states": 120,
+        "own_diagnostic_states": 30,
+        "selection_branches": 16,
+        "verification_branches": 32,
+        "latency_states": 30,
+        "teacher_validation_episodes": 30,
+        "t1": {
+          "candidates": 8,
+          "branches": 8,
+          "control_episodes": 30
+        },
+        "t2": {
+          "iterations": 64,
+          "depth": 3,
+          "k_action": 1.5,
+          "alpha_action": 0.5,
+          "k_state": 1.0,
+          "alpha_state": 0.5,
+          "exploration": 1.0
+        },
+        "t3": {
+          "steps": 2000000,
+          "rollout": 1024,
+          "batch_size": 128,
+          "epochs": 4,
+          "learning_rate": 0.0003,
+          "gae_lambda": 0.95,
+          "clip": 0.2,
+          "max_gradient_norm": 0.5,
+          "target_kl": 0.03,
+          "entropy_start": 0.02,
+          "entropy_end": 0.005,
+          "candidates": 32,
+          "validation_fractions": [
+            0.0,
+            0.1,
+            0.25,
+            0.5,
+            0.75,
+            1.0
+          ]
+        },
+        "t4": {
+          "rounds": 4,
+          "states_per_round": 600,
+          "candidates": 8,
+          "branches": 8,
+          "epochs": 10,
+          "batch_size": 16,
+          "learning_rate": 0.0003
+        },
+        "t5": {
+          "states": 600,
+          "episodes": 4800,
+          "branches": 4,
+          "batch_size": 128,
+          "buffer_size": 10000,
+          "target_interval": 100,
+          "learning_rate": 0.0003,
+          "max_gradient_norm": 40.0,
+          "epsilon_steps": 10000,
+          "epsilon_end": 0.01
+        },
+        "t6": {
+          "train_states": 2400,
+          "validation_states": 300,
+          "candidates": 8,
+          "branches": 16,
+          "epochs": 40,
+          "batch_size": 16,
+          "learning_rate": 0.0003,
+          "search_budget": 64,
+          "thresholds": [
+            0.0,
+            0.005,
+            0.01,
+            0.02
+          ]
+        },
+        "calibration": {
+          "report": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_parallel\\v5_20260907_main\\calibration_report.json",
+          "usable": false,
+          "selected_multiplier": 0.5,
+          "estimated_total_seconds": null,
+          "source_hash": "1d049a6ee19fbeaf4ea87570639664f09e83fdf596cd8f77b717cc09d01b9857"
+        }
+      },
+      "assumptions": [
+        "All six workers were benchmarked concurrently; phase wall times include observed contention and GPU waiting.",
+        "Formal phases are summed within each task; tasks overlap, so makespan uses the slowest task.",
+        "Four T5 quarterly validation passes are included; all fourteen exclusive deployment latency probes run afterward and are added serially.",
+        "T5/T6 serial evaluation benchmarks scale by CPU quota; measured speedup is not guaranteed.",
+        "Diagnostic distinct-candidate upper bounds and no cross-episode T5 cache savings are conservative.",
+        "PPO update cost scales by consumed state examples; BC uses the same update cost as a conservative proxy.",
+        "T6 validation forward cost is bounded using measured full update cost.",
+        "A global 20% margin covers phase imbalance, checkpoint/logging overhead and episode-length variation.",
+        "This is a throughput estimate, not a convergence or performance guarantee."
+      ]
+    }
+  ],
+  "selected_multiplier": 0.5,
+  "selection_reason": "smallest_budget_exceeds_target_will_still_complete",
+  "usable": true,
+  "frozen": false,
+  "fixed_training_seed": 20260907,
+  "expected_formal_test_executions": 21000
+}

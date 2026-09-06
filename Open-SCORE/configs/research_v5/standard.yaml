@@ -1,0 +1,15 @@
+# Full resolved parameters are frozen under the run's shared directory.
+seed: 20260907
+multiplier: 1.0
+device: auto
+max_steps: 50
+command_interval: 5
+gamma: 1.0
+eval_per_cell: 100
+validation_per_cell: 10
+bc_episodes: 300
+bc_epochs: 5
+diagnostic_states: 120
+own_diagnostic_states: 30
+selection_branches: 16
+verification_branches: 32

@@ -1,0 +1,60 @@
+{
+  "recorded_at": "2026-09-06T12:05:57.829659+00:00",
+  "scope": "calibration only, never formal model evidence",
+  "approved_changes": [
+    {
+      "component": "T3 candidate PPO entropy regularizer",
+      "change": "Use raw candidate-distribution entropy instead of dividing by member count; autoregressive entropy normalization unchanged.",
+      "effect_on_cost_model": "No model, batch, environment, simulation quota or matrix shape changes; a separate production batch update timing check is required.",
+      "measurement_caveat": "Already running training benchmark workers retain the module imported at startup. These cycles must not be described as measuring the corrected regularizer.",
+      "followup_update_timing": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_validation\\post_fix_t3\\benchmark.json"
+    },
+    {
+      "component": "CandidateActor.forward operator batching",
+      "change": "Strictly equivalent vectorized implementation planned; same network weights, parameters, masks and mathematical objective.",
+      "status": "implemented; equivalence tests passed according to parent; production-sized native-sampling and PPO-update follow-up completed",
+      "measurement_caveat": "Original joint calibration benchmark workers retain their initially imported forward; any later timing is a separately labeled measurement, not a replacement 15-minute joint calibration."
+    }
+  ],
+  "updated_at": "2026-09-06T12:31:38.522609+00:00",
+  "all_calibration_workers_exited_naturally": true,
+  "interrupted_cycles": [],
+  "actual_elapsed_seconds": 1315.9441542625427,
+  "original_report": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_parallel\\v5_20260907_main\\calibration\\20260906T120134\\calibration_report.json",
+  "original_report_sha256": "3fbdeea518598011ceb4b82661c179fe1c0b4924908f6ec7fe25588c7b8b4ae6",
+  "original_cycles": {
+    "T1": 2,
+    "T2": 2,
+    "T3": 26,
+    "T4": 9,
+    "T5": 94,
+    "T6": 23
+  },
+  "original_exits": {
+    "T5": 0,
+    "T3": 0,
+    "T6": 0,
+    "T4": 0,
+    "T1": 0,
+    "T2": 0
+  },
+  "changed_files": [
+    "src/open_score/research_v5/neural.py",
+    "src/open_score/research_v5/tasks/t3_ppo.py"
+  ],
+  "joint_source_before": "8e11b5d2a6c4054d7218be7b579770490d46f0811b81c9da8e324004e8c1c258",
+  "joint_source_after": "3642d4a42927f9249fbb9bac0d3894405e4344934f4f705ad5bcc50d9eede1ac",
+  "post_fix_source": "3642d4a42927f9249fbb9bac0d3894405e4344934f4f705ad5bcc50d9eede1ac",
+  "post_fix_benchmark": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_validation\\post_fix_t3\\benchmark.json",
+  "post_fix_benchmark_sha256": "229363a8204c2be78baf902eb272923ed43ce2ee478dbb8ec6550c56e82e1b2a",
+  "post_fix_scope": "separate production-sized actual PPO update and native mixed-roster sampling after entropy correction and mathematically equivalent vectorization; not concurrent calibration",
+  "equivalence_tests": "tests/test_v5_candidate_vectorized.py (CPU/CUDA logits and gradients; parent reports pass)",
+  "applied_estimate_replacements": [
+    "candidate_sampling",
+    "candidate_update",
+    "autoregressive_sampling",
+    "autoregressive_update"
+  ],
+  "unmodified_workloads": "All fixed testing, validation, diagnostic, simulation quotas, all T1/T2/T4/T5/T6 throughputs and original T3 online evaluation rates remain unchanged.",
+  "acceptance": "Complete joint throughput samples are usable, with audited source differences and a separately labeled non-concurrent post-fix estimate. No aborted cycle was relabeled complete."
+}

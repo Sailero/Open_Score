@@ -1,0 +1,11 @@
+{
+  "selected_multiplier": 0.5,
+  "reason": "smallest_budget_exceeds_target_will_still_complete",
+  "estimated_total_seconds": 247036.08762623384,
+  "frozen": false,
+  "usable": true,
+  "post_fix_adjusted_total_seconds": 158038.97380890817,
+  "post_fix_source_hash": "3642d4a42927f9249fbb9bac0d3894405e4344934f4f705ad5bcc50d9eede1ac",
+  "conservative_joint_total_seconds": 247036.08762623384,
+  "source_change_audit": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_parallel\\v5_20260907_main\\calibration\\20260906T120134\\source_change_audit.json"
+}

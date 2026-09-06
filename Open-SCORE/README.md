@@ -1,6 +1,122 @@
-# Open-SCORE v4.0：共享规则底层的动态分组
+# Open-SCORE v5.1：单种子混合难度六任务
 
-当前推荐 v4。所有路线使用同一纯规则红方底层及已知固定蓝方策略；上层最多每 5 步和非终止伤亡后决策，物理任务最多 50 步。红方组规模没有四人上限。历史 S1/S2、v2/v3 代码和结果保留，但不参与 v4 底层执行。
+当前实验采用一个训练种子 `20260907`，红方 8/12/16/24/32，蓝方为红方人数的 1/2、3/4 或全部，共 15 个场景单元等权混合。六任务包含 9 个主要实验臂，另有 5 个公共对照；正式测试每单元 100 局。
+
+实验总账见 [实验记录](../实验记录.md)，算法语义和完整配额见 [执行方案](../动态分组_六任务并行复现与诊断执行方案_v5.md)。所有方法固定同一规则底层、已知 reactive 对手、两个目标、原生终局奖励和最多 50 个物理步。
+
+## 当前 v5.1 运行入口
+
+在本项目目录执行；以下 `prepare/calibrate/freeze` 仅用于启动新的正式实验。已经冻结的目录直接 `run-all` 或 `watch`。
+
+```powershell
+Set-Location 'E:\Code\Open_Score\Open-SCORE'
+& 'D:\Software\Anaconda\envs\torch310\python.exe' scripts/run_research_v5.py prepare --config configs/research_v5/standard.yaml --run-dir outputs/v5_parallel/v5_20260907_main
+& 'D:\Software\Anaconda\envs\torch310\python.exe' scripts/run_research_v5.py calibrate --run-dir outputs/v5_parallel/v5_20260907_main --seconds 900
+# 正式启动前完成验证并提交源码，再冻结协议与配额。
+& 'D:\Software\Anaconda\envs\torch310\python.exe' scripts/run_research_v5.py freeze --run-dir outputs/v5_parallel/v5_20260907_main
+& 'D:\Software\Anaconda\envs\torch310\python.exe' -u scripts/run_research_v5.py run-all --run-dir outputs/v5_parallel/v5_20260907_main --parallel-tasks 6
+```
+
+`run-all` 自动跳过已完成任务，其他任务从已保存的状态继续。单独运行或恢复某个任务：
+
+```powershell
+& 'D:\Software\Anaconda\envs\torch310\python.exe' -u scripts/run_research_v5.py task --task T3 --run-dir outputs/v5_parallel/v5_20260907_main
+```
+
+T1 为 rollout，T2 为 MCTS，T3 为候选/AR 两臂 PPO，T4 为 ExIt 风格迭代，T5 为 BRIDGE 组划分，T6 为 BCE/ADV/gated 配对价值诊断。
+
+只看实时进度，不重复启动：
+
+```powershell
+& 'D:\Software\Anaconda\envs\torch310\python.exe' -u scripts/run_research_v5.py watch --run-dir outputs/v5_parallel/v5_20260907_main
+```
+
+本工作区 VS Code 默认构建任务为“v5.1 启动或恢复六任务”，按 `Ctrl+Shift+B` 可在本地集成终端运行；通过 Tasks: Run Task 可打开独立的仅监控任务。监控显示的 ETA 是当前阶段估计，正式任务没有墙钟截止时间。
+
+输出包含 `shared/budget_manifest.json`、每任务的模型/训练记录/诊断、`comparison.csv`、`comparison_summary.json`、`final_report.md`。逐局评估保存在 `T*/evaluations/<method>/<split>/<checkpoint>/episodes.jsonl`；完整事件、候选和分支使用同目录 `families/*.jsonl.gz` 按回合原子分片，首行是回合指标，其余行带 `record_type`。
+
+T5 在构造配额的 25%、50%、75%、100% 各用同一批 150 局验证，支持恢复；最终主表仍使用最后模型。六任务结束后，`run-all` 还会在其他实验工作进程退出的条件下，逐一测量 14 个方法在共同 30 个状态上的 CPU 单线程部署延迟，输出 `reports/serial_latency.json`。外部系统负载会记录，但不保证整机独占。主报告将这项测量与并行评估期间的事件延迟分开；只运行 `summarize` 不会补做测量。
+
+最小端到端检查使用独立目录：
+
+```powershell
+& 'D:\Software\Anaconda\envs\torch310\python.exe' scripts/run_research_v5.py prepare --smoke --run-dir outputs/v5_validation/smoke_new
+& 'D:\Software\Anaconda\envs\torch310\python.exe' scripts/run_research_v5.py run-all --run-dir outputs/v5_validation/smoke_new --parallel-tasks 6
+```
+
+较小配置只验证实现，不表示已训练充分或性能有效。正式主要结果使用固定配额末期模型；训练、验证、测试和旧协议结果分开报告。
+
+### 回放原始评估轨迹
+
+以下命令从指定运行目录的正式测试分片中，按路径顺序各选第一局成功和失败代表；若只存在其中一种结果，就回放已有的一种。`$replayRun` 也可以改成某个具体的 `families/*.jsonl.gz` 文件。当前可直接验证的目录是 `outputs/v5_acceptance`；正式训练产生测试分片后，将其改成 `outputs/v5_parallel/v5_20260907_main`。验收目录的回放只验证轨迹可复现，不是正式性能证据。
+
+回放读取首行 `episode` 的 `EpisodeSpec` 字段重建开局，再执行各 `event` 保存的 `selected_plan_raw`。每次执行前核对完整状态哈希，执行后核对步数与指挥事件，最后核对原生终局、成功标志和总步数。使用生成轨迹时冻结的代码版本；出现不一致会立即报出对应事件。
+
+```powershell
+Set-Location 'E:\Code\Open_Score\Open-SCORE'
+$replayRun = 'outputs/v5_acceptance'
+@'
+from pathlib import Path
+import gzip, json, sys
+from open_score.grouping.domain import Grouping
+from open_score.research_v5.protocol import EpisodeSpec, digest
+from open_score.research_v5.simulator import make_env
+
+source = Path(sys.argv[1])
+if source.is_file():
+    selected = [source]
+else:
+    examples = {}
+    for path in sorted(source.glob('T*/evaluations/*/test/*/families/*.jsonl.gz')):
+        with gzip.open(path, 'rt', encoding='utf-8') as stream:
+            header = json.loads(next(stream))
+        assert header['record_type'] == 'episode'
+        examples.setdefault(bool(header['success_native']), path)
+        if len(examples) == 2:
+            break
+    selected = list(examples.values())
+if not selected:
+    raise SystemExit('No committed test episodes yet; select a completed run or one .jsonl.gz file.')
+for path in selected:
+    with gzip.open(path, 'rt', encoding='utf-8') as stream:
+        episode = json.loads(next(stream))
+        assert episode['record_type'] == 'episode'
+        spec = EpisodeSpec(**{key: episode[key] for key in EpisodeSpec.__dataclass_fields__})
+        env = make_env(spec)
+        steps = events = 0
+        info = {}
+        try:
+            for line in stream:
+                event = json.loads(line)
+                if event['record_type'] != 'event':
+                    continue
+                assert not env.done, 'Extra event after terminal'
+                assert digest(env.state().to_dict()) == event['state_hash'], event['event_id']
+                _, _, _, info = env.step(Grouping.from_dict(event['selected_plan_raw']))
+                assert info['delta'] == event['physical_steps'], event['event_id']
+                assert info['event_reason'] == event['next_event_type'], event['event_id']
+                steps += info['delta']
+                events += 1
+            assert env.done, 'Replay did not reach native terminal'
+            assert bool(info['success']) == bool(episode['success_native'])
+            assert steps == env.state().step == episode['physical_steps']
+            assert events == episode['command_events']
+            assert info['event_reason'] == episode['termination_reason']
+            print(f'REPLAY OK success={info["success"]} steps={steps} events={events}\n{path}')
+        finally:
+            env.close()
+'@ | & 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 - $replayRun
+```
+
+### 完成后的 Git 归档
+
+正式 `run-all` 完成六任务、14 臂末期测试和串行部署测量后，会自动将本轮汇总报告、实验记录、配额与来源说明、任务分析及曲线提交到 Git，提交说明为 `results: v5.1 completed seed 20260907`。归档只提交明确列出的本轮文件，使用 `git commit --only`，不会夹带其他已暂存修改；大型模型检查点、原始轨迹分片和训练日志保留在本地输出目录，不加入该次结果提交。
+
+归档状态、提交号和实际文件清单写入运行目录的 `result_archive.json`。短测不自动提交。若仅归档失败，实验产物仍保留，恢复同一 `run-all` 可重试末尾归档；不应重新训练来处理 Git 问题。
+
+## 历史 v4 使用说明
+
+以下保留 v4 的历史运行入口，不作为 v5.1 的启动命令。所有 v4 路线使用同一纯规则红方底层及已知固定蓝方策略；上层最多每 5 步和非终止伤亡后决策，物理任务最多 50 步。红方组规模没有四人上限。
 
 先进入 `E:\Code\Open_Score\Open-SCORE`。下列命令使用本机已验证的 Torch Python，输出到新目录；已有兼容目录继续运行时加 `--resume`。`--workers` 可以在恢复时改变，`--steps` 可以增加；修改源码、执行器或实验协议后必须使用新目录。
 
@@ -50,7 +166,7 @@
 
 ### 历史 v3 运行记录
 
-v3 的入口是基于失败诊断重建的三路线过夜训练。详细设计、明确预算与当时已验证范围见 [v3 过夜方案](../固定对手下动态分组研究方案_v3_过夜训练.md)。下方原 v2 说明作为历史版本保留；旧检查点不能跨新增源码直接 `--resume`，重现原 v2 应使用对应历史提交和独立输出。
+v3 的入口是基于失败诊断重建的三路线过夜训练。历史预算、结果和适用范围已归并到 [实验记录](../实验记录.md)。下方原 v2 说明作为历史版本保留；旧检查点不能跨新增源码直接 `--resume`，重现原 v2 应使用对应历史提交和独立输出。
 
 在此目录执行下面这一条命令即可同时启动三个独立候选方案。上层使用 GPU，原冻结下层使用 CPU；每路最多 7 小时训练，45 分钟评估，总上限 8 小时，`--steps 0` 不在十万步提前结束。
 
@@ -160,7 +276,7 @@ B5 是针对本项目接口的 **ALMA 风格适配**，不称为原论文的严�
 
 DLOM 的直接训练支持是 **1–4 红方对 1–4 蓝方、50 步任务时限**。它提供局部存活代理，未用重新编组反事实或全局长期结果训练；B1 的配对仅用于评分，物理执行仍是共享环境。下层支持变数量实体输入不保证在所有实际接触人数下都有良好能力，需要执行诊断。
 
-源码主要位于 `src/open_score/grouping`，保留 HAD 物理环境和冻结推理所需模块。研究推导见 [根研究方案](../固定对手下动态分组研究方案_v2.md)，接口、训练与验收细节见 [method_v2.md](docs/method_v2.md)。
+v2 源码主要位于 `src/open_score/grouping`，保留 HAD 物理环境和冻结推理所需模块。历史研究问题及结果见 [实验记录](../实验记录.md)，旧接口与验收细节见 [method_v2.md](docs/method_v2.md)。
 
 运行测试：
 

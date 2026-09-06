@@ -1,0 +1,48 @@
+{
+  "complete": true,
+  "task_id": "T3",
+  "finished": "2026-09-06T12:32:06.583604+00:00",
+  "elapsed_seconds": 74.29700000002049,
+  "result": {
+    "complete": true,
+    "task": "T3",
+    "arms": [
+      {
+        "method_id": "t3_candidate",
+        "complete": true,
+        "physical_steps": 133,
+        "episodes": 6,
+        "wins": 2,
+        "upper_events": 59,
+        "actor_updates": 4,
+        "critic_updates": 4,
+        "bc_updates": 2,
+        "bc_epoch": 1,
+        "rollouts": 2,
+        "best_validation_rate": 0.3333333333333333,
+        "model_parameters": 17761,
+        "critic_parameters": 12481,
+        "latest": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_acceptance_final\\T3\\candidate\\latest.pt",
+        "best": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_acceptance_final\\T3\\candidate\\best.pt"
+      },
+      {
+        "method_id": "t3_autoregressive",
+        "complete": true,
+        "physical_steps": 143,
+        "episodes": 5,
+        "wins": 0,
+        "upper_events": 48,
+        "actor_updates": 3,
+        "critic_updates": 3,
+        "bc_updates": 2,
+        "bc_epoch": 1,
+        "rollouts": 2,
+        "best_validation_rate": 0.0,
+        "model_parameters": 17731,
+        "critic_parameters": 12481,
+        "latest": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_acceptance_final\\T3\\autoregressive\\latest.pt",
+        "best": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_acceptance_final\\T3\\autoregressive\\best.pt"
+      }
+    ]
+  }
+}

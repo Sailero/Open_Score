@@ -1,0 +1,7 @@
+﻿evaluation_episodes,evaluation_planner_physical_steps,evaluation_real_physical_steps,execution_status,note,offline_label_rollout_physical_steps,offline_state_collection_physical_steps,recorded_collection_plus_label_physical_steps,task_id,teacher_verification_physical_steps,training_real_physical_steps
+27,7665,647,complete,Recorded counters; evaluation includes validation/control. Missing costs are not zero.,,,,T1,,0
+3,1736,65,complete,Recorded counters; evaluation includes validation/control. Missing costs are not zero.,,,,T2,,0
+18,0,495,complete,Recorded counters; evaluation includes validation/control. Missing costs are not zero.,,,,T3,,276
+21,6475,591,complete,Recorded counters; evaluation includes validation/control. Missing costs are not zero.,1429,199,,T4,190,
+15,0,355,complete,Recorded counters; evaluation includes validation/control. Missing costs are not zero.,3737,104,3841,T5,,0
+21,0,637,complete,Recorded counters; evaluation includes validation/control. Missing costs are not zero.,1370,161,,T6,,0

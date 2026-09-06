@@ -1,0 +1,743 @@
+{
+  "complete": true,
+  "task_id": "T1",
+  "finished": "2026-09-06T12:32:10.909714+00:00",
+  "elapsed_seconds": 78.64100000006147,
+  "result": {
+    "task": "T1",
+    "execution_status": "completed",
+    "adaptation": "rollout_policy_improvement_fixed_rule",
+    "main": {
+      "method_id": "T1_rollout",
+      "checkpoint_id": "latest",
+      "split": "test",
+      "training_seed": 20260907,
+      "protocol_hash": "5dbab2ed80db39e963faf0e11b6c70615d2b62f866280d5a9fd44c03051bee44",
+      "wins": 1,
+      "episodes": 3,
+      "success_rate": 0.3333333333333333,
+      "complete": true,
+      "expected_episodes": 3,
+      "groups": [
+        {
+          "red_count": 8,
+          "blue_count": 4,
+          "wins": 1,
+          "episodes": 1,
+          "success_rate": 1.0,
+          "wilson95": [
+            0.20654931437723745,
+            1.0
+          ]
+        },
+        {
+          "red_count": 12,
+          "blue_count": 9,
+          "wins": 0,
+          "episodes": 1,
+          "success_rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.7934506856227626
+          ]
+        },
+        {
+          "red_count": 16,
+          "blue_count": 16,
+          "wins": 0,
+          "episodes": 1,
+          "success_rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.7934506856227626
+          ]
+        }
+      ],
+      "never_deployed_rate": 0.0,
+      "path": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_acceptance_final\\T1\\evaluations\\T1_rollout\\test\\latest"
+    },
+    "baselines": {
+      "rule": {
+        "method_id": "rule",
+        "checkpoint_id": "frozen",
+        "split": "test",
+        "training_seed": 20260907,
+        "protocol_hash": "5dbab2ed80db39e963faf0e11b6c70615d2b62f866280d5a9fd44c03051bee44",
+        "wins": 1,
+        "episodes": 3,
+        "success_rate": 0.3333333333333333,
+        "complete": true,
+        "expected_episodes": 3,
+        "groups": [
+          {
+            "red_count": 8,
+            "blue_count": 4,
+            "wins": 1,
+            "episodes": 1,
+            "success_rate": 1.0,
+            "wilson95": [
+              0.20654931437723745,
+              1.0
+            ]
+          },
+          {
+            "red_count": 12,
+            "blue_count": 9,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          },
+          {
+            "red_count": 16,
+            "blue_count": 16,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          }
+        ],
+        "never_deployed_rate": 0.0,
+        "path": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_acceptance_final\\T1\\evaluations\\rule\\test\\frozen"
+      },
+      "grand": {
+        "method_id": "grand",
+        "checkpoint_id": "frozen",
+        "split": "test",
+        "training_seed": 20260907,
+        "protocol_hash": "5dbab2ed80db39e963faf0e11b6c70615d2b62f866280d5a9fd44c03051bee44",
+        "wins": 1,
+        "episodes": 3,
+        "success_rate": 0.3333333333333333,
+        "complete": true,
+        "expected_episodes": 3,
+        "groups": [
+          {
+            "red_count": 8,
+            "blue_count": 4,
+            "wins": 1,
+            "episodes": 1,
+            "success_rate": 1.0,
+            "wilson95": [
+              0.20654931437723745,
+              1.0
+            ]
+          },
+          {
+            "red_count": 12,
+            "blue_count": 9,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          },
+          {
+            "red_count": 16,
+            "blue_count": 16,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          }
+        ],
+        "never_deployed_rate": 0.0,
+        "path": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_acceptance_final\\T1\\evaluations\\grand\\test\\frozen"
+      },
+      "singleton": {
+        "method_id": "singleton",
+        "checkpoint_id": "frozen",
+        "split": "test",
+        "training_seed": 20260907,
+        "protocol_hash": "5dbab2ed80db39e963faf0e11b6c70615d2b62f866280d5a9fd44c03051bee44",
+        "wins": 0,
+        "episodes": 3,
+        "success_rate": 0.0,
+        "complete": true,
+        "expected_episodes": 3,
+        "groups": [
+          {
+            "red_count": 8,
+            "blue_count": 4,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          },
+          {
+            "red_count": 12,
+            "blue_count": 9,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          },
+          {
+            "red_count": 16,
+            "blue_count": 16,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          }
+        ],
+        "never_deployed_rate": 0.0,
+        "path": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_acceptance_final\\T1\\evaluations\\singleton\\test\\frozen"
+      },
+      "frozen_b1": {
+        "method_id": "frozen_b1",
+        "checkpoint_id": "frozen",
+        "split": "test",
+        "training_seed": 20260907,
+        "protocol_hash": "5dbab2ed80db39e963faf0e11b6c70615d2b62f866280d5a9fd44c03051bee44",
+        "wins": 1,
+        "episodes": 3,
+        "success_rate": 0.3333333333333333,
+        "complete": true,
+        "expected_episodes": 3,
+        "groups": [
+          {
+            "red_count": 8,
+            "blue_count": 4,
+            "wins": 1,
+            "episodes": 1,
+            "success_rate": 1.0,
+            "wilson95": [
+              0.20654931437723745,
+              1.0
+            ]
+          },
+          {
+            "red_count": 12,
+            "blue_count": 9,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          },
+          {
+            "red_count": 16,
+            "blue_count": 16,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          }
+        ],
+        "never_deployed_rate": 0.0,
+        "path": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_acceptance_final\\T1\\evaluations\\frozen_b1\\test\\frozen"
+      },
+      "frozen_b3": {
+        "method_id": "frozen_b3",
+        "checkpoint_id": "frozen",
+        "split": "test",
+        "training_seed": 20260907,
+        "protocol_hash": "5dbab2ed80db39e963faf0e11b6c70615d2b62f866280d5a9fd44c03051bee44",
+        "wins": 0,
+        "episodes": 3,
+        "success_rate": 0.0,
+        "complete": true,
+        "expected_episodes": 3,
+        "groups": [
+          {
+            "red_count": 8,
+            "blue_count": 4,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          },
+          {
+            "red_count": 12,
+            "blue_count": 9,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          },
+          {
+            "red_count": 16,
+            "blue_count": 16,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          }
+        ],
+        "never_deployed_rate": 0.0,
+        "path": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_acceptance_final\\T1\\evaluations\\frozen_b3\\test\\frozen"
+      }
+    },
+    "historical_artifacts": {
+      "frozen_b1": {
+        "status": "available",
+        "artifact": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v4_comparison\\shared\\seed_20260906\\count_model.json",
+        "sha256": "b3a720f305bd3b822e7789c0fecda6e7c0cceb7b7ca7269fc81d7990d0e68eb8",
+        "original_protocol": "v4",
+        "evaluation_protocol": "known-rule-mixed-v5.1"
+      },
+      "frozen_b3": {
+        "status": "available",
+        "artifact": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v4_comparison\\shared\\seed_20260906\\global_model\\best.pt",
+        "sha256": "058b72565b2e03ae5bf1267aea8839e5bec7ebc6646ba91758dc0c115a1078a3",
+        "original_protocol": "v4",
+        "evaluation_protocol": "known-rule-mixed-v5.1"
+      }
+    },
+    "common_diagnostics": {
+      "states": 3,
+      "collection_wall_seconds": 0.004475699970498681,
+      "family_count": 3,
+      "all_zero_states": 2,
+      "all_tie_states": 2,
+      "simulation_physical_steps": 2356,
+      "grouping": {
+        "singletons": {
+          "better": 0,
+          "worse": 0,
+          "equal": 3,
+          "branch_sensitive": 0,
+          "mean_difference": 0.0
+        },
+        "pairs": {
+          "better": 1,
+          "worse": 0,
+          "equal": 2,
+          "branch_sensitive": 1,
+          "mean_difference": 0.16666666666666666
+        },
+        "rule": {
+          "better": 0,
+          "worse": 0,
+          "equal": 3,
+          "branch_sensitive": 0,
+          "mean_difference": 0.0
+        }
+      },
+      "records": [
+        {
+          "state_id": "known-rule-mixed-v5.1:20260907:shared:diagnostic:8v4:0:event:0",
+          "family_id": "known-rule-mixed-v5.1:20260907:shared:diagnostic:8v4:0",
+          "episode_spec": {
+            "family_id": "known-rule-mixed-v5.1:20260907:shared:diagnostic:8v4:0",
+            "red_count": 8,
+            "blue_count": 4,
+            "opening_seed": 1025949213,
+            "opponent_seed": 131985544,
+            "split": "diagnostic",
+            "opponent": "reactive",
+            "protocol_version": "known-rule-mixed-v5.1"
+          },
+          "state_kind": "initial",
+          "candidate_count": 4,
+          "selection_all_zero": false,
+          "selection_all_tie": false,
+          "verification_values": {
+            "grand": 0.0,
+            "singletons": 0.0,
+            "pairs": 0.5,
+            "rule": 0.0,
+            "selection_teacher": 0.0,
+            "rollout_budget_1": 0.0,
+            "rollout_budget_2": 0.0,
+            "rollout": 0.0,
+            "frozen_b3": 0.0
+          },
+          "paired_gain_vs_rule": {
+            "grand": 0.0,
+            "singletons": 0.0,
+            "pairs": 0.5,
+            "rule": 0.0,
+            "selection_teacher": 0.0,
+            "rollout_budget_1": 0.0,
+            "rollout_budget_2": 0.0,
+            "rollout": 0.0,
+            "frozen_b3": 0.0
+          },
+          "group_only": {
+            "singletons": {
+              "mean_difference": 0.0,
+              "branch_vector_changed": false
+            },
+            "pairs": {
+              "mean_difference": 0.5,
+              "branch_vector_changed": true
+            },
+            "rule": {
+              "mean_difference": 0.0,
+              "branch_vector_changed": false
+            }
+          },
+          "simulation_physical_steps": 822,
+          "budget_curve": [
+            {
+              "branches": 1,
+              "candidate_count": 4,
+              "selection_simulation_physical_steps": 121,
+              "verification_gain_vs_rule": 0.0
+            },
+            {
+              "branches": 2,
+              "candidate_count": 4,
+              "selection_simulation_physical_steps": 237,
+              "verification_gain_vs_rule": 0.0
+            }
+          ]
+        },
+        {
+          "state_id": "known-rule-mixed-v5.1:20260907:shared:diagnostic:12v9:0:event:0",
+          "family_id": "known-rule-mixed-v5.1:20260907:shared:diagnostic:12v9:0",
+          "episode_spec": {
+            "family_id": "known-rule-mixed-v5.1:20260907:shared:diagnostic:12v9:0",
+            "red_count": 12,
+            "blue_count": 9,
+            "opening_seed": 277872624,
+            "opponent_seed": 835611575,
+            "split": "diagnostic",
+            "opponent": "reactive",
+            "protocol_version": "known-rule-mixed-v5.1"
+          },
+          "state_kind": "initial",
+          "candidate_count": 4,
+          "selection_all_zero": true,
+          "selection_all_tie": true,
+          "verification_values": {
+            "grand": 0.0,
+            "singletons": 0.0,
+            "pairs": 0.0,
+            "rule": 0.0,
+            "selection_teacher": 0.0,
+            "rollout_budget_1": 0.0,
+            "rollout_budget_2": 0.0,
+            "rollout": 0.0,
+            "frozen_b3": 0.0
+          },
+          "paired_gain_vs_rule": {
+            "grand": 0.0,
+            "singletons": 0.0,
+            "pairs": 0.0,
+            "rule": 0.0,
+            "selection_teacher": 0.0,
+            "rollout_budget_1": 0.0,
+            "rollout_budget_2": 0.0,
+            "rollout": 0.0,
+            "frozen_b3": 0.0
+          },
+          "group_only": {
+            "singletons": {
+              "mean_difference": 0.0,
+              "branch_vector_changed": false
+            },
+            "pairs": {
+              "mean_difference": 0.0,
+              "branch_vector_changed": false
+            },
+            "rule": {
+              "mean_difference": 0.0,
+              "branch_vector_changed": false
+            }
+          },
+          "simulation_physical_steps": 791,
+          "budget_curve": [
+            {
+              "branches": 1,
+              "candidate_count": 4,
+              "selection_simulation_physical_steps": 100,
+              "verification_gain_vs_rule": 0.0
+            },
+            {
+              "branches": 2,
+              "candidate_count": 4,
+              "selection_simulation_physical_steps": 196,
+              "verification_gain_vs_rule": 0.0
+            }
+          ]
+        },
+        {
+          "state_id": "known-rule-mixed-v5.1:20260907:shared:diagnostic:16v16:0:event:0",
+          "family_id": "known-rule-mixed-v5.1:20260907:shared:diagnostic:16v16:0",
+          "episode_spec": {
+            "family_id": "known-rule-mixed-v5.1:20260907:shared:diagnostic:16v16:0",
+            "red_count": 16,
+            "blue_count": 16,
+            "opening_seed": 1893660500,
+            "opponent_seed": 882547658,
+            "split": "diagnostic",
+            "opponent": "reactive",
+            "protocol_version": "known-rule-mixed-v5.1"
+          },
+          "state_kind": "initial",
+          "candidate_count": 4,
+          "selection_all_zero": true,
+          "selection_all_tie": true,
+          "verification_values": {
+            "grand": 0.0,
+            "singletons": 0.0,
+            "pairs": 0.0,
+            "rule": 0.0,
+            "selection_teacher": 0.0,
+            "rollout_budget_1": 0.0,
+            "rollout_budget_2": 0.0,
+            "rollout": 0.0,
+            "frozen_b3": 0.0
+          },
+          "paired_gain_vs_rule": {
+            "grand": 0.0,
+            "singletons": 0.0,
+            "pairs": 0.0,
+            "rule": 0.0,
+            "selection_teacher": 0.0,
+            "rollout_budget_1": 0.0,
+            "rollout_budget_2": 0.0,
+            "rollout": 0.0,
+            "frozen_b3": 0.0
+          },
+          "group_only": {
+            "singletons": {
+              "mean_difference": 0.0,
+              "branch_vector_changed": false
+            },
+            "pairs": {
+              "mean_difference": 0.0,
+              "branch_vector_changed": false
+            },
+            "rule": {
+              "mean_difference": 0.0,
+              "branch_vector_changed": false
+            }
+          },
+          "simulation_physical_steps": 743,
+          "budget_curve": [
+            {
+              "branches": 1,
+              "candidate_count": 4,
+              "selection_simulation_physical_steps": 105,
+              "verification_gain_vs_rule": 0.0
+            },
+            {
+              "branches": 2,
+              "candidate_count": 4,
+              "selection_simulation_physical_steps": 212,
+              "verification_gain_vs_rule": 0.0
+            }
+          ]
+        }
+      ]
+    },
+    "own_diagnostics": {
+      "states": 1,
+      "collection_wall_seconds": 1.2898874999955297,
+      "collection_simulation_physical_steps": 437,
+      "family_count": 1,
+      "mean_gain_vs_rule": -1.0,
+      "simulation_physical_steps": 350,
+      "records": [
+        {
+          "method": "T1_rollout",
+          "state_id": "known-rule-mixed-v5.1:20260907:T1_rollout:onpolicy_diagnostic:8v4:0:event:0",
+          "family_id": "known-rule-mixed-v5.1:20260907:T1_rollout:onpolicy_diagnostic:8v4:0",
+          "episode_spec": {
+            "family_id": "known-rule-mixed-v5.1:20260907:T1_rollout:onpolicy_diagnostic:8v4:0",
+            "red_count": 8,
+            "blue_count": 4,
+            "opening_seed": 1194920481,
+            "opponent_seed": 1192281981,
+            "split": "onpolicy_diagnostic",
+            "opponent": "reactive",
+            "protocol_version": "known-rule-mixed-v5.1"
+          },
+          "rule_value": 1.0,
+          "selected_value": 0.0,
+          "paired_gain_vs_rule": -1.0,
+          "same_action": false,
+          "simulation_physical_steps": 350
+        }
+      ]
+    },
+    "control_diagnostic": {
+      "T1_once_then_rule": {
+        "method_id": "T1_once_then_rule",
+        "checkpoint_id": "latest",
+        "split": "control_diagnostic",
+        "training_seed": 20260907,
+        "protocol_hash": "5dbab2ed80db39e963faf0e11b6c70615d2b62f866280d5a9fd44c03051bee44",
+        "wins": 1,
+        "episodes": 3,
+        "success_rate": 0.3333333333333333,
+        "complete": true,
+        "expected_episodes": 3,
+        "groups": [
+          {
+            "red_count": 8,
+            "blue_count": 4,
+            "wins": 1,
+            "episodes": 1,
+            "success_rate": 1.0,
+            "wilson95": [
+              0.20654931437723745,
+              1.0
+            ]
+          },
+          {
+            "red_count": 12,
+            "blue_count": 9,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          },
+          {
+            "red_count": 16,
+            "blue_count": 16,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          }
+        ],
+        "never_deployed_rate": 0.0,
+        "path": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_acceptance_final\\T1\\evaluations\\T1_once_then_rule\\control_diagnostic\\latest"
+      },
+      "T1_continuous": {
+        "method_id": "T1_continuous",
+        "checkpoint_id": "latest",
+        "split": "control_diagnostic",
+        "training_seed": 20260907,
+        "protocol_hash": "5dbab2ed80db39e963faf0e11b6c70615d2b62f866280d5a9fd44c03051bee44",
+        "wins": 1,
+        "episodes": 3,
+        "success_rate": 0.3333333333333333,
+        "complete": true,
+        "expected_episodes": 3,
+        "groups": [
+          {
+            "red_count": 8,
+            "blue_count": 4,
+            "wins": 1,
+            "episodes": 1,
+            "success_rate": 1.0,
+            "wilson95": [
+              0.20654931437723745,
+              1.0
+            ]
+          },
+          {
+            "red_count": 12,
+            "blue_count": 9,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          },
+          {
+            "red_count": 16,
+            "blue_count": 16,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          }
+        ],
+        "never_deployed_rate": 0.0,
+        "path": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_acceptance_final\\T1\\evaluations\\T1_continuous\\control_diagnostic\\latest"
+      },
+      "B3_continuous": {
+        "method_id": "B3_continuous",
+        "checkpoint_id": "latest",
+        "split": "control_diagnostic",
+        "training_seed": 20260907,
+        "protocol_hash": "5dbab2ed80db39e963faf0e11b6c70615d2b62f866280d5a9fd44c03051bee44",
+        "wins": 1,
+        "episodes": 3,
+        "success_rate": 0.3333333333333333,
+        "complete": true,
+        "expected_episodes": 3,
+        "groups": [
+          {
+            "red_count": 8,
+            "blue_count": 4,
+            "wins": 1,
+            "episodes": 1,
+            "success_rate": 1.0,
+            "wilson95": [
+              0.20654931437723745,
+              1.0
+            ]
+          },
+          {
+            "red_count": 12,
+            "blue_count": 9,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          },
+          {
+            "red_count": 16,
+            "blue_count": 16,
+            "wins": 0,
+            "episodes": 1,
+            "success_rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.7934506856227626
+            ]
+          }
+        ],
+        "never_deployed_rate": 0.6666666666666666,
+        "path": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v5_acceptance_final\\T1\\evaluations\\B3_continuous\\control_diagnostic\\latest"
+      }
+    },
+    "wall_seconds": 78.62821089988574
+  }
+}
