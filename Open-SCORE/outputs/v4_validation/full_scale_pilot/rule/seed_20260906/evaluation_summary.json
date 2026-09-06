@@ -1,0 +1,105 @@
+{
+  "schema": "research-v4-evaluation-v1",
+  "route": "rule",
+  "episodes_per_scale": 2,
+  "variants": [
+    "policy"
+  ],
+  "scales": [
+    8,
+    12,
+    16,
+    24,
+    32
+  ],
+  "complete": true,
+  "groups": [
+    {
+      "route": "rule",
+      "variant": "policy",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 27.5,
+      "member_change": 0.3722486772486772,
+      "target_change": 0.20775132275132274,
+      "mean_group_size": 1.2214285714285715,
+      "decision_p95_seconds": 0.0006602674606256187
+    },
+    {
+      "route": "rule",
+      "variant": "policy",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 27.5,
+      "member_change": 0.1833967379421925,
+      "target_change": 0.10078526972466367,
+      "mean_group_size": 1.1507352941176472,
+      "decision_p95_seconds": 0.0009224774606991558
+    },
+    {
+      "route": "rule",
+      "variant": "policy",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 28.5,
+      "member_change": 0.21765044784275556,
+      "target_change": 0.10334904411827489,
+      "mean_group_size": 1.338083538083538,
+      "decision_p95_seconds": 0.0009130024642217903
+    },
+    {
+      "route": "rule",
+      "variant": "policy",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.5,
+      "member_change": 0.5029579962662549,
+      "target_change": 0.0861320055031235,
+      "mean_group_size": 1.7403042828247295,
+      "decision_p95_seconds": 0.0018612900283187619
+    },
+    {
+      "route": "rule",
+      "variant": "policy",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 22.0,
+      "member_change": 0.44487415293592264,
+      "target_change": 0.1095537683559025,
+      "mean_group_size": 2.0133885438233263,
+      "decision_p95_seconds": 0.002261217508930713
+    }
+  ],
+  "raw_episode_count": 10,
+  "evaluator_coverage_this_invocation": {}
+}

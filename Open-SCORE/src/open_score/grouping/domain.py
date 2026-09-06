@@ -48,16 +48,20 @@ class Grouping:
         """Groups have no numeric labels; construction already canonicalizes."""
         return self
 
-    def validate(self, live_ids: Iterable[int], target_ids: Iterable[int]) -> Grouping:
+    def validate(self, live_ids: Iterable[int], target_ids: Iterable[int], *,
+                 max_members: int | None = 4) -> Grouping:
         live, targets = tuple(map(int, live_ids)), set(map(int, target_ids))
         used = [i for group in self.groups for i in group.members] + list(self.reserve)
         if len(live) != len(set(live)):
             raise ValueError("Live identities must be unique")
         if len(used) != len(set(used)) or set(used) != set(live):
             raise ValueError("Every live identity must occur exactly once")
-        if any(group.target not in targets or not 1 <= len(group.members) <= 4
+        if max_members is not None and int(max_members) < 1:
+            raise ValueError("max_members must be positive or None")
+        if any(group.target not in targets or len(group.members) < 1
+               or (max_members is not None and len(group.members) > max_members)
                for group in self.groups):
-            raise ValueError("Every group needs a valid target and one to four members")
+            raise ValueError("Every group needs a valid target and a supported positive size")
         return self
 
     def prune(self, live_ids: Iterable[int]) -> Grouping:

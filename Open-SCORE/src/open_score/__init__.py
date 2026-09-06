@@ -1,6 +1,6 @@
-"""Known-opponent dynamic grouping with a frozen local executor."""
+"""Known-opponent dynamic grouping with shared rule execution and S2 values."""
 
-__version__ = "2.0.0"
+__version__ = "4.0.0"
 
 from .contracts import GlobalState, TeamObservation
 

@@ -24,7 +24,8 @@ class KnownOpponentEnv:
     """
 
     def __init__(self, red=8, blue=8, max_steps=50, opponent="reactive", seed=0,
-                 device="cpu", stage1_path: Path | str | None = None, command_interval=5):
+                 device="cpu", stage1_path: Path | str | None = None, command_interval=5,
+                 executor=None, group_max_size=4, targets=2, target_positions=None):
         if opponent not in OPPONENTS:
             raise ValueError(f"opponent must be one of {OPPONENTS}")
         if not 1 <= int(max_steps) <= 50 or not 1 <= int(command_interval) <= 50:
@@ -33,11 +34,14 @@ class KnownOpponentEnv:
         self.seed = int(seed)
         self.max_steps = int(max_steps)
         self.command_interval = int(command_interval)
-        self.adapter = HADStage3Adapter(int(red), int(blue), 2, max_steps=self.max_steps,
-                                        target_positions=[[-2100.0, -650.0, 100.0],
-                                                          [-2100.0, 650.0, 100.0]],
+        self.group_max_size = group_max_size
+        if target_positions is None:
+            target_positions = ([[-2100.0, 0.0, 100.0]] if int(targets) == 1 else
+                                [[-2100.0, -650.0, 100.0], [-2100.0, 650.0, 100.0]])
+        self.adapter = HADStage3Adapter(int(red), int(blue), int(targets), max_steps=self.max_steps,
+                                        target_positions=target_positions,
                                         blue_rule_style="rush")
-        self.executor = FrozenExecutor(stage1_path, device)
+        self.executor = FrozenExecutor(stage1_path, device) if executor is None else executor
         self.previous = Grouping((), self.adapter.red_ids)
         self.blue_grouping = Grouping(())
         self.done = False
@@ -96,7 +100,8 @@ class KnownOpponentEnv:
         if self.done:
             raise RuntimeError("Cannot step a completed episode; call reset")
         before = self.state()
-        grouping.validate(before.ids("red"), (target.id for target in before.targets))
+        grouping.validate(before.ids("red"), (target.id for target in before.targets),
+                          max_members=self.group_max_size)
         # Both choices use precisely `before`; Blue cannot read `grouping`.
         blue = sample(before, self.opponent, self.opponent_rng)
         blue.validate(before.ids("blue"), (target.id for target in before.targets))
@@ -166,11 +171,15 @@ class KnownOpponentEnv:
                 "opponent_rng": copy.deepcopy(self.opponent_rng.bit_generator.state),
                 "numpy_state": copy.deepcopy(self._numpy_state), "done": self.done,
                 "opponent": self.opponent, "max_steps": self.max_steps,
-                "command_interval": self.command_interval, "seed": self.seed}
+                "command_interval": self.command_interval, "seed": self.seed,
+                "group_max_size": self.group_max_size,
+                "executor_type": type(self.executor).__name__}
 
     def restore(self, snapshot: dict) -> DecisionState:
         if (snapshot["opponent"] != self.opponent or snapshot["max_steps"] != self.max_steps
-                or snapshot["command_interval"] != self.command_interval):
+                or snapshot["command_interval"] != self.command_interval
+                or snapshot.get("group_max_size", 4) != self.group_max_size
+                or snapshot.get("executor_type", type(self.executor).__name__) != type(self.executor).__name__):
             raise ValueError("Snapshot and environment protocols differ")
         with self._legacy_rng():
             self.adapter.restore(snapshot["physical"])

@@ -1,6 +1,56 @@
-# Open-SCORE v3.0：已知对手下的动态分组
+# Open-SCORE v4.0：共享规则底层的动态分组
 
-当前推荐入口是基于失败诊断重建的三路线过夜训练。详细设计、明确预算与已验证范围见 [v3 过夜方案](../固定对手下动态分组研究方案_v3_过夜训练.md)。下方原 v2 说明作为历史版本保留；旧检查点不能跨新增源码直接 `--resume`，重现原 v2 应使用对应历史提交和独立输出。
+当前推荐 v4。所有路线使用同一纯规则红方底层及已知固定蓝方策略；上层最多每 5 步和非终止伤亡后决策，物理任务最多 50 步。红方组规模没有四人上限。历史 S1/S2、v2/v3 代码和结果保留，但不参与 v4 底层执行。
+
+先进入 `E:\Code\Open_Score\Open-SCORE`。下列命令使用本机已验证的 Torch Python，输出到新目录；已有兼容目录继续运行时加 `--resume`。`--workers` 可以在恢复时改变，`--steps` 可以增加；修改源码、执行器或实验协议后必须使用新目录。
+
+### 先运行主方法 B3
+
+```powershell
+& 'D:\Software\Anaconda\envs\torch310\python.exe' scripts/run_research_comparison.py run --routes b3_global --workers 6 --device auto --output outputs/v4_main
+```
+
+该命令先收集共享规则底层的数据并训练局部/全局 S2，再测试 B3 和默认四种规则对照。B3 通过监督学习训练评估器，部署时搜索完整编组；它不额外训练 PPO。默认 S2 全局 120 个回合族、局部 160 个回合族，各训练最多 40 个 epoch。`--steps` 控制三条 RL 路线的物理交互预算，不控制 S2 的数据量。
+
+只检查主方法端到端链路，可用更短的命令；这不代表性能实验：
+
+```powershell
+& 'D:\Software\Anaconda\envs\torch310\python.exe' scripts/run_research_comparison.py run --routes b3_global --smoke --workers 1 --device auto --output outputs/v4_main_smoke
+```
+
+### 六路线首轮比较：每路一个种子，最多六任务并行
+
+```powershell
+& 'D:\Software\Anaconda\envs\torch310\python.exe' scripts/run_research_comparison.py run --seeds 20260906 --workers 6 --steps 100000 --device auto --output outputs/v4_comparison
+```
+
+三条学习路线为 `r1_ppo`、`r2_teacher_ppo`、`r3_ddqn`；三条分配路线为 `b1_counts`、`b2_local`、`b3_global`。B1/B2/B3 共用准备阶段模型，无重复的策略训练。每路的规则下层相同，PPO actor/critic 不共享参数，教师只用于初始化，训练只使用原生终局奖励。
+
+`--steps 100000` 为学习路线的物理步数目标；默认每路另有 6.5 小时兜底上限，先达到者停止。默认独立测试为 8/12/16/24/32 五种规模，每规模 100 局；学习路线的 best/latest/initialized 分别报告。首轮一个训练种子用于筛选方向，不能据此宣称跨训练种子的稳定优势。
+
+复测并发吞吐：
+
+```powershell
+& 'D:\Software\Anaconda\envs\torch310\python.exe' scripts/run_research_comparison.py benchmark --benchmark-workers 3 6 --benchmark-steps 1024 --output outputs/v4_benchmark
+```
+
+先做分组有效性诊断：
+
+```powershell
+& 'D:\Software\Anaconda\envs\torch310\python.exe' scripts/run_research_comparison.py diagnose --scales 4 8 16 32 --eval-episodes 20 --device cpu --output outputs/v4_rule_gate
+```
+
+输出包括根目录 `comparison_report.md`、`comparison_results.csv`、汇总 JSON、调度状态与每路日志，路线目录中的检查点和评估原始记录，以及 `shared/seed_20260906/` 中的 S2 曲线、校准、候选排序和旧模型迁移报告。准确文件索引及本次实测见 [v4 验证报告](docs/results_v4.md)。运行中不是所有路线都需要 GPU；数据采集与物理仿真主要在 CPU，神经网络训练可使用 CUDA。多个训练种子会各自重新训练 S2，再供同种子的六路线共享。
+
+完整参数及单独 `prepare/train/evaluate/report` 入口：
+
+```powershell
+& 'D:\Software\Anaconda\envs\torch310\python.exe' scripts/run_research_comparison.py --help
+```
+
+### 历史 v3 运行记录
+
+v3 的入口是基于失败诊断重建的三路线过夜训练。详细设计、明确预算与当时已验证范围见 [v3 过夜方案](../固定对手下动态分组研究方案_v3_过夜训练.md)。下方原 v2 说明作为历史版本保留；旧检查点不能跨新增源码直接 `--resume`，重现原 v2 应使用对应历史提交和独立输出。
 
 在此目录执行下面这一条命令即可同时启动三个独立候选方案。上层使用 GPU，原冻结下层使用 CPU；每路最多 7 小时训练，45 分钟评估，总上限 8 小时，`--steps 0` 不在十万步提前结束。
 

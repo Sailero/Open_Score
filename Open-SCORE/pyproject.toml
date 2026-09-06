@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "open-score"
-version = "3.0.0"
-description = "Known-opponent dynamic grouping with frozen local execution"
+version = "4.0.0"
+description = "Known-opponent dynamic grouping with common rule execution and continuation evaluation"
 requires-python = ">=3.10"
 dependencies = [
   "numpy>=1.23",
@@ -23,6 +23,7 @@ test = [
 
 [project.scripts]
 open-score = "open_score.grouping.cli:main"
+open-score-v4 = "open_score.research_v4.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

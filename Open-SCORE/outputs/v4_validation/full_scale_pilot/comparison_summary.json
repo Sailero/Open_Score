@@ -1,0 +1,2212 @@
+{
+  "schema": "research-v4-comparison-v1",
+  "evaluations": [
+    {
+      "path": "outputs\\v4_validation\\full_scale_pilot\\b1_counts\\seed_20260906\\evaluation_summary.json",
+      "complete": true,
+      "route": "b1_counts",
+      "seed": 20260906
+    },
+    {
+      "path": "outputs\\v4_validation\\full_scale_pilot\\b2_count\\seed_20260906\\evaluation_summary.json",
+      "complete": true,
+      "route": "b2_count",
+      "seed": 20260906
+    },
+    {
+      "path": "outputs\\v4_validation\\full_scale_pilot\\b2_local\\seed_20260906\\evaluation_summary.json",
+      "complete": true,
+      "route": "b2_local",
+      "seed": 20260906
+    },
+    {
+      "path": "outputs\\v4_validation\\full_scale_pilot\\b2_min\\seed_20260906\\evaluation_summary.json",
+      "complete": true,
+      "route": "b2_min",
+      "seed": 20260906
+    },
+    {
+      "path": "outputs\\v4_validation\\full_scale_pilot\\b3_global\\seed_20260906\\evaluation_summary.json",
+      "complete": true,
+      "route": "b3_global",
+      "seed": 20260906
+    },
+    {
+      "path": "outputs\\v4_validation\\full_scale_pilot\\b3_rebuild\\seed_20260906\\evaluation_summary.json",
+      "complete": true,
+      "route": "b3_rebuild",
+      "seed": 20260906
+    },
+    {
+      "path": "outputs\\v4_validation\\full_scale_pilot\\grand\\seed_20260906\\evaluation_summary.json",
+      "complete": true,
+      "route": "grand",
+      "seed": 20260906
+    },
+    {
+      "path": "outputs\\v4_validation\\full_scale_pilot\\group_only\\seed_20260906\\evaluation_summary.json",
+      "complete": true,
+      "route": "group_only",
+      "seed": 20260906
+    },
+    {
+      "path": "outputs\\v4_validation\\full_scale_pilot\\r1_ppo\\seed_20260906\\evaluation_summary.json",
+      "complete": true,
+      "route": "r1_ppo",
+      "seed": 20260906
+    },
+    {
+      "path": "outputs\\v4_validation\\full_scale_pilot\\r2_teacher_ppo\\seed_20260906\\evaluation_summary.json",
+      "complete": true,
+      "route": "r2_teacher_ppo",
+      "seed": 20260906
+    },
+    {
+      "path": "outputs\\v4_validation\\full_scale_pilot\\r3_ddqn\\seed_20260906\\evaluation_summary.json",
+      "complete": true,
+      "route": "r3_ddqn",
+      "seed": 20260906
+    },
+    {
+      "path": "outputs\\v4_validation\\full_scale_pilot\\random\\seed_20260906\\evaluation_summary.json",
+      "complete": true,
+      "route": "random",
+      "seed": 20260906
+    },
+    {
+      "path": "outputs\\v4_validation\\full_scale_pilot\\rule\\seed_20260906\\evaluation_summary.json",
+      "complete": true,
+      "route": "rule",
+      "seed": 20260906
+    },
+    {
+      "path": "outputs\\v4_validation\\full_scale_pilot\\static_rule\\seed_20260906\\evaluation_summary.json",
+      "complete": true,
+      "route": "static_rule",
+      "seed": 20260906
+    },
+    {
+      "path": "outputs\\v4_validation\\full_scale_pilot\\target_only\\seed_20260906\\evaluation_summary.json",
+      "complete": true,
+      "route": "target_only",
+      "seed": 20260906
+    }
+  ],
+  "groups": [
+    {
+      "route": "b1_counts",
+      "variant": "policy",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 29.5,
+      "member_change": 0.5363636363636364,
+      "target_change": 0.33058261183261184,
+      "mean_group_size": 1.9283625730994152,
+      "decision_p95_seconds": 0.013985317479819057,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b1_counts",
+      "variant": "policy",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 27.0,
+      "member_change": 0.4390873015873016,
+      "target_change": 0.26169282106782105,
+      "mean_group_size": 2.421474358974359,
+      "decision_p95_seconds": 0.0443095825088676,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b1_counts",
+      "variant": "policy",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 22.0,
+      "member_change": 0.42654579795204794,
+      "target_change": 0.32587501040626043,
+      "mean_group_size": 2.55,
+      "decision_p95_seconds": 0.09149995992192998,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b1_counts",
+      "variant": "policy",
+      "scale": 24,
+      "wins": 1,
+      "episodes": 2,
+      "success_rate": 0.5,
+      "wilson95": [
+        0.09453120573423074,
+        0.9054687942657693
+      ],
+      "physical_steps": 26.0,
+      "member_change": 0.46457714555642804,
+      "target_change": 0.23429514859210016,
+      "mean_group_size": 5.222222222222222,
+      "decision_p95_seconds": 0.23733161506243045,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b1_counts",
+      "variant": "policy",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.5916652426409992,
+      "target_change": 0.2433604202755797,
+      "mean_group_size": 7.0225,
+      "decision_p95_seconds": 0.5583543875254691,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b2_count",
+      "variant": "policy",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 23.5,
+      "member_change": 0.3051948051948052,
+      "target_change": 0.22380952380952382,
+      "mean_group_size": 3.192857142857143,
+      "decision_p95_seconds": 0.04803609746159049,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b2_count",
+      "variant": "policy",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.0,
+      "member_change": 0.39610389610389607,
+      "target_change": 0.23106060606060605,
+      "mean_group_size": 3.6237458193979935,
+      "decision_p95_seconds": 0.049870409967843435,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b2_count",
+      "variant": "policy",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 27.0,
+      "member_change": 0.3968253968253968,
+      "target_change": 0.3049006549006549,
+      "mean_group_size": 4.993589743589744,
+      "decision_p95_seconds": 0.08113087498350066,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b2_count",
+      "variant": "policy",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 21.5,
+      "member_change": 0.35384615384615387,
+      "target_change": 0.12251964917868807,
+      "mean_group_size": 11.456349206349206,
+      "decision_p95_seconds": 0.24920454497914762,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b2_count",
+      "variant": "policy",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.0,
+      "member_change": 0.37362637362637363,
+      "target_change": 0.16264141496771772,
+      "mean_group_size": 9.642753623188405,
+      "decision_p95_seconds": 0.5665146925661246,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b2_local",
+      "variant": "policy",
+      "scale": 8,
+      "wins": 1,
+      "episodes": 2,
+      "success_rate": 0.5,
+      "wilson95": [
+        0.09453120573423074,
+        0.9054687942657693
+      ],
+      "physical_steps": 16.5,
+      "member_change": 0.6428571428571428,
+      "target_change": 0.3197278911564626,
+      "mean_group_size": 2.8238095238095235,
+      "decision_p95_seconds": 0.07347866502823304,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b2_local",
+      "variant": "policy",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.0,
+      "member_change": 0.5,
+      "target_change": 0.17520833333333333,
+      "mean_group_size": 3.4027777777777777,
+      "decision_p95_seconds": 0.04483329503564164,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b2_local",
+      "variant": "policy",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 29.5,
+      "member_change": 0.6325757575757576,
+      "target_change": 0.28688167892713345,
+      "mean_group_size": 4.553260869565218,
+      "decision_p95_seconds": 0.042514360015047714,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b2_local",
+      "variant": "policy",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 27.0,
+      "member_change": 0.6396103896103896,
+      "target_change": 0.1933049777535312,
+      "mean_group_size": 8.358333333333334,
+      "decision_p95_seconds": 0.0641623325063847,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b2_local",
+      "variant": "policy",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 26.0,
+      "member_change": 0.7596153846153846,
+      "target_change": 0.17633154449684263,
+      "mean_group_size": 8.949175824175825,
+      "decision_p95_seconds": 0.10374568749102761,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b2_min",
+      "variant": "policy",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 27.5,
+      "member_change": 0.5347222222222222,
+      "target_change": 0.1989914021164021,
+      "mean_group_size": 2.615079365079365,
+      "decision_p95_seconds": 0.09140130244195449,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b2_min",
+      "variant": "policy",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 26.0,
+      "member_change": 0.5892857142857143,
+      "target_change": 0.17946428571428574,
+      "mean_group_size": 3.5083333333333333,
+      "decision_p95_seconds": 0.034504702605772763,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b2_min",
+      "variant": "policy",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.5,
+      "member_change": 0.5844155844155844,
+      "target_change": 0.16116879152593439,
+      "mean_group_size": 5.2,
+      "decision_p95_seconds": 0.036100457538850605,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b2_min",
+      "variant": "policy",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 23.0,
+      "member_change": 0.6154761904761905,
+      "target_change": 0.10707999172991577,
+      "mean_group_size": 8.496190476190476,
+      "decision_p95_seconds": 0.05756260002963244,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b2_min",
+      "variant": "policy",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.5,
+      "member_change": 0.5961538461538461,
+      "target_change": 0.1260498557558265,
+      "mean_group_size": 8.875,
+      "decision_p95_seconds": 0.10683141255867667,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b3_global",
+      "variant": "policy",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.0,
+      "member_change": 0.0,
+      "target_change": 0.0,
+      "mean_group_size": 0.0,
+      "decision_p95_seconds": 0.13392189752776174,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b3_global",
+      "variant": "policy",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.3125,
+      "target_change": 0.1315340909090909,
+      "mean_group_size": 2.0714285714285716,
+      "decision_p95_seconds": 0.05655509509379043,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b3_global",
+      "variant": "policy",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 27.5,
+      "member_change": 0.3943210635518327,
+      "target_change": 0.22023434025182276,
+      "mean_group_size": 4.728205128205128,
+      "decision_p95_seconds": 0.05545567497611045,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b3_global",
+      "variant": "policy",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 22.0,
+      "member_change": 0.8045696539485359,
+      "target_change": 0.16530000151843482,
+      "mean_group_size": 7.218620689655173,
+      "decision_p95_seconds": 0.07939470001729201,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b3_global",
+      "variant": "policy",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.6493256743256743,
+      "target_change": 0.21651499635370602,
+      "mean_group_size": 8.46,
+      "decision_p95_seconds": 0.11098100749077275,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b3_rebuild",
+      "variant": "policy",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 27.5,
+      "member_change": 0.3976731601731602,
+      "target_change": 0.28587662337662334,
+      "mean_group_size": 2.6538461538461537,
+      "decision_p95_seconds": 0.11188976002740664,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b3_rebuild",
+      "variant": "policy",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.7120486111111111,
+      "target_change": 0.44931502525252526,
+      "mean_group_size": 3.2035087719298243,
+      "decision_p95_seconds": 0.04181489506736398,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b3_rebuild",
+      "variant": "policy",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.8197222222222222,
+      "target_change": 0.46586920024420025,
+      "mean_group_size": 4.320971867007673,
+      "decision_p95_seconds": 0.04284552007447928,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b3_rebuild",
+      "variant": "policy",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 1.0,
+      "target_change": 0.4298137210936713,
+      "mean_group_size": 5.704963235294118,
+      "decision_p95_seconds": 0.06843991251080296,
+      "training_seed": 20260906
+    },
+    {
+      "route": "b3_rebuild",
+      "variant": "policy",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.9454460470085471,
+      "target_change": 0.29817993841069135,
+      "mean_group_size": 7.569642857142856,
+      "decision_p95_seconds": 0.09213964759837834,
+      "training_seed": 20260906
+    },
+    {
+      "route": "grand",
+      "variant": "policy",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 28.0,
+      "member_change": 0.5222222222222221,
+      "target_change": 0.23314814814814813,
+      "mean_group_size": 2.4652777777777777,
+      "decision_p95_seconds": 0.0004812076163943856,
+      "training_seed": 20260906
+    },
+    {
+      "route": "grand",
+      "variant": "policy",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.5,
+      "member_change": 0.5875,
+      "target_change": 0.20627164502164502,
+      "mean_group_size": 3.62012987012987,
+      "decision_p95_seconds": 0.0006767999962903558,
+      "training_seed": 20260906
+    },
+    {
+      "route": "grand",
+      "variant": "policy",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 19.5,
+      "member_change": 0.5642857142857143,
+      "target_change": 0.13855840587983448,
+      "mean_group_size": 4.835227272727273,
+      "decision_p95_seconds": 0.0007355876325163991,
+      "training_seed": 20260906
+    },
+    {
+      "route": "grand",
+      "variant": "policy",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.5,
+      "member_change": 0.6538461538461539,
+      "target_change": 0.07197739496824682,
+      "mean_group_size": 7.160714285714286,
+      "decision_p95_seconds": 0.0011967800441198052,
+      "training_seed": 20260906
+    },
+    {
+      "route": "grand",
+      "variant": "policy",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 26.0,
+      "member_change": 0.6923076923076923,
+      "target_change": 0.08499878590019624,
+      "mean_group_size": 9.482142857142858,
+      "decision_p95_seconds": 0.0019906974863260984,
+      "training_seed": 20260906
+    },
+    {
+      "route": "group_only",
+      "variant": "policy",
+      "scale": 8,
+      "wins": 1,
+      "episodes": 2,
+      "success_rate": 0.5,
+      "wilson95": [
+        0.09453120573423074,
+        0.9054687942657693
+      ],
+      "physical_steps": 19.0,
+      "member_change": 0.38809523809523805,
+      "target_change": 0.0,
+      "mean_group_size": 2.5359477124183005,
+      "decision_p95_seconds": 0.14206424999283618,
+      "training_seed": 20260906
+    },
+    {
+      "route": "group_only",
+      "variant": "policy",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 26.5,
+      "member_change": 0.516437332508761,
+      "target_change": 0.0,
+      "mean_group_size": 2.3833333333333333,
+      "decision_p95_seconds": 0.044473695004126054,
+      "training_seed": 20260906
+    },
+    {
+      "route": "group_only",
+      "variant": "policy",
+      "scale": 16,
+      "wins": 1,
+      "episodes": 2,
+      "success_rate": 0.5,
+      "wilson95": [
+        0.09453120573423074,
+        0.9054687942657693
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.39494880119880116,
+      "target_change": 0.0,
+      "mean_group_size": 2.2288838612368025,
+      "decision_p95_seconds": 0.057424975046888,
+      "training_seed": 20260906
+    },
+    {
+      "route": "group_only",
+      "variant": "policy",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 23.0,
+      "member_change": 0.6513354370274884,
+      "target_change": 0.0,
+      "mean_group_size": 2.7873070325900517,
+      "decision_p95_seconds": 0.11024965493124908,
+      "training_seed": 20260906
+    },
+    {
+      "route": "group_only",
+      "variant": "policy",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.5403679637469414,
+      "target_change": 0.0,
+      "mean_group_size": 3.087550054605024,
+      "decision_p95_seconds": 0.14539928751764816,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r1_ppo",
+      "variant": "best",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.0,
+      "member_change": 0.10052910052910054,
+      "target_change": 0.07671957671957673,
+      "mean_group_size": 1.0350000000000001,
+      "decision_p95_seconds": 0.008583067584550005,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r1_ppo",
+      "variant": "best",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 23.5,
+      "member_change": 0.11417748917748917,
+      "target_change": 0.0698051948051948,
+      "mean_group_size": 1.2270297360507851,
+      "decision_p95_seconds": 0.00916595251765102,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r1_ppo",
+      "variant": "best",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 28.0,
+      "member_change": 0.2889537545787546,
+      "target_change": 0.20730311355311354,
+      "mean_group_size": 1.19625468164794,
+      "decision_p95_seconds": 0.008017672493588177,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r1_ppo",
+      "variant": "best",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.0,
+      "member_change": 0.31769951063429325,
+      "target_change": 0.15170336909467344,
+      "mean_group_size": 1.6440976591995973,
+      "decision_p95_seconds": 0.01124288006685674,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r1_ppo",
+      "variant": "best",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 22.0,
+      "member_change": 0.27772085645600075,
+      "target_change": 0.07145816863134351,
+      "mean_group_size": 1.9225563909774435,
+      "decision_p95_seconds": 0.013155594968702644,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r1_ppo",
+      "variant": "latest",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.0,
+      "member_change": 0.10052910052910054,
+      "target_change": 0.07671957671957673,
+      "mean_group_size": 1.0350000000000001,
+      "decision_p95_seconds": 0.006135817506583407,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r1_ppo",
+      "variant": "latest",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 23.5,
+      "member_change": 0.11417748917748917,
+      "target_change": 0.0698051948051948,
+      "mean_group_size": 1.2270297360507851,
+      "decision_p95_seconds": 0.007460285100387409,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r1_ppo",
+      "variant": "latest",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 28.0,
+      "member_change": 0.2889537545787546,
+      "target_change": 0.20730311355311354,
+      "mean_group_size": 1.19625468164794,
+      "decision_p95_seconds": 0.008592612529173493,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r1_ppo",
+      "variant": "latest",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.0,
+      "member_change": 0.31769951063429325,
+      "target_change": 0.15170336909467344,
+      "mean_group_size": 1.6440976591995973,
+      "decision_p95_seconds": 0.011746102507458996,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r1_ppo",
+      "variant": "latest",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 22.0,
+      "member_change": 0.27772085645600075,
+      "target_change": 0.07145816863134351,
+      "mean_group_size": 1.9225563909774435,
+      "decision_p95_seconds": 0.012167852517450228,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r1_ppo",
+      "variant": "initialized",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 28.0,
+      "member_change": 0.24814814814814815,
+      "target_change": 0.14814814814814814,
+      "mean_group_size": 1.3257894736842104,
+      "decision_p95_seconds": 0.008354304969543591,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r1_ppo",
+      "variant": "initialized",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.0,
+      "member_change": 0.12321127946127947,
+      "target_change": 0.05776515151515152,
+      "mean_group_size": 1.2531311799604483,
+      "decision_p95_seconds": 0.008640764909796417,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r1_ppo",
+      "variant": "initialized",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 23.0,
+      "member_change": 0.2406295093795094,
+      "target_change": 0.1514790764790765,
+      "mean_group_size": 1.5892857142857144,
+      "decision_p95_seconds": 0.009333245060406625,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r1_ppo",
+      "variant": "initialized",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.26350340037200654,
+      "target_change": 0.09514938386421762,
+      "mean_group_size": 2.178018575851393,
+      "decision_p95_seconds": 0.02235152991488572,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r1_ppo",
+      "variant": "initialized",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 23.5,
+      "member_change": 0.3172409574231436,
+      "target_change": 0.14253356437795514,
+      "mean_group_size": 2.5970526315789475,
+      "decision_p95_seconds": 0.01181695742998272,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r2_teacher_ppo",
+      "variant": "best",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.45565476190476195,
+      "target_change": 0.3046130952380952,
+      "mean_group_size": 1.7222222222222223,
+      "decision_p95_seconds": 0.008525780006311833,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r2_teacher_ppo",
+      "variant": "best",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 26.0,
+      "member_change": 0.6104888167388167,
+      "target_change": 0.38196248196248195,
+      "mean_group_size": 1.675776397515528,
+      "decision_p95_seconds": 0.007933572545880452,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r2_teacher_ppo",
+      "variant": "best",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 30.5,
+      "member_change": 0.3007575757575757,
+      "target_change": 0.21846320346320347,
+      "mean_group_size": 2.1183673469387756,
+      "decision_p95_seconds": 0.009160659910412504,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r2_teacher_ppo",
+      "variant": "best",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 21.0,
+      "member_change": 0.3429774720893142,
+      "target_change": 0.21298358557936728,
+      "mean_group_size": 2.5579769736842106,
+      "decision_p95_seconds": 0.010039625031640752,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r2_teacher_ppo",
+      "variant": "best",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 22.0,
+      "member_change": 0.3180777555777556,
+      "target_change": 0.193462555962556,
+      "mean_group_size": 4.958035714285714,
+      "decision_p95_seconds": 0.012491430027876048,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r2_teacher_ppo",
+      "variant": "latest",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.45565476190476195,
+      "target_change": 0.3046130952380952,
+      "mean_group_size": 1.7222222222222223,
+      "decision_p95_seconds": 0.008726295037195086,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r2_teacher_ppo",
+      "variant": "latest",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 26.0,
+      "member_change": 0.6104888167388167,
+      "target_change": 0.38196248196248195,
+      "mean_group_size": 1.675776397515528,
+      "decision_p95_seconds": 0.007555259985383599,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r2_teacher_ppo",
+      "variant": "latest",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 30.5,
+      "member_change": 0.3007575757575757,
+      "target_change": 0.21846320346320347,
+      "mean_group_size": 2.1183673469387756,
+      "decision_p95_seconds": 0.00895907244994305,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r2_teacher_ppo",
+      "variant": "latest",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 21.0,
+      "member_change": 0.3429774720893142,
+      "target_change": 0.21298358557936728,
+      "mean_group_size": 2.5579769736842106,
+      "decision_p95_seconds": 0.010653317475225774,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r2_teacher_ppo",
+      "variant": "latest",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 22.0,
+      "member_change": 0.3180777555777556,
+      "target_change": 0.193462555962556,
+      "mean_group_size": 4.958035714285714,
+      "decision_p95_seconds": 0.013441030029207468,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r2_teacher_ppo",
+      "variant": "initialized",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 28.0,
+      "member_change": 0.24814814814814815,
+      "target_change": 0.14814814814814814,
+      "mean_group_size": 1.3257894736842104,
+      "decision_p95_seconds": 0.008306502521736547,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r2_teacher_ppo",
+      "variant": "initialized",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.0,
+      "member_change": 0.12321127946127947,
+      "target_change": 0.05776515151515152,
+      "mean_group_size": 1.2531311799604483,
+      "decision_p95_seconds": 0.008106302528176457,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r2_teacher_ppo",
+      "variant": "initialized",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 23.0,
+      "member_change": 0.2406295093795094,
+      "target_change": 0.1514790764790765,
+      "mean_group_size": 1.5892857142857144,
+      "decision_p95_seconds": 0.008989422424929214,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r2_teacher_ppo",
+      "variant": "initialized",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.26350340037200654,
+      "target_change": 0.09514938386421762,
+      "mean_group_size": 2.178018575851393,
+      "decision_p95_seconds": 0.010884800064377486,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r2_teacher_ppo",
+      "variant": "initialized",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 23.5,
+      "member_change": 0.3172409574231436,
+      "target_change": 0.14253356437795514,
+      "mean_group_size": 2.5970526315789475,
+      "decision_p95_seconds": 0.011695862468332052,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "best",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.4124149659863945,
+      "target_change": 0.29336734693877553,
+      "mean_group_size": 1.5138888888888888,
+      "decision_p95_seconds": 0.00844772498239763,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "best",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 26.0,
+      "member_change": 0.15079365079365079,
+      "target_change": 0.12698412698412698,
+      "mean_group_size": 0.7045454545454546,
+      "decision_p95_seconds": 0.008114812476560472,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "best",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 26.0,
+      "member_change": 0.37998112998112993,
+      "target_change": 0.2614246864246864,
+      "mean_group_size": 1.8036077235772359,
+      "decision_p95_seconds": 0.008545962464995682,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "best",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.5,
+      "member_change": 0.4009539842873176,
+      "target_change": 0.30612804044176595,
+      "mean_group_size": 2.80448533640023,
+      "decision_p95_seconds": 0.011647847515996543,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "best",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.0,
+      "member_change": 0.2761062692097175,
+      "target_change": 0.14667050030026438,
+      "mean_group_size": 4.356925418569254,
+      "decision_p95_seconds": 0.013194437470519915,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "latest",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.4124149659863945,
+      "target_change": 0.29336734693877553,
+      "mean_group_size": 1.5138888888888888,
+      "decision_p95_seconds": 0.007318887481233104,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "latest",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 26.0,
+      "member_change": 0.15079365079365079,
+      "target_change": 0.12698412698412698,
+      "mean_group_size": 0.7045454545454546,
+      "decision_p95_seconds": 0.007736669911537319,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "latest",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 26.0,
+      "member_change": 0.37998112998112993,
+      "target_change": 0.2614246864246864,
+      "mean_group_size": 1.8036077235772359,
+      "decision_p95_seconds": 0.008350127522135153,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "latest",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.5,
+      "member_change": 0.4009539842873176,
+      "target_change": 0.30612804044176595,
+      "mean_group_size": 2.80448533640023,
+      "decision_p95_seconds": 0.01025868243887089,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "latest",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.0,
+      "member_change": 0.2761062692097175,
+      "target_change": 0.14667050030026438,
+      "mean_group_size": 4.356925418569254,
+      "decision_p95_seconds": 0.011952959990594536,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "initialized",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 28.0,
+      "member_change": 0.24814814814814815,
+      "target_change": 0.14814814814814814,
+      "mean_group_size": 1.3257894736842104,
+      "decision_p95_seconds": 0.008714849920943377,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "initialized",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.0,
+      "member_change": 0.12321127946127947,
+      "target_change": 0.05776515151515152,
+      "mean_group_size": 1.2531311799604483,
+      "decision_p95_seconds": 0.007239660009508952,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "initialized",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 23.0,
+      "member_change": 0.2406295093795094,
+      "target_change": 0.1514790764790765,
+      "mean_group_size": 1.5892857142857144,
+      "decision_p95_seconds": 0.009571329969912768,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "initialized",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.26350340037200654,
+      "target_change": 0.09514938386421762,
+      "mean_group_size": 2.178018575851393,
+      "decision_p95_seconds": 0.010513859987258907,
+      "training_seed": 20260906
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "initialized",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 23.5,
+      "member_change": 0.3172409574231436,
+      "target_change": 0.14253356437795514,
+      "mean_group_size": 2.5970526315789475,
+      "decision_p95_seconds": 0.013658232416491955,
+      "training_seed": 20260906
+    },
+    {
+      "route": "random",
+      "variant": "policy",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 30.5,
+      "member_change": 0.8981481481481481,
+      "target_change": 0.6785714285714286,
+      "mean_group_size": 1.6282894736842106,
+      "decision_p95_seconds": 0.007147217571036889,
+      "training_seed": 20260906
+    },
+    {
+      "route": "random",
+      "variant": "policy",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 26.0,
+      "member_change": 0.7653125000000001,
+      "target_change": 0.49659722222222225,
+      "mean_group_size": 2.274193548387097,
+      "decision_p95_seconds": 0.012330954906065016,
+      "training_seed": 20260906
+    },
+    {
+      "route": "random",
+      "variant": "policy",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 22.0,
+      "member_change": 0.8951839826839827,
+      "target_change": 0.5946083209719573,
+      "mean_group_size": 1.7464216005204944,
+      "decision_p95_seconds": 0.003182067541638389,
+      "training_seed": 20260906
+    },
+    {
+      "route": "random",
+      "variant": "policy",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.0,
+      "member_change": 0.9151254671829206,
+      "target_change": 0.5248720816931425,
+      "mean_group_size": 2.528786755621448,
+      "decision_p95_seconds": 0.004262075026053934,
+      "training_seed": 20260906
+    },
+    {
+      "route": "random",
+      "variant": "policy",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 23.5,
+      "member_change": 0.8562678062678062,
+      "target_change": 0.4742324477071229,
+      "mean_group_size": 3.1771390374331547,
+      "decision_p95_seconds": 0.006784517539199441,
+      "training_seed": 20260906
+    },
+    {
+      "route": "rule",
+      "variant": "policy",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 27.5,
+      "member_change": 0.3722486772486772,
+      "target_change": 0.20775132275132274,
+      "mean_group_size": 1.2214285714285715,
+      "decision_p95_seconds": 0.0006602674606256187,
+      "training_seed": 20260906
+    },
+    {
+      "route": "rule",
+      "variant": "policy",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 27.5,
+      "member_change": 0.1833967379421925,
+      "target_change": 0.10078526972466367,
+      "mean_group_size": 1.1507352941176472,
+      "decision_p95_seconds": 0.0009224774606991558,
+      "training_seed": 20260906
+    },
+    {
+      "route": "rule",
+      "variant": "policy",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 28.5,
+      "member_change": 0.21765044784275556,
+      "target_change": 0.10334904411827489,
+      "mean_group_size": 1.338083538083538,
+      "decision_p95_seconds": 0.0009130024642217903,
+      "training_seed": 20260906
+    },
+    {
+      "route": "rule",
+      "variant": "policy",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.5,
+      "member_change": 0.5029579962662549,
+      "target_change": 0.0861320055031235,
+      "mean_group_size": 1.7403042828247295,
+      "decision_p95_seconds": 0.0018612900283187619,
+      "training_seed": 20260906
+    },
+    {
+      "route": "rule",
+      "variant": "policy",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 22.0,
+      "member_change": 0.44487415293592264,
+      "target_change": 0.1095537683559025,
+      "mean_group_size": 2.0133885438233263,
+      "decision_p95_seconds": 0.002261217508930713,
+      "training_seed": 20260906
+    },
+    {
+      "route": "static_rule",
+      "variant": "policy",
+      "scale": 8,
+      "wins": 1,
+      "episodes": 2,
+      "success_rate": 0.5,
+      "wilson95": [
+        0.09453120573423074,
+        0.9054687942657693
+      ],
+      "physical_steps": 19.5,
+      "member_change": 0.0,
+      "target_change": 0.0,
+      "mean_group_size": 1.5142857142857142,
+      "decision_p95_seconds": 0.00045933504588901953,
+      "training_seed": 20260906
+    },
+    {
+      "route": "static_rule",
+      "variant": "policy",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.5,
+      "member_change": 0.0,
+      "target_change": 0.0,
+      "mean_group_size": 1.29490022172949,
+      "decision_p95_seconds": 0.0004933099204208699,
+      "training_seed": 20260906
+    },
+    {
+      "route": "static_rule",
+      "variant": "policy",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 28.0,
+      "member_change": 0.0,
+      "target_change": 0.0,
+      "mean_group_size": 1.3866223908918407,
+      "decision_p95_seconds": 0.00046007003402337367,
+      "training_seed": 20260906
+    },
+    {
+      "route": "static_rule",
+      "variant": "policy",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.0,
+      "member_change": 0.0,
+      "target_change": 0.0,
+      "mean_group_size": 2.0199294532627867,
+      "decision_p95_seconds": 0.0007257800491061051,
+      "training_seed": 20260906
+    },
+    {
+      "route": "static_rule",
+      "variant": "policy",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.0,
+      "target_change": 0.0,
+      "mean_group_size": 2.616758241758242,
+      "decision_p95_seconds": 0.0011347174411639543,
+      "training_seed": 20260906
+    },
+    {
+      "route": "target_only",
+      "variant": "policy",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.0,
+      "member_change": 0.008928571428571428,
+      "target_change": 0.008928571428571428,
+      "mean_group_size": 1.3857142857142857,
+      "decision_p95_seconds": 0.12852844997541973,
+      "training_seed": 20260906
+    },
+    {
+      "route": "target_only",
+      "variant": "policy",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 23.0,
+      "member_change": 0.0,
+      "target_change": 0.0,
+      "mean_group_size": 1.2739212007504692,
+      "decision_p95_seconds": 0.0712507750140503,
+      "training_seed": 20260906
+    },
+    {
+      "route": "target_only",
+      "variant": "policy",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.0,
+      "member_change": 0.029251700680272108,
+      "target_change": 0.029251700680272108,
+      "mean_group_size": 1.5045351473922903,
+      "decision_p95_seconds": 0.08085407497128472,
+      "training_seed": 20260906
+    },
+    {
+      "route": "target_only",
+      "variant": "policy",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 27.5,
+      "member_change": 0.07171813693552824,
+      "target_change": 0.07171813693552824,
+      "mean_group_size": 1.876185336519929,
+      "decision_p95_seconds": 0.06575646500568837,
+      "training_seed": 20260906
+    },
+    {
+      "route": "target_only",
+      "variant": "policy",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 21.5,
+      "member_change": 0.04431692859112214,
+      "target_change": 0.04431692859112214,
+      "mean_group_size": 2.5531869078380707,
+      "decision_p95_seconds": 0.06810239993501455,
+      "training_seed": 20260906
+    }
+  ],
+  "missing_requested_evaluations": [],
+  "complete": true,
+  "paired_vs_rule": [
+    {
+      "route": "b1_counts",
+      "training_seed": 20260906,
+      "variant": "policy",
+      "pairs": 10,
+      "difference": 0.1,
+      "bootstrap95": [
+        0.0,
+        0.3
+      ]
+    },
+    {
+      "route": "b2_count",
+      "training_seed": 20260906,
+      "variant": "policy",
+      "pairs": 10,
+      "difference": 0.0,
+      "bootstrap95": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "route": "b2_local",
+      "training_seed": 20260906,
+      "variant": "policy",
+      "pairs": 10,
+      "difference": 0.1,
+      "bootstrap95": [
+        0.0,
+        0.3
+      ]
+    },
+    {
+      "route": "b2_min",
+      "training_seed": 20260906,
+      "variant": "policy",
+      "pairs": 10,
+      "difference": 0.0,
+      "bootstrap95": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "route": "b3_global",
+      "training_seed": 20260906,
+      "variant": "policy",
+      "pairs": 10,
+      "difference": 0.0,
+      "bootstrap95": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "route": "b3_rebuild",
+      "training_seed": 20260906,
+      "variant": "policy",
+      "pairs": 10,
+      "difference": 0.0,
+      "bootstrap95": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "route": "grand",
+      "training_seed": 20260906,
+      "variant": "policy",
+      "pairs": 10,
+      "difference": 0.0,
+      "bootstrap95": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "route": "group_only",
+      "training_seed": 20260906,
+      "variant": "policy",
+      "pairs": 10,
+      "difference": 0.2,
+      "bootstrap95": [
+        0.0,
+        0.5
+      ]
+    },
+    {
+      "route": "r1_ppo",
+      "training_seed": 20260906,
+      "variant": "best",
+      "pairs": 10,
+      "difference": 0.0,
+      "bootstrap95": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "route": "r1_ppo",
+      "training_seed": 20260906,
+      "variant": "initialized",
+      "pairs": 10,
+      "difference": 0.0,
+      "bootstrap95": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "route": "r1_ppo",
+      "training_seed": 20260906,
+      "variant": "latest",
+      "pairs": 10,
+      "difference": 0.0,
+      "bootstrap95": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "route": "r2_teacher_ppo",
+      "training_seed": 20260906,
+      "variant": "best",
+      "pairs": 10,
+      "difference": 0.0,
+      "bootstrap95": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "route": "r2_teacher_ppo",
+      "training_seed": 20260906,
+      "variant": "initialized",
+      "pairs": 10,
+      "difference": 0.0,
+      "bootstrap95": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "route": "r2_teacher_ppo",
+      "training_seed": 20260906,
+      "variant": "latest",
+      "pairs": 10,
+      "difference": 0.0,
+      "bootstrap95": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "route": "r3_ddqn",
+      "training_seed": 20260906,
+      "variant": "best",
+      "pairs": 10,
+      "difference": 0.0,
+      "bootstrap95": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "route": "r3_ddqn",
+      "training_seed": 20260906,
+      "variant": "initialized",
+      "pairs": 10,
+      "difference": 0.0,
+      "bootstrap95": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "route": "r3_ddqn",
+      "training_seed": 20260906,
+      "variant": "latest",
+      "pairs": 10,
+      "difference": 0.0,
+      "bootstrap95": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "route": "random",
+      "training_seed": 20260906,
+      "variant": "policy",
+      "pairs": 10,
+      "difference": 0.0,
+      "bootstrap95": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "route": "static_rule",
+      "training_seed": 20260906,
+      "variant": "policy",
+      "pairs": 10,
+      "difference": 0.1,
+      "bootstrap95": [
+        0.0,
+        0.3
+      ]
+    },
+    {
+      "route": "target_only",
+      "training_seed": 20260906,
+      "variant": "policy",
+      "pairs": 10,
+      "difference": 0.0,
+      "bootstrap95": [
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "all_available_evaluations_complete": true
+}

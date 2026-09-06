@@ -1,0 +1,277 @@
+{
+  "schema": "research-v4-evaluation-v1",
+  "route": "r3_ddqn",
+  "episodes_per_scale": 2,
+  "variants": [
+    "best",
+    "latest",
+    "initialized"
+  ],
+  "scales": [
+    8,
+    12,
+    16,
+    24,
+    32
+  ],
+  "complete": true,
+  "groups": [
+    {
+      "route": "r3_ddqn",
+      "variant": "best",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.4124149659863945,
+      "target_change": 0.29336734693877553,
+      "mean_group_size": 1.5138888888888888,
+      "decision_p95_seconds": 0.00844772498239763
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "best",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 26.0,
+      "member_change": 0.15079365079365079,
+      "target_change": 0.12698412698412698,
+      "mean_group_size": 0.7045454545454546,
+      "decision_p95_seconds": 0.008114812476560472
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "best",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 26.0,
+      "member_change": 0.37998112998112993,
+      "target_change": 0.2614246864246864,
+      "mean_group_size": 1.8036077235772359,
+      "decision_p95_seconds": 0.008545962464995682
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "best",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.5,
+      "member_change": 0.4009539842873176,
+      "target_change": 0.30612804044176595,
+      "mean_group_size": 2.80448533640023,
+      "decision_p95_seconds": 0.011647847515996543
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "best",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.0,
+      "member_change": 0.2761062692097175,
+      "target_change": 0.14667050030026438,
+      "mean_group_size": 4.356925418569254,
+      "decision_p95_seconds": 0.013194437470519915
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "latest",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.4124149659863945,
+      "target_change": 0.29336734693877553,
+      "mean_group_size": 1.5138888888888888,
+      "decision_p95_seconds": 0.007318887481233104
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "latest",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 26.0,
+      "member_change": 0.15079365079365079,
+      "target_change": 0.12698412698412698,
+      "mean_group_size": 0.7045454545454546,
+      "decision_p95_seconds": 0.007736669911537319
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "latest",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 26.0,
+      "member_change": 0.37998112998112993,
+      "target_change": 0.2614246864246864,
+      "mean_group_size": 1.8036077235772359,
+      "decision_p95_seconds": 0.008350127522135153
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "latest",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.5,
+      "member_change": 0.4009539842873176,
+      "target_change": 0.30612804044176595,
+      "mean_group_size": 2.80448533640023,
+      "decision_p95_seconds": 0.01025868243887089
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "latest",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.0,
+      "member_change": 0.2761062692097175,
+      "target_change": 0.14667050030026438,
+      "mean_group_size": 4.356925418569254,
+      "decision_p95_seconds": 0.011952959990594536
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "initialized",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 28.0,
+      "member_change": 0.24814814814814815,
+      "target_change": 0.14814814814814814,
+      "mean_group_size": 1.3257894736842104,
+      "decision_p95_seconds": 0.008714849920943377
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "initialized",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.0,
+      "member_change": 0.12321127946127947,
+      "target_change": 0.05776515151515152,
+      "mean_group_size": 1.2531311799604483,
+      "decision_p95_seconds": 0.007239660009508952
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "initialized",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 23.0,
+      "member_change": 0.2406295093795094,
+      "target_change": 0.1514790764790765,
+      "mean_group_size": 1.5892857142857144,
+      "decision_p95_seconds": 0.009571329969912768
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "initialized",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.26350340037200654,
+      "target_change": 0.09514938386421762,
+      "mean_group_size": 2.178018575851393,
+      "decision_p95_seconds": 0.010513859987258907
+    },
+    {
+      "route": "r3_ddqn",
+      "variant": "initialized",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 23.5,
+      "member_change": 0.3172409574231436,
+      "target_change": 0.14253356437795514,
+      "mean_group_size": 2.5970526315789475,
+      "decision_p95_seconds": 0.013658232416491955
+    }
+  ],
+  "raw_episode_count": 30,
+  "evaluator_coverage_this_invocation": {}
+}

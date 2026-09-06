@@ -1,0 +1,114 @@
+{
+  "schema": "research-v4-evaluation-v1",
+  "route": "b3_global",
+  "episodes_per_scale": 2,
+  "variants": [
+    "policy"
+  ],
+  "scales": [
+    8,
+    12,
+    16,
+    24,
+    32
+  ],
+  "complete": true,
+  "groups": [
+    {
+      "route": "b3_global",
+      "variant": "policy",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.0,
+      "member_change": 0.0,
+      "target_change": 0.0,
+      "mean_group_size": 0.0,
+      "decision_p95_seconds": 0.13392189752776174
+    },
+    {
+      "route": "b3_global",
+      "variant": "policy",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.3125,
+      "target_change": 0.1315340909090909,
+      "mean_group_size": 2.0714285714285716,
+      "decision_p95_seconds": 0.05655509509379043
+    },
+    {
+      "route": "b3_global",
+      "variant": "policy",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 27.5,
+      "member_change": 0.3943210635518327,
+      "target_change": 0.22023434025182276,
+      "mean_group_size": 4.728205128205128,
+      "decision_p95_seconds": 0.05545567497611045
+    },
+    {
+      "route": "b3_global",
+      "variant": "policy",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 22.0,
+      "member_change": 0.8045696539485359,
+      "target_change": 0.16530000151843482,
+      "mean_group_size": 7.218620689655173,
+      "decision_p95_seconds": 0.07939470001729201
+    },
+    {
+      "route": "b3_global",
+      "variant": "policy",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.5,
+      "member_change": 0.6493256743256743,
+      "target_change": 0.21651499635370602,
+      "mean_group_size": 8.46,
+      "decision_p95_seconds": 0.11098100749077275
+    }
+  ],
+  "raw_episode_count": 10,
+  "evaluator_coverage_this_invocation": {
+    "policy": {
+      "local_queries": 0,
+      "unseen_roster_queries": 0,
+      "unseen_rosters": {},
+      "undefended_reachability_proxy_queries": 0,
+      "neural_rows_evaluated": 0,
+      "cached_unique_queries": 0
+    }
+  }
+}

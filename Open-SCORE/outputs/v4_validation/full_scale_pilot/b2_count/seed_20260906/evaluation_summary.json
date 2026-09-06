@@ -1,0 +1,114 @@
+{
+  "schema": "research-v4-evaluation-v1",
+  "route": "b2_count",
+  "episodes_per_scale": 2,
+  "variants": [
+    "policy"
+  ],
+  "scales": [
+    8,
+    12,
+    16,
+    24,
+    32
+  ],
+  "complete": true,
+  "groups": [
+    {
+      "route": "b2_count",
+      "variant": "policy",
+      "scale": 8,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 23.5,
+      "member_change": 0.3051948051948052,
+      "target_change": 0.22380952380952382,
+      "mean_group_size": 3.192857142857143,
+      "decision_p95_seconds": 0.04803609746159049
+    },
+    {
+      "route": "b2_count",
+      "variant": "policy",
+      "scale": 12,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 24.0,
+      "member_change": 0.39610389610389607,
+      "target_change": 0.23106060606060605,
+      "mean_group_size": 3.6237458193979935,
+      "decision_p95_seconds": 0.049870409967843435
+    },
+    {
+      "route": "b2_count",
+      "variant": "policy",
+      "scale": 16,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 27.0,
+      "member_change": 0.3968253968253968,
+      "target_change": 0.3049006549006549,
+      "mean_group_size": 4.993589743589744,
+      "decision_p95_seconds": 0.08113087498350066
+    },
+    {
+      "route": "b2_count",
+      "variant": "policy",
+      "scale": 24,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 21.5,
+      "member_change": 0.35384615384615387,
+      "target_change": 0.12251964917868807,
+      "mean_group_size": 11.456349206349206,
+      "decision_p95_seconds": 0.24920454497914762
+    },
+    {
+      "route": "b2_count",
+      "variant": "policy",
+      "scale": 32,
+      "wins": 0,
+      "episodes": 2,
+      "success_rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "physical_steps": 25.0,
+      "member_change": 0.37362637362637363,
+      "target_change": 0.16264141496771772,
+      "mean_group_size": 9.642753623188405,
+      "decision_p95_seconds": 0.5665146925661246
+    }
+  ],
+  "raw_episode_count": 10,
+  "evaluator_coverage_this_invocation": {
+    "policy": {
+      "local_queries": 0,
+      "unseen_roster_queries": 0,
+      "unseen_rosters": {},
+      "undefended_reachability_proxy_queries": 0,
+      "neural_rows_evaluated": 0,
+      "cached_unique_queries": 0
+    }
+  }
+}

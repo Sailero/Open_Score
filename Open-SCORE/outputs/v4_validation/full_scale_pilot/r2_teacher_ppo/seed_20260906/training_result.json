@@ -1,0 +1,37 @@
+{
+  "route": "r2_teacher_ppo",
+  "seed": 20260906,
+  "complete": true,
+  "counters": {
+    "physical_steps": 2048,
+    "learner_physical_steps": 2048,
+    "teacher_simulation_steps": 0,
+    "validation_physical_steps": 12390,
+    "upper_events": 926,
+    "episodes": 78,
+    "wins": 4,
+    "next_episode": 86,
+    "updates": 1001,
+    "optimizer_steps": 1033,
+    "actor_updates": 1,
+    "critic_updates": 32,
+    "training_seconds": 276.3289999999106,
+    "teacher_seconds": 12.452999999979511,
+    "teacher_examples": 54,
+    "teacher_labels": 6,
+    "teacher_pretrain_updates": 1000,
+    "shared_teacher_simulation_steps": 10373
+  },
+  "training_seconds": 276.4069999998901,
+  "latest_checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v4_validation\\full_scale_pilot\\r2_teacher_ppo\\seed_20260906\\latest.pt",
+  "best_checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v4_validation\\full_scale_pilot\\r2_teacher_ppo\\seed_20260906\\best.pt",
+  "initialized_checkpoint": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v4_validation\\full_scale_pilot\\r2_teacher_ppo\\seed_20260906\\initialized.pt",
+  "teacher_source": "shared_terminal_data",
+  "annealing_budget": {
+    "seconds": 299.99999988,
+    "steps": 2048
+  },
+  "best_validation_wins": 4,
+  "best_selection": "validation",
+  "protocol_fingerprint": "18537994693af3f81d8f423b79ba70a0c3b8fc60f9bd94b056c97a681dd66b2c"
+}
