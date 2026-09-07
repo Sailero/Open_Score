@@ -2,21 +2,14 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Open-SCORE v5.1: 实时图表报告服务",
-      "type": "process",
-      "command": "D:\\Software\\Anaconda\\envs\\torch310\\python.exe",
-      "args": ["-X", "utf8", "-u", "monitoring/live_v5.py", "--interval", "10", "--port", "8765"],
-      "options": {"cwd": "${workspaceFolder}\\Open-SCORE"},
-      "presentation": {"reveal": "always", "panel": "dedicated", "clear": false},
-      "problemMatcher": [],
-      "runOptions": {"instanceLimit": 1}
-    },
-    {
-      "label": "Open-SCORE v5.1: 启动或恢复六任务",
+      "label": "Open-SCORE v5: 启动或恢复",
       "type": "process",
       "command": "powershell.exe",
       "args": [
-        "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
         "${workspaceFolder}\\.vscode\\start-v5.ps1"
       ],
       "options": {
@@ -30,24 +23,38 @@
         "reveal": "always",
         "focus": true,
         "panel": "dedicated",
-        "clear": false,
-        "showReuseMessage": true
+        "clear": false
       },
       "problemMatcher": [],
       "runOptions": {
-        "instanceLimit": 1,
-        "instancePolicy": "warn"
+        "instanceLimit": 1
       }
     },
     {
-      "label": "Open-SCORE v5.1: 实时进度（仅监控）",
+      "label": "Open-SCORE v5: 终端实时进度",
       "type": "process",
-      "command": "D:\\Software\\Anaconda\\envs\\torch310\\python.exe",
-      "args": ["-X", "utf8", "-u", "-m", "open_score.research_v5.orchestrate", "watch", "--run-dir", "outputs/v5_parallel/v5_20260907_main"],
-      "options": {"cwd": "${workspaceFolder}\\Open-SCORE"},
-      "presentation": {"reveal": "always", "focus": true, "panel": "dedicated", "clear": false},
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\.vscode\\start-v5.ps1",
+        "-StatusOnly"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}\\Open-SCORE"
+      },
+      "presentation": {
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated",
+        "clear": false
+      },
       "problemMatcher": [],
-      "runOptions": {"instanceLimit": 1}
+      "runOptions": {
+        "instanceLimit": 1
+      }
     }
   ]
 }

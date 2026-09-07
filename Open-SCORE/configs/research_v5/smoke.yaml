@@ -1,9 +1,0 @@
-# Minimal integration only; all 15 native terminal cells are tested separately.
-# Formal standard.yaml always retains the approved 15 equal-weight cells.
-smoke: true
-cells: [[8, 4], [12, 9], [16, 16]]
-bc_episodes: 3
-diagnostic_states: 3
-own_diagnostic_states: 1
-teacher_validation_episodes: 3
-latency_states: 3

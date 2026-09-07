@@ -15,12 +15,11 @@ import time
 import numpy as np
 
 from open_score.research_v4.actions import rule_grouping, partition_key
-from open_score.research_v4.evaluation import read_records, wilson
-from open_score.research_v4.runner import atomic_json
-from open_score.grouping.storage import replace_file
+from .reporting import wilson
 from .protocol import EpisodeSpec, digest, episode_spec
 from .runtime import append, serializable
 from .simulator import choose, make_env, step_with_trace
+from .storage import Store, method_dir
 
 _POLICY = None
 
@@ -149,8 +148,8 @@ def summarize_rows(rows, cells, expected):
 
 
 def evaluate_policy(ctx, policy, method_id, split='test', checkpoint='latest', limit=None):
-    directory = ctx.output/'evaluations'/method_id/split/checkpoint
-    directory.mkdir(parents=True, exist_ok=True)
+    directory = method_dir(ctx.run_dir, method_id)
+    store = Store(directory)
     if split in ('test','validation'):
         specs = ctx.manifest(split)
     else:
@@ -158,21 +157,7 @@ def evaluate_policy(ctx, policy, method_id, split='test', checkpoint='latest', l
         specs = [episode_spec(ctx.seed, i, split, 'shared', ctx.config['cells']) for i in range(count)]
     if limit is not None:
         specs = specs[:int(limit)]
-    row_path = directory/'episodes.jsonl'
-    rows = read_records(row_path, repair_tail=True)
-    shards = directory/'families'
-    shards.mkdir(exist_ok=True)
-    committed = {}
-    for shard in shards.glob('*.jsonl.gz'):
-        with gzip.open(shard,'rt',encoding='utf-8') as stream:
-            record=json.loads(stream.readline())
-        committed[record['family_id']]=record
-    # A complete compressed family is the transaction. Recover a lost index append.
-    indexed={r['family_id'] for r in rows}
-    for family,row in committed.items():
-        if family not in indexed:
-            append(row_path,row)
-            rows.append(row)
+    rows = store.episodes(method_id, split, checkpoint)
     done = {r['family_id'] for r in rows}
     if len(done) != len(rows):
         raise ValueError('Duplicate committed evaluation families')
@@ -185,9 +170,6 @@ def evaluate_policy(ctx, policy, method_id, split='test', checkpoint='latest', l
     def consume(result):
         row, events = result
         row.update(metadata)
-        shard=shards/(digest(row['family_id'])+'.jsonl.gz')
-        temporary=shard.with_suffix('.tmp')
-        row['raw_shard']=str(shard.relative_to(directory))
         records=[dict(record_type='episode',**row)]
         for event in events:
             records.append(dict(record_type='event',**metadata, **event))
@@ -204,11 +186,8 @@ def evaluate_policy(ctx, policy, method_id, split='test', checkpoint='latest', l
             for j, draw in enumerate(decision.get('simulation_draws', [])):
                 records.append(dict(record_type='branch',**metadata,event_id=event['event_id'], branch_id=j,
                                                     purpose='selection', **draw))
-        with gzip.open(temporary,'wt',encoding='utf-8') as stream:
-            for record in records:
-                stream.write(json.dumps(serializable(record),ensure_ascii=False,allow_nan=False)+'\n')
-        replace_file(temporary,shard)
-        append(row_path, row)  # derived index; the complete family shard is authoritative
+        data = ''.join(json.dumps(serializable(record),ensure_ascii=False,allow_nan=False)+'\n' for record in records)
+        store.save_episode(method_id, split, checkpoint, row, gzip.compress(data.encode('utf-8')))
         rows.append(row)
         ctx.progress('evaluate', method_id=method_id, evaluation_split=split, checkpoint_id=checkpoint,
             completed_episodes=len(rows), total_episodes=len(specs),
@@ -236,5 +215,5 @@ def evaluate_policy(ctx, policy, method_id, split='test', checkpoint='latest', l
             for spec in pending:
                 consume(episode(policy,spec))
     result = {**metadata, **summarize_rows(rows,ctx.config['cells'],len(specs)), 'path':str(directory)}
-    atomic_json(directory/'summary.json',result)
+    store.put(f'evaluation/{method_id}/{split}/{checkpoint}', result)
     return result

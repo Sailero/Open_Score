@@ -1,0 +1,10 @@
+{
+  "version": "v4",
+  "runs": {
+    "v4_comparison": {
+      "files": 478,
+      "discarded_intermediate_checkpoints": 3
+    }
+  },
+  "parameters": "Original run configurations are retained in each method data.sqlite metadata table"
+}

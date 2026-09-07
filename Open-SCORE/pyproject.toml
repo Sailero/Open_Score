@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "open-score"
-version = "5.1.0"
-description = "Mixed-difficulty fixed-opponent grouping replication, planning and learning diagnostics"
+version = "5.2.0"
+description = "Fixed-opponent dynamic grouping: planning and learning"
 requires-python = ">=3.10"
 dependencies = [
   "numpy>=1.23",
@@ -17,14 +17,7 @@ dependencies = [
   "psutil>=5.9",
 ]
 
-[project.optional-dependencies]
-test = [
-  "pytest==8.4.2",
-]
-
 [project.scripts]
-open-score = "open_score.grouping.cli:main"
-open-score-v4 = "open_score.research_v4.cli:main"
 open-score-v5 = "open_score.research_v5.orchestrate:main"
 
 [tool.setuptools.packages.find]
@@ -33,7 +26,3 @@ where = ["src"]
 [tool.setuptools.package-data]
 HAD_Env = ["resources/*.png"]
 
-[tool.pytest.ini_options]
-pythonpath = ["src", "."]
-testpaths = ["tests"]
-addopts = "-q"

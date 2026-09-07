@@ -75,9 +75,12 @@ def train_arm(ctx,kind):
     config = dict(ctx.config['t3'])
     config['rollout_events'] = int(config.get('rollout',1024))
     budget = int(config['candidates'])
-    directory = ctx.output/kind
+    ctx.select_method(f't3_{kind}')
+    directory = ctx.output/'models'
     directory.mkdir(parents=True,exist_ok=True)
-    restored = ctx.load_checkpoint(f'{kind}/latest.pt')
+    restored = ctx.load_checkpoint('resume.pt')
+    if restored is None and (directory/'final.pt').exists():
+        restored = ctx.load_checkpoint('final.pt')
     seed_everything(stable_seed(ctx.seed,'T3','matched_initialization'))
     actor = make_actor(kind,ctx.config['model'])
     torch.manual_seed(stable_seed(ctx.seed,'T3','matched_critic_initialization'))
@@ -91,6 +94,11 @@ def train_arm(ctx,kind):
     recent,started = [],time.monotonic()
     elapsed = 0.
     if restored:
+        if restored.get('training_seed', ctx.seed) != ctx.seed or restored['kind'] != kind:
+            raise ValueError('The saved PPO seed or policy kind differs from this run')
+        for key in ('steps', 'rollout', 'batch_size', 'epochs', 'learning_rate', 'candidates'):
+            if key in restored.get('config', {}) and restored['config'][key] != config[key]:
+                raise ValueError(f'The saved PPO parameter {key} differs from this run')
         actor.load_state_dict(restored['actor'])
         critic.load_state_dict(restored['critic'])
         actor_optimizer.load_state_dict(restored['actor_optimizer'])
@@ -115,7 +123,7 @@ def train_arm(ctx,kind):
             initialization='shared_rule_BC',training_seed=ctx.seed,
             protocol_version=ctx.config.get('version'),protocol_hash=getattr(ctx,'identity',{}).get('protocol_hash'),
             opponent=ctx.config.get('opponent'),executor=ctx.config.get('executor'))
-        return ctx.checkpoint(f'{kind}/{name}',payload)
+        return ctx.checkpoint(name,payload)
 
     if phase=='bc':
         prepared=time.monotonic()
@@ -142,7 +150,6 @@ def train_arm(ctx,kind):
             ctx.progress('rule_bc',method=kind,epoch=epoch+1,epochs=ctx.config['bc_epochs'])
             save()
         phase='ppo'
-        save('initialized.pt')
         save()
 
     policy = NeuralPolicy(actor,kind,budget)
@@ -155,7 +162,7 @@ def train_arm(ctx,kind):
             return
         # Several thresholds crossed by a final episode share one real checkpoint.
         checkpoint = f'step_{counts["physical_steps"]}'
-        save(checkpoint+'.pt')
+        save()
         result = ctx.evaluate(policy,f't3_{kind}',split='validation',checkpoint=checkpoint)
         rate = validation_rate(result)
         if rate>best_rate:
@@ -253,72 +260,26 @@ def train_arm(ctx,kind):
         save()
     if phase=='evaluation':
         validate_due()
-        ctx.evaluate(load_policy(directory/'latest.pt'),f't3_{kind}',checkpoint='latest')
-        latest=load_policy(directory/'latest.pt')
-        ctx.diagnose(latest,f't3_{kind}',candidate_provider=CoverageProvider(latest,
-            4 if ctx.config.get('smoke') else 32,ctx.seed),include_own=kind=='autoregressive')
+        ctx.evaluate(load_policy(directory/'resume.pt'),f't3_{kind}',checkpoint='latest')
         phase='complete'
-        save()
-    return dict(method_id=f't3_{kind}',complete=phase=='complete',**counts,
+        save('final.pt')
+        (directory/'resume.pt').unlink(missing_ok=True)
+    result = dict(method_id=f't3_{kind}',complete=phase=='complete',**counts,
                 best_validation_rate=best_rate,model_parameters=sum(p.numel() for p in actor.parameters()),
                 critic_parameters=sum(p.numel() for p in critic.parameters()),
-                latest=str(directory/'latest.pt'),best=str(directory/'best.pt'))
+                latest=str(directory/'final.pt'),best=str(directory/'best.pt'))
+    ctx.store.put('result',result)
+    return result
 
 
 def run(ctx):
     torch.set_num_threads(1)
     results=[]
-    for kind in ('candidate','autoregressive'):
+    kinds = ('candidate','autoregressive') if ctx.config.get('selected_method') not in ('candidate_ppo','ar_ppo') else (
+        ('candidate',) if ctx.config['selected_method']=='candidate_ppo' else ('autoregressive',))
+    for kind in kinds:
         results.append(train_arm(ctx,kind))
     ctx.progress('complete',complete=True,results=results)
     return dict(complete=True,task='T3',arms=results)
 
 
-def benchmark(ctx,events=48):
-    """Full-size models, mixed scales and an actual update, without training artifacts."""
-    torch.set_num_threads(1)
-    result={}
-    config=dict(ctx.config['t3'],epochs=1)
-    for kind in ('candidate','autoregressive'):
-        seed_everything(stable_seed(ctx.seed,'T3_benchmark',kind))
-        actor=make_actor(kind,ctx.config['model'])
-        critic=StateCritic(**ctx.config['model'])
-        ao=torch.optim.Adam(actor.parameters(),lr=config['learning_rate'])
-        co=torch.optim.Adam(critic.parameters(),lr=config['learning_rate'])
-        slots=[ctx.make_env(i,'calibration','T3_benchmark') for i in (0,7,14)]
-        rows=[]
-        physical=0
-        started=time.monotonic()
-        for index in range(events):
-            slot=index%3
-            env=slots[slot]
-            if env.done:
-                env=ctx.make_env((0,7,14)[slot]+15*(index//3+1),'calibration','T3_benchmark')
-                slots[slot]=env
-            state=env.state()
-            with torch.no_grad():
-                value=float(critic([state])[0])
-                if kind=='autoregressive':
-                    d=actor([state]);plan=d['plans'][0];logp=float(d['log_prob'][0]);extra=dict(trace=d['traces'][0])
-                else:
-                    pool=propose_plans(state,config['candidates'],0)
-                    dist=Categorical(logits=actor([state],[pool])[0]);choice=int(dist.sample())
-                    plan=pool[choice];logp=float(dist.log_prob(torch.tensor(choice)));extra=dict(candidates=pool,action=choice)
-            following,reward,done,info=env.step(plan)
-            physical+=info['delta']
-            rows.append(dict(state=state,next_state=following,reward=reward,done=done,value=value,
-                log_prob=logp,env=slot,**extra))
-        sample_s=time.monotonic()-started
-        started=time.monotonic()
-        with update_device(ctx,[actor,critic],[ao,co]):
-            metrics=ppo_update(actor,critic,ao,co,rows,kind,config)
-            if ctx.device=='cuda':
-                torch.cuda.synchronize()
-        update_s=time.monotonic()-started
-        for env in slots:
-            env.close()
-        result[kind]=dict(events=len(rows),physical_steps=physical,sample_seconds=sample_s,
-            sample_physical_steps_per_second=physical/sample_s,update_seconds=update_s,
-            update_examples=len(rows),actor_parameters=sum(p.numel() for p in actor.parameters()),
-            critic_parameters=sum(p.numel() for p in critic.parameters()),**metrics)
-    return result

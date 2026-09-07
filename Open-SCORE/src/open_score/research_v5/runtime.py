@@ -11,11 +11,20 @@ import time
 import numpy as np
 import torch
 
-from open_score.grouping.storage import atomic_checkpoint, replace_file
-from open_score.research_v4.runner import atomic_json, read_json, pid_alive
-from open_score.research_v4.evaluation import read_records
+from open_score.grouping.storage import atomic_checkpoint
 from .protocol import CELLS, EpisodeSpec, digest, episode_spec, stable_seed
 from .simulator import choose, make_env
+from .storage import Store, method_dir
+
+
+def read_json(path, default=None):
+    path = Path(path)
+    return json.loads(path.read_text(encoding='utf-8')) if path.exists() else ({} if default is None else default)
+
+
+def pid_alive(pid):
+    import psutil
+    return bool(pid and psutil.pid_exists(int(pid)))
 
 
 def serializable(value):
@@ -46,30 +55,43 @@ def append(path, row):
 class TaskContext:
     def __init__(self, run_dir, task_id, config=None):
         self.run_dir = Path(run_dir).resolve()
-        self.config = config or read_json(self.run_dir/'shared/config_resolved.json')
+        self.config = config or read_json(self.run_dir/'config.json')
         self.task_id = str(task_id)
-        self.output = self.run_dir/self.task_id
+        self.output = method_dir(self.run_dir, self.task_id)
         self.output.mkdir(parents=True, exist_ok=True)
         self.root = self.output
         self.seed = int(self.config['seed'])
         requested = self.config.get('device', 'auto')
         self.device = 'cuda' if requested == 'auto' and torch.cuda.is_available() else ('cpu' if requested == 'auto' else requested)
-        self.smoke = bool(self.config.get('smoke'))
         self.cpu_quota = int(self.config.get('cpu_quotas', {}).get(self.task_id, 1))
         self.started = time.monotonic()
-        self._progress = read_json(self.output/'progress.json', {})
+        self.store = Store(self.output)
+        self.shared = Store(self.run_dir/'shared')
+        self._progress = self.store.get('progress', self.store.get('progress.json', {}))
         self._gpu_wait_s = float(self._progress.get('gpu_wait_s', 0.))
         self._streams = {}
         self._rate_key = None
         self._rate_start = None
-        self.identity = read_json(self.run_dir/'shared/protocol_resolved.json', {})
-        atomic_json(self.output/'manifest.json', dict(task_id=self.task_id, training_seed=self.seed,
-                    protocol_hash=self.identity.get('protocol_hash'), config=self.config))
+        self.identity = dict(git_commit=self.config.get('git_commit'))
+
+    def select_method(self, method):
+        self.store.close()
+        self.output = method_dir(self.run_dir, method)
+        self.output.mkdir(parents=True, exist_ok=True)
+        self.root = self.output
+        self.store = Store(self.output)
+        self._progress = self.store.get('progress', {})
+        self._rate_key = None
+
+    def model_path(self, name='resume.pt'):
+        path = self.output/'models'/name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
 
     def log(self, stream, row):
-        metadata = dict(schema_version='v5.1', run_id=self.run_dir.name, task_id=self.task_id,
+        metadata = dict(schema_version='v5.1', run_id=self.config.get('run_id', self.run_dir.name), task_id=self.task_id,
                         training_seed=self.seed, timestamp_utc=datetime.now(timezone.utc).isoformat())
-        append(self.output/(stream if str(stream).endswith('.jsonl') else f'{stream}.jsonl'), {**metadata, **row})
+        self.store.append(str(stream).removesuffix('.jsonl'), serializable({**metadata, **row}))
 
     def progress(self, phase=None, **metrics):
         if isinstance(phase, dict):
@@ -116,7 +138,7 @@ class TaskContext:
                               updated=datetime.now(timezone.utc).isoformat(),
                               session_elapsed_s=time.monotonic()-self.started,
                               gpu_wait_s=self._gpu_wait_s)
-        atomic_json(self.output/'progress.json', self._progress)
+        self.store.put('progress', self._progress)
 
     @contextmanager
     def gpu(self):
@@ -167,13 +189,20 @@ class TaskContext:
                     time.sleep(.01)
 
     def checkpoint(self, name, payload):
-        path = self.output/name
-        atomic_checkpoint(path, payload)
-        return path
+        name = str(name)
+        if name in ('latest.pt', 'resume.pt', 'final.pt', 'best.pt'):
+            path = self.model_path('resume.pt' if name == 'latest.pt' else name)
+            atomic_checkpoint(path, payload)
+            return path
+        self.store.save_torch(name, payload)
+        return name
 
     def load_checkpoint(self, name):
-        path = self.output/name
-        return torch.load(path, map_location='cpu', weights_only=False) if path.exists() else None
+        name = str(name)
+        path = self.model_path('resume.pt' if name == 'latest.pt' else name)
+        if path.exists():
+            return torch.load(path, map_location='cpu', weights_only=False)
+        return self.store.load_torch(name)
 
     def spec(self, index, split='train', namespace=None):
         return episode_spec(self.seed, index, split, namespace or self.task_id, self.config['cells'])
@@ -184,21 +213,22 @@ class TaskContext:
 
     def manifest(self, split='test'):
         filename = 'evaluation_manifest.json' if split == 'test' else 'validation_manifest.json'
-        values = read_json(self.run_dir/'shared'/filename)
+        values = self.shared.get(filename)
+        expected = int(self.config['eval_per_cell' if split == 'test' else 'validation_per_cell'])*len(self.config['cells'])
+        if len(values['episodes']) != expected:
+            raise ValueError('The saved evaluation openings differ from the requested episode count')
         return [EpisodeSpec.from_dict(x) for x in values['episodes']]
 
     def collect_states(self, count, split='train', policy=None, namespace=None):
         namespace = namespace or self.task_id
         key = digest([namespace, split, int(count)])[:16]
-        directory = (self.run_dir/'shared' if namespace == 'shared' else self.output)/'datasets'/key
-        directory.mkdir(parents=True, exist_ok=True)
+        store = self.shared if namespace == 'shared' else self.store
         result = []
         index = 0
         while len(result) < count:
-            path = directory/f'family_{index:06d}.pt'
-            if path.exists():
-                data = torch.load(path, map_location='cpu', weights_only=False)
-            else:
+            path = f'datasets/{key}/family_{index:06d}.pt'
+            data = store.load_torch(path)
+            if data is None:
                 spec = self.spec(index, split, namespace)
                 env = self.make_env(spec)
                 if hasattr(policy, 'reset'):
@@ -239,15 +269,14 @@ class TaskContext:
                            category_available=category != 'casualty' or actual_event == 'casualty',
                            collection_physical_steps=work, collection_planning_steps=planning_work)
                 data = dict(complete=True, row=row)
-                atomic_checkpoint(path, data)
+                store.save_torch(path, data)
             result.append(data['row'])
             index += 1
             self.progress('collect_states', collection_split=split, completed_states=len(result), total_states=count)
         return result
 
     def bc_records(self):
-        path = self.run_dir/'shared/bc_records.pt'
-        data = torch.load(path, map_location='cpu', weights_only=False)
+        data = self.shared.load_torch('bc_records.pt')
         return data['rows']
 
     def evaluate(self, policy, method_id, split='test', checkpoint='latest', limit=None, **kwargs):
@@ -260,5 +289,4 @@ class TaskContext:
         return result
 
     def diagnose(self, policy, method_id, **kwargs):
-        from .diagnostics import diagnose_policy
-        return diagnose_policy(self, policy, method_id, **kwargs)
+        return {'status': 'cancelled_by_user', 'note': 'Remaining optional diagnostics cancelled 2026-09-07.'}

@@ -221,7 +221,7 @@ def _state_value(ctx, record, partition, cache, branch_seeds, path):
             'continuation_version': 'rule_grouping_v1', 'protocol_hash': ctx.identity.get('protocol_hash'),
             'wall_s': time.monotonic()-started}
         # Persist once per (state, partition, branch set), independently of DQN checkpoints.
-        atomic_json(path, cache)
+        ctx.store.put(path, cache)
         ctx.log('candidates', {'task': 'T5', 'family_id': record['family_id'],
             'state_id': record['state_id'], 'candidate_id': key, 'action': partition.to_dict(),
             'y': row['y'], 'branches': len(branch_seeds), 'purpose': 'fixed_branch_potential'})
@@ -236,49 +236,13 @@ def _state_value(ctx, record, partition, cache, branch_seeds, path):
     return float(cache[key]['y'])
 
 
-def partition_diagnostic_report(output):
-    """Read the independently verified common snapshots; do not resimulate."""
-    records = []
-    for path in sorted((Path(output)/'diagnostics/t5_bridge_grouping/diagnostic').glob('*.pt')):
-        saved = torch.load(path, map_location='cpu', weights_only=False)
-        summary, rows = saved['summary'], saved['verification']
-        state = DecisionState.from_dict(rows[0]['state'])
-        rule, singletons, grand = partition_controls(state)
-        by_key = {partition_key(Grouping.from_dict(row['action'])): row for row in rows}
-        selected = rows[summary['selected_index']]
-        selected_plan = Grouping.from_dict(selected['action'])
-        if selected_plan.assignment() != rule.assignment():
-            raise AssertionError('T5 diagnostic must fix target identity assignment')
-        record = {'family_id': summary['family_id'], 'state_id': summary['state_id'],
-                  'red_count': summary['red_count'], 'blue_count': summary['blue_count']}
-        grand_row = by_key[partition_key(grand)]
-        for name, row in [('rule', by_key[partition_key(rule)]),
-                          ('singletons', by_key[partition_key(singletons)]),
-                          ('grand', grand_row), ('learned', selected)]:
-            record[name] = float(row['y'])
-            record[name+'_minus_grand'] = float(np.mean(np.asarray(row['outcomes'])-grand_row['outcomes']))
-            record[name+'_branch_vector_changed'] = row['outcomes'] != grand_row['outcomes']
-        records.append(record)
-    result = {'states': len(records), 'families': len({row['family_id'] for row in records}),
-              'comparison': 'fixed_rule_target_identity_assignment; independent_verification_branches',
-              'rows': records, 'directions_vs_grand': {}}
-    for name in ('rule', 'singletons', 'learned'):
-        differences = [row[name+'_minus_grand'] for row in records]
-        result['directions_vs_grand'][name] = {'better_states': sum(value > 0 for value in differences),
-            'worse_states': sum(value < 0 for value in differences), 'tie_states': sum(value == 0 for value in differences),
-            'branch_vector_changed_states': sum(row[name+'_branch_vector_changed'] for row in records),
-            'mean_gain': float(np.mean(differences)) if differences else None}
-    atomic_json(Path(output)/'pure_partition_diagnostic.json', result)
-    return result
-
-
 def run(ctx):
     cfg = ctx.config['t5']; output = Path(ctx.output); output.mkdir(parents=True, exist_ok=True)
-    phase_path = output/'phase_costs.json'
-    costs = json.loads(phase_path.read_text(encoding='utf-8')) if phase_path.exists() else {}
+    phase_path = 'phase_costs'
+    costs = ctx.store.get(phase_path, {})
     def phase(name, **values):
         costs[name] = values
-        atomic_json(phase_path, costs); ctx.log('phase_costs', {'phase': name, **values})
+        ctx.store.put(phase_path, costs); ctx.log('phase_costs', {'phase': name, **values})
     seed_everything(ctx.seed)
     collection_started = time.monotonic()
     records = ctx.collect_states(int(cfg['states']), split='train', namespace='t5-construction')
@@ -288,20 +252,19 @@ def run(ctx):
     phase('state_collection', wall_s=costs.get('state_collection', {}).get('wall_s', 0.)+time.monotonic()-collection_started,
           simulation_physical_steps=collection_steps, states=len(records))
     model_config = {'max_members': 32, 'max_targets': 2,
-                    'hidden_dim': 64 if ctx.config.get('smoke') else 256}
+                    'hidden_dim': 256}
     network = PartitionQNetwork(**model_config).to(ctx.device)
     target = copy.deepcopy(network).eval()
     optimizer = torch.optim.Adam(network.parameters(), lr=float(cfg['learning_rate']))
     replay = deque(maxlen=int(cfg['buffer_size']))
     construction_index = transitions = updates = warmup = 0; elapsed_before = 0.; optimization_seconds = 0.
     validated = []; validation_seconds = 0.; validation_episodes = 0
-    identity = fingerprint({'config': cfg, 'protocol': ctx.config['version'], 'seed': ctx.seed,
-                            'states': [row['state_id'] for row in records], 'model': model_config})
-    checkpoint = output/'latest.pt'
+    identity = dict(config=cfg, seed=ctx.seed, model=model_config)
+    checkpoint = ctx.model_path('resume.pt')
     if checkpoint.exists():
         saved = torch.load(checkpoint, map_location=ctx.device, weights_only=False)
-        if saved['identity'] != identity:
-            raise ValueError('T5 protocol/state/model changed; use a new output directory')
+        if saved['model_config'] != model_config:
+            raise ValueError('T5 model structure differs from the saved checkpoint')
         network.load_state_dict(saved['model']); target.load_state_dict(saved['target'])
         optimizer.load_state_dict(saved['optimizer']); replay.extend(saved['replay'])
         construction_index, transitions, updates, warmup = (saved[key] for key in
@@ -313,13 +276,9 @@ def run(ctx):
         validation_episodes = saved.get('validation_episodes', 0)
     caches = {}; cache_paths = {}
     for i, record in enumerate(records):
-        path = output/'potential_cache'/f'state_{i:06d}.json'
+        path = f'potential_cache/state_{i:06d}.json'
         cache_paths[i] = path
-        caches[i] = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
-    initial_path = output/'initialized.pt'
-    if not initial_path.exists():
-        atomic_checkpoint(initial_path, {'model': network.state_dict(), 'model_config': network.config,
-                                        'schema': 'v5-bridge-fixed-rule-v1', 'identity': identity})
+        caches[i] = ctx.store.get(path, {})
     started = time.monotonic(); validation_seconds_before = validation_seconds; metrics = {}
     def validate_due(completed):
         nonlocal validation_seconds, validation_episodes
@@ -329,9 +288,7 @@ def run(ctx):
         # Commit construction before validation; resume uses the same frozen
         # checkpoint and finishes only missing validation families.
         payload = torch.load(checkpoint, map_location='cpu', weights_only=False)
-        model_path = output/f'construction_{completed}.pt'
-        if not model_path.exists():
-            atomic_checkpoint(model_path, payload)
+        model_path = checkpoint
         ambient = random_state(); validation_started = time.monotonic()
         try:
             summary = ctx.evaluate(load_policy(model_path), 't5_bridge_grouping',
@@ -341,6 +298,9 @@ def run(ctx):
         validation_seconds += time.monotonic()-validation_started
         validation_episodes += int(summary['episodes'])
         validated.extend(due)
+        if summary['success_rate'] > ctx.store.get('best_validation_rate', -1.):
+            atomic_checkpoint(ctx.model_path('best.pt'), payload)
+            ctx.store.put('best_validation_rate', summary['success_rate'])
         payload.update(validated_fractions=list(validated), validation_seconds=validation_seconds,
                        validation_episodes=validation_episodes, rng=random_state())
         atomic_checkpoint(checkpoint, payload)
@@ -438,12 +398,6 @@ def run(ctx):
     evaluation = ctx.evaluate(policy, 't5_bridge_grouping', checkpoint='final_construction')
     phase('evaluation', wall_s=costs.get('evaluation', {}).get('wall_s', 0.)+time.monotonic()-evaluation_started,
           episodes=evaluation['episodes'])
-    diagnostic_started = time.monotonic()
-    diagnostics = ctx.diagnose(policy, 't5_bridge_grouping', candidate_provider=partition_controls)
-    phase('diagnostics', wall_s=costs.get('diagnostics', {}).get('wall_s', 0.)+time.monotonic()-diagnostic_started,
-          states=sum(value['states'] for value in diagnostics.values()),
-          simulation_physical_steps=sum(value['simulated_physical_steps'] for value in diagnostics.values()))
-    pure_partition = partition_diagnostic_report(output)
     final_values = [row['y'] for cache in caches.values() for row in cache.values()]
     result = {'task': 'T5', 'status': 'complete', 'adaptation_scope': 'rule_target_assignment_plus_learned_partition',
         'reproduction': 'paper_algorithm_reimplementation_of_merge_STOP_DQN_with_fixed_rule_lower',
@@ -453,102 +407,12 @@ def run(ctx):
         'state_collection_physical_steps': collection_steps, 'real_train_steps': 0,
         'training_seconds': training_seconds, 'validation_seconds': validation_seconds,
         'validation_episodes': validation_episodes, 'validated_fractions': list(validated), 'evaluation': evaluation,
-        'diagnostics': diagnostics, 'pure_partition_diagnostic': pure_partition,
         'potential': {'cached_partitions': len(final_values),
             'zero_labels': sum(v == 0 for v in final_values),
             'non_tie_states': sum(len({r['y'] for r in cache.values()}) > 1 for cache in caches.values())}}
-    atomic_json(output/'summary.json', result)
-    learned_direction = pure_partition['directions_vs_grand']['learned']
-    common = diagnostics['diagnostic']
-    (output/'analysis.md').write_text('# T5 BRIDGE 固定规则分组适配\n\n'
-        '每次指挥事件先按共同规则确定目标与身份归属，再从单体组开始学习同目标合并或停止。'
-        '固定分支缓存终局势值，内部回报为势差、gamma=1；STOP 的奖励为零。'
-        '没有训练下层，不属于原 BRIDGE 双层实验的完整复现。\n\n'
-        f"已完成 {int(cfg['episodes'])} 次构造、{transitions} 条内部 transition、{updates} 次 DQN 更新。"
-        f"正式独立测试 {evaluation['wins']}/{evaluation['episodes']}。\n\n"
-        f"训练快照中有 {result['potential']['non_tie_states']}/{len(records)} 个曾观察到势值不同。"
-        f"共同状态独立复核相对规则平均收益差为 {common['selected_vs_rule_verification_gain']:+.4f}。\n\n"
-        f"固定目标与身份归属，相对大组：学习分区更好 {learned_direction['better_states']} 个状态，"
-        f"更差 {learned_direction['worse_states']}，平局 {learned_direction['tie_states']}。"
-        '逐分支变化与平均收益变化分开计数，见pure_partition_diagnostic.json。\n\n'
-        '若势值多数平局，采样信息不足是待检验瓶颈；若教师独立复核更好而学习分区未改善，'
-        '应检查构造策略学习和访问分布。以上为有限分支单种子证据，固定目标范围的负结果不能当完整BRIDGE的上限。\n',
-        encoding='utf-8')
+    ctx.store.put('result', result)
+    checkpoint.replace(ctx.model_path('final.pt'))
     ctx.progress(phase='complete', optimizer_steps=updates)
     return result
 
 
-def benchmark(ctx):
-    """Bounded production-shape sampler/update probe; never touches training data."""
-    from open_score.research_v5.paired import benchmark_records
-    from open_score.research_v5.simulator import paired_rollouts
-    torch.set_num_threads(1)
-    started = time.monotonic(); phases = {}
-    phase_started = time.monotonic()
-    iteration = getattr(ctx, '_t5_benchmark_iteration', 0)
-    ctx._t5_benchmark_iteration = iteration+1
-    records, collection_steps = benchmark_records(ctx, f'T5-calibration-only:{iteration}')
-    phases['state_collection'] = {'wall_s': time.monotonic()-phase_started,
-        'simulation_physical_steps': collection_steps, 'states': len(records),
-        'units': len(records), 'unit': 'states', 'optimizer_steps': 0}
-    phase_started = time.monotonic(); examples = []; physical_steps = candidate_rows = 0; construction_merges = []
-    for record in records:
-        state = record['state']; partition = singleton_partition(rule_grouping(state))
-        seeds = [stable_seed(ctx.seed, record['state_id'], 'T5-benchmark-branch', i)
-                 for i in range(int(ctx.config['t5']['branches']))]
-        cache = {}; rng = random.Random(stable_seed(record['state_id'], 'construction'))
-        def potential(plan):
-            nonlocal physical_steps, candidate_rows
-            key = partition_key(plan)
-            if key not in cache:
-                row = paired_rollouts(record['snapshot'], [plan], branch_seeds=seeds)[0]
-                physical_steps += sum(row['physical_steps']); candidate_rows += 1
-                cache[key] = row['y']
-            return cache[key]
-        current = potential(partition); merges = 0
-        while True:
-            actions = merge_actions(partition); action = rng.choice(actions)
-            following = merge_partition(partition, action)
-            value = current if action is None else potential(following)
-            done = action is None or len(merge_actions(following)) == 1
-            examples.append({'state': state, 'partition': partition, 'action': action, 'following': following,
-                'reward': value-current, 'done': done})
-            partition, current = following, value
-            if action is not None: merges += 1
-            if done: break
-        construction_merges.append(merges)
-    phases['potential_simulation'] = {'wall_s': time.monotonic()-phase_started,
-        'simulation_physical_steps': physical_steps, 'candidate_rows': candidate_rows,
-        'states': len(records), 'units': candidate_rows, 'unit': 'candidate_rows', 'optimizer_steps': 0,
-        'construction_episodes': len(records), 'internal_transitions': len(examples),
-        'mean_internal_transitions': len(examples)/len(records),
-        'mean_unique_potentials': candidate_rows/len(records),
-        'merge_counts': construction_merges, 'mean_merges': float(np.mean(construction_merges))}
-    setup_started = time.monotonic()
-    network = PartitionQNetwork(hidden_dim=256).to(ctx.device); target = copy.deepcopy(network)
-    optimizer = torch.optim.Adam(network.parameters(), lr=float(ctx.config['t5']['learning_rate']))
-    phases['model_setup'] = {'wall_s': time.monotonic()-setup_started, 'units': 1, 'unit': 'models',
-                            'parameters': sum(p.numel() for p in network.parameters()), 'optimizer_steps': 0}
-    batch = [examples[i % len(examples)] for i in range(128)]
-    phase_started = time.monotonic()
-    for _ in range(2):
-        with ctx.gpu():
-            dqn_update(network, target, optimizer, batch, max_gradient_norm=40.)
-            if str(ctx.device).startswith('cuda'):
-                torch.cuda.synchronize()
-    phases['optimization'] = {'wall_s': time.monotonic()-phase_started, 'optimizer_steps': 2,
-        'batches': 2, 'batch_size': 128, 'units': 2, 'unit': 'optimizer_steps',
-        'simulation_physical_steps': 0}
-    from open_score.research_v5.evaluate import episode as evaluate_episode
-    policy = MergePolicy(network.to('cpu'))
-    phase_started = time.monotonic(); evaluation_rows = []
-    for index in (0, len(ctx.config['cells'])//2, len(ctx.config['cells'])-1):
-        row, _ = evaluate_episode(policy, ctx.spec(index, 'calibration', f'T5-evaluation:{iteration}'))
-        evaluation_rows.append(row)
-    phases['evaluation'] = {'wall_s': time.monotonic()-phase_started, 'episodes': len(evaluation_rows),
-        'units': len(evaluation_rows), 'unit': 'episodes',
-        'real_physical_steps': sum(row['physical_steps'] for row in evaluation_rows),
-        'command_events': sum(row['command_events'] for row in evaluation_rows), 'optimizer_steps': 0}
-    return {'task_id': 'T5', 'phases': phases, 'wall_s': time.monotonic()-started,
-            'state_steps': [row['state'].step for row in records],
-            'gpu_wait_s': getattr(ctx, '_gpu_wait_s', 0.)}

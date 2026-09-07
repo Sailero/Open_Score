@@ -19,9 +19,7 @@ from .t3_ppo import update_device,policy_payload,bc_rows,validation_rate
 
 
 def frozen_version(actor,round_index):
-    buffer=io.BytesIO()
-    torch.save(actor.state_dict(),buffer)
-    return f'exit_round_{round_index}:'+hashlib.sha256(buffer.getvalue()).hexdigest()
+    return f'exit_round_{round_index}'
 
 
 class ExitTeacher:
@@ -121,7 +119,6 @@ def run(ctx):
             ctx.progress('rule_bc',epoch=bc_epoch,epochs=ctx.config['bc_epochs'])
             save()
         phase='collect'
-        save('initialized.pt')
         save()
     while round_index<int(config['rounds']) and phase!='complete':
         if phase=='collect':
@@ -219,87 +216,24 @@ def run(ctx):
         if phase=='validate':
             student=NeuralPolicy(actor,'candidate',budget)
             name=f'round_{round_index+1}'
-            save(name+'.pt')
+            save()
             result=ctx.evaluate(student,'t4_exit',split='validation',checkpoint=name)
             rate=validation_rate(result)
             if rate>best_rate:
                 best_rate=rate
                 save('best.pt')
-            teacher=ExitTeacher(continuation,budget,config['branches'],stable_seed(ctx.seed,'T4',round_index),continuation_version)
-            ctx.evaluate(teacher,f't4_teacher_round_{round_index+1}',split='validation',checkpoint=name,
-                         limit=ctx.config['teacher_validation_episodes'])
-            ctx.evaluate(student,f't4_student_subset_round_{round_index+1}',split='validation',checkpoint=name,
-                         limit=ctx.config['teacher_validation_episodes'])
-            # Independent branch verification uses only two already-selected plans.
-            for index,record in enumerate(records[:int(ctx.config['own_diagnostic_states'])]):
-                path=f'verification_round_{round_index+1}_{index}.pt'
-                if ctx.load_checkpoint(path) is not None:
-                    continue
-                row=labels[index]
-                selected,baseline=row['candidates'][row['selected_index']],row['candidates'][row['baseline_index']]
-                seeds=[stable_seed(ctx.seed,'T4','verification',round_index,record['state_id'],b)
-                       for b in range(ctx.config['verification_branches'])]
-                verification_started=time.monotonic()
-                results=paired_rollouts(record['snapshot'],[selected,baseline],continuation,seeds,continuation_version)
-                work=sum(sum(r['physical_steps']) for r in results)
-                counts['verification_physical_steps']+=work
-                audit=dict(round=round_index+1,state_id=record['state_id'],family_id=record['family_id'],
-                    selected_outcomes=results[0]['outcomes'],baseline_outcomes=results[1]['outcomes'],
-                    verified_gain=results[0]['y']-results[1]['y'],branch_seeds=seeds,
-                    physical_steps_simulated=work,continuation_version=continuation_version)
-                ctx.log('teacher_verification',audit)
-                ctx.log('phase_costs',dict(phase='teacher_verification',method_id='t4_exit',
-                    wall_s=time.monotonic()-verification_started,states=1,
-                    real_physical_steps=0,simulation_physical_steps=work,optimizer_steps=0,branches=2*len(seeds)))
-                ctx.checkpoint(path,audit)
-                save()
             round_index+=1
             labels,records=[],[]
             phase='collect' if round_index<config['rounds'] else 'evaluation'
             save()
     if phase=='evaluation':
-        policy=load_policy(ctx.output/'latest.pt')
+        policy=load_policy(ctx.model_path('resume.pt'))
         ctx.evaluate(policy,'t4_exit',checkpoint='latest')
-        ctx.diagnose(policy,'t4_exit')
         phase='complete'
-        save()
+        save('final.pt')
+        ctx.model_path('resume.pt').unlink(missing_ok=True)
     ctx.progress('complete',complete=True,rounds_completed=round_index,**counts)
     return dict(task='T4',complete=phase=='complete',rounds_completed=round_index,
         best_validation_rate=best_rate,teacher_bc_fraction=.5,**counts)
 
 
-def benchmark(ctx):
-    """Cost a frozen neural continuation on real full-horizon counterfactuals."""
-    torch.set_num_threads(1)
-    seed_everything(stable_seed(ctx.seed,'T4_benchmark'))
-    config=ctx.config['t4']
-    actor=CandidateActor(**ctx.config['model'])
-    optimizer=torch.optim.Adam(actor.parameters(),lr=config['learning_rate'])
-    continuation=NeuralPolicy(actor,'candidate',config['candidates'])
-    rows=[]
-    work=branches=0
-    started=time.monotonic()
-    for index in (0,7,14):
-        env=ctx.make_env(index,'calibration','T4_benchmark')
-        state=env.state()
-        pool=propose_plans(state,config['candidates'])
-        estimates=paired_rollouts(env.snapshot(),pool,continuation,
-            [stable_seed(ctx.seed,'T4_benchmark',index,b) for b in range(config['branches'])],
-            'T4_benchmark_frozen_neural')
-        baseline=next(i for i,p in enumerate(pool) if p==continuation.act(state))
-        targets,_=teacher_targets([r['y'] for r in estimates],baseline)
-        work+=sum(sum(r['physical_steps']) for r in estimates)
-        branches+=len(pool)*config['branches']
-        rows.append(dict(state=state,candidates=pool,target_distribution=targets))
-        env.close()
-    sample_s=time.monotonic()-started
-    update_rows=[rows[i%len(rows)] for i in range(config['batch_size'])]
-    started=time.monotonic()
-    with update_device(ctx,[actor],[optimizer]):
-        metric=imitation_update(actor,optimizer,update_rows)
-        if ctx.device=='cuda':
-            torch.cuda.synchronize()
-    update_s=time.monotonic()-started
-    return dict(states=len(rows),branches=branches,simulated_physical_steps=work,
-        sample_seconds=sample_s,simulated_physical_steps_per_second=work/sample_s,
-        update_seconds=update_s,update_examples=len(update_rows),**metric)

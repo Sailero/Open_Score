@@ -1,8 +1,0 @@
-{
-  "route": "b2_local",
-  "seed": 20260906,
-  "state": "ready",
-  "policy_training_required": false,
-  "shared_preparation": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\v4_validation\\full_scale_pilot\\shared\\seed_20260906",
-  "note": "This solver consumes a shared outcome/payoff model; no separate policy training is performed."
-}

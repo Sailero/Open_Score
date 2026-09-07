@@ -1,4 +1,4 @@
-"""Immutable episode families and experiment quotas, independent of scheduling."""
+"""Episode families and algorithm parameters."""
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
@@ -55,9 +55,9 @@ def episode_spec(seed, index, split='train', namespace='shared', cells=CELLS):
                        stable_seed(family, 'opponent'), split)
 
 
-def defaults(smoke=False, multiplier=1., seed=20260907):
+def defaults(multiplier=.5, seed=20260907):
     q = float(multiplier)
-    result = dict(version=VERSION, seed=int(seed), smoke=bool(smoke), multiplier=q,
+    result = dict(version=VERSION, seed=int(seed), multiplier=q,
                   cells=[list(x) for x in CELLS], opponent='reactive', executor='rule_group_v1',
                   max_steps=50, command_interval=5, gamma=1., device='auto', threads=1,
                   cpu_quotas=dict(zip(TASKS, (4, 4, 2, 3, 3, 2))),
@@ -81,28 +81,6 @@ def defaults(smoke=False, multiplier=1., seed=20260907):
                   t6=dict(train_states=int(1200*q), validation_states=300, candidates=8,
                           branches=16, epochs=40, batch_size=16, learning_rate=3e-4,
                           search_budget=64, thresholds=[0., .005, .01, .02]))
-    if smoke:
-        result.update(model=dict(hidden_dim=32, layers=1, heads=4),
-                      eval_per_cell=1, validation_per_cell=1, bc_episodes=15, bc_epochs=1,
-                      diagnostic_states=15, own_diagnostic_states=2, selection_branches=2,
-                      verification_branches=2, latency_states=3, teacher_validation_episodes=3,
-                      cpu_quotas={t: 1 for t in TASKS})
-        result['t1'].update(candidates=4, branches=2, control_episodes=3)
-        result['t2'].update(iterations=4, depth=2)
-        result['t3'].update(steps=120, rollout=32, batch_size=16, epochs=1, candidates=8,
-                            validation_fractions=[0., 1.])
-        result['t4'].update(rounds=2, states_per_round=4, candidates=4, branches=2, epochs=1, batch_size=2)
-        result['t5'].update(states=4, episodes=12, branches=2, batch_size=4, target_interval=4)
-        result['t6'].update(train_states=4, validation_states=3, candidates=4, branches=2,
-                            epochs=2, batch_size=2, search_budget=8)
     return result
 
 
-def source_identity():
-    paths = []
-    for folder in ('src', 'configs/research_v5', 'scripts'):
-        paths.extend(p for p in (ROOT/folder).rglob('*') if p.is_file() and p.suffix in ('.py', '.yaml', '.ps1'))
-    files = {p.relative_to(ROOT).as_posix(): hashlib.sha256(
-        p.read_text(encoding='utf-8-sig').replace('\r\n', '\n').encode()).hexdigest() for p in sorted(paths)}
-    commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
-    return dict(git_commit=commit, source_hash=digest(files), source_files=files)

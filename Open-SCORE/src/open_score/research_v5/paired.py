@@ -21,6 +21,7 @@ from open_score.grouping.storage import (append_jsonl, atomic_checkpoint, atomic
     fingerprint, random_state, restore_random_state, seed_everything)
 from open_score.research_v4.actions import partition_key, rule_grouping, search
 from open_score.research_v4.outcomes import GlobalOutcomeNetwork
+from .storage import Store
 
 
 def group_rows(rows):
@@ -176,23 +177,20 @@ def train_model(train, validation, output, *, kind, seed, epochs=40, batch_state
         raise ValueError('training requires nonempty complete state groups')
     output = Path(output); output.mkdir(parents=True, exist_ok=True)
     metadata = metadata or {}
-    identity = fingerprint({'kind': kind, 'seed': int(seed), 'epochs': int(epochs),
-        'batch_states': int(batch_states), 'learning_rate': learning_rate,
-        'model_config': model_config or {}, 'metadata': metadata,
-        'train': [(g['family_id'], g['state_id'], g['y'].tolist(),
-                   [a.to_dict() for a in g['actions']], g['branch_seeds'],
-                   g['branch_differences'].tolist()) for g in train],
-        'validation': [(g['family_id'], g['state_id'], g['y'].tolist(),
-                        g['branch_seeds']) for g in validation]})
+    identity = dict(kind=kind, seed=int(seed), epochs=int(epochs), batch_states=int(batch_states), learning_rate=learning_rate, model_config=model_config or {})
+    store = Store(output)
+    models = output/'models'; models.mkdir(parents=True,exist_ok=True)
     seed_everything(seed)
     model = GlobalOutcomeNetwork(**(model_config or {})).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     epoch = updates = 0; elapsed_before = 0.
-    checkpoint = output/'latest.pt'
-    if checkpoint.exists():
-        saved = torch.load(checkpoint, map_location=device, weights_only=False)
-        if saved['identity'] != identity:
-            raise ValueError('paired training protocol/data changed; use a new output directory')
+    checkpoint = models/f'{kind}_resume.pt'
+    final_path = models/f'{kind}_final.pt'
+    restore_path = checkpoint if checkpoint.exists() else final_path
+    if restore_path.exists():
+        saved = torch.load(restore_path, map_location=device, weights_only=False)
+        if saved['kind'] != kind or saved['model_config'] != model.config:
+            raise ValueError('paired model structure differs from the saved checkpoint')
         model.load_state_dict(saved['model']); optimizer.load_state_dict(saved['optimizer'])
         epoch, updates, elapsed_before = saved['epoch'], saved['updates'], saved['training_seconds']
         restore_random_state(saved['rng'])
@@ -220,14 +218,16 @@ def train_model(train, validation, output, *, kind, seed, epochs=40, batch_state
             'optimizer': optimizer.state_dict(), 'rng': random_state(), 'epoch': current_epoch,
             'updates': updates, 'training_seconds': elapsed, 'identity': identity,
             'metadata': metadata})
-        append_jsonl(output/'training.jsonl', row); atomic_json(output/'progress.json', row)
+        store.put(f'{kind}_progress', row)
         if progress:
             progress(row)
     result = {'kind': kind, 'epochs': int(epochs), 'updates': updates,
               'training_seconds': elapsed_before+time.monotonic()-started,
-              'checkpoint': str(checkpoint), 'selection': 'final_epoch',
+              'checkpoint': str(final_path), 'selection': 'final_epoch',
               'training_labels': label_statistics(train)}
-    atomic_json(output/'training_result.json', result)
+    if checkpoint.exists(): checkpoint.replace(final_path)
+    store.put(f'{kind}_training_result', result)
+    store.close()
     return model, result
 
 
@@ -307,23 +307,3 @@ def load_policy(path, device='cpu', **opts):
                         budget=opts.get('budget', 64), threshold=opts.get('threshold', 0.))
 
 
-def benchmark_records(ctx, namespace):
-    """Three independent calibration-only physical states, including late play."""
-    records = []; collection_steps = 0
-    indices = [0, len(ctx.config['cells'])//2, len(ctx.config['cells'])-1]
-    for index, wanted_step in zip(indices, (5, 12, 20)):
-        spec = ctx.spec(index, split='calibration', namespace=namespace)
-        env = ctx.make_env(spec)
-        try:
-            state, snapshot = env.state(), env.snapshot()
-            while not env.done and env.state().step < wanted_step:
-                state, snapshot = env.state(), env.snapshot()
-                _, _, _, info = env.step(rule_grouping(state))
-                collection_steps += int(info['delta'])
-                if not env.done:
-                    state, snapshot = env.state(), env.snapshot()
-            records.append({'state': state, 'snapshot': snapshot, 'family_id': spec.family_id,
-                'state_id': f'{spec.family_id}:{state.step}', 'episode_spec': spec.to_dict()})
-        finally:
-            env.close()
-    return records, collection_steps

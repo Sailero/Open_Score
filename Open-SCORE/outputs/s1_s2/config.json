@@ -1,0 +1,10 @@
+{
+  "version": "s1_s2",
+  "runs": {
+    "historical_s1_s2": {
+      "files": 13,
+      "discarded_intermediate_checkpoints": 0
+    }
+  },
+  "parameters": "Original run configurations are retained in each method data.sqlite metadata table"
+}

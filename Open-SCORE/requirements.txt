@@ -4,4 +4,3 @@ torch>=2.0
 PyYAML>=6.0
 pygame>=2.5
 matplotlib>=3.7
-pytest==8.4.2

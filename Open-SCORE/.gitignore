@@ -1,7 +1,5 @@
 ﻿__pycache__/
 *.py[cod]
-.pytest_cache/
-.coverage
 checkpoints/
 runs/
 *.pt
