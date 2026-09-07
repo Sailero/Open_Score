@@ -1,0 +1,344 @@
+"""Update the one V6 report and its figures directly from recorded outcomes."""
+from __future__ import annotations
+
+from collections import defaultdict
+from datetime import datetime
+import json
+from pathlib import Path
+import sqlite3
+
+import numpy as np
+
+from . import METHODS, RL_METHODS, load_config
+
+
+def _read(directory):
+    path = Path(directory) / 'data.sqlite'
+    if not path.exists():
+        return {}, {}, []
+    with sqlite3.connect(path.resolve().as_uri()+'?mode=ro', uri=True) as connection:
+        metadata = {k: json.loads(v) for k, v in connection.execute('SELECT key,value FROM metadata')}
+        streams = defaultdict(list)
+        for stream, value in connection.execute("SELECT stream,value FROM records WHERE stream IN ('s2_fit','diagnostics') ORDER BY id"):
+            streams[stream].append(json.loads(value))
+        # Keep the last complete block in every fixed 50k-step interval, which
+        # also keeps each seed's newest block. SQLite scans raw records; Python
+        # receives ~101 rows/seed at 5M, rather than hundreds of thousands.
+        memory_peaks, vram_peaks = [], []
+        for value, memory, vram in connection.execute("""
+                SELECT r.value,b.memory_peak,b.vram_peak FROM records r JOIN (
+                    SELECT MAX(id) AS last_id,
+                           MAX(json_extract(value,'$.resident_memory_bytes')) AS memory_peak,
+                           MAX(json_extract(value,'$.peak_vram_bytes')) AS vram_peak
+                    FROM records WHERE stream='training'
+                    GROUP BY json_extract(value,'$.seed'),
+                             CAST(json_extract(value,'$.physical_steps')/50000 AS INTEGER)
+                ) b ON r.id=b.last_id ORDER BY r.id"""):
+            streams['training'].append(json.loads(value))
+            if memory is not None:
+                memory_peaks.append(float(memory))
+            if vram is not None:
+                vram_peaks.append(float(vram))
+        metadata['report_resource_peaks'] = dict(memory=max(memory_peaks, default=None),
+                                                vram=max(vram_peaks, default=None))
+        count, gap = connection.execute("""SELECT COUNT(*),MAX(ABS(
+            json_extract(value,'$.shaped_return')-json_extract(value,'$.native_return')))
+            FROM records WHERE stream='train_episodes'
+            AND json_extract(value,'$.shaped_return') IS NOT NULL
+            AND json_extract(value,'$.native_return') IS NOT NULL""").fetchone()
+        metadata['report_return_check'] = dict(episodes=count, maximum_gap=gap)
+        episodes = []
+        for method, split, checkpoint, family, value in connection.execute(
+                'SELECT method,split,checkpoint,family,value FROM episodes'):
+            row = json.loads(value)
+            episodes.append(dict(row, method=method, split=split,
+                                 family_id=row.get('family_id', family),
+                                 checkpoint_step=row.get('checkpoint_step', checkpoint.split('_')[-1])))
+    return metadata, streams, episodes
+
+
+def _step(row):
+    value = str(row.get('checkpoint_step', 'final'))
+    return int(value) if value.isdigit() else value
+
+
+def _final(method, rows, final_steps):
+    target = final_steps if method in RL_METHODS else 'final'
+    return [r for r in rows if r['method'] == method and r['split'] == 'test' and _step(r) == target]
+
+
+def _cells(rows):
+    result = defaultdict(dict)
+    for row in rows:
+        result[(int(row['seed']), row['scenario_id'])][row['family_id']] = int(row['success_native'])
+    return {key: (sum(outcomes.values()), len(outcomes)) for key, outcomes in result.items()}
+
+
+def _rate(cells, seed, scenarios, quota):
+    values = [cells.get((int(seed), scenario)) for scenario in scenarios]
+    if any(value is None or value[1] != quota for value in values):
+        return None
+    return float(np.mean([wins/count for wins, count in values]))
+
+
+def _paired(first, second, final_rows, seeds, scenarios, quota):
+    indexed = {}
+    for method in (first, second):
+        values = defaultdict(dict)
+        for row in final_rows[method]:
+            values[(int(row['seed']), row['scenario_id'])][row['family_id']] = float(row['success_native'])
+        indexed[method] = values
+    strata = []
+    for scenario in scenarios:
+        families = [set(indexed[method][(seed, scenario)]) for method in (first, second) for seed in seeds]
+        if any(len(family) != quota or family != families[0] for family in families):
+            return dict(available=False, reason='尚未取得两个方法全部三种子、相同开局族的完整正式结果')
+        strata.append(np.asarray([np.mean([indexed[first][(seed, scenario)][family]
+                                         -indexed[second][(seed, scenario)][family] for seed in seeds])
+                                  for family in sorted(families[0])]))
+    rng = np.random.default_rng(20260914)
+    samples = np.mean([v[rng.integers(len(v), size=(2000, len(v)))].mean(axis=1) for v in strata], axis=0)
+    return dict(available=True, difference=float(np.mean([v.mean() for v in strata])),
+                interval=np.quantile(samples, [.025, .975]).tolist(),
+                opening_families=sum(map(len, strata)), seeds=list(seeds))
+
+
+def _number(value, digits=4):
+    return '未记录' if value is None else f'{float(value):.{digits}f}'
+
+
+def summarize(run_dir):
+    """Overwrite one report/three figure paths; never invent unfinished results."""
+    run = Path(run_dir)
+    shared, common, _ = _read(run/'shared')
+    config = shared.get('config') or load_config()
+    seeds = [int(s) for s in config['seeds']['initializations']]
+    scenes = config['scenarios']
+    main = config['evaluation']['main_scenarios']
+    auxiliary = config['evaluation']['auxiliary_scenarios']
+    final_steps = int(config['training']['physical_steps_per_method_seed'])
+    quota = int(config['evaluation']['test_per_scenario'])
+    validation_quota = int(config['evaluation']['validation_per_scenario'])
+    methods = [*METHODS.values(), 'FrozenRule']
+    data = {name: _read(run/name) for name in methods}
+    rows = [r for _, _, records in data.values() for r in records]
+    final = {method: _final(method, rows, final_steps) for method in methods}
+    cells = {method: _cells(final[method]) for method in methods}
+    main_rates, auxiliary_rates = {}, {}
+    for method in methods:
+        method_seeds = seeds if method != 'FrozenRule' else sorted({int(r['seed']) for r in final[method]})
+        main_rates[method] = [_rate(cells[method], seed, main, quota) for seed in method_seeds]
+        auxiliary_rates[method] = [_rate(cells[method], seed, auxiliary, quota) for seed in method_seeds]
+    fits = common.get('s2_fit', [])
+    training = {method: data[method][1].get('training', []) for method in RL_METHODS}
+    # Before real measurements exist there is no result figure and no empty report.
+    if not rows and not fits and not any(training.values()):
+        return dict(status='waiting_for_recorded_results', report=None, evaluation_episodes=0)
+
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    figures = run/'figures'
+    figures.mkdir(parents=True, exist_ok=True)
+    image_paths = []
+    if any(training.values()) or any(r['split'] == 'validation' for r in rows):
+        fig, axes = plt.subplots(2, 2, figsize=(12, 7), constrained_layout=True)
+        for axis, method in zip(axes.flat, RL_METHODS):
+            for index, seed in enumerate(seeds):
+                color = f'C{index}'
+                sparse = sorted((r for r in training[method] if int(r['seed']) == seed),
+                                key=lambda r: r['physical_steps'])
+                points, previous_wins, previous_episodes = [], 0, 0
+                for row in sparse:
+                    wins, episodes = row.get('native_success_count'), row.get('episodes')
+                    if wins is not None and episodes is not None and episodes > previous_episodes:
+                        points.append((row['physical_steps'], (wins-previous_wins)/(episodes-previous_episodes)))
+                        previous_wins, previous_episodes = wins, episodes
+                if points:
+                    x, y = np.asarray(points).T
+                    axis.plot(x/1e6, y*100,
+                              '--', marker='.', alpha=.45, color=color, label=f'{seed} train mix')
+                validation = [r for r in rows if r['method'] == method and r['split'] == 'validation'
+                              and int(r['seed']) == seed]
+                points = []
+                for step in sorted({_step(r) for r in validation if isinstance(_step(r), int)}):
+                    value = _rate(_cells([r for r in validation if _step(r) == step]), seed, main, validation_quota)
+                    if value is not None:
+                        points.append((step, value))
+                if points:
+                    axis.plot([p[0]/1e6 for p in points], [100*p[1] for p in points],
+                              'o-', color=color, label=f'{seed} validation A-D')
+            axis.set(title=method, xlabel='Physical steps (M)', ylabel='Native success (%)', ylim=(0, 100))
+            axis.grid(alpha=.2)
+            if axis.lines:
+                axis.legend(fontsize=7)
+        has_points = any(axis.lines for axis in axes.flat)
+        if has_points:
+            fig.savefig(figures/'learning.png', dpi=160)
+        plt.close(fig)
+        if has_points:
+            image_paths.append(('learning.png', '训练混合胜率（虚线，约50k物理步区间内累计成功数/回合数差，末区间可能未满）与主场景验证胜率（实线）；两者分布不同。仅完整验证点计入实线，数据库保留全部原始训练记录。'))
+    chart_methods = [m for m in methods if any(v is not None for v in main_rates[m]+auxiliary_rates[m])]
+    if chart_methods:
+        fig, axes = plt.subplots(1, 2, figsize=(13, 5), constrained_layout=True)
+        for axis, category, label in zip(axes, (main_rates, auxiliary_rates), ('Main A-D', 'Auxiliary E')):
+            for position, method in enumerate(chart_methods):
+                values = [v for v in category[method] if v is not None]
+                if values:
+                    axis.bar(position, 100*np.mean(values), color='C0', alpha=.65)
+                    axis.scatter([position]*len(values), np.asarray(values)*100, color='black', s=15)
+                if method in RL_METHODS:
+                    earlier = _cells([r for r in rows if r['method'] == method and r['split'] == 'test' and _step(r) == 2_000_000])
+                    previous = [_rate(earlier, seed, main if category is main_rates else auxiliary, quota) for seed in seeds]
+                    previous = [v for v in previous if v is not None]
+                    if previous:
+                        axis.scatter([position], [100*np.mean(previous)], marker='D', color='C3', s=38)
+            axis.set_xticks(range(len(chart_methods)), chart_methods, rotation=35, ha='right')
+            axis.set(title=label+' (bar: final; diamond: 2M)', ylabel='Native success (%)', ylim=(0, 100))
+            axis.grid(axis='y', alpha=.2)
+        fig.savefig(figures/'results.png', dpi=160)
+        plt.close(fig)
+        image_paths.append(('results.png', '最终模型及同次训练2M模型。黑点为已完成种子；未完成种子缺席，不能据部分结果宣称三种子优势。'))
+    if fits:
+        fig, axes = plt.subplots(1, 2, figsize=(10, 4), constrained_layout=True)
+        for seed in seeds:
+            entries = sorted([r for r in fits if int(r['seed']) == seed], key=lambda r: r['epoch'])
+            for axis, field in zip(axes, ('train_loss', 'validation_brier')):
+                entries_field = [r for r in entries if r.get(field) is not None]
+                if entries_field:
+                    axis.plot([r['epoch'] for r in entries_field], [r[field] for r in entries_field], label=str(seed))
+                axis.set(xlabel='Epoch', ylabel=field)
+                axis.grid(alpha=.2)
+                if axis.lines:
+                    axis.legend(fontsize=8)
+        fig.savefig(figures/'s2.png', dpi=160)
+        plt.close(fig)
+        image_paths.append(('s2.png', '共享S2数据上三个初始化的训练损失和验证Brier；损失下降不等于在线方法有效。'))
+
+    if not image_paths:
+        return dict(status='waiting_for_plottable_results', report=None, evaluation_episodes=len(rows))
+    complete = all(len(main_rates[m]) == 3 and all(v is not None for v in main_rates[m]+auxiliary_rates[m])
+                   for m in METHODS.values()) and bool(main_rates['FrozenRule']) and all(
+                       v is not None for v in main_rates['FrozenRule']+auxiliary_rates['FrozenRule'])
+    core = shared.get('native_core', {})
+    text = ['# v6 动态分组实验报告', '', f'更新时间：{datetime.now().astimezone().isoformat(timespec="seconds")}。', '',
+            f'当前状态：{"六方法最终正式评价齐备" if complete else "实验尚未完成；以下只汇总已落盘记录"}。正式评价记录累计 {sum(r["split"] == "test" for r in rows):,} 局执行（含2M/最终及共享开局重复执行，不等于独立开局数）。', '',
+            '## 研究问题与固定设计', '',
+            '在已知 reactive 对手、共享 rule_group_v1 底层和原生物理世界中，比较目标归属与同目标分组。每局最多50物理步，5步及非终止伤亡重新决策；不设组大小上限、后备配额或强制部署。', '',
+            f'本轮使用独立新版had_env库。运行记录CORE_VERSION：{core.get("core_version", "尚未记录")}；PHYSICS_PROTOCOL：{core.get("physics_protocol", "尚未记录")}；来源：{core.get("package_path", "尚未记录")}。', '',
+            '四个RL方法各训练三种子，每种子五场景合计5M物理步；2M和5M是同次训练的检查点。所有RL采用λ=0.5、γ=1蓝方生命损耗潜势，真实终局潜势归零；S2始终学习原生终局标签。', '',
+            '| 场景 | 红/蓝 | 目标数 | 汇总范围 |', '|---|---:|---:|---|']
+    text += [f'| {s["id"]} | {s["red"]}/{s["blue"]} | {s["targets"]} | {s["role"]} |' for s in scenes]
+    text += ['', '## 总体效果', '', '| 方法 | 主场景均值±种子标准差 | 辅助E | 完整种子 |', '|---|---:|---:|---:|']
+    for method in methods:
+        rates, extra = [v for v in main_rates[method] if v is not None], [v for v in auxiliary_rates[method] if v is not None]
+        result = f'{100*np.mean(rates):.2f}% ± {100*np.std(rates, ddof=1):.2f}' if len(rates)>1 else (f'{100*rates[0]:.2f}%' if rates else '待完成')
+        text.append(f'| {method} | {result} | {100*np.mean(extra):.2f}% | {len(rates)}/{1 if method == "FrozenRule" else 3} |' if extra else f'| {method} | {result} | 待完成 | {len(rates)}/{1 if method == "FrozenRule" else 3} |')
+    for path, caption in image_paths:
+        text += ['', f'![{caption}](figures/{path})', '', caption]
+    text += ['', '## 三项预设比较', '', '仅使用A–D主场景；先在每个开局族内对三个模型求差值均值，再按场景分层重采样开局族2000次。区间条件于这三份已训练模型，不将同一开局的模型重复执行当作独立样本。', '', '| 比较 | 差值（百分点） | 配对95%区间 |', '|---|---:|---:|']
+    comparisons = {}
+    for first, second in config['evaluation']['primary_comparisons']:
+        value = _paired(first, second, final, seeds, main, quota)
+        comparisons[f'{first}-{second}'] = value
+        text.append(f'| {first}−{second} | {100*value["difference"]:.2f} | [{100*value["interval"][0]:.2f}, {100*value["interval"][1]:.2f}] |' if value['available'] else f'| {first}−{second} | 待完成 | {value["reason"]} |')
+    for method in methods:
+        text += ['', f'## {method}', '']
+        if method.startswith('ALMA_'):
+            text += [f'配置：AQL，{config["aql"]["candidates"]["current"]}候选、每批{config["aql"]["batch_events"]}事件、每{config["aql"]["events_per_update"]}新增事件一次Q/proposal更新；RMSprop学习率{config["aql"]["optimizer"]["learning_rate"]}，回放{config["aql"]["replay"]["capacity_complete_episodes"]}完整回合。', '']
+        elif method == 'MAPPO_Intent':
+            text += [f'配置：每批{config["mappo"]["episodes_per_batch"]}同版本完整回合、{config["mappo"]["epochs"]}epoch、{config["mappo"]["n_step_events"]}事件n-step、逐成员clip={config["mappo"]["clip"]}；Adam学习率{config["mappo"]["optimizer"]["learning_rate"]}。', '']
+        elif method.startswith('BLOTTO_'):
+            text += ['配置：完整枚举人数和后备配置，按距离确定身份，冻结局部S2的对数概率求和；'+('固定目标归属后评分64个不同完整分区。' if method == 'BLOTTO_Group' else '每个目标形成一个大组。'), '']
+        else:
+            text += ['冻结规则上层参照，仅在共同正式开局上评价一次，不进行学习。', '']
+        text += ['| 种子 | 检查点 | 场景 | 成功/局数 | 胜率 |', '|---|---|---|---:|---:|']
+        evaluated = [r for r in rows if r['method'] == method and r['split'] == 'test']
+        for step in sorted({_step(r) for r in evaluated}, key=str):
+            for (seed, scenario), (wins, count) in sorted(_cells([r for r in evaluated if _step(r)==step]).items()):
+                text.append(f'| {seed} | {step} | {scenario} | {wins}/{count} | {100*wins/count:.2f}% |')
+        if not evaluated:
+            text.append('| — | — | — | 尚无正式评价记录 | — |')
+        last = {int(r['seed']): r for r in data[method][1].get('training', [])}
+        if last:
+            text += ['', '实际训练进度：'+ '；'.join(f'{s}: {r["physical_steps"]:,}物理步，{r.get("events", "未记录")}事件，{r.get("episodes", "未记录")}回合' for s,r in sorted(last.items()))+'。']
+            text += ['', '| 种子 | 成功数/首次成功步 | 当前replay正例 | 连续无原生奖励回合 | 优化器step | TD RMSE | 最新速度(物理步/s) |', '|---|---|---:|---:|---:|---:|---:|']
+            for seed, row in sorted(last.items()):
+                text.append(f'| {seed} | {row.get("native_success_count", "—")}/{row.get("first_success_physical_step", "尚无成功")} | {row.get("replay_positive_episodes", "不适用或未记录")} | {row.get("no_native_reward_window", "—")} | {row.get("optimizer_steps", "—")} | {_number(row.get("td_rmse"))} | {_number(row.get("physical_steps_per_second"), 2)} |')
+            text += ['', '最后采集块学习指标：'+ '；'.join(f'{s}: '+', '.join(f'{k}={_number(r[k])}' for k in ('q_loss','proposal_loss','actor_loss','critic_loss','s2_rows','internal_tokens','candidate_generated','candidate_scored') if r.get(k) is not None) for s,r in sorted(last.items()))+'。']
+            peaks = data[method][0]['report_resource_peaks']
+            text += ['', f'完整训练记录中的进程内存峰值：{_number(peaks["memory"]/2**30 if peaks["memory"] is not None else None, 2)} GiB；显存峰值：{_number(peaks["vram"]/2**30 if peaks["vram"] is not None else None, 2)} GiB（不是全机各并发进程同步总峰值）。']
+        if final[method]:
+            latencies = [r['decision_latency_ms_mean'] for r in final[method] if r.get('decision_latency_ms_mean') is not None]
+            cost = sum(r.get('physical_steps', 0) for r in final[method])
+            wall = sum(r.get('wall_time_s', 0) for r in final[method])
+            text += ['', f'最终评价成本：{cost:,}物理步、累计回合耗时{wall:.1f}秒；每回合平均决策时延再取均值：{_number(np.mean(latencies) if latencies else None, 2)}毫秒。并发累计耗时不等于墙钟完成时间。']
+            details = []
+            for field in ('sustained_all_reserve','reserve_exposure','reassignment_count','partition_changes_at_fixed_assignment','nonterminal_positive_shaping','terminal_compensation','s2_scoring_rows','candidates_scored'):
+                values = [r[field] for r in final[method] if r.get(field) is not None]
+                if values:
+                    details.append(f'{field}={np.mean(values):.4g}')
+            failures = [r['blue_health_loss'] for r in final[method] if not r['success_native'] and r.get('blue_health_loss') is not None]
+            text += ['', '最终评价行为（逐局均值）：'+'；'.join(details)+f'；失败局蓝方生命损耗={_number(np.mean(failures) if failures else None)}。']
+            reasons = defaultdict(int)
+            for row in final[method]:
+                reasons[row.get('termination_reason', '未记录')] += 1
+            text += ['', '终止原因局数：'+'；'.join(f'{key}={value}' for key,value in sorted(reasons.items()))+'。']
+        check = data[method][0].get('report_return_check', {})
+        if check.get('episodes'):
+            text += ['', f'已记录完整训练回合原生/塑形总回报最大绝对差：{check["maximum_gap"]:.3g}（{check["episodes"]:,}局）；正塑形反馈不作为原生成功计数。']
+    text += ['', '## S2能力评价与额外成本', '', '| 初始化 | 选中epoch | 测试Brier | ECE | 非平局排序 | 平局率 | 选择损失 | 全零/非平局/总状态 |', '|---|---:|---:|---:|---:|---:|---:|---|']
+    for seed in seeds:
+        result = shared.get(f's2_result/{seed}', {})
+        text.append(f'| {seed} | {result.get("best_epoch", "待完成")} | '+ ' | '.join(_number(result.get(key)) for key in ('test_brier','test_ece','test_nontie_ranking_accuracy','test_tie_fraction','test_selection_loss'))+f' | {result.get("test_all_zero_states", "—")}/{result.get("test_non_tie_states", "—")}/{result.get("test_states", "—")} |')
+    scale_rows = [(seed, scale, value) for seed in seeds for scale, value in shared.get(f's2_result/{seed}', {}).get('test_by_scale', {}).items()]
+    if scale_rows:
+        text += ['', '| S2初始化 | 局部规模 | 实际留出指标 |', '|---|---|---|']
+        text += [f'| {seed} | {scale} | '+json.dumps(value, ensure_ascii=False, separators=(',', ':'))+' |' for seed,scale,value in scale_rows]
+    if shared.get('s2_data_result'):
+        result = shared['s2_data_result']
+        text += ['', f'共享数据采集一次：{result.get("families", "未记录")}母回合族、{result.get("states", "未记录")}状态；母回合{result.get("mother_physical_steps", "未记录")}步，标签续行{result.get("simulation_physical_steps", "未记录")}模拟物理步。三个S2初始化共用数据，不能重复计为三份独立数据。']
+    diagnostics = common.get('diagnostics', [])
+    text += ['', '## 有限原因分析', '']
+    if diagnostics:
+        better, partition, rankings = [], [], []
+        invalid_assignment = 0
+        for row in diagnostics:
+            values = np.mean(np.asarray(row['outcomes'], dtype=float), axis=1)
+            selected = row['methods']
+            if 'FrozenRule' in selected:
+                better.append(float(values.max()-values[selected['FrozenRule']]))
+            if all(m in selected for m in ('BLOTTO_Count','BLOTTO_Group')):
+                actions = [row['candidates'][selected[m]] for m in ('BLOTTO_Count','BLOTTO_Group')]
+                allocations = [{**{int(i): g['target'] for g in a['groups'] for i in g['members']},
+                                **{int(i): None for i in a.get('reserve', [])}} for a in actions]
+                if allocations[0] == allocations[1]:
+                    partition.append(float(values[selected['BLOTTO_Group']]-values[selected['BLOTTO_Count']]))
+                else:
+                    invalid_assignment += 1
+            scores = row.get('s2_scores')
+            if scores is not None and len(scores) == len(values):
+                pair_scores = []
+                for i in range(len(values)):
+                    for j in range(i):
+                        if values[i] != values[j] and scores[i] is not None and scores[j] is not None:
+                            product = (values[i]-values[j])*(scores[i]-scores[j])
+                            pair_scores.append(1. if product>0 else .5 if product==0 else 0.)
+                if pair_scores:
+                    rankings.append(float(np.mean(pair_scores)))
+        text += [f'已记录{len(diagnostics)}个固定状态，使用第一初始化模型；每候选执行一个事件后按共同规则至真正终局，同状态使用配对分支。成本{sum(r.get("simulation_physical_steps", 0) for r in diagnostics):,}模拟物理步，仅用于事后诊断。', '',
+                 f'候选中经验最优相对规则平均增益：{_number(np.mean(better) if better else None)}；显示改善的状态{sum(v>0 for v in better)}/{len(better)}。经验最优仍受有限分支的选优偏差影响，不是已证明可实现增益。', '',
+                 f'同目标归属G2−G1平均续行增益：{_number(np.mean(partition) if partition else None)}；正/负/平局状态={sum(v>0 for v in partition)}/{sum(v<0 for v in partition)}/{sum(v==0 for v in partition)}；发现归属不一致而排除{invalid_assignment}状态。', '',
+                 f'S2代理对共享世界非平局候选的排序准确率（先状态内平均）：{_number(np.mean(rankings) if rankings else None)}，有可比非平局的状态{len(rankings)}；预测平局记0.5。该分析只针对这批状态与第一初始化，不扩大为三种子机制证据。']
+    else:
+        text += ['尚无已完成的固定状态诊断；候选是否存在改善、固定归属分组收益及S2向共享世界迁移尚不能下结论。']
+    text += ['', '## 复现边界与结论范围', '',
+             'BLOTTO_Count是人数枚举与距离身份分配；BLOTTO_Group固定相同目标归属后只搜索分区。ALMA_Alloc是固定底层上的AQL分配适配；MAPPO_Intent使用同时成员选择与旧意图。ALMA_Group、ALMA_S2是项目扩展，后者仅向全局Q提供冻结局部S2能力。', '',
+             '六法在线选动作均不调用真实模拟器反复试选。真实终局模拟仅用于共享S2离线标签和事先限定的原因分析；S2删除跨目标物理耦合，输出局部续行概率，不能当作完整世界无误差模型。', '',
+             '局部模型校准、训练损失或正奖励改善不能单独证明方法有效；主结论依据主场景原生胜率、配对差值与三个训练种子的一致性。辅助E单列，不抬高主胜率。尚未记录的评价与原因分析均保持未完成；不能把仍存活目标在全局提前失败时标为局部成功。', '',
+             '网络使用128维、4头、两层实体编码；完整参数、种子及预算见[config.json](config.json)，实际运行资源记录于共享数据库runtime。2M/5M按完整采样块边界保存，逐局checkpoint_physical_steps及权重记录实际训练步数。', '',
+             '数据与模型按方法保存在本目录；共享数据为[shared/data.sqlite](shared/data.sqlite)。本文件为本轮唯一正式报告，图表更新既有路径。', '']
+    path = run/'实验报告.md'
+    path.write_text('\n'.join(text), encoding='utf-8')
+    return dict(status='final_evaluations_complete' if complete else 'in_progress', report=str(path),
+                evaluation_episodes=len(rows), final_main_rates=main_rates, comparisons=comparisons)
