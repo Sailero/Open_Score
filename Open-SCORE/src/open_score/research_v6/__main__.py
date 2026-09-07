@@ -121,6 +121,7 @@ def sample_episode(spec_dict, weights, physical_steps, explore, keep_transitions
         if abs(native_total-shaped_total) > 1e-6:
             raise RuntimeError('Potential terminal compensation did not telescope')
         row = dict(**spec.to_dict(), success_native=success, physical_steps=state.step,
+            s2_revision=_CONFIG['s2'].get('revision', 'binary_v1') if _CONFIG['methods'].get(_METHOD, {}).get('s2') else None,
             real_events=events, native_return=native_total, shaped_return=shaped_total,
             shaped_native_gap=shaped_total-native_total, nonterminal_positive_shaping=positive_shaping,
             positive_shaping_event_fraction=positive_events/max(events, 1), terminal_compensation=compensation,
@@ -255,6 +256,7 @@ def train(config, run, method, seed, device):
                 elapsed = time.monotonic()-started
                 speed = (progress['physical_steps']-initial_steps)/max(elapsed, 1e-6)
                 metric = dict(**update_metrics, seed=seed, physical_steps=progress['physical_steps'],
+                    s2_revision=config['s2'].get('revision', 'binary_v1') if config['methods'][method]['s2'] else None,
                     episodes=progress['episodes'], events=progress['events'], phase='training',
                     native_success_rate=float(np.mean([r['success_native'] for _, r in collected])),
                     shaped_native_gap=max(abs(r['shaped_native_gap']) for _, r in collected),
@@ -300,6 +302,7 @@ def jobs(config):
     result = [('FrozenRule', 'FrozenRule', seeds[0], []), ('S2_data', 'S2_data', 0, [])]
     for seed in seeds:
         result.append((f'S2_{seed}', 'S2_fit', seed, ['S2_data']))
+    for seed in seeds:
         result.append((f'ALMA_S2_{seed}', 'ALMA_S2', seed, [f'S2_{seed}']))
         for method in ('ALMA_Alloc', 'MAPPO_Intent', 'ALMA_Group'):
             result.append((f'{method}_{seed}', method, seed, []))
@@ -315,7 +318,9 @@ def worker(run, job, device):
     selected = next(item for item in jobs(config) if item[0] == job)
     _, method, seed, _ = selected
     shared = Store(run/'shared')
-    shared.put(f'progress/{job}', dict(phase='running', pid=os.getpid(), started=now()))
+    ownership = dict(phase='running', pid=os.getpid(), started=now())
+    shared.put(f'worker/{job}', ownership)
+    shared.put(f'progress/{job}', ownership)
     try:
         if method == 'S2_data':
             from .local_value import collect_data
@@ -331,8 +336,10 @@ def worker(run, job, device):
             result = nonlearning(config, run, method, seed)
         shared.put(f'finished/{job}', dict(complete=True, finished=now(), result=result))
         shared.put(f'progress/{job}', dict(phase='complete', finished=now()))
+        shared.put(f'worker/{job}', dict(**ownership, complete=True))
     except BaseException as error:
         shared.put(f'progress/{job}', dict(phase='error', error=str(error), traceback=traceback.format_exc(), updated=now()))
+        shared.put(f'worker/{job}', dict(phase='error', pid=os.getpid(), started=ownership['started']))
         raise
     finally:
         shared.close()
@@ -421,6 +428,23 @@ def diagnostics(config, run):
     return dict(completed=True, fixed_states=total, model_seed=seed)
 
 
+class _AdoptedJob:
+    """Observe a live worker after replacing its scheduler, without restarting it."""
+    def __init__(self, process, job, shared):
+        self.process, self.job, self.shared = process, job, shared
+        self.pid, self.returncode = process.pid, None
+
+    def poll(self):
+        import psutil
+        try:
+            if self.process.is_running() and self.process.status() != psutil.STATUS_ZOMBIE:
+                return None
+        except psutil.Error:
+            pass
+        self.returncode = 0 if self.shared.get(f'finished/{self.job}', {}).get('complete') else 1
+        return self.returncode
+
+
 def run_all(args):
     from .reporting import summarize
     config = load_config(args.config)
@@ -469,11 +493,35 @@ def run_all(args):
         raise ValueError('At most three heavy jobs are permitted')
     pending = [j for j in jobs(config) if not shared.get(f'finished/{j[0]}', {}).get('complete')]
     active, logs = {}, {}
+    # An interrupted scheduler may leave valid workers alive. Match the exact
+    # job/output and recorded process creation time before taking ownership.
+    for item in list(pending):
+        job, method, _, _ = item
+        recorded = shared.get(f'worker/{job}', shared.get(f'progress/{job}', {}))
+        if recorded.get('phase') != 'running' or not recorded.get('pid'):
+            continue
+        try:
+            process = psutil.Process(recorded['pid'])
+            command = process.cmdline()
+            if (command[command.index('--job')+1] != job or
+                    Path(command[command.index('--output')+1]).resolve() != run or
+                    'open_score.research_v6' not in command):
+                continue
+            if abs(process.create_time()-datetime.fromisoformat(recorded['started']).timestamp()) > 120:
+                continue
+            if any(not shared.get(f'finished/{d}', {}).get('complete') for d in item[3]):
+                raise RuntimeError(f'Live {job} has unfinished dependencies; stop only that dependent worker first')
+            owner = 'shared' if method.startswith('S2') or method == 'diagnostics' else method
+            active[job] = (_AdoptedJob(process, job, shared), owner)
+            pending.remove(item)
+            print(f'[resume] Keeping live {job}, PID {process.pid}', flush=True)
+        except (psutil.Error, ValueError, IndexError, KeyError):
+            continue
     shared.put('runtime', dict(device=device, max_heavy_jobs=cap,
                environment_processes_per_job=config['resources']['environment_processes_per_job'],
                numerical_threads=1, version=config['version']))
     shared.put('scheduler', dict(pid=os.getpid(), started=now(), workers=cap, device=device))
-    last_display, last_report = 0., time.monotonic()
+    last_display, last_report = 0., time.monotonic()-300
     reporter = ThreadPoolExecutor(max_workers=1, thread_name_prefix='v6-report')
     report_future = None
     try:
@@ -500,7 +548,9 @@ def run_all(args):
                 pending.remove(item)
             for job, (process, _) in list(active.items()):
                 if process.poll() is not None:
-                    logs.pop(job).close()
+                    stream = logs.pop(job, None)
+                    if stream is not None:
+                        stream.close()
                     del active[job]
                     if process.returncode:
                         raise RuntimeError(f'{job} failed; see its method run.log. Completed work is retained.')
@@ -525,6 +575,8 @@ def run_all(args):
                         details += f' phase_remaining~{max(0, eta)/3600:.2f}h'
                     if 'validation_brier' in progress:
                         details += f' validation_Brier={progress["validation_brier"]:.5f}'
+                    if 'validation_time_mae' in progress:
+                        details += f' time_MAE={progress["validation_time_mae"]:.2f} steps'
                     print(details, flush=True)
                 last_display = current
             if current-last_report >= 300 and (report_future is None or report_future.done()):
@@ -543,6 +595,10 @@ def run_all(args):
         reporter.submit(summarize, run).result()
     finally:
         for process, _ in active.values():
+            # A fault in a replacement job must not interrupt unrelated jobs
+            # that were already training before this scheduler took over.
+            if isinstance(process, _AdoptedJob):
+                continue
             try:
                 children = psutil.Process(process.pid).children(recursive=True)
                 for child in children:

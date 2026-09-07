@@ -709,11 +709,15 @@ class AQLLearner:
 
     def policy_state_dict(self):
         return dict(method=self.method, proposal=self.proposal.state_dict(), q=self.q.state_dict(),
-                    policy_version=self.policy_version)
+                    policy_version=self.policy_version,
+                    s2_revision=self.config['s2'].get('revision', 'binary_v1') if self.method == 'ALMA_S2' else None)
 
     def load_policy_state_dict(self, payload):
         if payload['method'] != self.method:
             raise ValueError('Policy method mismatch')
+        if (self.method == 'ALMA_S2' and payload.get('s2_revision', 'binary_v1') !=
+                self.config['s2'].get('revision', 'binary_v1')):
+            raise ValueError('ALMA_S2 checkpoint uses a different frozen evaluator; start its new run explicitly')
         self.proposal.load_state_dict(payload['proposal'])
         self.q.load_state_dict(payload['q'])
         self.policy_version = int(payload.get('policy_version', 0))

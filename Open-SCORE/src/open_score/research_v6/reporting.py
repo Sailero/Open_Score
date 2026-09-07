@@ -25,9 +25,12 @@ def _read(directory):
         maximum = connection.execute('SELECT COALESCE(MAX(id),0) FROM records').fetchone()[0]
         key = str(path.resolve())
         identity = path.stat().st_ino
+        revision = metadata.get('s2_revision', metadata.get('config', {}).get('s2', {}).get('revision'))
         cache = _READ_CACHE.get(key)
-        if cache is None or maximum < cache['last_id'] or identity != cache['identity']:
-            cache = dict(last_id=0, identity=identity, bins={}, recent=defaultdict(lambda: deque(maxlen=200)),
+        if (cache is None or maximum < cache['last_id'] or identity != cache['identity']
+                or revision != cache.get('revision')):
+            cache = dict(last_id=0, identity=identity, revision=revision,
+                         bins={}, recent=defaultdict(lambda: deque(maxlen=200)),
                          streams=defaultdict(list), memory=None, vram=None, episodes=0, gap=None)
             _READ_CACHE[key] = cache
         # Read each committed record once. Retain coarse history plus every one
@@ -146,7 +149,12 @@ def summarize(run_dir):
         method_seeds = seeds if method != 'FrozenRule' else sorted({int(r['seed']) for r in final[method]})
         main_rates[method] = [_rate(cells[method], seed, main, quota) for seed in method_seeds]
         auxiliary_rates[method] = [_rate(cells[method], seed, auxiliary, quota) for seed in method_seeds]
-    fits = common.get('s2_fit', [])
+    s2_revision = config['s2'].get('revision', 'binary_v1')
+    def current_s2(row):
+        return row.get('revision', 'binary_v1') == s2_revision
+    fits = [r for r in common.get('s2_fit', []) if current_s2(r)]
+    s2_results = {seed: result if current_s2(result) else {}
+                  for seed in seeds for result in [shared.get(f's2_result/{seed}', {})]}
     training = {method: data[method][1].get('training', []) for method in RL_METHODS}
     # Before real measurements exist there is no result figure and no empty report.
     if not rows and not fits and not any(training.values()):
@@ -234,20 +242,46 @@ def summarize(run_dir):
         plt.close(fig)
         image_paths.append(('results.png', '最终模型及同次训练2M模型。黑点为已完成种子；未完成种子缺席，不能据部分结果宣称三种子优势。'))
     if fits:
-        fig, axes = plt.subplots(1, 2, figsize=(10, 4), constrained_layout=True)
+        fig, axes = plt.subplots(2, 2, figsize=(12, 8), constrained_layout=True)
         for seed in seeds:
             entries = sorted([r for r in fits if int(r['seed']) == seed], key=lambda r: r['epoch'])
-            for axis, field in zip(axes, ('train_loss', 'validation_brier')):
+            for axis, field, label in zip(axes.flat,
+                    ('train_loss', 'validation_brier', 'validation_time_mae', 'validation_nontie_ranking_accuracy'),
+                    ('Joint outcome-time NLL' if s2_revision == 'joint_v2' else 'Training loss',
+                     'Validation success Brier', 'Validation remaining-time MAE (steps)',
+                     'Validation non-tie ranking accuracy')):
                 entries_field = [r for r in entries if r.get(field) is not None]
                 if entries_field:
                     axis.plot([r['epoch'] for r in entries_field], [r[field] for r in entries_field], label=str(seed))
-                axis.set(xlabel='Epoch', ylabel=field)
+                axis.set(xlabel='Epoch', ylabel=label)
                 axis.grid(alpha=.2)
                 if axis.lines:
                     axis.legend(fontsize=8)
+        axes[1, 1].set_ylim(0, 1)
+        axes[1, 1].axhline(.5, color='grey', linestyle=':', linewidth=1)
         fig.savefig(figures/'s2.png', dpi=160)
         plt.close(fig)
-        image_paths.append(('s2.png', '共享S2数据上三个初始化的训练损失和验证Brier；损失下降不等于在线方法有效。'))
+        image_paths.append(('s2.png', f'当前S2版本{s2_revision}：共享数据上三个初始化的训练损失、胜率Brier、剩余时间MAE和非平局候选排序；只显示当前版本实际记录，旧二分类曲线不与重训拼接。损失或时间误差下降不等于在线方法有效。'))
+    elif s2_revision == 'joint_v2':
+        # Replace the old revision's image immediately; fitting has not begun.
+        sampled = shared.get('s2_data_result', {}) or shared.get('progress/S2_data', {})
+        if current_s2(sampled):
+            dataset = config['s2']['data']
+            split_names = ('train', 'validation', 'test')
+            quotas = [len(dataset['single_target']['count_pairs'])*dataset['single_target']['split'][split]
+                      + len(scenes)*sum(controller['split'][split] for controller in dataset['multi_target']['controllers'])
+                      for split in split_names]
+            counts = sampled.get('completed_by_split', sampled.get('families_by_split', {}))
+            values = [counts.get(split, 0) for split in split_names]
+            fig, axis = plt.subplots(figsize=(9, 4), constrained_layout=True)
+            axis.barh(split_names, quotas, color='lightgrey', label='Fixed quota')
+            bars = axis.barh(split_names, values, label='Collected families')
+            axis.bar_label(bars, labels=[f'{n:,} / {q:,}' for n, q in zip(values, quotas)], padding=4)
+            axis.set(xlabel='Independent mother episode families', title='S2 joint_v2: collecting data; fitting not started')
+            axis.legend()
+            fig.savefig(figures/'s2.png', dpi=160)
+            plt.close(fig)
+            image_paths.append(('s2.png', '新S2独立母回合采集进度；采集完成后自动拟合，届时此图原位更新为联合损失、Brier、时间MAE和排序曲线。'))
 
     if not image_paths:
         return dict(status='waiting_for_plottable_results', report=None, evaluation_episodes=len(rows))
@@ -330,17 +364,56 @@ def summarize(run_dir):
         check = data[method][0].get('report_return_check', {})
         if check.get('episodes'):
             text += ['', f'已记录完整训练回合原生/塑形总回报最大绝对差：{check["maximum_gap"]:.3g}（{check["episodes"]:,}局）；正塑形反馈不作为原生成功计数。']
-    text += ['', '## S2能力评价与额外成本', '', '| 初始化 | 选中epoch | 测试Brier | ECE | 非平局排序 | 平局率 | 选择损失 | 全零/非平局/总状态 |', '|---|---:|---:|---:|---:|---:|---:|---|']
+    text += ['', '## S2能力评价与额外成本', '', f'当前评价器版本：`{s2_revision}`。']
+    if s2_revision == 'joint_v2':
+        text += ['', '保留局部物理状态和候选分组关系，联合预测原生胜负与剩余结束物理步数；训练使用结局与时间联合负对数似然。G1/G2仍以成功概率边缘分布评分，搜索、人数枚举和目标归属逻辑不变，时间不作为额外惩罚或奖励。每个ALMA_S2种子待其新评价器完成并冻结后重新训练，旧训练记录不与本次曲线拼接。', '',
+                 '旧二分类评价器与受其影响的训练记录、权重保留为binary_v1归档；以下训练曲线、留出指标及在线结果只计当前版本。增加独立局面和恢复时间监督是待验证的改进，不能提前承诺排序或在线胜率提升。']
+    dataset = config['s2']['data']
+    split_quotas = {split: len(dataset['single_target']['count_pairs'])*int(count)
+                    + len(scenes)*sum(int(controller['split'][split])
+                                      for controller in dataset['multi_target']['controllers'])
+                    for split, count in dataset['single_target']['split'].items()}
+    progress = shared.get('progress/S2_data', {})
+    if not current_s2(progress):
+        progress = {}
+    collection = shared.get('s2_data_result', {})
+    if not current_s2(collection):
+        collection = {}
+    collected = collection or progress
+    text += ['', f'固定采样配额：{sum(split_quotas.values()):,}个独立母回合族（训练{split_quotas.get("train", 0):,}、验证{split_quotas.get("validation", 0):,}、测试{split_quotas.get("test", 0):,}）；每族最多{dataset["states_per_family"]}个状态，每状态最多{dataset["candidates_per_state"]}个不同候选。训练/验证/测试的每候选配对分支数为'+ '/'.join(str(dataset['branches'][split]) for split in ('train', 'validation', 'test'))+'。同一母回合族不跨划分，全部失败和全部成功状态均保留。']
+    completed_families = collected.get('families', collected.get('completed', 0))
+    text += ['', f'已落盘采样：{completed_families:,}/{sum(split_quotas.values()):,}母回合族；状态{collected.get("states", "未记录")}，候选{collected.get("candidates", "未记录")}，非平局状态{collected.get("non_tie_states", "未记录")}；母回合{collected.get("mother_physical_steps", "未记录")}物理步、标签续行{collected.get("simulation_physical_steps", "未记录")}模拟物理步。']
+    if progress and not collection.get('complete'):
+        remaining = progress.get('remaining_seconds')
+        text += ['', f'最近记录采样速度：{_number(progress.get("families_per_second"), 3)}族/秒；采样剩余时间估计：{_number(remaining/3600 if remaining is not None else None, 2)}小时，仅含数据采集，不含后续三个评价器及ALMA_S2训练。该估计随并发和局面长度变化。']
+    completed_by_split = collected.get('completed_by_split', collected.get('families_by_split', {}))
+    if completed_by_split:
+        text += ['', '| 数据划分 | 已完成母回合族 | 固定配额 |', '|---|---:|---:|']
+        text += [f'| {split} | {completed_by_split.get(split, 0)} | {quota} |'
+                 for split, quota in split_quotas.items()]
+    text += ['', f'三个S2初始化共用同一份采样数据，不能重复计为三份独立数据。每个模型保留{config["s2"]["epochs"]}轮配额；下表阶段来自最近一次落盘记录，不代替进程存活检查。', '',
+             '| 初始化 | 最近记录阶段 | 已完成epoch/配额 | 验证Brier | 验证时间MAE(步) | 验证非平局排序 |', '|---|---|---:|---:|---:|---:|']
     for seed in seeds:
-        result = shared.get(f's2_result/{seed}', {})
-        text.append(f'| {seed} | {result.get("best_epoch", "待完成")} | '+ ' | '.join(_number(result.get(key)) for key in ('test_brier','test_ece','test_nontie_ranking_accuracy','test_tie_fraction','test_selection_loss'))+f' | {result.get("test_all_zero_states", "—")}/{result.get("test_non_tie_states", "—")}/{result.get("test_states", "—")} |')
-    scale_rows = [(seed, scale, value) for seed in seeds for scale, value in shared.get(f's2_result/{seed}', {}).get('test_by_scale', {}).items()]
+        entries = sorted([r for r in fits if int(r['seed']) == seed], key=lambda r: r['epoch'])
+        latest = entries[-1] if entries else {}
+        stage = '已完成' if s2_results[seed].get('complete') else ('拟合中或等待恢复' if latest else '等待采样或调度')
+        text.append(f'| {seed} | {stage} | {latest.get("epoch", 0)}/{config["s2"]["epochs"]} | '
+                    + ' | '.join(_number(latest.get(key)) for key in
+                                 ('validation_brier', 'validation_time_mae', 'validation_nontie_ranking_accuracy'))+' |')
+    text += ['', '| 初始化 | 选中epoch | 测试Brier | ECE | 时间MAE(步) | 非平局排序 | 平局率 | 选择损失 | 全零/非平局/总状态 |', '|---|---:|---:|---:|---:|---:|---:|---:|---|']
+    for seed in seeds:
+        result = s2_results[seed]
+        text.append(f'| {seed} | {result.get("best_epoch", "待完成")} | '+ ' | '.join(_number(result.get(key)) for key in ('test_brier','test_ece','test_time_mae','test_nontie_ranking_accuracy','test_tie_fraction','test_selection_loss'))+f' | {result.get("test_all_zero_states", "—")}/{result.get("test_non_tie_states", "—")}/{result.get("test_states", "—")} |')
+    if any(result.get('test_time_mae') is not None for result in s2_results.values()):
+        text += ['', '| 初始化 | 成功条件时间MAE(步) | 失败条件时间MAE(步) | 测试联合NLL |', '|---|---:|---:|---:|']
+        for seed, result in s2_results.items():
+            text.append(f'| {seed} | '+' | '.join(_number(result.get(key)) for key in
+                        ('test_success_time_mae', 'test_failure_time_mae', 'test_joint_nll'))+' |')
+        text += ['', '时间误差按实际终局标签评价；成功和失败分列，守满50步成功与快速失败不会被当作同一种结果。模型选择仍依据验证胜率Brier，测试集不用于选模型。']
+    scale_rows = [(seed, scale, value) for seed in seeds for scale, value in s2_results[seed].get('test_by_scale', {}).items()]
     if scale_rows:
         text += ['', '| S2初始化 | 局部规模 | 实际留出指标 |', '|---|---|---|']
         text += [f'| {seed} | {scale} | '+json.dumps(value, ensure_ascii=False, separators=(',', ':'))+' |' for seed,scale,value in scale_rows]
-    if shared.get('s2_data_result'):
-        result = shared['s2_data_result']
-        text += ['', f'共享数据采集一次：{result.get("families", "未记录")}母回合族、{result.get("states", "未记录")}状态；母回合{result.get("mother_physical_steps", "未记录")}步，标签续行{result.get("simulation_physical_steps", "未记录")}模拟物理步。三个S2初始化共用数据，不能重复计为三份独立数据。']
     diagnostics = common.get('diagnostics', [])
     text += ['', '## 有限原因分析', '']
     if diagnostics:

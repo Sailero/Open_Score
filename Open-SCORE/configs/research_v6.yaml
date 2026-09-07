@@ -79,7 +79,7 @@ reward:
     formula: native_interval_reward + coefficient * (potential_next - potential_current)
   value_output: unbounded_shaped_return
   native_value_recovery: shaped_value + coefficient * potential_current
-  s2_label: native_terminal_success
+  s2_label: native_terminal_success_and_remaining_physical_steps
 
 model:
   hidden: 128
@@ -108,9 +108,12 @@ model:
 
 s2:
   name: GroupLocalS2
-  output: local_target_native_success_probability
+  revision: joint_v2
+  output: joint_native_outcome_and_remaining_physical_steps
+  time_bins: 51  # 剩余物理步 0..50；屏蔽超出当前剩余时域的类别。
+  decision_output: marginal_native_success_probability
   local_group_aggregation: joint_group_relation_encoding
-  # 一个目标的完整分区只输出一个概率，禁止把小组概率相乘。
+  # G1/G2/R4 只读取联合分布的成功概率；时间不作为额外奖励或评分惩罚。
   projection:
     engine: native_single_target_world
     preserve: [physical_time, position, velocity, health, physical_parameters, entity_id_mapping]
@@ -122,9 +125,10 @@ s2:
     nonterminal_empty_red: frozen_s2_prediction_online
     online_rollout_fallback: false
   data:
+    collection_workers: 2
     single_target:
       # implementation choice：显式冻结 60 对。前 16 对是 1..4 的完整笛卡尔积，
-      # 其余覆盖 5..20、极不均衡和约 1:2 配比；每一对恰有 5 个母回合族。
+      # 其余覆盖 5..20、极不均衡和约 1:2 配比；每一对有 100 个独立母回合族。
       count_pairs:
         - [1, 1]
         - [1, 2]
@@ -186,16 +190,16 @@ s2:
         - [20, 10]
         - [15, 20]
         - [20, 15]
-      families_per_pair: 5
-      split: {train: 3, validation: 1, test: 1}
+      families_per_pair: 100
+      split: {train: 60, validation: 20, test: 20}
       controller_assignment: rotate_by_pair_and_family
     multi_target:
-      families_per_scenario: 60
-      split: {train: 36, validation: 12, test: 12}
+      families_per_scenario: 1200
+      split: {train: 720, validation: 240, test: 240}
       controllers:
-        - {name: rule, families_per_scenario: 20, split: {train: 12, validation: 4, test: 4}}
-        - {name: grand, families_per_scenario: 20, split: {train: 12, validation: 4, test: 4}}
-        - {name: legal_random, families_per_scenario: 20, split: {train: 12, validation: 4, test: 4}}
+        - {name: rule, families_per_scenario: 400, split: {train: 240, validation: 80, test: 80}}
+        - {name: grand, families_per_scenario: 400, split: {train: 240, validation: 80, test: 80}}
+        - {name: legal_random, families_per_scenario: 400, split: {train: 240, validation: 80, test: 80}}
       targets_per_state: 1
       threatened_target_probability: 0.75
       no_threatened_target_fallback: all_valid_targets
@@ -214,10 +218,10 @@ s2:
     candidates_per_state: 8
     partition_sources: [grand, singleton, spatial, random, local_change]
     fixed_local_members_across_candidates: true
-    branches: {train: 8, validation: 16, test: 16}
+    branches: {train: 1, validation: 1, test: 1}
     paired_branch_randomness: true
     split_unit: mother_episode_family
-    label: mean_native_binary_branch_success
+    label: native_terminal_outcome_and_elapsed_physical_steps_per_candidate_branch
     retain_failures_and_ties: true
   optimizer:
     name: adamw
@@ -230,7 +234,7 @@ s2:
   keep_all_candidates_in_state_block: true
   epochs: 40
   learning_rate_schedule: constant
-  loss: soft_bce
+  loss: joint_outcome_time_nll
   loss_weighting: equal_family_then_state_then_candidate
   success_reweighting: false
   ranking_loss: false

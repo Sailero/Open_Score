@@ -6,10 +6,12 @@ R4's scorer use the frozen network and public observations exclusively.
 from __future__ import annotations
 
 from collections import Counter
+from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
 from dataclasses import replace
 import heapq
 import itertools
 import math
+import multiprocessing as mp
 from pathlib import Path
 import time
 
@@ -181,10 +183,24 @@ def _allocation_projection(state, cfg, rng):
     return public_projection(state, target, selected, grouping)
 
 
+def _revision(config):
+    return str(config['s2'].get('revision', 'binary_v1'))
+
+
+def _data_prefix(config):
+    revision = _revision(config)
+    return 's2' if revision == 'binary_v1' else f's2_{revision}'
+
+
 def _local_outcomes(local_state, candidates, branch_seeds):
-    outcomes, physical_steps = [], 0
+    """Observe native success and physical time to the actual terminal.
+
+    Defending to the horizon is observed success, not censoring. Time includes
+    the candidate's first command, measured from its input physical state.
+    """
+    outcomes, durations, reasons, physical_steps = [], [], [], 0
     for action in candidates:
-        wins = []
+        wins, times, causes = [], [], []
         for seed in branch_seeds:
             env = local_env_from_state(replace(local_state, previous=action), int(seed))
             try:
@@ -193,17 +209,83 @@ def _local_outcomes(local_state, candidates, branch_seeds):
                     env.step(action)
                 while not env.done:
                     env.step(grand_grouping(env.state()))
-                physical_steps += env.state().step-start
-                wins.append(int(env.native_success))
+                final = env.state()
+                duration = int(final.step-start)
+                physical_steps += duration
+                terminal, success, reason = native_terminal(final)
+                if not terminal or bool(success) != bool(env.native_success):
+                    raise RuntimeError('S2 labels require the actual native terminal')
+                wins.append(int(success))
+                times.append(duration)
+                causes.append(reason)
             finally:
                 env.close()
         outcomes.append(wins)
-    return outcomes, physical_steps
+        durations.append(times)
+        reasons.append(causes)
+    return outcomes, durations, reasons, physical_steps
+
+
+_COLLECTION_CONFIG = None
+
+
+def _initialize_collection(config):
+    global _COLLECTION_CONFIG
+    _COLLECTION_CONFIG = config
+    torch.set_num_threads(1)
+    torch.set_num_interop_threads(1)
+
+
+def _collect_family(spec, config=None):
+    """Workers return complete families; only the parent writes SQLite."""
+    config = config or _COLLECTION_CONFIG
+    settings, data = config['environment'], config['s2']['data']
+    revision = _revision(config)
+    family, red, blue, targets, split, controller, scenario = spec
+    family_seed = stable_seed(config['version'], 's2', revision, family, split)
+    rng = np.random.default_rng(stable_seed(family_seed, 'policy'))
+    env = V6Env(red, blue, targets, seed=stable_seed(family_seed, 'opening'),
+                opponent_seed=stable_seed(family_seed, 'opponent'),
+                max_steps=settings['max_physical_steps'],
+                command_interval=settings['command_interval'],
+                reward_coefficient=config['reward']['shaping']['coefficient'])
+    try:
+        states, mother_steps = _mother_states(env, controller, rng, data['states_per_family'])
+    finally:
+        env.close()
+    blocks, simulated = [], 0
+    for state_index, state in enumerate(states):
+        if targets == 1:
+            base = (Grouping((Group(state.targets[0].id, tuple(state.ids('red'))),))
+                    if state.ids('red') else Grouping(()))
+            local = public_projection(state, state.targets[0].id, state.ids('red'), base)
+        else:
+            local = _allocation_projection(state, data['multi_target'], rng)
+        assignment = {i: local.targets[0].id for i in local.ids('red')}
+        candidates = partition_candidates(local, assignment, data['candidates_per_state'], rng)
+        branch_seeds = [stable_seed(family_seed, state_index, 'branch', j)
+                        for j in range(data['branches'][split])]
+        outcomes, durations, reasons, steps = _local_outcomes(local, candidates, branch_seeds)
+        simulated += steps
+        blocks.append(dict(state=local, candidates=candidates, outcomes=outcomes,
+                           remaining_steps=durations, terminal_reasons=reasons,
+                           family_id=family, state_index=state_index, revision=revision,
+                           branch_seeds=branch_seeds, scenario=scenario,
+                           source_state=state, controller=controller))
+    means = [np.mean(block['outcomes'], axis=1) for block in blocks]
+    row = dict(revision=revision, family_id=family, split=split, states=len(blocks),
+               candidates=sum(len(block['candidates']) for block in blocks),
+               mother_physical_steps=mother_steps, simulation_physical_steps=simulated,
+               non_tie_states=sum(bool(np.ptp(values)) for values in means),
+               all_zero_states=sum(bool(np.all(values == 0)) for values in means),
+               all_one_states=sum(bool(np.all(values == 1)) for values in means),
+               controller=controller, scenario=scenario)
+    return row, blocks
 
 
 def collect_data(config, run_dir):
-    """Resume by completed mother family; a single authoritative SQLite copy."""
-    settings, data = config['environment'], config['s2']['data']
+    """Resume atomic mother families, without sharing RNGs or DB writers."""
+    data, revision, prefix = config['s2']['data'], _revision(config), _data_prefix(config)
     specs = []
     single = data['single_target']
     split_sequence = [split for split, n in single['split'].items() for _ in range(n)]
@@ -221,57 +303,61 @@ def collect_data(config, run_dir):
                                   scenario['red'], scenario['blue'], scenario['targets'],
                                   split, controller['name'], scenario['id']))
                     index += 1
+    workers = max(1, int(data.get('collection_workers', 1)))
     started = time.monotonic()
     with Store(Path(run_dir)/'shared') as store:
-        completed = {x['family_id'] for x in store.rows('s2/families')}
+        previous = store.rows(f'{prefix}/families')
+        completed = {x['family_id'] for x in previous}
         initial_completed = len(completed)
-        for family, red, blue, targets, split, controller, scenario in specs:
-            if family in completed:
-                continue
-            family_seed = stable_seed(config['version'], 's2', family, split)
-            rng = np.random.default_rng(stable_seed(family_seed, 'policy'))
-            env = V6Env(red, blue, targets, seed=stable_seed(family_seed, 'opening'),
-                        opponent_seed=stable_seed(family_seed, 'opponent'),
-                        max_steps=settings['max_physical_steps'],
-                        command_interval=settings['command_interval'],
-                        reward_coefficient=config['reward']['shaping']['coefficient'])
-            try:
-                states, mother_steps = _mother_states(env, controller, rng, data['states_per_family'])
-            finally:
-                env.close()
-            blocks, simulated = [], 0
-            for state_index, state in enumerate(states):
-                if targets == 1:
-                    base = Grouping((Group(state.targets[0].id, tuple(state.ids('red'))),)) if state.ids('red') else Grouping(())
-                    local = public_projection(state, state.targets[0].id, state.ids('red'), base)
-                else:
-                    local = _allocation_projection(state, multi, rng)
-                assignment = {i: local.targets[0].id for i in local.ids('red')}
-                candidates = partition_candidates(local, assignment, data['candidates_per_state'], rng)
-                branch_seeds = [stable_seed(family_seed, state_index, 'branch', j)
-                                for j in range(data['branches'][split])]
-                outcomes, steps = _local_outcomes(local, candidates, branch_seeds)
-                simulated += steps
-                blocks.append(dict(state=local, candidates=candidates, outcomes=outcomes,
-                                   family_id=family, state_index=state_index,
-                                   branch_seeds=branch_seeds, scenario=scenario,
-                                   source_state=state, controller=controller))
+        totals = Counter({key: sum(int(row.get(key, 0)) for row in previous)
+                          for key in ('states', 'candidates', 'mother_physical_steps',
+                                      'simulation_physical_steps', 'non_tie_states',
+                                      'all_zero_states', 'all_one_states')})
+        splits = Counter(row['split'] for row in previous)
+        remaining = [spec for spec in specs if spec[0] not in completed]
+        # Interleave fixed source strata. This changes no family seed or split
+        # and makes early throughput representative of the full collection.
+        schedule_rng = np.random.default_rng(stable_seed(config['version'], revision, 'collection_order'))
+        remaining = [remaining[i] for i in schedule_rng.permutation(len(remaining))]
+        def commit(result):
+            row, blocks = result
+            family, split = row['family_id'], row['split']
             with store.transaction():
-                store.save_torch(f's2/{split}/{family}', blocks)
-                store.append('s2/families', dict(family_id=family, split=split, states=len(blocks),
-                             mother_physical_steps=mother_steps, simulation_physical_steps=simulated,
-                             controller=controller, scenario=scenario), source=f's2/{family}', source_line=0)
+                store.save_torch(f'{prefix}/{split}/{family}', blocks)
+                store.append(f'{prefix}/families', row, source=f'{prefix}/{family}', source_line=0)
             completed.add(family)
+            splits[split] += 1
+            totals.update({key: int(row[key]) for key in totals})
             elapsed = time.monotonic()-started
             rate = (len(completed)-initial_completed)/max(elapsed, 1e-9)
-            store.put('progress/S2_data', dict(phase='s2_data', completed=len(completed), total=len(specs),
-                      families_per_second=rate, remaining_seconds=(len(specs)-len(completed))/max(rate, 1e-9),
-                      last_family_simulation_steps=simulated))
-            print(f'[S2 data] {len(completed)}/{len(specs)} families; {family}; {simulated} branch steps', flush=True)
-        rows = store.rows('s2/families')
-        result = dict(complete=True, families=len(rows), states=sum(x['states'] for x in rows),
-                      mother_physical_steps=sum(x['mother_physical_steps'] for x in rows),
-                      simulation_physical_steps=sum(x['simulation_physical_steps'] for x in rows),
+            store.put('progress/S2_data', dict(phase='s2_data', revision=revision,
+                      completed=len(completed), total=len(specs), workers=workers,
+                      completed_by_split=dict(splits), **dict(totals),
+                      families_per_second=rate, remaining_seconds=(len(specs)-len(completed))/max(rate, 1e-9)))
+            print(f'[S2 {revision} data] {len(completed)}/{len(specs)} families; '
+                  f'{family}; {row["simulation_physical_steps"]} branch steps; '
+                  f'{totals["non_tie_states"]}/{totals["states"]} non-tie states; '
+                  f'ETA {(len(specs)-len(completed))/max(rate, 1e-9)/3600:.2f}h', flush=True)
+        if workers == 1:
+            for spec in remaining:
+                commit(_collect_family(spec, config))
+        elif remaining:
+            with ProcessPoolExecutor(max_workers=workers, mp_context=mp.get_context('spawn'),
+                                     initializer=_initialize_collection, initargs=(config,)) as pool:
+                iterator = iter(remaining)
+                pending = {}
+                for spec in itertools.islice(iterator, workers*2):
+                    pending[pool.submit(_collect_family, spec)] = spec[0]
+                while pending:
+                    finished, _ = wait(pending, return_when=FIRST_COMPLETED)
+                    for future in finished:
+                        pending.pop(future)
+                        commit(future.result())
+                        spec = next(iterator, None)
+                        if spec is not None:
+                            pending[pool.submit(_collect_family, spec)] = spec[0]
+        result = dict(complete=True, revision=revision, families=len(completed),
+                      families_by_split=dict(splits), **dict(totals), workers=workers,
                       wall_time_s=time.monotonic()-started)
         store.put('s2_data_result', result)
     return result
@@ -359,23 +445,34 @@ def make_policy(method, config, scorer):
 
 
 class GroupLocalS2(nn.Module):
-    """One target's entire partition, batched across physical local inputs."""
-    def __init__(self, config):
+    """Entire local partition; binary legacy or joint native outcome/time.
+
+    Joint class y*(H+1)+t is P(native_success=y, remaining_steps=t).
+    The deployment value is its success marginal, never a time penalty.
+    """
+    def __init__(self, config, revision=None):
         super().__init__()
         from .learning import EntityEncoder, _transformer
+        self.revision = str(revision or _revision(config))
+        self.joint = self.revision != 'binary_v1'
+        self.time_bins = int(config['s2'].get('time_bins', config['environment']['max_physical_steps']+1))
+        if self.time_bins != int(config['environment']['max_physical_steps'])+1:
+            raise ValueError('Joint S2 needs one bin per physical step including zero')
         model = config['model']
         d = int(model['hidden'])
         self.encoder = EntityEncoder(model)
         self.group_fusion = nn.Sequential(nn.Linear(3*d+5, d), nn.GELU())
         self.kind = nn.Embedding(3, d)
         self.relations = _transformer(model, model['group_layers'])
-        self.output = nn.Sequential(nn.Linear(d, d), nn.GELU(), nn.Linear(d, 1))
+        self.output = nn.Sequential(nn.Linear(d, d), nn.GELU(),
+                                    nn.Linear(d, 2*self.time_bins if self.joint else 1))
 
     def forward(self, states, candidates):
         if len(states) != len(candidates):
             raise ValueError('S2 requires one complete local partition per local state')
         if not states:
-            return self.kind.weight.new_empty((0,))
+            shape = (0, 2*self.time_bins) if self.joint else (0,)
+            return self.kind.weight.new_empty(shape)
         encoded, contact_rows = [], []
         for state, action in zip(states, candidates):
             # The executor is stateless: old group features are normalized to
@@ -424,7 +521,33 @@ class GroupLocalS2(nn.Module):
         mask = torch.as_tensor(np.concatenate([np.zeros((batch, 2), bool), group_mask], axis=1), device=device)
         result = self.relations(tokens, src_key_padding_mask=mask)
         result = (result*~mask[:, :, None]).sum(1)/(~mask).sum(1)[:, None]
-        return self.output(result).squeeze(-1)
+        logits = self.output(result)
+        if not self.joint:
+            return logits.squeeze(-1)
+        remaining = torch.tensor([max(0, state.max_steps-state.step) for state in states], device=device)
+        steps = torch.arange(self.time_bins, device=device)
+        allowed = steps[None, :] <= remaining[:, None]
+        # Only states that are already terminal can end in zero further steps.
+        already_terminal = torch.tensor([native_terminal(state)[0] for state in states], device=device)
+        allowed[:, 0] = already_terminal
+        allowed = torch.where(already_terminal[:, None], steps[None, :] == 0, allowed)
+        return logits.masked_fill(~allowed.repeat(1, 2), -torch.inf)
+
+    def success_log_probabilities(self, logits):
+        if not self.joint:
+            return F.logsigmoid(logits)
+        log_joint = F.log_softmax(logits, dim=-1).reshape(-1, 2, self.time_bins)
+        return torch.logsumexp(log_joint[:, 1], dim=-1)
+
+    def time_predictions(self, logits):
+        """Unconditional and outcome-conditional remaining physical means."""
+        if not self.joint:
+            return None
+        joint = F.softmax(logits, dim=-1).reshape(-1, 2, self.time_bins)
+        values = torch.arange(self.time_bins, device=joint.device, dtype=joint.dtype)
+        time_mass = (joint*values).sum(-1)
+        conditional = time_mass/joint.sum(-1).clamp_min(torch.finfo(joint.dtype).tiny)
+        return time_mass.sum(-1), conditional[:, 1], conditional[:, 0]
 
 
 def _local_key(state, action):
@@ -439,7 +562,8 @@ def _local_key(state, action):
 class FrozenLocalScorer:
     def __init__(self, config, payload, device='cpu'):
         self.config, self.device = config, torch.device(device)
-        self.model = GroupLocalS2(config).to(self.device)
+        revision = payload.get('revision', 'binary_v1' if payload['model']['output.2.weight'].shape[0] == 1 else 'joint_v2')
+        self.model = GroupLocalS2(config, revision=revision).to(self.device)
         self.model.load_state_dict(payload['model'])
         self.model.eval().requires_grad_(False)
         self.seed = int(payload['seed'])
@@ -448,7 +572,8 @@ class FrozenLocalScorer:
         self.last_requested_rows = 0
 
     def export(self):
-        return dict(seed=self.seed, model={k: v.detach().cpu() for k, v in self.model.state_dict().items()})
+        return dict(seed=self.seed, revision=self.model.revision, time_bins=self.model.time_bins,
+                    model={k: v.detach().cpu() for k, v in self.model.state_dict().items()})
 
     def log_probabilities(self, state, plans):
         targets = tuple(sorted(state.alive('targets'), key=lambda t: t.id))
@@ -475,7 +600,7 @@ class FrozenLocalScorer:
             for start in range(0, len(pending), size):
                 rows = pending[start:start+size]
                 logits = self.model([x[0] for x in rows], [x[1] for x in rows])
-                values.extend(F.logsigmoid(logits).cpu().double().tolist())
+                values.extend(self.model.success_log_probabilities(logits).cpu().double().tolist())
                 self.rows_scored += len(rows)
         for i, j, index in destinations:
             result[i, j] = values[index]
@@ -486,8 +611,9 @@ class FrozenLocalScorer:
         return np.exp(self.log_probabilities(state, plans))
 
 
-def _checkpoint_path(run_dir, seed, kind):
-    return Path(run_dir)/'shared'/'models'/f's2_{int(seed)}_{kind}.pt'
+def _checkpoint_path(run_dir, seed, kind, revision='binary_v1'):
+    prefix = 's2' if revision == 'binary_v1' else f's2_{revision}'
+    return Path(run_dir)/'shared'/'models'/f'{prefix}_{int(seed)}_{kind}.pt'
 
 
 def _save_model(path, payload):
@@ -498,13 +624,30 @@ def _save_model(path, payload):
 
 
 def load_scorer(config, run_dir, seed, device='cpu'):
-    path = _checkpoint_path(run_dir, seed, 'best')
+    revision = _revision(config)
+    path = _checkpoint_path(run_dir, seed, 'best', revision)
     payload = torch.load(path, map_location='cpu', weights_only=False)
+    if payload.get('revision', 'binary_v1') != revision:
+        raise ValueError('S2 checkpoint revision differs from this experiment')
     return FrozenLocalScorer(config, payload, device)
 
 
-def _dataset(store, split):
-    return [block for key in store.blob_keys(f's2/{split}/') for block in store.load_torch(key)]
+def _dataset(store, split, config):
+    prefix = _data_prefix(config)
+    return [block for key in store.blob_keys(f'{prefix}/{split}/') for block in store.load_torch(key)]
+
+
+def _candidate_losses(model, logits, blocks):
+    if not model.joint:
+        truth = np.concatenate([np.mean(block['outcomes'], axis=1) for block in blocks])
+        return F.binary_cross_entropy_with_logits(logits, logits.new_tensor(truth), reduction='none')
+    outcomes = np.concatenate([np.asarray(block['outcomes'], dtype=np.int64) for block in blocks])
+    times = np.concatenate([np.asarray(block['remaining_steps'], dtype=np.int64) for block in blocks])
+    if outcomes.shape != times.shape or np.any(times < 0) or np.any(times >= model.time_bins):
+        raise ValueError('S2 outcome/time labels have invalid shape or physical duration')
+    labels = torch.as_tensor(outcomes*model.time_bins+times, device=logits.device)
+    # Mean over paired terminal branches, with each candidate contributing once.
+    return -F.log_softmax(logits, dim=-1).gather(1, labels).mean(1)
 
 
 def _metrics(model, blocks, size):
@@ -519,12 +662,15 @@ def _metrics(model, blocks, size):
             chunk = blocks[start:start+size]
             states = [b['state'] for b in chunk for _ in b['candidates']]
             candidates = [p for b in chunk for p in b['candidates']]
-            probabilities = model(states, candidates).sigmoid().cpu().numpy()
+            logits = model(states, candidates)
+            probabilities = model.success_log_probabilities(logits).exp().cpu().numpy()
+            time_values = model.time_predictions(logits)
+            time_values = [values.cpu().numpy() for values in time_values] if time_values is not None else None
+            losses = _candidate_losses(model, logits, chunk).cpu().numpy()
             offset = 0
             for block in chunk:
                 n = len(block['candidates'])
                 predicted = probabilities[offset:offset+n]
-                offset += n
                 terminal, success, _ = native_terminal(block['state'])
                 if terminal:
                     predicted = np.full(n, float(success))
@@ -534,20 +680,42 @@ def _metrics(model, blocks, size):
                 non_ties = [(i, j) for i, j in pairs if truth[i] != truth[j]]
                 accuracy = np.mean([float((predicted[i]-predicted[j])*(truth[i]-truth[j]) > 0)
                                     + .5*float(predicted[i] == predicted[j]) for i, j in non_ties]) if non_ties else None
-                results.append(dict(weight=weight, brier=float(np.mean((predicted-truth)**2)),
+                row = dict(weight=weight, brier=float(np.mean((predicted-truth)**2)),
                     ranking=accuracy, tie_fraction=1.-len(non_ties)/max(1, len(pairs)),
                     selection_loss=float(truth.max()-truth[int(np.argmax(predicted))]),
-                    all_zero=bool(np.all(truth == 0)), non_tie=bool(non_ties),
-                    scale=f'{len(block["state"].ids("red"))}v{len(block["state"].ids("blue"))}'))
+                    all_zero=bool(np.all(truth == 0)), all_one=bool(np.all(truth == 1)), non_tie=bool(non_ties),
+                    scale=f'{len(block["state"].ids("red"))}v{len(block["state"].ids("blue"))}')
+                if time_values is not None:
+                    expected, success_time, failure_time = [values[offset:offset+n] for values in time_values]
+                    if terminal:
+                        expected = success_time = failure_time = np.zeros(n)
+                    durations = np.asarray(block['remaining_steps'])
+                    wins = np.asarray(block['outcomes'], dtype=bool)
+                    row.update(time_mae=float(np.abs(expected[:, None]-durations).mean()),
+                               joint_nll=float(losses[offset:offset+n].mean()),
+                               success_time_error=float((np.abs(success_time[:, None]-durations)*wins).mean()),
+                               failure_time_error=float((np.abs(failure_time[:, None]-durations)*~wins).mean()),
+                               success_mass=float(wins.mean()), failure_mass=float((~wins).mean()))
+                results.append(row)
+                offset += n
                 calibration.extend((float(p), float(y), weight/n) for p, y in zip(predicted, truth))
     def aggregate(rows):
         mass = sum(row['weight'] for row in rows)
         ranks = [row for row in rows if row['ranking'] is not None]
-        return dict(states=len(rows), brier=sum(x['weight']*x['brier'] for x in rows)/mass,
+        summary = dict(states=len(rows), brier=sum(x['weight']*x['brier'] for x in rows)/mass,
                     nontie_ranking_accuracy=(sum(x['weight']*x['ranking'] for x in ranks)/sum(x['weight'] for x in ranks) if ranks else None),
                     tie_fraction=sum(x['weight']*x['tie_fraction'] for x in rows)/mass,
                     selection_loss=sum(x['weight']*x['selection_loss'] for x in rows)/mass,
-                    all_zero_states=sum(x['all_zero'] for x in rows), non_tie_states=sum(x['non_tie'] for x in rows))
+                    all_zero_states=sum(x['all_zero'] for x in rows),
+                    all_one_states=sum(x['all_one'] for x in rows), non_tie_states=sum(x['non_tie'] for x in rows))
+        if model.joint:
+            for key in ('time_mae', 'joint_nll'):
+                summary[key] = sum(x['weight']*x[key] for x in rows)/mass
+            for outcome in ('success', 'failure'):
+                selected_mass = sum(x['weight']*x[f'{outcome}_mass'] for x in rows)
+                summary[f'{outcome}_time_mae'] = (sum(x['weight']*x[f'{outcome}_time_error'] for x in rows)
+                                                 /selected_mass if selected_mass else None)
+        return summary
     result = aggregate(results)
     ece = 0.
     for index in range(10):
@@ -561,33 +729,44 @@ def _metrics(model, blocks, size):
 
 
 def fit(config, run_dir, seed, device):
-    """Forty fixed epochs, selecting Brier on held-out mother families."""
+    """Joint terminal likelihood; fixed epochs, held-family Brier selection."""
     started = time.monotonic()
-    settings = config['s2']
+    settings, revision = config['s2'], _revision(config)
     seed = int(seed)
     with Store(Path(run_dir)/'shared') as store:
         prior = store.get(f's2_result/{seed}')
-        if prior and prior.get('complete'):
+        if prior and prior.get('complete') and prior.get('revision', 'binary_v1') == revision:
             return prior
-        train, validation, test = (_dataset(store, split) for split in ('train', 'validation', 'test'))
-    if not train or not validation or not test:
+        data_result = store.get('s2_data_result', {})
+        if not data_result.get('complete') or data_result.get('revision', 'binary_v1') != revision:
+            raise ValueError('Complete the current S2 data revision before training')
+        train, validation = (_dataset(store, split, config) for split in ('train', 'validation'))
+        have_test = bool(store.blob_keys(f'{_data_prefix(config)}/test/'))
+    if not train or not validation or not have_test:
         raise ValueError('Collect all shared S2 family splits before fitting')
     torch.manual_seed(seed)
     model = GroupLocalS2(config).to(device)
     opt = settings['optimizer']
     optimizer = torch.optim.AdamW(model.parameters(), lr=opt['learning_rate'],
                                  weight_decay=opt['weight_decay'], eps=opt['epsilon'], betas=tuple(opt['betas']))
-    rng = np.random.default_rng(stable_seed(seed, 's2_fit'))
+    rng = np.random.default_rng(stable_seed(seed, revision, 's2_fit'))
     start_epoch, best, best_epoch = 0, math.inf, 0
-    resume = _checkpoint_path(run_dir, seed, 'resume')
+    resume = _checkpoint_path(run_dir, seed, 'resume', revision)
     if resume.exists():
         payload = torch.load(resume, map_location=device, weights_only=False)
+        if payload.get('revision', 'binary_v1') != revision:
+            raise ValueError('Cannot resume S2 across label revisions')
         model.load_state_dict(payload['model'])
         optimizer.load_state_dict(payload['optimizer'])
         rng.bit_generator.state = payload['numpy_rng']
+        if 'torch_rng' in payload:
+            torch.set_rng_state(payload['torch_rng'].cpu())
+        if torch.device(device).type == 'cuda' and payload.get('cuda_rng') is not None:
+            torch.cuda.set_rng_state(payload['cuda_rng'].cpu(), device=device)
         start_epoch, best, best_epoch = payload['epoch'], payload['best'], payload['best_epoch']
     counts = Counter(block['family_id'] for block in train)
     batch = int(settings['batch_state_blocks'])
+    last_progress = 0.
     for epoch in range(start_epoch+1, int(settings['epochs'])+1):
         model.train()
         order = rng.permutation(len(train))
@@ -596,9 +775,8 @@ def fit(config, run_dir, seed, device):
             blocks = [train[i] for i in order[start:start+batch]]
             states = [b['state'] for b in blocks for _ in b['candidates']]
             actions = [p for b in blocks for p in b['candidates']]
-            targets = np.concatenate([np.mean(b['outcomes'], axis=1) for b in blocks])
             logits = model(states, actions)
-            losses = F.binary_cross_entropy_with_logits(logits, logits.new_tensor(targets), reduction='none')
+            losses = _candidate_losses(model, logits, blocks)
             terms, offset = [], 0
             for block in blocks:
                 n = len(block['candidates'])
@@ -614,27 +792,52 @@ def fit(config, run_dir, seed, device):
             optimizer.step()
             total_loss += float(loss.detach())*len(blocks)
             total_blocks += len(blocks)
+            if time.monotonic()-last_progress >= 60.:
+                progress = epoch-1+total_blocks/len(train)
+                elapsed_epochs = max(progress-start_epoch, 1e-9)
+                with Store(Path(run_dir)/'shared') as store:
+                    store.put(f'progress/{seed}', dict(phase='s2_fit', revision=revision,
+                              completed=progress, total=settings['epochs'],
+                              train_state_blocks=len(train), state_blocks_this_epoch=total_blocks,
+                              train_loss=total_loss/total_blocks,
+                              remaining_seconds=(time.monotonic()-started)/elapsed_epochs*(settings['epochs']-progress)))
+                last_progress = time.monotonic()
         held = _metrics(model, validation, batch)
-        payload = dict(seed=seed, epoch=epoch, model=model.state_dict(), config=config['model'])
+        payload = dict(seed=seed, epoch=epoch, revision=revision, time_bins=model.time_bins,
+                       model=model.state_dict(), config=config['model'])
         if held['brier'] < best:
             best, best_epoch = held['brier'], epoch
-            _save_model(_checkpoint_path(run_dir, seed, 'best'), payload)
+            _save_model(_checkpoint_path(run_dir, seed, 'best', revision), payload)
         if epoch == settings['epochs']:
-            _save_model(_checkpoint_path(run_dir, seed, 'final'), payload)
+            _save_model(_checkpoint_path(run_dir, seed, 'final', revision), payload)
         _save_model(resume, dict(**payload, optimizer=optimizer.state_dict(), numpy_rng=rng.bit_generator.state,
+                                 torch_rng=torch.get_rng_state(),
+                                 cuda_rng=(torch.cuda.get_rng_state(device) if torch.device(device).type == 'cuda' else None),
                                  best=best, best_epoch=best_epoch))
         with Store(Path(run_dir)/'shared') as store:
-            store.append('s2_fit', dict(seed=seed, epoch=epoch, train_loss=total_loss/max(total_blocks, 1),
+            store.append('s2_fit', dict(seed=seed, epoch=epoch, revision=revision,
+                         train_loss=total_loss/max(total_blocks, 1),
                          validation_brier=held['brier'], validation_nontie_ranking_accuracy=held['nontie_ranking_accuracy'],
-                         validation_selection_loss=held['selection_loss']), source=f's2_fit/{seed}', source_line=epoch)
-            store.put(f'progress/{seed}', dict(phase='s2_fit', completed=epoch, total=settings['epochs'],
+                         validation_selection_loss=held['selection_loss'],
+                         **{f'validation_{key}': held.get(key) for key in
+                            ('time_mae', 'success_time_mae', 'failure_time_mae', 'joint_nll')}),
+                         source=f's2_fit/{revision}/{seed}', source_line=epoch)
+            store.put(f'progress/{seed}', dict(phase='s2_fit', revision=revision,
+                      completed=epoch, total=settings['epochs'],
                       validation_brier=held['brier'],
+                      validation_time_mae=held.get('time_mae'),
                       remaining_seconds=(time.monotonic()-started)/max(epoch-start_epoch, 1)*(settings['epochs']-epoch)))
-        print(f'[S2 {seed}] epoch {epoch}/{settings["epochs"]}; validation Brier={held["brier"]:.5f}', flush=True)
-    payload = torch.load(_checkpoint_path(run_dir, seed, 'best'), map_location=device, weights_only=False)
+        print(f'[S2 {revision} {seed}] epoch {epoch}/{settings["epochs"]}; '
+              f'validation Brier={held["brier"]:.5f}; time MAE={held.get("time_mae")}; '
+              f'ranking={held["nontie_ranking_accuracy"]}', flush=True)
+    payload = torch.load(_checkpoint_path(run_dir, seed, 'best', revision), map_location=device, weights_only=False)
     model.load_state_dict(payload['model'])
+    del train, validation
+    with Store(Path(run_dir)/'shared') as store:
+        test = _dataset(store, 'test', config)
     metrics = _metrics(model, test, batch)
-    result = dict(complete=True, seed=seed, best_epoch=best_epoch, best_validation_brier=best,
+    result = dict(complete=True, revision=revision, time_bins=model.time_bins,
+                  seed=seed, best_epoch=best_epoch, best_validation_brier=best,
                   **{f'test_{k}': v for k, v in metrics.items()}, wall_time_s=time.monotonic()-started)
     with Store(Path(run_dir)/'shared') as store:
         store.put(f's2_result/{seed}', result)

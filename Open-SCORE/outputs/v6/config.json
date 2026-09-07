@@ -149,7 +149,7 @@
     },
     "value_output": "unbounded_shaped_return",
     "native_value_recovery": "shaped_value + coefficient * potential_current",
-    "s2_label": "native_terminal_success"
+    "s2_label": "native_terminal_success_and_remaining_physical_steps"
   },
   "model": {
     "hidden": 128,
@@ -185,7 +185,10 @@
   },
   "s2": {
     "name": "GroupLocalS2",
-    "output": "local_target_native_success_probability",
+    "revision": "joint_v2",
+    "output": "joint_native_outcome_and_remaining_physical_steps",
+    "time_bins": 51,
+    "decision_output": "marginal_native_success_probability",
     "local_group_aggregation": "joint_group_relation_encoding",
     "projection": {
       "engine": "native_single_target_world",
@@ -206,6 +209,7 @@
       "online_rollout_fallback": false
     },
     "data": {
+      "collection_workers": 2,
       "single_target": {
         "count_pairs": [
           [
@@ -449,47 +453,47 @@
             15
           ]
         ],
-        "families_per_pair": 5,
+        "families_per_pair": 100,
         "split": {
-          "train": 3,
-          "validation": 1,
-          "test": 1
+          "train": 60,
+          "validation": 20,
+          "test": 20
         },
         "controller_assignment": "rotate_by_pair_and_family"
       },
       "multi_target": {
-        "families_per_scenario": 60,
+        "families_per_scenario": 1200,
         "split": {
-          "train": 36,
-          "validation": 12,
-          "test": 12
+          "train": 720,
+          "validation": 240,
+          "test": 240
         },
         "controllers": [
           {
             "name": "rule",
-            "families_per_scenario": 20,
+            "families_per_scenario": 400,
             "split": {
-              "train": 12,
-              "validation": 4,
-              "test": 4
+              "train": 240,
+              "validation": 80,
+              "test": 80
             }
           },
           {
             "name": "grand",
-            "families_per_scenario": 20,
+            "families_per_scenario": 400,
             "split": {
-              "train": 12,
-              "validation": 4,
-              "test": 4
+              "train": 240,
+              "validation": 80,
+              "test": 80
             }
           },
           {
             "name": "legal_random",
-            "families_per_scenario": 20,
+            "families_per_scenario": 400,
             "split": {
-              "train": 12,
-              "validation": 4,
-              "test": 4
+              "train": 240,
+              "validation": 80,
+              "test": 80
             }
           }
         ],
@@ -535,13 +539,13 @@
       ],
       "fixed_local_members_across_candidates": true,
       "branches": {
-        "train": 8,
-        "validation": 16,
-        "test": 16
+        "train": 1,
+        "validation": 1,
+        "test": 1
       },
       "paired_branch_randomness": true,
       "split_unit": "mother_episode_family",
-      "label": "mean_native_binary_branch_success",
+      "label": "native_terminal_outcome_and_elapsed_physical_steps_per_candidate_branch",
       "retain_failures_and_ties": true
     },
     "optimizer": {
@@ -559,7 +563,7 @@
     "keep_all_candidates_in_state_block": true,
     "epochs": 40,
     "learning_rate_schedule": "constant",
-    "loss": "soft_bce",
+    "loss": "joint_outcome_time_nll",
     "loss_weighting": "equal_family_then_state_then_candidate",
     "success_reweighting": false,
     "ranking_loss": false,
@@ -830,6 +834,20 @@
         "FrozenRule"
       ]
     ],
+    "mechanism_comparisons": [
+      [
+        "BLOTTO_Group",
+        "BLOTTO_Count"
+      ],
+      [
+        "ALMA_Group",
+        "ALMA_Alloc"
+      ],
+      [
+        "ALMA_S2",
+        "ALMA_Group"
+      ]
+    ],
     "intervals": {
       "unit": "paired_opening_family",
       "condition_on_trained_models": true,
@@ -901,21 +919,7 @@
         "peak_memory",
         "peak_vram"
       ]
-    },
-    "mechanism_comparisons": [
-      [
-        "BLOTTO_Group",
-        "BLOTTO_Count"
-      ],
-      [
-        "ALMA_Group",
-        "ALMA_Alloc"
-      ],
-      [
-        "ALMA_S2",
-        "ALMA_Group"
-      ]
-    ]
+    }
   },
   "diagnostics": {
     "enabled": true,
