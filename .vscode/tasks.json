@@ -2,6 +2,16 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Open-SCORE v5.1: 实时图表报告服务",
+      "type": "process",
+      "command": "D:\\Software\\Anaconda\\envs\\torch310\\python.exe",
+      "args": ["-X", "utf8", "-u", "monitoring/live_v5.py", "--interval", "10", "--port", "8765"],
+      "options": {"cwd": "${workspaceFolder}\\Open-SCORE"},
+      "presentation": {"reveal": "always", "panel": "dedicated", "clear": false},
+      "problemMatcher": [],
+      "runOptions": {"instanceLimit": 1}
+    },
+    {
       "label": "Open-SCORE v5.1: 启动或恢复六任务",
       "type": "process",
       "command": "powershell.exe",

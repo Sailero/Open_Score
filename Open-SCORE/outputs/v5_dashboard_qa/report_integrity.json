@@ -1,0 +1,38 @@
+{
+  "frozen_method_commit": "b3ef7d3cf2bb175fb8e387bb5a963a9b408ee929",
+  "source_hash": "3642d4a42927f9249fbb9bac0d3894405e4344934f4f705ad5bcc50d9eede1ac",
+  "frozen_source_assets_and_manifests_unchanged": true,
+  "current_workers": {
+    "T1": {
+      "pid": 21444,
+      "alive": true
+    },
+    "T2": {
+      "pid": 37060,
+      "alive": true
+    },
+    "T3": {
+      "pid": 41240,
+      "alive": true
+    },
+    "T6": {
+      "pid": 33528,
+      "alive": true
+    }
+  },
+  "completed_tasks": [
+    {
+      "task": "T4",
+      "returncode": 0,
+      "finished": "2026-09-06T22:33:35.607438+00:00"
+    },
+    {
+      "task": "T5",
+      "returncode": 0,
+      "finished": "2026-09-07T00:45:32.876903+00:00"
+    }
+  ],
+  "task_reports": 6,
+  "arm_reports": 14,
+  "missing_markdown_links": []
+}

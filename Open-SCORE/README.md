@@ -6,6 +6,8 @@
 
 ## 当前 v5.1 运行入口
 
+实时报告入口：[浏览器自动刷新总览](http://127.0.0.1:8765/live/)、[Markdown 总报告](outputs/v5_parallel/v5_20260907_main/live/report.md)。导航中的 T1–T6 分别进入六份独立实验报告；其中候选/AR、BCE/ADV/gated 均有独立实验臂页面。图表和胜率每 10 秒读取新记录，诊断汇总约每 5 分钟更新。该服务独立于训练运行，启动方式见 [monitoring/README.md](monitoring/README.md)。
+
 在本项目目录执行；以下 `prepare/calibrate/freeze` 仅用于启动新的正式实验。已经冻结的目录直接 `run-all` 或 `watch`。
 
 ```powershell
