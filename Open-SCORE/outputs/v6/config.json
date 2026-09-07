@@ -806,16 +806,28 @@
     },
     "primary_comparisons": [
       [
+        "BLOTTO_Count",
+        "FrozenRule"
+      ],
+      [
         "BLOTTO_Group",
-        "BLOTTO_Count"
+        "FrozenRule"
+      ],
+      [
+        "ALMA_Alloc",
+        "FrozenRule"
+      ],
+      [
+        "MAPPO_Intent",
+        "FrozenRule"
       ],
       [
         "ALMA_Group",
-        "ALMA_Alloc"
+        "FrozenRule"
       ],
       [
         "ALMA_S2",
-        "ALMA_Group"
+        "FrozenRule"
       ]
     ],
     "intervals": {
@@ -889,7 +901,21 @@
         "peak_memory",
         "peak_vram"
       ]
-    }
+    },
+    "mechanism_comparisons": [
+      [
+        "BLOTTO_Group",
+        "BLOTTO_Count"
+      ],
+      [
+        "ALMA_Group",
+        "ALMA_Alloc"
+      ],
+      [
+        "ALMA_S2",
+        "ALMA_Group"
+      ]
+    ]
   },
   "diagnostics": {
     "enabled": true,

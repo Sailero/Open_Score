@@ -387,6 +387,13 @@ evaluation:
   nonlearning_repeat_checkpoints: false
   baseline: {name: FrozenRule, test_once: true}
   primary_comparisons:
+    - [BLOTTO_Count, FrozenRule]
+    - [BLOTTO_Group, FrozenRule]
+    - [ALMA_Alloc, FrozenRule]
+    - [MAPPO_Intent, FrozenRule]
+    - [ALMA_Group, FrozenRule]
+    - [ALMA_S2, FrozenRule]
+  mechanism_comparisons:
     - [BLOTTO_Group, BLOTTO_Count]
     - [ALMA_Group, ALMA_Alloc]
     - [ALMA_S2, ALMA_Group]

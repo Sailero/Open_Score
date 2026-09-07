@@ -297,7 +297,7 @@ def nonlearning(config, run, method, seed):
 
 def jobs(config):
     seeds = config['seeds']['initializations']
-    result = [('S2_data', 'S2_data', 0, [])]
+    result = [('FrozenRule', 'FrozenRule', seeds[0], []), ('S2_data', 'S2_data', 0, [])]
     for seed in seeds:
         result.append((f'S2_{seed}', 'S2_fit', seed, ['S2_data']))
         result.append((f'ALMA_S2_{seed}', 'ALMA_S2', seed, [f'S2_{seed}']))
@@ -305,7 +305,6 @@ def jobs(config):
             result.append((f'{method}_{seed}', method, seed, []))
         for method in ('BLOTTO_Count', 'BLOTTO_Group'):
             result.append((f'{method}_{seed}', method, seed, [f'S2_{seed}']))
-    result.append(('FrozenRule', 'FrozenRule', seeds[0], []))
     if config['diagnostics']['enabled']:
         result.append(('diagnostics', 'diagnostics', seeds[0], [item[0] for item in result]))
     return result
@@ -423,7 +422,7 @@ def diagnostics(config, run):
 
 
 def run_all(args):
-    from .reporting import refresh, summarize
+    from .reporting import summarize
     config = load_config(args.config)
     run = Path(args.output or ROOT/config['storage']['output_root']).resolve()
     run.mkdir(parents=True, exist_ok=True)
@@ -474,7 +473,7 @@ def run_all(args):
                environment_processes_per_job=config['resources']['environment_processes_per_job'],
                numerical_threads=1, version=config['version']))
     shared.put('scheduler', dict(pid=os.getpid(), started=now(), workers=cap, device=device))
-    last_display = last_report = 0.
+    last_display, last_report = 0., time.monotonic()
     reporter = ThreadPoolExecutor(max_workers=1, thread_name_prefix='v6-report')
     report_future = None
     try:
@@ -528,13 +527,13 @@ def run_all(args):
                         details += f' validation_Brier={progress["validation_brier"]:.5f}'
                     print(details, flush=True)
                 last_display = current
-            if current-last_report >= 10 and (report_future is None or report_future.done()):
+            if current-last_report >= 300 and (report_future is None or report_future.done()):
                 if report_future is not None:
                     try:
                         report_future.result()
                     except Exception as error:
                         print(f'[report] Refresh failed; retrying: {error}', flush=True)
-                report_future = reporter.submit(refresh, run)
+                report_future = reporter.submit(summarize, run)
                 last_report = current
             if active:
                 time.sleep(.5)
@@ -576,4 +575,7 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
-    raise SystemExit(main())
+    # Windows spawn does not reconstruct a package's __main__ module. Run the
+    # canonical import so pool callables have an importable module identity.
+    from open_score.research_v6.__main__ import main as module_main
+    raise SystemExit(module_main())

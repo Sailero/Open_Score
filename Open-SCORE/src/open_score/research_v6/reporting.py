@@ -13,24 +13,6 @@ from . import METHODS, RL_METHODS, load_config
 
 
 _READ_CACHE = {}
-_REFRESH_SIGNATURES = {}
-
-
-def refresh(run_dir):
-    """Refresh changed data at the scheduler's cadence, without disk caches."""
-    run = Path(run_dir).resolve()
-    signature = []
-    for folder in ('shared', *METHODS.values(), 'FrozenRule'):
-        path = run/folder/'data.sqlite'
-        if path.exists():
-            stat = path.stat()
-            signature.append((folder, stat.st_mtime_ns, stat.st_size))
-    signature = tuple(signature)
-    if _REFRESH_SIGNATURES.get(str(run)) == signature:
-        return dict(status='unchanged')
-    result = summarize(run)
-    _REFRESH_SIGNATURES[str(run)] = signature
-    return result
 
 
 def _read(directory):
@@ -113,19 +95,23 @@ def _rate(cells, seed, scenarios, quota):
 
 
 def _paired(first, second, final_rows, seeds, scenarios, quota):
+    def slot(method, seed, scenario):
+        # One rule outcome per opening; reuse it as the reference, never count
+        # it as three independent executions or three fitted rule models.
+        return (None if method == 'FrozenRule' else int(seed), scenario)
     indexed = {}
     for method in (first, second):
         values = defaultdict(dict)
         for row in final_rows[method]:
-            values[(int(row['seed']), row['scenario_id'])][row['family_id']] = float(row['success_native'])
+            values[slot(method, row['seed'], row['scenario_id'])][row['family_id']] = float(row['success_native'])
         indexed[method] = values
     strata = []
     for scenario in scenarios:
-        families = [set(indexed[method][(seed, scenario)]) for method in (first, second) for seed in seeds]
+        families = [set(indexed[method][slot(method, seed, scenario)]) for method in (first, second) for seed in seeds]
         if any(len(family) != quota or family != families[0] for family in families):
-            return dict(available=False, reason='尚未取得两个方法全部三种子、相同开局族的完整正式结果')
-        strata.append(np.asarray([np.mean([indexed[first][(seed, scenario)][family]
-                                         -indexed[second][(seed, scenario)][family] for seed in seeds])
+            return dict(available=False, reason='相同开局族的完整配对结果尚未齐备（规则每个开局只评一次）')
+        strata.append(np.asarray([np.mean([indexed[first][slot(first, seed, scenario)][family]
+                                         -indexed[second][slot(second, seed, scenario)][family] for seed in seeds])
                                   for family in sorted(families[0])]))
     rng = np.random.default_rng(20260914)
     samples = np.mean([v[rng.integers(len(v), size=(2000, len(v)))].mean(axis=1) for v in strata], axis=0)
@@ -150,7 +136,7 @@ def summarize(run_dir):
     final_steps = int(config['training']['physical_steps_per_method_seed'])
     quota = int(config['evaluation']['test_per_scenario'])
     validation_quota = int(config['evaluation']['validation_per_scenario'])
-    methods = [*METHODS.values(), 'FrozenRule']
+    methods = ['FrozenRule', *METHODS.values()]
     data = {name: _read(run/name) for name in methods}
     rows = [r for _, _, records in data.values() for r in records]
     final = {method: _final(method, rows, final_steps) for method in methods}
@@ -240,6 +226,9 @@ def summarize(run_dir):
                         axis.scatter([position], [100*np.mean(previous)], marker='D', color='C3', s=38)
             axis.set_xticks(range(len(chart_methods)), chart_methods, rotation=35, ha='right')
             axis.set(title=label+' (bar: final; diamond: 2M)', ylabel='Native success (%)', ylim=(0, 100))
+            if category['FrozenRule'] and category['FrozenRule'][0] is not None:
+                axis.axhline(100*category['FrozenRule'][0], color='black', linestyle=':', label='FrozenRule')
+                axis.legend(fontsize=8)
             axis.grid(axis='y', alpha=.2)
         fig.savefig(figures/'results.png', dpi=160)
         plt.close(fig)
@@ -281,14 +270,23 @@ def summarize(run_dir):
         text.append(f'| {method} | {result} | {100*np.mean(extra):.2f}% | {len(rates)}/{1 if method == "FrozenRule" else 3} |' if extra else f'| {method} | {result} | 待完成 | {len(rates)}/{1 if method == "FrozenRule" else 3} |')
     for path, caption in image_paths:
         text += ['', f'![{caption}](figures/{path})', '', caption]
-    text += ['', '## 三项预设比较', '', '仅使用A–D主场景；先在每个开局族内对三个模型求差值均值，再按场景分层重采样开局族2000次。区间条件于这三份已训练模型，不将同一开局的模型重复执行当作独立样本。', '', '| 比较 | 差值（百分点） | 配对95%区间 |', '|---|---:|---:|']
     comparisons = {}
-    for first, second in config['evaluation']['primary_comparisons']:
-        value = _paired(first, second, final, seeds, main, quota)
-        comparisons[f'{first}-{second}'] = value
-        text.append(f'| {first}−{second} | {100*value["difference"]:.2f} | [{100*value["interval"][0]:.2f}, {100*value["interval"][1]:.2f}] |' if value['available'] else f'| {first}−{second} | 待完成 | {value["reason"]} |')
+    for title, key in (('首先比较：六方法相对规则是否有效', 'primary_comparisons'),
+                       ('其次比较：三项机制归因', 'mechanism_comparisons')):
+        text += ['', f'## {title}', '', '仅使用A–D主场景；先在每个开局族内对三个模型求差值均值，再按场景分层重采样开局族2000次。规则每个开局只运行一次，复用同一结果作参照。区间条件于已训练模型，不将模型重复执行当作独立开局；各区间为逐比较区间。', '', '| 比较 | 差值（百分点） | 配对95%区间 |', '|---|---:|---:|']
+        for first, second in config['evaluation'].get(key, []):
+            value = _paired(first, second, final, seeds, main, quota)
+            comparisons[f'{first}-{second}'] = value
+            text.append(f'| {first}−{second} | {100*value["difference"]:.2f} | [{100*value["interval"][0]:.2f}, {100*value["interval"][1]:.2f}] |' if value['available'] else f'| {first}−{second} | 待完成 | {value["reason"]} |')
     for method in methods:
         text += ['', f'## {method}', '']
+        if method != 'FrozenRule':
+            text += ['本方法首先与FrozenRule比较（A–D，单个已完成种子的条件区间）：', '',
+                     '| 模型种子 | 相对规则差值（百分点） | 配对95%区间 |', '|---|---:|---:|']
+            for seed in seeds:
+                gain = _paired(method, 'FrozenRule', final, [seed], main, quota)
+                text.append(f'| {seed} | {100*gain["difference"]:.2f} | [{100*gain["interval"][0]:.2f}, {100*gain["interval"][1]:.2f}] |' if gain['available'] else f'| {seed} | 待完成 | 相同开局结果尚未齐备 |')
+            text.append('')
         if method.startswith('ALMA_'):
             text += [f'配置：AQL，{config["aql"]["candidates"]["current"]}候选、每批{config["aql"]["batch_events"]}事件、每{config["aql"]["events_per_update"]}新增事件一次Q/proposal更新；RMSprop学习率{config["aql"]["optimizer"]["learning_rate"]}，回放{config["aql"]["replay"]["capacity_complete_episodes"]}完整回合。', '']
         elif method == 'MAPPO_Intent':
