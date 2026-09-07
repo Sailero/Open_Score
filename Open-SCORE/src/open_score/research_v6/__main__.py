@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import argparse
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from datetime import datetime, timezone
 import json
 import multiprocessing as mp
@@ -423,7 +423,7 @@ def diagnostics(config, run):
 
 
 def run_all(args):
-    from .reporting import summarize
+    from .reporting import refresh, summarize
     config = load_config(args.config)
     run = Path(args.output or ROOT/config['storage']['output_root']).resolve()
     run.mkdir(parents=True, exist_ok=True)
@@ -475,6 +475,8 @@ def run_all(args):
                numerical_threads=1, version=config['version']))
     shared.put('scheduler', dict(pid=os.getpid(), started=now(), workers=cap, device=device))
     last_display = last_report = 0.
+    reporter = ThreadPoolExecutor(max_workers=1, thread_name_prefix='v6-report')
+    report_future = None
     try:
         while pending or active:
             # Memory pressure changes concurrency, never an algorithm or its quota.
@@ -526,15 +528,20 @@ def run_all(args):
                         details += f' validation_Brier={progress["validation_brier"]:.5f}'
                     print(details, flush=True)
                 last_display = current
-            if current-last_report >= 300:
-                summarize(run)
+            if current-last_report >= 10 and (report_future is None or report_future.done()):
+                if report_future is not None:
+                    try:
+                        report_future.result()
+                    except Exception as error:
+                        print(f'[report] Refresh failed; retrying: {error}', flush=True)
+                report_future = reporter.submit(refresh, run)
                 last_report = current
             if active:
                 time.sleep(.5)
             elif pending:
                 raise RuntimeError('Unresolved job dependency; no work was silently skipped')
         shared.put('run_result', dict(complete=True, finished=now()))
-        summarize(run)
+        reporter.submit(summarize, run).result()
     finally:
         for process, _ in active.values():
             try:
@@ -546,6 +553,7 @@ def run_all(args):
                 pass
         for stream in logs.values():
             stream.close()
+        reporter.shutdown(wait=True)
         shared.put('scheduler', dict(pid=None, stopped=now()))
         shared.close()
 

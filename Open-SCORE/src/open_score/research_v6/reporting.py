@@ -1,7 +1,7 @@
 """Update the one V6 report and its figures directly from recorded outcomes."""
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import defaultdict, deque
 from datetime import datetime
 import json
 from pathlib import Path
@@ -12,41 +12,72 @@ import numpy as np
 from . import METHODS, RL_METHODS, load_config
 
 
+_READ_CACHE = {}
+_REFRESH_SIGNATURES = {}
+
+
+def refresh(run_dir):
+    """Refresh changed data at the scheduler's cadence, without disk caches."""
+    run = Path(run_dir).resolve()
+    signature = []
+    for folder in ('shared', *METHODS.values(), 'FrozenRule'):
+        path = run/folder/'data.sqlite'
+        if path.exists():
+            stat = path.stat()
+            signature.append((folder, stat.st_mtime_ns, stat.st_size))
+    signature = tuple(signature)
+    if _REFRESH_SIGNATURES.get(str(run)) == signature:
+        return dict(status='unchanged')
+    result = summarize(run)
+    _REFRESH_SIGNATURES[str(run)] = signature
+    return result
+
+
 def _read(directory):
     path = Path(directory) / 'data.sqlite'
     if not path.exists():
         return {}, {}, []
     with sqlite3.connect(path.resolve().as_uri()+'?mode=ro', uri=True) as connection:
+        connection.execute('BEGIN')
         metadata = {k: json.loads(v) for k, v in connection.execute('SELECT key,value FROM metadata')}
-        streams = defaultdict(list)
-        for stream, value in connection.execute("SELECT stream,value FROM records WHERE stream IN ('s2_fit','diagnostics') ORDER BY id"):
-            streams[stream].append(json.loads(value))
-        # Keep the last complete block in every fixed 50k-step interval, which
-        # also keeps each seed's newest block. SQLite scans raw records; Python
-        # receives ~101 rows/seed at 5M, rather than hundreds of thousands.
-        memory_peaks, vram_peaks = [], []
-        for value, memory, vram in connection.execute("""
-                SELECT r.value,b.memory_peak,b.vram_peak FROM records r JOIN (
-                    SELECT MAX(id) AS last_id,
-                           MAX(json_extract(value,'$.resident_memory_bytes')) AS memory_peak,
-                           MAX(json_extract(value,'$.peak_vram_bytes')) AS vram_peak
-                    FROM records WHERE stream='training'
-                    GROUP BY json_extract(value,'$.seed'),
-                             CAST(json_extract(value,'$.physical_steps')/50000 AS INTEGER)
-                ) b ON r.id=b.last_id ORDER BY r.id"""):
-            streams['training'].append(json.loads(value))
-            if memory is not None:
-                memory_peaks.append(float(memory))
-            if vram is not None:
-                vram_peaks.append(float(vram))
-        metadata['report_resource_peaks'] = dict(memory=max(memory_peaks, default=None),
-                                                vram=max(vram_peaks, default=None))
-        count, gap = connection.execute("""SELECT COUNT(*),MAX(ABS(
-            json_extract(value,'$.shaped_return')-json_extract(value,'$.native_return')))
-            FROM records WHERE stream='train_episodes'
-            AND json_extract(value,'$.shaped_return') IS NOT NULL
-            AND json_extract(value,'$.native_return') IS NOT NULL""").fetchone()
-        metadata['report_return_check'] = dict(episodes=count, maximum_gap=gap)
+        maximum = connection.execute('SELECT COALESCE(MAX(id),0) FROM records').fetchone()[0]
+        key = str(path.resolve())
+        identity = path.stat().st_ino
+        cache = _READ_CACHE.get(key)
+        if cache is None or maximum < cache['last_id'] or identity != cache['identity']:
+            cache = dict(last_id=0, identity=identity, bins={}, recent=defaultdict(lambda: deque(maxlen=200)),
+                         streams=defaultdict(list), memory=None, vram=None, episodes=0, gap=None)
+            _READ_CACHE[key] = cache
+        # Read each committed record once. Retain coarse history plus every one
+        # of the newest 200 collection blocks per seed so live progress is visible.
+        for record_id, stream, value in connection.execute(
+                'SELECT id,stream,value FROM records WHERE id>? AND id<=? ORDER BY id',
+                (cache['last_id'], maximum)):
+            if stream not in ('training', 'train_episodes', 's2_fit', 'diagnostics'):
+                continue
+            row = json.loads(value)
+            if stream == 'training':
+                seed = int(row['seed'])
+                cache['bins'][(seed, int(row['physical_steps'])//50000)] = (record_id, row)
+                cache['recent'][seed].append((record_id, row))
+                for field, target in (('resident_memory_bytes', 'memory'), ('peak_vram_bytes', 'vram')):
+                    if row.get(field) is not None:
+                        cache[target] = max(cache[target] or 0, float(row[field]))
+            elif stream == 'train_episodes':
+                if row.get('shaped_return') is not None and row.get('native_return') is not None:
+                    cache['episodes'] += 1
+                    gap = abs(row['shaped_return']-row['native_return'])
+                    cache['gap'] = max(cache['gap'] or 0., gap)
+            else:
+                cache['streams'][stream].append(row)
+        cache['last_id'] = maximum
+        streams = defaultdict(list, cache['streams'])
+        selected = dict(cache['bins'].values())
+        for recent in cache['recent'].values():
+            selected.update(recent)
+        streams['training'] = [row for _, row in sorted(selected.items())]
+        metadata['report_resource_peaks'] = dict(memory=cache['memory'], vram=cache['vram'])
+        metadata['report_return_check'] = dict(episodes=cache['episodes'], maximum_gap=cache['gap'])
         episodes = []
         for method, split, checkpoint, family, value in connection.execute(
                 'SELECT method,split,checkpoint,family,value FROM episodes'):
@@ -142,8 +173,8 @@ def summarize(run_dir):
     figures.mkdir(parents=True, exist_ok=True)
     image_paths = []
     if any(training.values()) or any(r['split'] == 'validation' for r in rows):
-        fig, axes = plt.subplots(2, 2, figsize=(12, 7), constrained_layout=True)
-        for axis, method in zip(axes.flat, RL_METHODS):
+        fig, axes = plt.subplots(4, 2, figsize=(12, 13), constrained_layout=True)
+        for axis, method in zip(axes[:2].flat, RL_METHODS):
             for index, seed in enumerate(seeds):
                 color = f'C{index}'
                 sparse = sorted((r for r in training[method] if int(r['seed']) == seed),
@@ -172,12 +203,26 @@ def summarize(run_dir):
             axis.grid(alpha=.2)
             if axis.lines:
                 axis.legend(fontsize=7)
+        for axis, method in zip(axes[2:].flat, RL_METHODS):
+            fields = ('actor_loss', 'value_loss') if method == 'MAPPO_Intent' else ('q_loss', 'proposal_loss')
+            for index, seed in enumerate(seeds):
+                entries = sorted((r for r in training[method] if int(r['seed']) == seed),
+                                 key=lambda r: r['physical_steps'])
+                for field, style in zip(fields, ('-', '--')):
+                    valid = [r for r in entries if r.get(field) is not None]
+                    if valid:
+                        axis.plot([r['physical_steps']/1e6 for r in valid], [r[field] for r in valid],
+                                  style, marker='.', color=f'C{index}', label=f'{seed} {field}')
+            axis.set(title=method+' optimization', xlabel='Physical steps (M)', ylabel='Loss')
+            axis.grid(alpha=.2)
+            if axis.lines:
+                axis.legend(fontsize=7)
         has_points = any(axis.lines for axis in axes.flat)
         if has_points:
             fig.savefig(figures/'learning.png', dpi=160)
         plt.close(fig)
         if has_points:
-            image_paths.append(('learning.png', '训练混合胜率（虚线，约50k物理步区间内累计成功数/回合数差，末区间可能未满）与主场景验证胜率（实线）；两者分布不同。仅完整验证点计入实线，数据库保留全部原始训练记录。'))
+            image_paths.append(('learning.png', '上半部分：训练混合胜率（虚线，相邻显示点之间的成功数/回合数差；每种子最近200个采集块逐块显示，更早历史约50k步一个点）与主场景验证胜率（实线），两者分布不同，仅完整验证点计入实线。下半部分：实际Q/proposal或actor/critic训练损失。数据库保留全部原始记录，损失下降不等于任务有效。'))
     chart_methods = [m for m in methods if any(v is not None for v in main_rates[m]+auxiliary_rates[m])]
     if chart_methods:
         fig, axes = plt.subplots(1, 2, figsize=(13, 5), constrained_layout=True)
