@@ -1,7 +1,6 @@
-"""Known-opponent dynamic grouping with shared rule execution and S2 values."""
+"""Public environment factories backed by the independent HAD Workbench."""
+
+from had_env import make_env, parallel_env
 
 __version__ = "6.4.0"
-
-from .contracts import GlobalState, TeamObservation
-
-__all__ = ["GlobalState", "TeamObservation"]
+__all__ = ["make_env", "parallel_env", "__version__"]

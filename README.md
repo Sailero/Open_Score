@@ -1,63 +1,54 @@
 # Open-SCORE
 
-研究已知固定对手下的动态分组与资源分配。当前 v6.4 根据 [v6 执行方案](dynamic_grouping_v6_execution_plan.md) 实现，使用更新渲染后的独立 **HAD Workbench** 环境，以及共享规则底层。
+当前仓库保留 HAD Workbench 的环境、规则策略和公开接口。旧研究主线已于 **2026-09-08 16:00:19 +08:00** 确认停止；探索 final 为 Git `cc2ab86`，历史研究源码可从该提交查阅。
 
-v6 配置在 [research_v6.yaml](Open-SCORE/configs/research_v6.yaml)。六种方法为 `BLOTTO_Count`、`BLOTTO_Group`、`ALMA_Alloc`、`MAPPO_Intent`、`ALMA_Group`、`ALMA_S2`，后者为优先验证的主方法。五场景包含 10v10/20v20 的两目标与三目标任务，以及 10v6 两目标辅助任务；每个 RL 方法每个种子训练 5,000,000 物理步，三个种子合计四种 RL 共 60,000,000 步。
+## 环境与安装
 
-本机已将 `E:\Code\Open_Score_HAD_Workbench` 以 editable 包 `had_env` 安装到 torch310。v6 直接调用该新版的物理引擎、规则执行器及蓝方逻辑；不调用项目内旧 `HAD_Env` 作为物理环境。保留分组协议的 50 步防守成功终止，通用 Parallel API 的时间截断不替代此定义。S2 在新环境中重新采集和训练；六种方法部署决策均不调用真实模拟分支。
-
-S2 当前按用户要求改为 `joint_v2`：保留完整分组输入，恢复“原生胜负＋剩余结束物理步数”的联合预测。共享采样预算由旧版 600 个独立母回合族扩大为 **12,000 族**，按族划分为 7,200/2,400/2,400 个训练/验证/测试族。每候选保留一条终局续行，将预算用于新局面，而非重复胜负完全一致的分支；保留自然分布中的失败与平局。G1/G2 的人数枚举、分区搜索及成功概率评分不变，时间输出仅作为联合监督，不加入时间惩罚。新 S2 冻结后，G1/G2 使用新模型重新评价，`ALMA_S2` 从零重新训练；`ALMA_Alloc`、`MAPPO_Intent` 等不依赖 S2 的任务继续原进度。
-
-这套 60M 配额很重：本机同一小批真实状态上的三条 AQL 完整 CUDA 更新约 2.94/3.86/6.46 秒，按观察到的事件频率外推，整轮可能为**数周量级**，不能按 20 小时估算。此为初始化模型短样本外推，三任务并发共享 GPU，实际时长还包括采样、扩充后的 S2 准备与评价。正式长训练已启动；当前进度与按实际吞吐更新的剩余时间见终端及 [v6 唯一实验报告](Open-SCORE/outputs/v6/实验报告.md)，数据预算扩大不等于已经获得准确评估器。
-
-启动或恢复整轮只需这一条命令：
+唯一底层是独立仓库 [HAD Workbench](../Open_Score_HAD_Workbench/README.md)，本仓库直接导出其原生实现。当前本地依赖路径为 `E:/Code/Open_Score_HAD_Workbench`，该仓库未在本次清理中修改。Open-SCORE 不再提供训练、评估或研究报告生成命令。
 
 ```powershell
-& 'D:\Software\Anaconda\envs\torch310\python.exe' -u -m open_score.research_v6 run-all
+& 'D:\Software\Anaconda\envs\torch310\python.exe' -m pip install -e ./Open-SCORE
 ```
 
-入口自动完成共享 S2 数据和模型、六方法队列、固定验证、2M/5M 正式评价与有限诊断。最多三个重任务、每个两个采样进程；配置不设墙钟停止。再次输入同一命令会跳过已完成任务并从完整检查点继续。S2 的旧数据、旧模型与新 `joint_v2` 在同一目录中按修订字段和模型名区分，不能将旧二元 S2 的完成标记当作新模型已完成，也不能中途替换正在训练的 `ALMA_S2` 输入。终端每 10 秒显示阶段、真实步数、优化次数、训练胜率、最近验证及当前阶段剩余时间，细节追加到各方法 `run.log`。结果只写入 `Open-SCORE/outputs/v6`，共用 SQLite 数据和必要权重。
+依赖由 `had-env` 声明；渲染及 Workbench 界面的可选安装方法见其 README。此命令供后续安装使用，本次归档没有重装环境。
 
-报告后台每 5 分钟刷新同一份 `实验报告.md` 和原位图片，不持续检查文件变化；绘图尚未完成时不重复排队，结束时立即汇总。`figures/learning.png` 包含四种 RL 的训练/验证胜率及 Q/proposal、actor/value 损失；`figures/s2.png` 显示 S2 损失、胜负校准、候选排序和时间预测指标，旧二元模型与 `joint_v2` 分开标记；`figures/results.png` 显示已完成的正式胜率。每种子最近 200 个采集块逐块显示，更早历史约 50k 步一个点，全量数据仍保留在 SQLite。报告增量读取记录，仅使用内存缓存，不新建缓存目录、网页或重复报告。更新需要有新完成的采集块、S2 epoch 或评价记录；验证仍按原定检查点执行，不因报告刷新额外评估。六方法首先分别与 FrozenRule 作配对比较，再报告三项方法间机制比较。VS Code 可打开报告 Markdown 预览；若预览图片未自动刷新，重新打开预览即可。
+## 公开接口
 
-- [实验记录](实验记录.md)：各版本的研究问题、关键结果和报告入口。
-- [已完成的 v5 唯一实验报告](Open-SCORE/outputs/v5/实验报告.md)：方法、训练/验证曲线、正式胜率图、完整结果表与结论限制。
-- [项目工作约定](AGENTS.md)：文件数量、结果合并与任务执行方式。
+| 导入 | 用途 |
+|---|---|
+| `open_score.make_env`、`open_score.parallel_env` | 原生 Parallel / MPE 环境工厂 |
+| `open_score.grouping.KnownOpponentEnv`、`make_grouping_env` | 原生事件式分组环境；后者默认规则执行器 |
+| `Entity`、`Group`、`Grouping`、`DecisionState`（均位于 `open_score.grouping`） | 实体、分组动作与公开状态，沿用原生序列化与合法性约束 |
+| `RuleExecutor`、`RulePolicy` | 共享规则底层与上层规则策略 |
+| `rule_grouping`、`grand_grouping`、`decode_counts` | 规则分组、每目标大组及人数分配解码 |
 
-v5 训练与正式评估已于 **2026-09-07 17:25:52** 完成：14/14 个实验臂、21,000 局。用户已关闭该轮，旧执行方案和 VS Code 启动任务已移除。最终成果合并为一份 Markdown 报告，引用保留的图片与必要数据，各方法不另建报告。
+规则策略支持 `rule`、`grand`、`random`、`static_rule`；`reset()` 重置策略状态，`act(state)` 返回原生 `Grouping`。固定对手接口在 `had_env.grouping.opponents`，物理适配器和快照类型在 `had_env.grouping.adapter`。
 
-本次代码整理版本为 v5.2，物理实验协议仍是 v5.1。未执行的额外诊断、预算比较与独立部署时延测量已取消。此前旧输出的删除被自动执行审核拒绝，以下保留当时限定目录的清理命令，不表示本次清理已经完成：
+```python
+from open_score.grouping import make_grouping_env, RulePolicy
 
-```powershell
-$outputRoot = 'E:\Code\Open_Score\Open-SCORE\outputs'
-$retiredNames = @(
-  'analysis_exports', 'historical_s1_s2', 'overnight_audit', 'overnight_ppo_audit',
-  'overnight_runtime_benchmark', 'overnight_validation', 'v2_device_probe_1024',
-  'v2_device_probe_20260906', 'v2_parallel_100k', 'v2_parallel_100k_w3_new', 'v2_validation',
-  'v3_overnight', 'v3_validation', 'v4_comparison', 'v4_cpu_parallel_benchmark',
-  'v4_cpu_parallel_benchmark_two_repeats', 'v4_integration_first', 'v4_integration_second',
-  'v4_learning_validation', 'v4_question_audit', 'v4_validation', 'v5_acceptance',
-  'v5_acceptance_final', 'v5_candidate_vectorization', 'v5_dashboard_qa', 'v5_parallel',
-  'v5_public_integration_audit', 'v5_smoke_cli', 'v5_smoke_cli_2', 'v5_smoke_final',
-  'v5_validation', 'v5_value_bench_probe', 'v5_value_tasks_integration', 'v5_value_tasks_integration_v2'
-)
-foreach ($name in $retiredNames) {
-    $candidatePath = Join-Path $outputRoot $name
-    if (Test-Path -LiteralPath $candidatePath) {
-        $target = Get-Item -LiteralPath $candidatePath
-        if ($target.Parent.FullName -ne $outputRoot -or $target.LinkType) { throw 'Unexpected cleanup target' }
-        Remove-Item -LiteralPath $target.FullName -Recurse -Force
-    }
-}
-$projectRoot = 'E:\Code\Open_Score\Open-SCORE'
-foreach ($name in @('tests', 'monitoring', 'docs', '.pytest_cache')) {
-    $candidatePath = Join-Path $projectRoot $name
-    if (Test-Path -LiteralPath $candidatePath) {
-        $target = Get-Item -LiteralPath $candidatePath
-        if ($target.Parent.FullName -ne $projectRoot -or $target.LinkType) { throw 'Unexpected cleanup target' }
-        Remove-Item -LiteralPath $target.FullName -Recurse -Force
-    }
-}
+env = make_grouping_env(red=8, blue=8, targets=2, opponent="reactive", seed=0)
+policy = RulePolicy("rule", seed=0)
+state = env.reset()
+policy.reset()
+grouping = policy.act(state)
+state, reward, done, info = env.step(grouping)
+env.adapter.env.close()
 ```
 
-[原始修改稿](固定对手下动态分组研究方案.md)按用户要求保留，用于历史讨论。不同底层、难度和协议的历史胜率分开解释。
+示例用于说明接口，本次未运行仿真。分组环境原生时限为任务终止；Parallel/MPE 工厂采用自己的时限与截断语义，二者不混用。多目标位置、零人数、事件返回和快照格式均以 Workbench 原生 API 为准；已移除 v6 包装、奖励塑形、S2 投影及旧训练张量接口。
+
+## 历史研究
+
+[实验记录](实验记录.md) 维护跨版本摘要。六份唯一正式报告均在当前根目录：
+
+- [S1/S2 与早期 Stage3](实验报告_s1_s2.md)
+- [v2：选择释放与重建](实验报告_v2.md)
+- [v3：较长训练与底层迁移](实验报告_v3.md)
+- [v4：共享规则底层与价值搜索](实验报告_v4.md)
+- [v5：混合难度六路线](实验报告_v5.md)
+- [v6：新环境六方法与 S2 修订](实验报告_v6.md)
+
+数据、日志、配置快照和已有模型原位保留于 `Open-SCORE/outputs`；历史冻结模型仍在 `Open-SCORE/assets/frozen`，当前接口不加载这些模型。多数输出资产被 Git 忽略，不属于探索 final 提交的备份范围。恢复旧研究需使用探索 final 的代码与对应历史环境，当前精简接口不兼容旧训练检查点。
+
+[原始研究修改稿](固定对手下动态分组研究方案.md) 与 [v6 原执行方案](dynamic_grouping_v6_execution_plan.md) 仅作为历史设计材料保留。各版实际完成量、取消项和结论以根目录正式报告为准。

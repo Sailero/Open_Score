@@ -1,1 +1,0 @@
-"""HAD agent implementations."""

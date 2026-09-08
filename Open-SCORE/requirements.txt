@@ -1,8 +1,1 @@
-﻿numpy>=1.23
-scipy>=1.11.4
-torch>=2.0
-PyYAML>=6.0
-pygame>=2.5
-matplotlib>=3.7
-psutil>=5.9
 had-env @ file:///E:/Code/Open_Score_HAD_Workbench

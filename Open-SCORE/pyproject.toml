@@ -5,26 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "open-score"
 version = "6.4.0"
-description = "Fixed-opponent dynamic grouping: planning and learning"
+description = "Environment and rule-policy interfaces for HAD Workbench"
 requires-python = ">=3.10"
 dependencies = [
-  "numpy>=1.23",
-  "scipy>=1.11.4",
-  "torch>=2.0",
-  "PyYAML>=6.0",
-  "pygame>=2.5",
-  "matplotlib>=3.7",
-  "psutil>=5.9",
   "had-env @ file:///E:/Code/Open_Score_HAD_Workbench",
 ]
 
-[project.scripts]
-open-score-v5 = "open_score.research_v5.orchestrate:main"
-open-score-v6 = "open_score.research_v6.__main__:main"
-
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[tool.setuptools.package-data]
-HAD_Env = ["resources/*.png"]
-
