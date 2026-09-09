@@ -3,7 +3,18 @@
   "runs": {
     "historical_s1_s2": {
       "files": 13,
-      "discarded_intermediate_checkpoints": 0
+      "discarded_intermediate_checkpoints": 0,
+      "s2_run": "stage123_unknown_upper_v1 identity-aligned: 19200 episodes, 101366 states; distinct from round_01_mvp"
+    },
+    "round_01_mvp": {
+      "source_commit": "f8009fe",
+      "s1_training_seed": 20260831,
+      "s1_test_episodes": 1200,
+      "s1_unseen_episodes": 1000,
+      "s2_dataset_episodes": 10020,
+      "s2_dataset_rows": 50826,
+      "s2_prediction_rows_recovered": 11349,
+      "recovered_sources": "shared/data.sqlite metadata: report_evidence/recovered_sources.json"
     }
   },
   "parameters": "Original run configurations are retained in each method data.sqlite metadata table"
