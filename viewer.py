@@ -26,9 +26,9 @@ MAX_SAFE_INTEGER = 2 ** 53 - 1
 
 
 def _defaults():
-    from had_env.core.config import DefaultMaxSteps, initial_health
-    from open_score.grouping.coverage_rule import validate_strategy
-    return {**DEFAULTS, "max_steps": int(DefaultMaxSteps), "target_health": float(initial_health),
+    from open_score.envs import had_config
+    from open_score.rules.coverage_rule import validate_strategy
+    return {**DEFAULTS, "max_steps": int(had_config.DefaultMaxSteps), "target_health": float(had_config.initial_health),
             "red_strategy": validate_strategy("red"), "blue_strategy": validate_strategy("blue")}
 
 
@@ -43,8 +43,8 @@ def _json(handler, code, payload):
 
 
 def _meta():
-    from had_env.core.version import PHYSICS_PROTOCOL
-    from open_score.grouping.coverage_rule import (
+    from open_score.envs import PHYSICS_PROTOCOL
+    from open_score.rules.coverage_rule import (
         STRATEGY_CATALOG,
         TASK_MODES, env_constants, parameter_snapshot,
     )
@@ -65,9 +65,9 @@ def _meta():
 
 
 def _validate_config(payload):
-    from had_env.core.version import PHYSICS_PROTOCOL
-    from open_score.grouping.coverage_rule import validate_strategy, TASK_MODES
-    from open_score.grouping.coverage_rule import parameter_snapshot
+    from open_score.envs import PHYSICS_PROTOCOL
+    from open_score.rules.coverage_rule import validate_strategy, TASK_MODES
+    from open_score.rules.coverage_rule import parameter_snapshot
     if not isinstance(payload, dict):
         raise ValueError("运行参数必须是 JSON 对象。")
     config = _defaults()
@@ -137,7 +137,7 @@ def _progress(record):
 
 def _run_job(job_id, payload):
     try:
-        from open_score.grouping.coverage_rule import evaluate
+        from open_score.rules.coverage_rule import evaluate
         seeds = list(range(payload["seed0"], payload["seed0"] + payload["stats"]))
 
         def on_episode(current, episode, keep):

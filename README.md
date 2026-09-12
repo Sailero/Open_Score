@@ -1,33 +1,42 @@
 # Open-SCORE
 
-当前仓库保留 HAD Workbench 的环境、规则策略和公开接口。旧研究主线已于 **2026-09-08 16:00:19 +08:00** 确认停止；探索 final 为 Git `cc2ab86`，历史研究源码可从该提交查阅。停止后的 v7 重标定了引擎并增加覆盖式规则与本地回放器，见 [实验报告 v7](实验报告/实验报告_v7.md)。
+当前主线为 **跨规模攻防泛化 v2**：以 HAD damage 任务为底层，接入 B0 QMIX、B2 QMIX-Atten、REFIL、DCG、GNN-QMIX、SPECTra 六种方法。代码、统一验证记录和已授权短跑结果集中在[本轮唯一实验报告](Open-SCORE/outputs/crossscale_v2/实验报告.md)。截至 2026-09-10，HAD 物理／奖励／终止验证、8 worker 混合规模掩码检查已通过；单进程 8v8 K2 为 889.29 步/秒，20v20 K4 为 282.91 步/秒。六方法 E0 各 20000 步全部完成，合计 120000 原生物理步；只确认学习与保存链路，不作收敛结论。REFIL 的 4/8 worker × 1/4 并发任务吞吐矩阵也已完成，共 10 个任务、每个累计 20000 步，合计 200000 HAD 物理步；具体实现的计时区间与资源见报告。已记录的 loss/grad 均有限，最终与恢复权重存在，阶段三准备检查通过。用户已确认阶段三每方法 100 万物理步、8 worker、种子 0；B0、B2、REFIL 三基础方法并行，第四槽执行规则锚点。正式训练尚未运行，由用户手动启动。
+
+旧研究主线已于 **2026-09-08 16:00:19 +08:00** 确认停止；探索 final 为 Git `cc2ab86`，历史研究源码可从该提交查阅。随后 v7 重标定引擎并增加覆盖式规则与本地回放器，见 [实验报告 v7](实验报告/实验报告_v7.md)。该轮停止决定与“仅保留规则”的描述属于历史轮次。
 
 ## 环境与安装
 
-唯一底层是独立仓库 [HAD Workbench](../Open_Score_HAD_Workbench/README.md)，本仓库直接导出其原生实现，无第二份环境代码。本地依赖路径为 `E:/Code/Open_Score_HAD_Workbench`，当前协议为 `had-workbench-2.1.0` / `rebuild-calibrated-v3-r7-target-initialization`。历史 v7 使用 r2，不代表当前任务与规则的结果。覆盖规则评估在 `open_score.grouping`；回放器为仓库根目录 `python viewer.py`，打开 `http://127.0.0.1:8765`。
+唯一底层是独立仓库 [HAD Workbench](../Open_Score_HAD_Workbench/README.md)，本仓库通过 `Open-SCORE/open_score/envs/had_wrapper.py` 访问其原生实现，无第二份环境代码。本地依赖路径为 `E:/Code/Open_Score_HAD_Workbench`，当前协议为 `had-workbench-2.1.0` / `rebuild-calibrated-v3-r7-target-initialization`。历史 v7 使用 r2，不代表当前任务与规则的结果。覆盖规则评估在 `open_score.rules`；回放器为仓库根目录 `python viewer.py`，打开 `http://127.0.0.1:8765`。
+
+跨规模实验使用扁平包 `Open-SCORE/open_score/`，通过仓库内可编辑安装运行。`open_score.envs.make_entity_env` 提供固定 20 红方、20 蓝方、6 目标槽的 damage 任务实体接口；每局训练规模独立采样，死亡和 padding 槽保留，模型动作编号为 0–8。仅逐步热路径绕开原生观测；reset 沿用 HAD 原生初始化。评估和规则锚点共享蓝方事件调度、物理过程、动作映射和诊断采集。
 
 ```powershell
-& 'D:\Software\Anaconda\envs\torch310\python.exe' -m pip install -e ./Open-SCORE
+& 'D:\Software\Anaconda\envs\torch310\python.exe' -m pip install -e './Open-SCORE[training]'
 ```
 
-依赖由 `had-env` 声明；渲染及 Workbench 界面的可选安装方法见其 README。此命令供后续安装使用，本次归档没有重装环境。
+`had-env` 声明环境依赖，`training` extra 声明六方法训练与出图所需依赖。当前运行解释器为上述 `torch310`，已安装 PyTorch 2.13.0+cu130、NumPy 1.26.4、SciPy 1.15.3、Matplotlib 3.10.9、PyYAML 6.0.3；extra 不负责选择 CUDA 构建。渲染及 Workbench 界面的安装方法见其 README。
+
+本轮支持保留源码目录的可编辑安装。方法配置保留在包外的 `Open-SCORE/configs/`，命令入口保留在 `Open-SCORE/scripts/`；独立 wheel 不是当前支持的运行方式。vendored 主干及补丁内的 YAML 与已有 LICENSE 已声明为 package data，不复制包外配置来扩展发布体系。
 
 ## 公开接口
 
 | 导入 | 用途 |
 |---|---|
+| `open_score.envs.make_entity_env`、`HADEntityEnv` | damage 跨规模实体环境；10 维基础特征、固定槽与原生动作映射 |
+| `open_score.algos.train(name, cfg)` | 六方法共享训练入口；预算必须显式指定 |
+| `open_score.algos.load_policy(name, checkpoint)` | 冻结 checkpoint 转为 `reset()`／`act(state, side, action_ids)` 策略，可注册到规则评估与回放接口 |
 | `open_score.make_env`、`open_score.parallel_env` | 原生 Parallel / MPE 环境工厂 |
-| `open_score.grouping.KnownOpponentEnv`、`make_grouping_env` | 原生事件式分组环境；后者默认规则执行器 |
-| `Entity`、`Group`、`Grouping`、`DecisionState`（均位于 `open_score.grouping`） | 实体、分组动作与公开状态，沿用原生序列化与合法性约束 |
+| `open_score.rules.KnownOpponentEnv`、`make_grouping_env` | 原生事件式分组环境；后者默认规则执行器 |
+| `Entity`、`Group`、`Grouping`、`DecisionState`（均位于 `open_score.rules`） | 实体、分组动作与公开状态，沿用原生序列化与合法性约束 |
 | `RuleExecutor`、`RulePolicy` | 共享规则底层与上层规则策略 |
 | `CoveragePolicy`、`CoverageExecutor`、`run_episode`、`evaluate` | 当前 `rule_nv1_v1`：每步整数规划分组与匀速直线预测 |
 | `rule_grouping`、`grand_grouping`、`decode_counts` | 规则分组、每目标大组及人数分配解码 |
 
-规则策略支持 `rule`、`grand`、`random`、`static_rule`；`reset()` 重置策略状态，`act(state)` 返回原生 `Grouping`。固定对手接口在 `had_env.grouping.opponents`，物理适配器和快照类型在 `had_env.grouping.adapter`。
+规则策略支持 `rule`、`grand`、`random`、`static_rule`；`reset()` 重置策略状态，`act(state)` 返回原生 `Grouping`。项目代码统一通过 `open_score.envs` 访问固定对手和物理适配器，只有 `had_wrapper.py` 直接导入 HAD。
 
 当前网页默认双方使用分层策略。红方上层 `nv1` 每步用 `p + v × Δt` 预测蓝方下一步位置，通过 0–1 整数规划最小化总拦截距离；下层 `predictive_intercept` 将指派转为飞行动作。每个红方恰好负责一个蓝方、每个参与分组的蓝方至少分配一个红方。红方不足时仅纳入最近的 R 个蓝方。蓝方上层默认 `reactive`，每 5 步或伤亡时重新选目标，下层 `rush` 每步控制飞行。完整定义见 [现行规则说明](docs/three_layer_rule_mathematical_spec.md)。旧覆盖策略别名和历史策略选择入口已移除，历史结果仍保留原记录。
 
-网页对红蓝双方采用相同结构：先选 `end_to_end` 或 `hierarchical`；端到端只有一个动作策略，分层按实际层级显示各层策略。端到端提供最近威胁直追 / 最近目标直冲的规则基线及随机基线，直接输出动作，不运行分组或整数规划。它描述观测到动作的接口形式，并不代表已有训练模型。蓝方分层上层可选 `reactive/concentrated/balanced`，下层可选 `rush/split_rush`。XY/XZ 图等比例绘制，伤害与存活任务使用各自指标；同条件比较校验物理协议及实际环境参数。
+网页对红蓝双方采用相同结构：先选 `end_to_end` 或 `hierarchical`；端到端只有一个动作策略，分层按实际层级显示各层策略。默认端到端目录提供最近威胁直追 / 最近目标直冲的规则基线及随机基线；训练 checkpoint 在显式加载并注册后进入该目录。蓝方分层上层可选 `reactive/concentrated/balanced`，下层可选 `rush/split_rush`。XY/XZ 图等比例绘制，伤害与存活任务使用各自指标；同条件比较校验物理协议及实际环境参数。
 
 API 4 的策略输入是两个对称对象；切换架构后只提交该架构字段，旧 `red_policy/blue_rule/blue_opponent/blue_style` 参数会被拒绝：
 
@@ -68,10 +77,10 @@ observations, infos = env.reset(seed=0)
 - 伤害任务保留固定槽到整局结束。死亡槽零观测、强制空动作，但继续接收团队奖励。`agent_mask` 用于 actor，`bootstrap_mask` 用于团队 critic。死亡当步更新使用动作产生前的存活掩码。同队 `team_reward` 已是同一份团队奖励，不能再按队员相加。
 - 累计伤害、时间和维度通过 `info` 提供。任意红蓝 MARL 策略可接 Parallel 联合动作字典，或接 MPE 固定顺序动作列表；网页通过 `red_strategy/blue_strategy` 对象传入统一入口。分组适配器保留原 27 个动作编号，二维只从其中 9 个平面方向选择，与训练接口的 0–8 编号勿混用。
 
-本轮仅修改环境、接入与展示，未训练、未运行正式评估或性能探测。静态审查已移除 Parallel 无用的全局 NumPy RNG 交换、缓存实体顺序，并提前过滤未开火/未干扰对象的伤害距离计算；不据此宣称具体倍数加速或胜率平衡。每步整数规划和大规模成对碰撞仍有成本。完整接口见 [HAD API](../Open_Score_HAD_Workbench/docs/API.md)。
+此前环境接入轮次仅修改环境、接入与展示，没有进行该轮网络训练。其 Parallel RNG、实体缓存和伤害距离过滤调整属于历史环境修改；本轮跨规模实现未修改外部 HAD。当前验证与已授权短跑状态以本轮实验报告为准。完整原生接口见 [HAD API](../Open_Score_HAD_Workbench/docs/API.md)。
 
 ```python
-from open_score.grouping import make_grouping_env, RulePolicy
+from open_score.rules import make_grouping_env, RulePolicy
 
 env = make_grouping_env(red=8, blue=8, targets=2, opponent="reactive", seed=0)
 policy = RulePolicy("rule", seed=0)
@@ -82,11 +91,49 @@ state, reward, done, info = env.step(grouping)
 env.adapter.env.close()
 ```
 
-示例用于说明接口，本次未运行仿真。分组环境 `survival` 保留原生时限终止与 0/1 奖励；传入 `task_mode="damage"` 后返回整个宏步的伤害奖励之和，并区分自然终止与截断。Parallel/MPE 工厂采用自己的时限语义。多目标位置、零人数、事件返回和快照格式均以 Workbench 原生 API 为准；已移除 v6 包装、奖励塑形、S2 投影及旧训练张量接口。
+上述示例说明原生分组接口。分组环境 `survival` 保留原生时限终止与 0/1 奖励；传入 `task_mode="damage"` 后返回整个宏步的伤害奖励之和，并区分自然终止与截断。Parallel/MPE 工厂采用自己的时限语义。多目标位置、零人数、事件返回和快照格式均以 Workbench 原生 API 为准；v6 包装、奖励塑形、S2 投影及旧训练张量接口已归档。
+
+## 查看运行、停止与恢复
+
+阶段三已确认每方法 100 万物理步、8 worker、种子 0；B0、B2、REFIL 同时训练，第四槽执行规则锚点。当前尚未启动，由用户在 PowerShell 手动执行以下命令：
+
+```powershell
+& 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 'E:\Code\Open_Score\Open-SCORE\scripts\train.py' --stage stage3 --steps 1000000 --batch-size-run 8 --seed 0
+```
+
+本轮只有一个输出目录 `Open-SCORE/outputs/crossscale_v2/`。合并记录通过方法、运行和种子字段区分；模型与控制台日志按 `<方法>/<运行>/seed_<种子>/` 保存。唯一正式 Markdown 报告为该目录的 `实验报告.md`，图表放在 `figures/`。训练启动终端每 10 秒显示进度、吞吐、loss、评估进度和最近完整验证 D；报告每 5 分钟、完整验证结束及任务退出时原位刷新，编辑器中重新打开或刷新即可查看。
+
+阶段三启动并生成日志后，可在另一终端读取 REFIL 种子 0 的训练日志；其他基础方法替换路径中的方法名。以下相对路径命令在仓库根目录 `E:\Code\Open_Score` 执行：
+
+```powershell
+Get-Content -LiteralPath '.\Open-SCORE\outputs\crossscale_v2\refil\stage3\seed_0\console.log' -Tail 30 -Wait
+```
+
+从已有记录立即重画同一份报告，不运行训练或新评估：
+
+```powershell
+& 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 .\Open-SCORE\scripts\plot.py --run stage3
+```
+
+阶段三日志路径的运行段使用 `stage3`。刷新命令的 `--run` 只标记刷新来源，同一份报告始终保留 E0、全部吞吐任务和正式阶段三各自的数据与图表，不会切换成另一份报告。已完成的 E0 日志仍在各方法的 `e0/seed_0/console.log`。图表只显示实际已落盘数据；E0 的原生环境结果与 HAD 指标分开解释。正式阶段三、最终评价及规则锚点尚未运行，用户执行上述已确认配置的启动命令后才开始产生结果。
+
+需要停止时，在另一个终端运行下面的命令。调度器会请求训练子任务完成当前采样和学习批次，保存 `resume.pt` 后退出；评价与规则锚点保留已落盘的逐局结果，恢复时补齐剩余局。等待状态显示 `stopped` 与可恢复步数后再关闭终端。执行工具的强制中断曾直接结束整个进程组、跳过 Python 的 Ctrl+C 保存处理，因此工具会话使用此停止入口。
+
+```powershell
+& 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 .\Open-SCORE\scripts\train.py --stage stop
+```
+
+恢复时在原启动命令末尾增加 `--resume`，并保留原方法、环境、种子、`--steps`、`--batch-size-run`、运行标识和输出目录。恢复点包含 replay、优化器、目标网络、随机流和进度；`final.pt` 与验证选优 `best.pt` 用于冻结评估。已运行但尚未保存的日志步数不等同于可恢复步数。
+
+吞吐矩阵已全部完成，无需再运行。以下仅保留本轮矩阵的恢复命令记录；调度器会保留已完成任务，每个任务累计配额仍为 20000 步。阶段三如需恢复，在上方正式启动命令末尾增加 `--resume`，并等待原调度器退出后再执行。
+
+```powershell
+& 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 .\Open-SCORE\scripts\train.py --stage benchmark --run benchmark_optimized --resume
+```
 
 ## 历史研究
 
-[实验记录](实验报告/实验记录.md) 维护跨版本摘要。各版唯一正式报告在 `实验报告/`：
+[实验记录](实验报告/实验记录.md) 维护跨版本摘要。本轮报告归 `Open-SCORE/outputs/crossscale_v2/`，历史各版唯一正式报告在 `实验报告/`：
 
 - [S1/S2 与早期 Stage3](实验报告/实验报告_s1_s2.md)
 - [v2：选择释放与重建](实验报告/实验报告_v2.md)
