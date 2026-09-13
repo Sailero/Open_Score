@@ -123,14 +123,21 @@ class ParallelRunner:
         data = {key: np.stack([row[key] for row in values]) for key in observation_keys
                 if key in self.scheme and key in values[0]}
         if 'hier_decision' in self.scheme:
-            # The upper layer re-decides every action_length steps, starting at
-            # the first state. A terminal state is never a decision point,
-            # because there is no following segment to bootstrap from.
-            length = int(self.args.hier_agent['action_length'])
-            decide = int(t) % length == 0
-            data['hier_decision'] = np.asarray(
-                [[int(decide and not ended)] for ended in (terminal or [False] * len(values))],
-                dtype=np.uint8)
+            # Prefer the environment clock when it records one, so event-driven
+            # ALMA and the official interval stay on the same runner path. A
+            # terminal state is never a decision point.
+            ended = list(terminal or [False] * len(values))
+            if 'hier_decision' in values[0]:
+                flags = []
+                for row, done in zip(values, ended):
+                    flag = int(np.asarray(row['hier_decision']).reshape(-1)[0])
+                    flags.append([0 if done else flag])
+                data['hier_decision'] = np.asarray(flags, dtype=np.uint8)
+            else:
+                length = int(self.args.hier_agent['action_length'])
+                decide = int(t) % length == 0
+                data['hier_decision'] = np.asarray(
+                    [[int(decide and not done)] for done in ended], dtype=np.uint8)
         return data
 
     def run(self, test_mode=False, jobs=None, max_train_steps=None, **unused):

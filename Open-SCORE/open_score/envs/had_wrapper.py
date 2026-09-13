@@ -204,7 +204,9 @@ class HADWrapper:
     def __init__(self, scale=(8, 8, 2), max_steps=100, blue_upper="reactive", blue_lower="rush",
                  command_interval=5, diagnostics=False, retain_trajectory=False,
                  gamma=0.99, fold_wipeout_tail=True, pool_slots=None,
-                 shaping_coef=0.0, shaping_range=4000.0, pad="eval", **kwargs):
+                 shaping_coef=0.0, shaping_range=4000.0, pad="eval",
+                 subtask_set="targets", allocation_clock="interval",
+                 action_length=5, max_alloc_hold=10, **kwargs):
         self.scale = as_scale(scale)
         self.max_steps = int(max_steps)
         self.blue_upper, self.blue_lower = blue_upper, blue_lower
@@ -215,6 +217,16 @@ class HADWrapper:
         self.shaping_range = float(shaping_range)
         if self.shaping_range <= 0:
             raise ValueError("shaping_range must be positive")
+        if subtask_set not in ("targets", "blues"):
+            raise ValueError("subtask_set must be 'targets' or 'blues'")
+        if allocation_clock not in ("interval", "event"):
+            raise ValueError("allocation_clock must be 'interval' or 'event'")
+        self.subtask_set = subtask_set
+        self.allocation_clock = allocation_clock
+        self.action_length = int(action_length)
+        self.max_alloc_hold = int(max_alloc_hold)
+        if self.action_length < 1 or self.max_alloc_hold < 1:
+            raise ValueError("action_length and max_alloc_hold must be positive")
         self.n_red, self.n_blue, self.n_targets = resolve_pad(pad)
         self.n_entities = self.n_red + self.n_blue + self.n_targets
         self.pool_slots = None if pool_slots is None else tuple(int(value) for value in pool_slots)
@@ -223,6 +235,10 @@ class HADWrapper:
         self.diagnostics_enabled, self.retain_trajectory = diagnostics, retain_trajectory
         self.adapter_kwargs = {key: kwargs[key] for key in ("target_positions", "target_health", "target_initialization") if key in kwargs}
         self.adapter = None
+        self.hier_decision = 1
+        self.steps_since_alloc = 0
+        self.last_nearest = None
+        self.last_alive = None
 
     def reset(self, seed=0, scale=None, evaluate=False, diagnostics=None, retain_trajectory=None):
         self.scale = self.scale if scale is None else as_scale(scale)
@@ -253,6 +269,10 @@ class HADWrapper:
         self.diagnostics = EpisodeDiagnostics(adapter, seed, self.blue_upper, self.blue_lower,
                                               enabled, retain)
         self._refresh_features()
+        self.hier_decision = 1
+        self.steps_since_alloc = 0
+        self.last_nearest = self._blue_nearest_ids()
+        self.last_alive = self._alive_counts()
         return self.entities.copy()
 
     def _decide_blue(self):
@@ -301,6 +321,88 @@ class HADWrapper:
                                                      minlength=self.n_targets)
         return values
 
+    def n_tasks(self):
+        return self.n_blue if self.subtask_set == "blues" else self.n_targets
+
+    def _alive_counts(self):
+        env = self.adapter.env
+        return (sum(agent.Health > 0 for agent in env.red_agents),
+                sum(agent.Health > 0 for agent in env.blue_agents))
+
+    def _blue_nearest_ids(self):
+        env = self.adapter.env
+        nearest = np.full(self.n_blue, -1, dtype=np.int32)
+        live = [(index, agent) for index, agent in enumerate(env.blue_agents) if agent.Health > 0]
+        if not live or not env.targets:
+            return nearest
+        targets = np.asarray([target.position[:2] for target in env.targets])
+        blue = np.asarray([agent.position[:2] for _, agent in live])
+        chosen = np.linalg.norm(blue[:, None] - targets[None], axis=-1).argmin(axis=1)
+        for (index, _), target_id in zip(live, chosen):
+            nearest[index] = int(target_id)
+        return nearest
+
+    def _potential_by_blue(self):
+        values = np.zeros(self.n_blue, dtype=np.float64)
+        live = [(index, agent) for index, agent in enumerate(self.adapter.env.blue_agents) if agent.Health > 0]
+        if not self.shaping_coef or not live:
+            return values
+        targets = np.asarray([target.position[:2] for target in self.adapter.env.targets])
+        blue = np.asarray([agent.position[:2] for _, agent in live])
+        distances = np.linalg.norm(blue[:, None] - targets[None], axis=-1)
+        closed = np.clip(1.0 - distances.min(axis=1) / self.shaping_range, 0.0, 1.0)
+        for (index, _), value in zip(live, closed):
+            values[index] = -self.shaping_coef * value
+        return values
+
+    def _potential_parts(self):
+        return self._potential_by_blue() if self.subtask_set == "blues" else self._potential_by_target()
+
+    def _attribute_damage_to_blues(self, damage_by_target, nearest):
+        values = np.zeros(self.n_blue, dtype=np.float64)
+        nearest = np.asarray(nearest)
+        for target_id, damage in enumerate(damage_by_target):
+            if damage == 0:
+                continue
+            owners = np.flatnonzero(nearest == target_id)
+            if len(owners):
+                values[owners] += damage / len(owners)
+        leftover = float(np.asarray(damage_by_target).sum() - values.sum())
+        if abs(leftover) > 1e-9:
+            live = np.flatnonzero(nearest >= 0)
+            if len(live):
+                values[live] += leftover / len(live)
+            else:
+                values[0] += leftover
+        return values
+
+    def _damage_parts(self, nearest=None):
+        env = self.adapter.env
+        damage = np.zeros(self.n_targets, dtype=np.float64)
+        damage[:len(env.targets)] = [float(target.step_damage) for target in env.targets]
+        if self.subtask_set != "blues":
+            return damage
+        return self._attribute_damage_to_blues(damage, nearest)
+
+    def _update_hier_decision(self, terminated, truncated):
+        if terminated or truncated:
+            self.hier_decision = 0
+            return
+        if self.allocation_clock != "event":
+            self.hier_decision = int(self.adapter.step_count % self.action_length == 0)
+            return
+        nearest = self._blue_nearest_ids()
+        alive = self._alive_counts()
+        self.steps_since_alloc += 1
+        death = alive != self.last_alive
+        geometry = self.last_nearest is not None and not np.array_equal(nearest, self.last_nearest)
+        decide = death or (geometry and self.steps_since_alloc >= 2) or self.steps_since_alloc >= self.max_alloc_hold
+        self.hier_decision = int(decide)
+        if decide:
+            self.steps_since_alloc = 0
+            self.last_nearest = nearest
+            self.last_alive = alive
+
     def potential(self):
         """Shaping potential: how far the live Blue force has closed in.
 
@@ -319,7 +421,8 @@ class HADWrapper:
         all_actions = dict(native_red)
         all_actions.update({int(a.Id): int(value) for a, value in zip(env.blue_agents, blue)})
         before = [a.Health > 0 for a in env.agents]
-        potential_parts = self._potential_by_target()
+        nearest_before = self._blue_nearest_ids()
+        potential_parts = self._potential_parts()
         potential = float(potential_parts.sum())
         self.diagnostics.before_step(native_red)
         env.step_physics([ACCELERATION_PRIMITIVES[all_actions[int(a.Id)]].copy() for a in env.agents])
@@ -330,6 +433,7 @@ class HADWrapper:
         damage[:len(env.targets)] = [float(target.step_damage) for target in env.targets]
         if not np.isclose(damage.sum(), -reward, atol=1e-6, rtol=0):
             raise AssertionError("per-target damage does not sum to the step damage")
+        damage_parts = self._damage_parts(nearest_before)
         # return_sum stays the physical return, so D and the episode summary
         # never see the shaping term.
         self.return_sum += reward
@@ -343,12 +447,13 @@ class HADWrapper:
                 self._decide_blue()
         # A terminal state has no future, so its potential is zero by
         # convention; truncation keeps the real one because it bootstraps.
-        successor_parts = np.zeros(self.n_targets) if terminated else self._potential_by_target()
+        successor_parts = np.zeros(self.n_tasks()) if terminated else self._potential_parts()
         shaped = reward + self.gamma * float(successor_parts.sum()) - potential
-        by_target = -damage + self.gamma * successor_parts - potential_parts
-        if not np.isclose(by_target.sum(), shaped, atol=1e-6, rtol=0):
+        by_task = -damage_parts + self.gamma * successor_parts - potential_parts
+        if not np.isclose(by_task.sum(), shaped, atol=1e-6, rtol=0):
             raise AssertionError("per-subtask rewards do not sum to the team reward")
-        return shaped, by_target, terminated, truncated
+        self._update_hier_decision(terminated, truncated)
+        return shaped, by_task, terminated, truncated
 
     def step(self, actions):
         adapter, env = self.adapter, self.adapter.env
@@ -379,20 +484,18 @@ class HADWrapper:
             if not terminated:
                 # Declaring a still-running state terminal drops its future,
                 # so take back the successor potential the last step credited.
-                refund = self._potential_by_target()
+                refund = self._potential_parts()
                 reward -= discount * self.gamma * float(refund.sum())
                 task_rewards = task_rewards - discount * self.gamma * refund
             terminated, truncated = True, False
+            self.hier_decision = 0
         info = {"terminated": terminated, "truncated": truncated, "episode_limit": truncated,
                 "bootstrap_mask": float(not terminated), "target_damage": float(env.target_damage),
                 "step_target_damage": float(env.step_target_damage), "step": int(adapter.step_count),
                 "n_agents_init": self.scale.N_R, "config": self.scale.as_dict(),
                 "episode_seed": self.episode_seed, "folded_steps": folded_steps,
-                # ALMA's subtask signal. Defence subtasks never complete on
-                # their own, so every active one ends with the episode.
                 "task_rewards": task_rewards.tolist(),
-                "tasks_terminated": ([1] * self.scale.K + [0] * (self.n_targets - self.scale.K)
-                                     if terminated else [0] * self.n_targets)}
+                "tasks_terminated": self._tasks_terminated(terminated).tolist()}
         if terminated or truncated:
             if not np.isclose(self.return_sum, -env.target_damage, atol=1e-9, rtol=0):
                 raise AssertionError("damage reward does not equal the native episode return")
@@ -400,6 +503,17 @@ class HADWrapper:
             if self.diagnostics.retain_trajectory:
                 info["trajectory"] = self.diagnostics.trajectory
         return reward, terminated or truncated, info
+
+    def _tasks_terminated(self, episode_over):
+        if self.subtask_set == "blues":
+            flags = np.zeros(self.n_blue, dtype=np.int64)
+            for index, agent in enumerate(self.adapter.env.blue_agents):
+                if episode_over or agent.Health <= 0:
+                    flags[index] = 1
+            return flags
+        if episode_over:
+            return np.asarray([1] * self.scale.K + [0] * (self.n_targets - self.scale.K), dtype=np.int64)
+        return np.zeros(self.n_targets, dtype=np.int64)
 
     def get_policy_state(self):
         return build_decision_state(self.adapter, self.red_grouping, self.blue_upper)
@@ -411,7 +525,10 @@ class HADWrapper:
         """Explicit recovery/validation path; never called during physical stepping."""
         return {"native": self.adapter.snapshot(), "opponent_rng": copy.deepcopy(self.opponent_rng.bit_generator.state),
                 "last_actions": dict(self.adapter._policy_last_actions), "return_sum": self.return_sum,
-                "diagnostics": copy.deepcopy({k: v for k, v in vars(self.diagnostics).items() if k != "adapter"})}
+                "diagnostics": copy.deepcopy({k: v for k, v in vars(self.diagnostics).items() if k != "adapter"}),
+                "hier_decision": int(self.hier_decision), "steps_since_alloc": int(self.steps_since_alloc),
+                "last_nearest": None if self.last_nearest is None else np.asarray(self.last_nearest).copy(),
+                "last_alive": self.last_alive}
 
     def restore(self, state):
         self.adapter.restore(state["native"])
@@ -420,6 +537,10 @@ class HADWrapper:
         self.return_sum = state["return_sum"]
         vars(self.diagnostics).update(copy.deepcopy(state["diagnostics"]))
         self._refresh_features()
+        self.hier_decision = int(state.get("hier_decision", 0))
+        self.steps_since_alloc = int(state.get("steps_since_alloc", 0))
+        self.last_nearest = state.get("last_nearest")
+        self.last_alive = state.get("last_alive")
 
     def close(self):
         if self.adapter is not None:

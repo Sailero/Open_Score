@@ -226,13 +226,22 @@ class EntityAgent(ALMAAgent):
                       "gnn": GraphEncoder}[kind](input_shape, args)
         if args.agent.get("recurrent", False):
             self._head = TemporalHead(args)
+        if args.agent.get("subtask_cond") == "full_obs":
+            self.task_cond = nn.Linear(args.attn_embed_dim, args.rnn_hidden_dim)
 
     def _compute_network(self, inputs):
         # Modern torch requires bool masks; official ALMA stores uint8 replay.
         inputs = dict(inputs)
         inputs["entity_mask"] = inputs["entity_mask"].bool()
         inputs["obs_mask"] = inputs["obs_mask"].bool()
-        return super()._compute_network(inputs)
+        encoded = self._base(inputs)
+        if hasattr(self, "task_cond") and "task_embeds" in inputs:
+            encoded = encoded + self.task_cond(inputs["task_embeds"][:, :, :self.args.n_agents])
+        if self.use_copa:
+            encoded = encoded + inputs["coach_z"]
+        q, hidden = self._head(encoded, inputs)
+        agent_mask = inputs["entity_mask"][:, :, :self.args.n_agents]
+        return q.masked_fill(agent_mask.unsqueeze(3), 0), hidden
 
     def make_imagined_inputs(self, inputs):
         imagined, groups = super().make_imagined_inputs(inputs)

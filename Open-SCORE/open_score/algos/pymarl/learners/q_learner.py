@@ -111,11 +111,22 @@ class QLearner:
         cuml_terminated = th.zeros_like(terminated[:, 0])
         cuml_timeout = th.zeros_like(timeout[:, 0])
 
+        smdp = bool(self.args.hier_agent.get('smdp_alloc', False))
+        gamma = float(self.args.gamma)
+        seg_dt = th.zeros_like(reward)
+        cuml_dt = th.zeros_like(reward[:, 0])
         for t in reversed(range(reward.shape[1])):
             # sum rewards between hierarchical decision points
-            cuml_rewards += reward[:, t]
+            if smdp:
+                cuml_rewards = reward[:, t] + gamma * cuml_rewards
+            else:
+                cuml_rewards = cuml_rewards + reward[:, t]
             seg_rewards[:, t] = cuml_rewards
-            cuml_rewards *= 1 - decision_points[:, t]
+            cuml_rewards = cuml_rewards * (1 - decision_points[:, t])
+
+            cuml_dt = cuml_dt + 1
+            seg_dt[:, t] = cuml_dt
+            cuml_dt = cuml_dt * (1 - decision_points[:, t])
 
             # track whether env terminated between decision points
             cuml_terminated = cuml_terminated.max(terminated[:, t])
@@ -127,8 +138,10 @@ class QLearner:
             mask[:, t] *= (1 - cuml_timeout)
             cuml_timeout *= 1 - decision_points[:, t]
 
-        # scale by action length to keep gradients around same magnitude as low-level controllers
-        seg_rewards /= self.args.hier_agent['action_length']
+        # Official ALMA scales the undiscounted sum by the fixed interval.
+        # Event-driven segments keep the discounted return and γ^τ bootstrap.
+        if not smdp:
+            seg_rewards = seg_rewards / self.args.hier_agent['action_length']
 
         last_alloc = th.zeros_like(allocs)
         was_reset = th.zeros_like(reset[:, [0]])
@@ -163,6 +176,7 @@ class QLearner:
             'avail_actions': batch['avail_actions'][d_inds][:max_bs],
             'last_alloc': last_alloc[d_inds][:max_bs],
             't_added': t_added[d_inds][:max_bs],
+            'seg_dt': seg_dt[d_inds][:max_bs],
         }
         return meta_batch
 
@@ -185,7 +199,11 @@ class QLearner:
 
         # Compute TD-loss (don't bootstrap from next state if previous state is
         # terminal)
-        targets = (rewards[:-1] + self.args.gamma * (1 - terminated[:-1]) * target_alloc_q[1:]).detach()
+        if self.args.hier_agent.get('smdp_alloc', False):
+            discount = self.args.gamma ** meta_batch['seg_dt'][:-1]
+            targets = (rewards[:-1] + discount * (1 - terminated[:-1]) * target_alloc_q[1:]).detach()
+        else:
+            targets = (rewards[:-1] + self.args.gamma * (1 - terminated[:-1]) * target_alloc_q[1:]).detach()
         if self.args.popart:
             targets = self.mac.alloc_critic.popart_update(
                 targets, mask[:-1])
@@ -300,7 +318,7 @@ class QLearner:
         mask[:, 1:] = mask[:, 1:] * (1 - reset[:, :-1])
         org_mask = mask.clone()
         avail_actions = batch["avail_actions"]
-        if self.args.agent['subtask_cond'] is not None:
+        if self.args.agent['subtask_cond'] is not None and getattr(self.args, 'mixer_subtask_cond', None) is not None:
             # Learning separate controllers for each task
             rewards = batch['task_rewards'][:, :-1]
             terminated = batch['tasks_terminated'][:, :-1].float()

@@ -114,17 +114,51 @@ def masks_from_entity_mask(entity_mask):
             "entity_mask": absent.copy()}
 
 
-def task_masks(entities, entity_mask, n_active_targets, n_red=MAX_AGENTS,
-               n_blue=MAX_BLUE, n_targets=MAX_TARGETS):
-    """ALMA's subtask contract: one subtask per live target.
+def blue_nearest_from_table(entities, entity_mask, n_red=MAX_AGENTS,
+                            n_blue=MAX_BLUE, n_targets=MAX_TARGETS):
+    """Public nearest-target index of each Blue slot; -1 if that slot is empty."""
+    absent = np.asarray(entity_mask, dtype=bool)
+    nearest = np.full(int(n_blue), -1, dtype=np.int32)
+    live_blue = np.flatnonzero(~absent[n_red:n_red + n_blue])
+    live_tgt = np.flatnonzero(~absent[n_red + n_blue:n_red + n_blue + n_targets])
+    if not len(live_blue) or not len(live_tgt):
+        return nearest
+    table = np.asarray(entities)
+    distances = np.linalg.norm(table[n_red + live_blue, None, :2]
+                               - table[n_red + n_blue + live_tgt, :2][None], axis=-1)
+    nearest[live_blue] = live_tgt[distances.argmin(axis=1)]
+    return nearest
 
-    Blue rows are attached to the target they are closest to, a quantity every
-    method can derive from the same entity table; the Blue side's own
-    assignment is private and is never used. Red rows start attached to every
-    active subtask and are replaced by the allocation at decision points.
-    Zero means "belongs to"; a padded or dead row belongs to nothing.
+
+def task_masks(entities, entity_mask, n_active_targets, n_red=MAX_AGENTS,
+               n_blue=MAX_BLUE, n_targets=MAX_TARGETS, subtask_set="targets"):
+    """ALMA's subtask contract.
+
+    ``targets``: one subtask per live target. Blue rows attach to the target
+    they are closest to, a quantity every method can derive from the same
+    entity table; the Blue side's own assignment is private and is never used.
+
+    ``blues``: one subtask per Blue slot. A live Blue belongs only to its own
+    slot; live targets are shared context for every currently active Blue
+    task. Empty or dead Blue slots are inactive tasks.
+
+    Red rows start attached to every active subtask and are replaced by the
+    allocation at decision points. Zero means "belongs to".
     """
+    if subtask_set not in ("targets", "blues"):
+        raise ValueError(f"unknown subtask set {subtask_set!r}")
     absent = np.asarray(entity_mask, dtype=np.uint8).astype(bool)
+    if subtask_set == "blues":
+        task_mask = absent[n_red:n_red + n_blue].astype(np.uint8).copy()
+        entity2task = np.ones((n_red + n_blue + n_targets, n_blue), dtype=np.uint8)
+        active = np.flatnonzero(task_mask == 0)
+        if len(active):
+            entity2task[np.ix_(np.flatnonzero(~absent[:n_red]), active)] = 0
+            live_targets = np.flatnonzero(~absent[n_red + n_blue:n_red + n_blue + n_targets]) + n_red + n_blue
+            if len(live_targets):
+                entity2task[np.ix_(live_targets, active)] = 0
+            entity2task[n_red + active, active] = 0
+        return {"task_mask": task_mask, "entity2task_mask": entity2task}
     task_mask = np.ones(n_targets, dtype=np.uint8)
     task_mask[:int(n_active_targets)] = 0
     entity2task = np.ones((n_red + n_blue + n_targets, n_targets), dtype=np.uint8)

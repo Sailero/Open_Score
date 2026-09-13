@@ -18,6 +18,7 @@ PACKAGE = Path(__file__).resolve().parents[1]
 PROJECT = PACKAGE.parent
 UPSTREAM = Path(__file__).resolve().parent / "pymarl"
 METHODS = ("b0_qmix", "b2_qmix_atten", "refil", "dcg", "gnn_qmix", "spectra", "alma")
+PROBE_METHODS = ("alma_fullobs", "alma_blue", "alma_event")
 # Everything else defines the experiment and must match on resume, so that a
 # single run never mixes old replay data with changed learning conditions.
 RESUME_MUTABLE = frozenset(("resume", "output", "device", "use_cuda",
@@ -45,7 +46,7 @@ def _merge(base, update):
 
 def load_config(name, overrides=None):
     import yaml
-    if name not in METHODS:
+    if name not in METHODS and name not in PROBE_METHODS:
         raise ValueError(f"Unknown method: {name}")
     base = yaml.safe_load((UPSTREAM / "config/default.yaml").read_text(encoding="utf-8-sig"))
     base = _merge(base, yaml.safe_load((PROJECT / f"configs/{name}.yaml").read_text(encoding="utf-8-sig")))
@@ -69,7 +70,10 @@ def load_config(name, overrides=None):
     base["multi_task"] = base["hier_agent"]["task_allocation"] is not None
     if not base["multi_task"] and base["agent"]["subtask_cond"] is not None:
         raise ValueError("Subtask conditioning requires an allocation layer")
-    if base["mixer_subtask_cond"] is None:
+    mixer_cond = base.get("mixer_subtask_cond")
+    if mixer_cond in (False, "off", "none", "null"):
+        base["mixer_subtask_cond"] = None
+    elif mixer_cond is None:
         base["mixer_subtask_cond"] = base["agent"]["subtask_cond"]
     base["output"] = str(Path(base.get("output", DEFAULT_OUTPUT)).resolve())
     base["feature_layout"] = "had" if base["env"] == "had" else "native"
@@ -93,6 +97,9 @@ def make_runtime_env(args_dict, rank=0):
         if args_dict.get("pool_slots") is not None:
             env_args.setdefault("pool_slots", args_dict["pool_slots"])
         env_args.setdefault("pad", args_dict.get("entity_pad", "train"))
+        hier = args_dict.get("hier_agent") or {}
+        if hier.get("action_length") is not None:
+            env_args.setdefault("action_length", int(hier["action_length"]))
         return HADEntityEnv(**env_args)
     return NativeEntityEnv(args_dict["env"], **env_args)
 
@@ -598,7 +605,11 @@ def load_policy(name, checkpoint):
     # Set-based checkpoints do not bake roster size into weights. Rebuild the
     # pad to the current entity interface so 40v40 / 20v40 can be evaluated.
     from open_score.envs.entity_env import HADEntityEnv
-    probe = HADEntityEnv(seed=0, scale=(4, 4, 2))
+    env_args = dict(getattr(args, "env_args", None) or {})
+    probe_kwargs = {}
+    if env_args.get("subtask_set"):
+        probe_kwargs["subtask_set"] = env_args["subtask_set"]
+    probe = HADEntityEnv(seed=0, scale=(4, 4, 2), **probe_kwargs)
     env_info = probe.get_env_info()
     probe.close()
     if getattr(args, "multi_task", False):
@@ -630,4 +641,4 @@ def load_policy(name, checkpoint):
     return FrozenPolicyAdapter(mac, args, scheme, groups, preprocess, mixer)
 
 
-__all__ = ["train", "load_policy", "load_config", "METHODS"]
+__all__ = ["train", "load_policy", "load_config", "METHODS", "PROBE_METHODS"]

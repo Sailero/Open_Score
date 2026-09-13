@@ -20,16 +20,18 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("MKL_NUM_THREADS", "1")
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 
-from open_score.algos import METHODS, setup_runtime
+from open_score.algos import METHODS, PROBE_METHODS, setup_runtime
 from open_score.utils.logging import DEFAULT_OUTPUT, FORMAL_RUN
 
 BASELINE_METHODS = METHODS[:3]
 MAIN_METHODS = ("dcg", "spectra")
+PROBE_OUTPUT = DEFAULT_OUTPUT.parent / "alma_probe"
 METHOD_GROUPS = {
     "baseline": BASELINE_METHODS,
     "main": MAIN_METHODS,
     "alma": ("alma",),
     "dcg_alma": ("dcg", "alma"),
+    "alma_probe": PROBE_METHODS,
 }
 FORMAL_METHODS = BASELINE_METHODS
 FORMAL_SEEDS = (0, 1, 2)
@@ -43,6 +45,9 @@ _METHOD_ALIAS = {
     "gnn_qmix": "gnn",
     "spectra": "spectra",
     "alma": "alma",
+    "alma_fullobs": "fullobs",
+    "alma_blue": "blue",
+    "alma_event": "event",
 }
 _STATUS_ALIAS = {
     "starting": "init",
@@ -502,9 +507,10 @@ def validate(output):
 def parser():
     result = argparse.ArgumentParser(description=__doc__)
     result.add_argument("--stage", choices=("validate", "e0", "benchmark", "train", "single", "stop"), required=True)
-    result.add_argument("--method", choices=METHODS)
+    result.add_argument("--method", choices=METHODS + PROBE_METHODS)
     result.add_argument("--group", choices=tuple(METHOD_GROUPS), default="main",
-                        help="train pool: main=DCG/SPECTra, baseline=B0/B2/REFIL, alma=ALMA, dcg_alma=DCG/ALMA")
+                        help="train pool: main=DCG/SPECTra, baseline=B0/B2/REFIL, alma=ALMA, "
+                             "dcg_alma=DCG/ALMA, alma_probe=three HAD-adapted ALMA arms")
     result.add_argument("--steps", type=int)
     result.add_argument("--batch-size-run", type=int, choices=(4, 8), default=4)
     result.add_argument("--seed", type=int, default=0)
@@ -564,6 +570,9 @@ def main():
     options = parser().parse_args()
     setup_runtime()
     output = options.output.resolve()
+    probe_job = options.group == "alma_probe" or options.method in PROBE_METHODS
+    if probe_job and output == DEFAULT_OUTPUT.resolve():
+        output = PROBE_OUTPUT.resolve()
     if options.stage == "stop":
         output.mkdir(parents=True, exist_ok=True)
         (output / "stop.request").write_text("Stop after the current complete sampling/learning batch.\n", encoding="utf-8")
@@ -599,8 +608,13 @@ def main():
             raise SystemExit("formal train needs --steps; no default budget")
         if options.steps < 50:
             raise SystemExit("formal budget must support 50 validation points")
-        require_preparation(output)
         methods = METHOD_GROUPS[options.group]
+        if options.group == "alma_probe":
+            jobs = [(method, {**base, "seed": options.seed, "t_max": options.steps, "env": "had", "run": FORMAL_RUN})
+                    for method in methods]
+            run_group(jobs, output)
+            return
+        require_preparation(output)
         # Default group is DCG / SPECTra. GNN seed 0 is already done; later
         # GNN seeds are not queued. B0 / B2 / REFIL stay in baseline.
         jobs = [(method, {**base, "seed": seed, "t_max": options.steps, "env": "had", "run": FORMAL_RUN})

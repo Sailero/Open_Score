@@ -25,7 +25,14 @@ LABELS = {"b0_qmix": "B0", "b2_qmix_atten": "QMIX", "refil": "REFIL",
           "random": "Random", "rule_nv1": "Rule nv1"}
 COLORS = {"b0_qmix": "#5b6770", "b2_qmix_atten": "#1675b8", "refil": "#e36b32",
           "dcg": "#7955a3", "gnn_qmix": "#32865e", "spectra": "#bf4c79",
-          "alma": "#b08a1e", "random": "#979fa5", "rule_nv1": "#267c4f"}
+          "alma": "#b08a1e", "random": "#979fa5", "rule_nv1": "#267c4f",
+          "alma_fullobs": "#3d6ea8", "alma_blue": "#c47b2b", "alma_event": "#6a4c93"}
+PROBE_METHODS = ("alma_fullobs", "alma_blue", "alma_event")
+PROBE_LABELS = {"alma_fullobs": "ALMA-全场", "alma_blue": "ALMA-蓝方",
+                "alma_event": "ALMA-事件", "alma": "v3 ALMA",
+                "b2_qmix_atten": "v3 QMIX", "refil": "v3 REFIL",
+                "random": "Random", "rule_nv1": "Rule nv1"}
+PROBE_SEEDS = (0,)
 BENCHMARK_REVISION = "filled_padding_compact_mixer_frozen_target"
 FORMAL_SEEDS = (0, 1, 2)
 _REPORT_THREAD_LOCK = threading.RLock()
@@ -1023,11 +1030,191 @@ def _refresh_report(output=DEFAULT_OUTPUT, *, run=FORMAL_RUN, report_stream=None
     return report_path
 
 
+def _is_probe_output(output):
+    return Path(output).resolve().name == "alma_probe"
+
+
+def _v3_reference():
+    """Anchors and seed-0 last validation from the formal v3 directory."""
+    if not DEFAULT_OUTPUT.exists():
+        return {}, {}
+    episodes = unique_episodes(read_records(DEFAULT_OUTPUT, "episodes", run=FORMAL_RUN))
+    anchors = _anchor_values(episodes)
+    points = _validation_points(episodes, anchors)
+    refs = {}
+    for method in ("alma", "b2_qmix_atten", "refil"):
+        last = [-row["D"] for row in points
+                if row["method"] == method and row.get("eval_point") == 50 and row.get("seed") == 0
+                and _numeric(row.get("D"))]
+        if last:
+            refs[method] = statistics.mean(last)
+    return anchors, refs
+
+
+def _plot_probe_learning(plt, output, points, anchors, refs):
+    fig, axis = plt.subplots(1, 1, figsize=(7.6, 4.4), constrained_layout=True)
+    for method in PROBE_METHODS:
+        by_point = defaultdict(list)
+        for row in points:
+            if row["method"] == method:
+                by_point[row["eval_point"]].append(-row["D"])
+        xs, ys, err = [], [], []
+        for point, rewards in sorted(by_point.items()):
+            mean, std = _mean_std(rewards)
+            if mean is None:
+                continue
+            times = [row["t_env"] for row in points if row["method"] == method and row["eval_point"] == point]
+            xs.append(statistics.mean(times))
+            ys.append(mean)
+            err.append(std)
+        if xs:
+            axis.plot(xs, ys, color=COLORS[method], linewidth=2.2, label=PROBE_LABELS[method])
+            axis.fill_between(xs, [y - e for y, e in zip(ys, err)], [y + e for y, e in zip(ys, err)],
+                              color=COLORS[method], alpha=.18, linewidth=0)
+    for method, style in (("alma", ":"), ("b2_qmix_atten", "--"), ("refil", "-.")):
+        if method in refs:
+            axis.axhline(refs[method], color=COLORS[method], linestyle=style, linewidth=1.4,
+                         label=f"{PROBE_LABELS[method]} seed0")
+    for policy, style in (("random", "--"), ("rule_nv1", "-.")):
+        value = _pool_return(anchors, policy)
+        if value is not None:
+            axis.axhline(value, color=COLORS[policy], linestyle=style, linewidth=1.2, label=LABELS[policy])
+    axis.set(title="ALMA probe: in-distribution red return",
+             xlabel="Environment steps", ylabel="Red episode return  R = −D")
+    axis.grid(alpha=.2)
+    axis.legend(fontsize=8)
+    path = output / "figures" / "learning.png"
+    _save_figure(fig, path)
+    plt.close(fig)
+    return path
+
+
+def _refresh_probe_report(output, *, run=FORMAL_RUN, report_stream=None):
+    output = Path(output)
+    output.mkdir(parents=True, exist_ok=True)
+    (output / "figures").mkdir(exist_ok=True)
+    episodes = unique_episodes(read_records(output, "episodes", run=run))
+    progress = {(method, seed): row for (method, recorded_run, seed), row in
+                read_latest(output, "progress", run=run).items() if method in PROBE_METHODS}
+    anchors, refs = _v3_reference()
+    points = [row for row in _validation_points(episodes, anchors) if row["method"] in PROBE_METHODS]
+    now = datetime.now().astimezone().isoformat(timespec="seconds")
+    unfinished = [f"{PROBE_LABELS[method]}/seed {seed}" for (method, seed), row in sorted(progress.items())
+                  if row.get("status") in ("training", "evaluating", "running")]
+    planned = [(method, seed) for method in PROBE_METHODS for seed in PROBE_SEEDS]
+    finished = sum(1 for key in planned if progress.get(key, {}).get("status") in ("completed", "complete"))
+    if unfinished:
+        status = " 仍在运行：" + "、".join(unfinished) + "。"
+    elif finished == len(planned):
+        status = " 三个单种子臂均已结束。"
+    elif finished:
+        status = f" 已完成 {finished}/{len(planned)} 次训练。"
+    else:
+        status = " 训练尚未开始。"
+    text = [
+        "<!-- report_layout: alma_probe -->",
+        "# ALMA 场景适配临时测试",
+        "",
+        f"更新时间：{now}。这是一份独立于跨规模 v3 主报告的临时对照，只问一件事："
+        "把 ALMA 的 HAD 合同按三刀改完之后，单种子 1M 是否还能明显好于正式 v3 的 ALMA。"
+        + status,
+        "协议与 v3 正式训练相同：混合池、1,000,000 物理步、50 个池内验证点、`best.pt` 按验证 D 选优。"
+        "每臂只跑 seed 0。正式三种子对照、外推评估和主报告结论都不在这里改写。",
+        "三臂是递进关系，不是三个无关新算法。",
+        "",
+        "- **ALMA-全场**（`alma_fullobs`）：子任务仍是目标，上层仍每 5 步分配；去掉硬掩码，低层看全场，"
+        "分配只作为任务嵌入。Mixer 改回单路团队 Q，低层 TD 用团队回报。",
+        "- **ALMA-蓝方**（`alma_blue`）：在全场之上把子任务改成活着的蓝方槽，训练垫 10、评估宽 40。",
+        "- **ALMA-事件**（`alma_event`）：在蓝方子任务之上改为伤亡 / 公开最近目标变化 / 最多 10 步再分配，"
+        "上层 TD 用折扣段回报和 $\\gamma^\\tau$ bootstrap。",
+        "",
+        "对照虚线来自 v3 主实验 seed 0 的第 50 个验证点，以及同一套规则 / 随机锚点，不是本目录新跑的。",
+        "",
+    ]
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    learning_figure = _plot_probe_learning(plt, output, points, anchors, refs)
+    last_r = {}
+    for method in PROBE_METHODS:
+        last = [row["D"] for row in points if row["method"] == method and row["eval_point"] == 50]
+        mean, std = _mean_std([-value for value in last])
+        last_r[method] = (mean, std)
+    text += ["## 结论", ""]
+    random_r, rule_r = _pool_return(anchors, "random"), _pool_return(anchors, "rule_nv1")
+    ranked = [method for method in PROBE_METHODS if last_r[method][0] is not None]
+    if ranked:
+        ranking = "；".join(
+            f"{PROBE_LABELS[method]} ${last_r[method][0]:.2f}\\pm{last_r[method][1]:.2f}$" for method in ranked)
+        text += [
+            f"红方回报越高越好。v3 池内随机约 ${random_r:.2f}$，规则约 ${rule_r:.2f}$。"
+            if random_r is not None and rule_r is not None else "锚点尚未读到。",
+            f"已有 1M 验证回报的探针对臂：{ranking}。",
+        ]
+        if "alma" in refs:
+            text += [f"v3 正式 ALMA seed 0 第 50 点约为 ${refs['alma']:.2f}$。"]
+        text += [""]
+    else:
+        text += ["记录尚未齐，暂不写结论。先看学习曲线是否离开随机带。", ""]
+    if learning_figure:
+        text += ["## 训练池内验证曲线", "",
+                 f"![学习曲线]({learning_figure.relative_to(output).as_posix()})", ""]
+    if points:
+        rows = []
+        for method in PROBE_METHODS:
+            series = [row for row in points if row["method"] == method]
+            if not series:
+                continue
+            last = [row for row in series if row["eval_point"] == max(item["eval_point"] for item in series)]
+            mean, std = _mean_std([-row["D"] for row in last])
+            rows.append(dict(method=PROBE_LABELS[method], point=last[0]["eval_point"],
+                             steps=int(statistics.mean(row["t_env"] for row in last)),
+                             ret=_number(mean), std=_number(std)))
+        text += ["## 当前验证点", ""]
+        text += _table(rows, [("method", "方法"), ("point", "验证点"), ("steps", "步数"),
+                              ("ret", "回报"), ("std", "标准差")]) + [""]
+    status_rows = []
+    for method, seed in planned:
+        row = progress.get((method, seed), {})
+        best = None
+        series = [item for item in points if item["method"] == method and item.get("seed") == seed]
+        if series:
+            best = min(series, key=lambda item: item["D"])
+        status_rows.append(dict(
+            method=PROBE_LABELS[method], seed=seed, status=row.get("status", "未开始"),
+            steps=row.get("t_env", 0), budget=row.get("budget_steps", 1000000),
+            points=f"{len({item['eval_point'] for item in series})}/50",
+            best=_number(-best["D"]) if best else "—",
+            best_step=best["t_env"] if best else "—"))
+    text += ["## 运行状态", ""]
+    text += _table(status_rows, [("method", "方法"), ("seed", "种子"), ("status", "状态"),
+                                 ("steps", "已训步"), ("budget", "预算"), ("points", "验证点"),
+                                 ("best", "best 验证回报"), ("best_step", "best 步数")]) + [""]
+    streams = ("episodes", "learning", "progress")
+    text += ["## 原始数据", "",
+             "；".join(f"[{name}.csv]({name}.csv)" for name in streams if (output / f"{name}.csv").exists()) + "。",
+             f"正式 v3 对照仍以 [跨规模 v3 主报告](../crossscale_v3/实验报告.md) 为准。", ""]
+    report_path = output / "实验报告.md"
+    content = "\n".join(text)
+    if report_stream is None:
+        _atomic_text(report_path, content)
+    else:
+        report_stream.seek(0)
+        report_stream.write(content.encode("utf-8"))
+        report_stream.truncate()
+        report_stream.flush()
+        os.fsync(report_stream.fileno())
+    return report_path
+
+
 def refresh_report(output=DEFAULT_OUTPUT, *, run=FORMAL_RUN):
     """Render the one report of this version; a side run never replaces it."""
     output = Path(output)
     try:
         with _report_lock(output) as stream:
+            if _is_probe_output(output):
+                return _refresh_probe_report(output, run=run if run == FORMAL_RUN else FORMAL_RUN,
+                                             report_stream=stream)
             return _refresh_report(output, run=run if run == FORMAL_RUN else FORMAL_RUN,
                                    report_stream=stream)
     except TimeoutError:

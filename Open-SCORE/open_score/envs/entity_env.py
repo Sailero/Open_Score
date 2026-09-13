@@ -5,7 +5,8 @@ import copy
 import numpy as np
 
 from .features import (MAX_AGENTS, ENTITY_DIM, N_ACTIONS, masks_from_entity_mask,
-                       available_actions, entities_from_state, task_masks)
+                       available_actions, blue_nearest_from_table, entities_from_state,
+                       resolve_pad, task_masks)
 from .had_wrapper import HADWrapper, run_environment_checks
 from .scales import ScaleSampler, as_scale
 from ..utils.seeding import EpisodeSeedStream, split_seeds
@@ -93,11 +94,15 @@ class HADEntityEnv:
         return {"n_agents": self.n_agents, "n_entities": self.n_entities, "n_actions": N_ACTIONS,
                 "entity_shape": ENTITY_DIM, "state_shape": self.get_state_size(),
                 "obs_shape": self.get_obs_size(), "episode_limit": self.episode_limit,
-                "gt_mask_avail": False, "feature_layout": "had", "n_tasks": self.n_targets}
+                "gt_mask_avail": False, "feature_layout": "had",
+                "n_tasks": self.wrapper.n_tasks()}
 
     def get_task_masks(self):
-        return task_masks(self.wrapper.entities, self.wrapper.entity_mask, self.wrapper.scale.K,
-                          self.n_agents, self.n_blue, self.n_targets)
+        masks = task_masks(self.wrapper.entities, self.wrapper.entity_mask, self.wrapper.scale.K,
+                           self.n_agents, self.n_blue, self.n_targets,
+                           subtask_set=self.wrapper.subtask_set)
+        masks["hier_decision"] = np.asarray([int(self.wrapper.hier_decision)], dtype=np.uint8)
+        return masks
 
     def episode_summary(self):
         return self.wrapper.episode_summary()
@@ -258,6 +263,9 @@ class FrozenPolicyAdapter:
         self.last_step, self.last_result = -1, None
         self.q_tot, self.q_i = [], []
         self.roster = None
+        self._alloc_hold = 0
+        self._last_nearest = None
+        self._last_alive = None
 
     def act(self, state, side, action_ids):
         import torch as th
@@ -298,10 +306,14 @@ class FrozenPolicyAdapter:
         if getattr(self.args, "multi_task", False):
             # Same subtask decomposition and decision clock as the training
             # runner, so a hierarchical checkpoint acts as it was trained.
-            subtasks = task_masks(entities, absent, len(state.targets))
+            env_args = dict(getattr(self.args, "env_args", None) or {})
+            n_red, n_blue, n_targets = resolve_pad("eval")
+            subtask_set = env_args.get("subtask_set", "targets")
+            subtasks = task_masks(entities, absent, len(state.targets), n_red, n_blue, n_targets,
+                                  subtask_set=subtask_set)
             data.update(entity2task_mask=subtasks["entity2task_mask"][None],
                         task_mask=subtasks["task_mask"][None],
-                        hier_decision=[[int(step % int(self.args.hier_agent["action_length"]) == 0)]])
+                        hier_decision=[[int(self._hier_decision(state, absent, step, env_args))]])
         self.batch.update(data, ts=step)
         with th.no_grad():
             actions = self.mac.select_actions(self.batch, t_ep=step, t_env=0, test_mode=True)
@@ -320,6 +332,28 @@ class FrozenPolicyAdapter:
                             for i, entity in enumerate(state.red)}
         self.last_step = step
         return dict(self.last_result)
+
+    def _hier_decision(self, state, absent, step, env_args):
+        length = int(self.args.hier_agent["action_length"])
+        if env_args.get("allocation_clock", "interval") != "event":
+            return step % length == 0
+        n_red, n_blue, n_targets = resolve_pad("eval")
+        nearest = blue_nearest_from_table(entities_from_state(state)[0], absent, n_red, n_blue, n_targets)
+        alive = (sum(entity.alive for entity in state.red), sum(entity.alive for entity in state.blue))
+        if step == 0:
+            self._alloc_hold = 0
+            self._last_nearest = nearest
+            self._last_alive = alive
+            return True
+        self._alloc_hold += 1
+        death = alive != self._last_alive
+        geometry = self._last_nearest is not None and not np.array_equal(nearest, self._last_nearest)
+        decide = death or (geometry and self._alloc_hold >= 2) or self._alloc_hold >= int(env_args.get("max_alloc_hold", 10))
+        if decide:
+            self._alloc_hold = 0
+            self._last_nearest = nearest
+            self._last_alive = alive
+        return decide
 
     def episode_q_statistics(self):
         return {"q_tot_mean": float(np.mean(self.q_tot)) if self.q_tot else None,
