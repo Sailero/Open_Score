@@ -10,6 +10,7 @@ import math
 import os
 from pathlib import Path
 import threading
+import time
 
 VERSION = "crossscale_v3"
 # The formal training run of this version. v2 called it "stage3" after a
@@ -68,7 +69,19 @@ def _locked_file(path, *, create=False):
             stream.seek(0)
             if os.name == "nt":
                 import msvcrt
-                msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
+                # LK_LOCK can raise errno 36 (deadlock avoided) when DCG,
+                # SPECTra and the parent status loop contend for one byte.
+                deadline = time.monotonic() + 30
+                delay = 0.02
+                while True:
+                    try:
+                        msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
+                        break
+                    except OSError as error:
+                        if getattr(error, "errno", None) not in (11, 13, 36) or time.monotonic() >= deadline:
+                            raise
+                        time.sleep(delay)
+                        delay = min(delay * 2, 0.5)
             else:
                 import fcntl
                 fcntl.flock(stream.fileno(), fcntl.LOCK_EX)

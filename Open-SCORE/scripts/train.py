@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 from collections import deque
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 import json
 from multiprocessing import get_context
 import os
@@ -25,7 +25,12 @@ from open_score.utils.logging import DEFAULT_OUTPUT, FORMAL_RUN
 
 BASELINE_METHODS = METHODS[:3]
 MAIN_METHODS = ("dcg", "spectra")
-METHOD_GROUPS = {"baseline": BASELINE_METHODS, "main": MAIN_METHODS, "alma": ("alma",)}
+METHOD_GROUPS = {
+    "baseline": BASELINE_METHODS,
+    "main": MAIN_METHODS,
+    "alma": ("alma",),
+    "dcg_alma": ("dcg", "alma"),
+}
 FORMAL_METHODS = BASELINE_METHODS
 FORMAL_SEEDS = (0, 1, 2)
 MAX_CONCURRENT = 3
@@ -99,6 +104,76 @@ def _rewrite_block(lines, previous, use_ansi):
     return len(lines)
 
 
+class _JobAlreadyRunning(RuntimeError):
+    pass
+
+
+@contextmanager
+def _exclusive_job(method, run, seed):
+    """One live trainer per method/run/seed; a second copy must not write the same files."""
+    if os.name != "nt":
+        yield
+        return
+    import ctypes
+    from ctypes import wintypes
+    api = ctypes.WinDLL("kernel32", use_last_error=True)
+    api.CreateMutexW.argtypes = (ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR)
+    api.CreateMutexW.restype = wintypes.HANDLE
+    api.WaitForSingleObject.argtypes = (wintypes.HANDLE, wintypes.DWORD)
+    api.WaitForSingleObject.restype = wintypes.DWORD
+    api.ReleaseMutex.argtypes = (wintypes.HANDLE,)
+    api.CloseHandle.argtypes = (wintypes.HANDLE,)
+    handle = api.CreateMutexW(None, False, f"Local\\OpenScoreJob_{method}_{run}_{int(seed)}")
+    if not handle:
+        raise ctypes.WinError(ctypes.get_last_error())
+    acquired = False
+    try:
+        if api.WaitForSingleObject(handle, 0) not in (0, 0x80):
+            raise _JobAlreadyRunning(f"{method} [{run} seed={seed}] is already running")
+        acquired = True
+        yield
+    finally:
+        if acquired:
+            api.ReleaseMutex(handle)
+        api.CloseHandle(handle)
+
+
+def _flag(command, name):
+    parts = (command or "").split()
+    token = f"--{name}"
+    if token not in parts:
+        return None
+    index = parts.index(token)
+    if index + 1 >= len(parts):
+        return None
+    return parts[index + 1]
+
+
+def _occupied_train_jobs():
+    """Seeds already owned by another train.py, including jobs started before the mutex."""
+    occupied = set()
+    try:
+        import subprocess
+        completed = subprocess.run(
+            ["powershell", "-NoProfile", "-Command",
+             "Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | "
+             "Where-Object { $_.CommandLine -match 'train.py' } | "
+             "ForEach-Object { \"$($_.ProcessId)`t$($_.CommandLine)\" }"],
+            capture_output=True, text=True, timeout=20)
+    except Exception:
+        return occupied
+    mine = {str(os.getpid())}
+    for line in completed.stdout.splitlines():
+        pid, _, command = line.partition("\t")
+        if pid in mine or "train.py" not in command:
+            continue
+        method, seed = _flag(command, "method"), _flag(command, "seed")
+        if method is None or seed is None:
+            continue
+        occupied.add((method, _flag(command, "run") or FORMAL_RUN, int(seed)))
+    return occupied
+
+
 def _job_entry(method, options, stop_event, results):
     from open_score.algos import train
     directory = Path(options["output"]) / method / options["run"] / f"seed_{options['seed']}"
@@ -106,9 +181,14 @@ def _job_entry(method, options, stop_event, results):
     with (directory / "console.log").open("a", encoding="utf-8", buffering=1) as log:
         with redirect_stdout(log), redirect_stderr(log):
             try:
-                result = train(method, {**options, "_stop_event": stop_event})
+                with _exclusive_job(method, options["run"], options["seed"]):
+                    result = train(method, {**options, "_stop_event": stop_event})
                 results.put(dict(method=method, run=options["run"], seed=options["seed"],
                                  status="stopped" if stop_event.is_set() else "completed", checkpoint=result))
+            except _JobAlreadyRunning as error:
+                print(error, flush=True)
+                results.put(dict(method=method, run=options["run"], seed=options["seed"],
+                                 status="skipped", error=str(error)))
             except BaseException:
                 detail = traceback.format_exc()
                 print(detail, flush=True)
@@ -133,12 +213,17 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
         raise ValueError("Concurrent experiment tasks must be between 1 and 4")
     pending_jobs = []
     latest = read_latest(output, "progress")
+    occupied = _occupied_train_jobs()
     for method, options in jobs:
         options = dict(options)
         directory = Path(output) / method / options["run"] / f"seed_{options['seed']}"
         row = latest.get((method, options["run"], options["seed"]), {})
         if row.get("status") in ("completed", "complete") and any((directory / name).exists() for name in ("final.pt", "best.pt")):
             print(f"{method} [{options['run']} seed={options['seed']}] already done", flush=True)
+            continue
+        key = (method, options["run"], options["seed"])
+        if key in occupied:
+            print(f"{method} [{options['run']} seed={options['seed']}] already running; skip duplicate", flush=True)
             continue
         if options.get("resume"):
             saved_config = directory / "config.json"
@@ -257,8 +342,8 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
             if now - last_report >= 300:
                 try:
                     refresh_report(output, run=report_run)
-                except MemoryError:
-                    print("report refresh skipped: MemoryError", flush=True)
+                except (MemoryError, TimeoutError, OSError) as error:
+                    print(f"report refresh skipped: {type(error).__name__}", flush=True)
                 last_report = now
             for item in live:
                 item["child"].join(timeout=0.2)
@@ -271,8 +356,8 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
                         for item in finished if item["child"].exitcode and item["child"].pid not in abnormal_exits)
         try:
             refresh_report(output, run=report_run)
-        except MemoryError:
-            print("report refresh skipped: MemoryError", flush=True)
+        except (MemoryError, TimeoutError, OSError) as error:
+            print(f"report refresh skipped: {type(error).__name__}", flush=True)
         if failures:
             raise RuntimeError("\n".join(item["error"] for item in failures))
         expected = len(finished) if stop_event.is_set() else pool
@@ -419,7 +504,7 @@ def parser():
     result.add_argument("--stage", choices=("validate", "e0", "benchmark", "train", "single", "stop"), required=True)
     result.add_argument("--method", choices=METHODS)
     result.add_argument("--group", choices=tuple(METHOD_GROUPS), default="main",
-                        help="train pool: main=DCG/SPECTra, baseline=B0/B2/REFIL, alma=ALMA")
+                        help="train pool: main=DCG/SPECTra, baseline=B0/B2/REFIL, alma=ALMA, dcg_alma=DCG/ALMA")
     result.add_argument("--steps", type=int)
     result.add_argument("--batch-size-run", type=int, choices=(4, 8), default=4)
     result.add_argument("--seed", type=int, default=0)

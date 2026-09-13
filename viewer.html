@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <title>HAD · 多智能体评估工作台</title>
+  <title>Open-SCORE · 模型评估</title>
   <style>
     :root { --bg:#0c1320; --panel:#141e2e; --line:#2a384d; --ink:#eef3fb; --muted:#a8b7cb; --blue:#90baff; --red:#ff929a; --green:#70d5b3; --yellow:#edcb80; }
     * { box-sizing:border-box; }
@@ -143,56 +143,101 @@
     .comparison-note { padding:12px 16px; color:var(--muted); font-size:11px; }
     .method-note { margin:14px 0 0; padding-top:12px; border-top:1px solid var(--line); }
     .run-context { color:var(--muted); font-size:11px; overflow-wrap:anywhere; margin-top:10px; }
+    .button-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .button-row button { flex:1; padding:6px 9px; font-size:12px; }
+    .checkpoint-filters { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .checkpoint-info { white-space:pre-line; color:var(--muted); font-size:11px; overflow-wrap:anywhere; }
+    .checkpoint-info.invalid { color:var(--yellow); }
+    .queue-panel { margin-top:16px; padding-top:13px; border-top:1px solid var(--line); }
+    .queue-items { display:grid; gap:8px; margin-top:10px; padding:0; list-style:none; }
+    .queue-items li { padding:8px; border:1px solid var(--line); border-radius:6px; font-size:11px; overflow-wrap:anywhere; }
+    .queue-items li strong { display:block; font-weight:500; }
+    .queue-items button { padding:2px 8px; margin-top:5px; font-size:11px; }
+    .comparison-chart { padding:16px; display:grid; gap:14px; }
+    .comparison-chart-row { display:grid; gap:5px; font-size:12px; }
+    .comparison-chart-row small { display:block; color:var(--muted); }
+    .comparison-chart-value { display:grid; grid-template-columns:1fr 70px; align-items:center; gap:12px; }
+    .comparison-chart-value .bar-track { height:12px; }
+    .comparison-chart-value strong { text-align:right; font-variant-numeric:tabular-nums; }
+    .comparison-tools { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 16px 0; }
+    .comparison-tools label { margin:0; }
+    .comparison-tools select { width:auto; max-width:100%; }
+    td .button-row { margin:0; }
     @media (max-width:1160px) { .workspace { grid-template-columns:240px minmax(0,1fr); gap:16px; } .scene-grid { grid-template-columns:minmax(0,1fr); } .scene-side { grid-template-columns:1fr 1fr; } .stage { height:clamp(340px,calc(100vh - 360px),500px); } .live-metrics { gap:8px; } .target-rows { margin-top:8px; } }
     @media (max-width:800px) { .shell { padding:18px 14px; } .masthead { align-items:flex-start; gap:10px; } h1 { font-size:20px; } .workspace { grid-template-columns:1fr; } .workspace > section:first-child { grid-row:auto; } .results-area { grid-column:auto; } .form-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } .form-grid .full { grid-column:span 2; } .form-section { grid-column:1/-1; } .subtitle { font-size:12px; } .card-body { padding:16px; } }
     @media (max-width:560px) { .metrics,.scene-side { grid-template-columns:1fr; } .form-grid { grid-template-columns:1fr 1fr; } .form-grid .full { grid-column:1/-1; } .playback-row { flex-wrap:wrap; } .playback-row #episode { flex-basis:100%; } .stage { height:330px; } .scene-grid { padding:10px; } .section-id { display:none; } .switches { gap:10px; } }
     @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
+    .workspace { grid-template-columns:300px minmax(0,1fr); gap:18px; }
+    .shell { max-width:1440px; padding:18px 24px; }
+    .card-body { padding:16px; }
+    .scene-grid { grid-template-columns:minmax(0,1fr) 215px; gap:12px; }
+    .stage { height:clamp(320px,calc(100vh - 350px),490px); }
+    .metrics { grid-template-columns:1fr; }
+    .primary { margin-top:16px; }
+    .job-panel { margin:14px 0 0; padding-bottom:0; border-bottom:0; }
+    .settings-details { border-top:1px solid var(--line); padding-top:12px; margin-top:4px; }
+    .settings-details > .form-grid { margin-top:12px; }
+    .model-register { border-top:1px solid var(--line); padding-top:12px; }
+    .model-register h3 { margin-bottom:8px; }
+    .compact-details { margin-top:12px; }
+    .checkpoint-details { margin-top:8px; }
+    .checkpoint-details > .checkpoint-filters { margin:10px 0; }
+    .checkpoint-error { color:var(--yellow); margin:0; }
+    .distribution-details { border-top:1px solid var(--line); padding-top:16px; margin-top:16px; }
+    .comparison-history { padding:0 16px 14px; }
+    .comparison-history > .comparison-scroll { margin-top:10px; }
+    .comparison-note { padding:10px 0 0; }
+    #red_model_fields label { font-size:12px; }
+    #red_checkpoint { font-size:12px; }
+    .model-count { color:var(--muted); font-size:11px; margin-top:5px; }
+    @media (max-width:1100px) { .scene-grid { grid-template-columns:minmax(0,1fr); } .scene-side { grid-template-columns:1fr; } .scene-side .live-metrics { margin-top:6px; } }
+    @media (max-width:800px) { .shell { padding:14px; } .workspace { grid-template-columns:1fr; } .form-grid { grid-template-columns:1fr 1fr; } .form-grid .full { grid-column:1/-1; } }
   </style>
 </head>
 <body>
   <main class="shell">
     <header class="masthead">
-      <div><div class="eyebrow">OPEN-SCORE / MULTI-AGENT EVALUATION</div><h1>HAD 多智能体评估工作台</h1><p class="subtitle">红蓝策略配置 · 任务回放 · 同条件算法对比</p></div>
+      <div><h1>Open-SCORE 模型评估</h1></div>
       <span class="badge" id="jobBadge">待开始</span>
     </header>
     <div id="notice" class="notice" role="status" hidden></div>
     <div class="workspace">
       <section class="card" aria-labelledby="configTitle">
-        <div class="card-head"><h2 id="configTitle">评估配置</h2><span class="section-id">01 / SETUP</span></div>
+        <div class="card-head"><h2 id="configTitle">评估配置</h2></div>
         <div class="card-body">
-          <button class="primary" id="run" type="submit" form="runForm" disabled>开始评估</button>
+          <form id="runForm">
+            <fieldset id="settings"><div class="form-grid">
+              <div class="full"><label for="red_algorithm">红方算法 / 模型</label><select id="red_algorithm"><option value="checkpoint:">训练模型（正在读取目录…）</option></select><select id="red_architecture" hidden><option value="checkpoint" selected>训练模型</option><option value="end_to_end">动作策略</option><option value="hierarchical">分层规则</option></select></div>
+              <div class="full" id="red_model_fields"><label for="red_checkpoint">模型权重</label><select id="red_checkpoint" disabled><option>正在连接服务，读取模型…</option></select></div>
+              <p class="hint full checkpoint-error" id="checkpointError" role="alert" hidden></p>
+              <div class="full"><label for="blue_algorithm">蓝方对手</label><select id="blue_algorithm"><option value="hierarchical">分层规则</option></select><select id="blue_architecture" hidden><option value="end_to_end">动作策略</option><option value="hierarchical" selected>分层规则</option></select></div>
+              <div><label for="red">红方数量</label><input id="red" type="number" min="1" max="40" step="1" value="8" required></div>
+              <div><label for="blue">蓝方数量</label><input id="blue" type="number" min="1" max="40" step="1" value="8" required></div>
+              <div><label for="targets">目标数 K</label><select id="targets"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>
+              <div><label for="stats">评估局数</label><input id="stats" type="number" min="1" max="400" step="1" value="100" required></div>
+              <details class="full settings-details" id="advancedSettings"><summary>更多设置</summary><div class="form-grid">
+                <div class="full"><label for="task_mode">任务</label><select id="task_mode"><option value="damage">累计伤害</option><option value="survival">目标生存</option></select></div>
+                <div><label for="spatial_dim">空间维度</label><select id="spatial_dim"><option value="2">二维</option><option value="3">三维</option></select></div>
+                <div><label for="target_initialization">目标初始化</label><select id="target_initialization"><option value="random">随机</option><option value="fixed">固定</option></select></div>
+                <div class="full"><label for="scalePreset">规模预设</label><select id="scalePreset"><option value="">自定义规模</option></select></div>
+                <div><label for="max_steps">步数上限</label><input id="max_steps" type="number" min="1" max="500" step="1" value="100" required></div>
+                <div><label for="target_health">目标血量</label><input id="target_health" type="number" min="0.000001" step="any" value="2" required></div>
+                <div><label for="seed0">起始种子</label><input id="seed0" type="number" min="0" max="9007199254740591" step="1" value="0" required></div>
+                <div><label for="display">保存回放局数</label><input id="display" type="number" min="0" max="20" step="1" value="5" required></div>
+                <div class="full" id="red_rule_settings"><h3>红方策略细选</h3><div class="strategy-layers" id="red_strategy_layers"></div></div>
+                <div class="full"><h3>蓝方策略细选</h3><div class="strategy-layers" id="blue_strategy_layers"></div></div>
+                <div class="full model-register"><h3>添加本地模型</h3><label for="checkpointPath">权重路径</label><input id="checkpointPath" type="text" placeholder="experiments/…/best.pt"><label for="checkpointMethod">算法类型</label><select id="checkpointMethod"><option value="">自动识别</option></select><div class="button-row"><button id="registerCheckpoint" type="button">添加模型</button><button id="refreshCheckpoints" type="button">刷新目录</button></div><p class="hint" id="checkpointCatalogHint" role="status"></p></div>
+              </div></details>
+            </div></fieldset>
+            <button class="primary" id="run" type="submit" disabled>开始评估</button>
+          </form>
           <div class="job-panel">
             <div class="progress-heading"><span id="status" role="status" aria-live="polite">正在连接本地服务…</span><span id="progressCount">0 / 0</span></div>
             <progress id="progress" max="1" value="0" aria-label="已完成评估局数"></progress>
-            <div class="timing"><div>已用时间<strong id="elapsed">—</strong></div><div>预计剩余<strong id="eta">—</strong></div></div>
-            <p class="hint" id="progressHint">每局完成后更新进度，已保存的局可立即回放。</p>
-            <button id="retry" type="button" hidden>重新连接</button>
+            <div class="timing"><div>已用<strong id="elapsed">—</strong></div><div>预计剩余<strong id="eta">—</strong></div></div>
+            <p class="hint" id="progressHint" hidden></p><button id="retry" type="button" hidden>重新连接</button>
           </div>
-          <form id="runForm">
-            <fieldset id="settings"><div class="form-grid">
-              <div class="form-section">任务定义</div>
-              <div class="full"><label for="task_mode">任务类型</label><select id="task_mode"><option value="damage">累计伤害 · 零和回报</option><option value="survival">目标生存 · 胜负判定</option></select></div>
-              <div class="full"><label for="spatial_dim">空间维度</label><select id="spatial_dim"><option value="2">二维平面 · 9 个动作</option><option value="3">三维空间 · 27 个动作</option></select></div>
-              <div class="full"><label for="target_initialization">目标初始化</label><select id="target_initialization"><option value="random">随机目标（训练默认）</option><option value="fixed">固定目标（对比布局）</option></select></div>
-              <p class="hint full" id="targetInitHint">随机模式每局按区域重新采样；固定模式保持目标坐标不变。</p>
-              <div class="full"><label for="targets">目标数量 K</label><select id="targets"><option value="1">1 个目标</option><option value="2" selected>2 个目标</option><option value="3">3 个目标</option></select></div>
-              <div><label for="red">红方规模</label><input id="red" type="number" min="1" max="32" step="1" value="8" required></div>
-              <div><label for="blue">蓝方规模</label><input id="blue" type="number" min="1" max="32" step="1" value="8" required></div>
-              <div><label for="max_steps">对局步数上限</label><input id="max_steps" type="number" min="1" max="500" step="1" value="100" required></div>
-              <div><label for="target_health">目标初始血量</label><input id="target_health" type="number" min="0.000001" step="any" value="2" required></div>
-              <p class="hint full" id="taskHint">目标持续承受伤害且不会消亡。每步新增伤害计入回报：红方 −伤害，蓝方 +伤害。</p>
-              <div class="form-section">策略接口</div>
-              <div class="full strategy-card"><h3>红方策略</h3><label for="red_architecture">策略架构</label><select id="red_architecture"><option value="end_to_end">端到端</option><option value="hierarchical" selected>分层</option></select><div class="strategy-layers" id="red_strategy_layers"></div><p class="hint" id="red_strategy_hint"></p></div>
-              <div class="full strategy-card blue-team"><h3>蓝方策略</h3><label for="blue_architecture">策略架构</label><select id="blue_architecture"><option value="end_to_end">端到端</option><option value="hierarchical" selected>分层</option></select><div class="strategy-layers" id="blue_strategy_layers"></div><p class="hint" id="blue_strategy_hint"></p></div>
-              <p class="hint full" id="balanceHint">双方满伤 1 点 · 无人机血量 1 · 目标初始血量 2。</p>
-              <div class="form-section">评估采样</div>
-              <div class="full"><label for="seed0">起始种子 seed0</label><input id="seed0" type="number" min="0" max="9007199254740591" step="1" value="0" required></div>
-              <div><label for="stats">统计局数 S</label><input id="stats" type="number" min="1" max="400" step="1" value="100" required></div>
-              <div><label for="display">回放局数 D</label><input id="display" type="number" min="0" max="20" step="1" value="5" required></div>
-            </div></fieldset>
-            <p class="hint" id="runHint">100 局连续种子；保存前 5 局回放。</p>
-          </form>
-          <details class="method-note"><summary>规则与任务口径</summary><p>nv1：每个物理步按下一步匀速位置 p + v × Δt 重新分组，每个红方负责一个蓝方。红方不足时只覆盖距红方最近的 R 个蓝方。</p><p>累计伤害任务：目标不消亡，不因目标受击提前终止；累计双方回报为 −D / +D。D 是所有目标承受的伤害之和，不以初始血量截断。</p><p>目标生存任务：保留任一目标被摧毁即失守的判定。不同任务的指标分开展示和比较。</p><p>二维环境固定高度。Parallel 训练接口提供 9 个平面动作；回放适配器保持 27 个动作编号，仅选择其中 9 个平面动作。三维环境提供 27 个三维动作。</p><p>回放局数只控制轨迹记录量，不改变统计样本；界面只列出后端已注册的可执行策略。</p></details>
+          <details class="queue-panel"><summary>批量对比队列</summary><div class="button-row"><button id="addQueue" type="button" disabled>加入当前配置</button><button id="runQueue" type="button" disabled>运行队列</button></div><div class="button-row"><button id="stopQueue" type="button" hidden>停止后续排队</button><button id="clearQueue" type="button" disabled>清空队列</button></div><p class="hint" id="queueProgress" role="status" aria-live="polite">队列为空。</p><ol id="queueItems" class="queue-items"></ol></details>
         </div>
       </section>
       <section class="card" aria-labelledby="replayTitle">
@@ -204,8 +249,7 @@
           </div></div>
           <div class="scene-side">
             <div class="plot" id="altitudePlot" hidden><div class="plot-title">XZ 高度投影<span>等比例坐标 · m</span></div><canvas id="altitude" width="320" height="190" role="img" aria-label="XZ 高度投影，Z 轴向上，单位米"></canvas></div>
-            <div class="live-state" id="planeNote"><h3>二维平面</h3><p class="hint" id="planeDescription">固定高度 · 9 个平面动作<br>平面坐标等比例，缩放不改变物理距离。</p></div>
-            <div class="live-state"><h3 id="liveTitle">当前帧状态</h3><div class="live-metrics"><div><span id="liveDamageLabel">目标累计伤害</span><strong id="liveDamage">—</strong></div><div><span>存活 · 红 / 蓝</span><strong id="liveAlive">— / —</strong></div><div><span>红方累计回报</span><strong id="liveRedReturn" class="red-ink">—</strong></div><div><span>蓝方累计回报</span><strong id="liveBlueReturn" class="blue-ink">—</strong></div></div><div class="target-rows" id="targetStates">目标状态随回放更新。</div></div>
+            <div class="live-state"><h3 id="liveTitle">当前帧状态</h3><div class="live-metrics"><div><span id="liveDamageLabel">目标累计伤害</span><strong id="liveDamage">—</strong></div><div><span>存活 · 红 / 蓝</span><strong id="liveAlive">— / —</strong></div></div><details class="compact-details"><summary>目标 / 回报详情</summary><div class="live-metrics"><div><span>红方累计回报</span><strong id="liveRedReturn" class="red-ink">—</strong></div><div><span>蓝方累计回报</span><strong id="liveBlueReturn" class="blue-ink">—</strong></div></div><div class="target-rows" id="targetStates">目标状态随回放更新。</div></details></div>
           </div>
         </div>
         <div class="view-note"><div class="switches"><label><input type="checkbox" id="showAssignments" checked>拦截连线</label><label><input type="checkbox" id="showTrails">近期轨迹</label><label><input type="checkbox" id="showLabels" checked>实体编号</label></div><span id="replayStatus">尚无回放</span></div>
@@ -218,7 +262,7 @@
           </div>
           <div class="scrubber"><input id="slider" type="range" min="0" max="0" value="0" aria-label="回放帧" disabled><span id="frameCount">— / —</span></div>
           <div id="frameInfo">拖动进度条定位；播放速度只影响回放。</div>
-          <div class="run-context" id="runContext">选择任务与策略后开始评估。</div>
+          <details class="compact-details"><summary>当前任务配置</summary><div class="run-context" id="runContext">选择模型后开始评估。</div></details>
         </div>
       </section>
       <div class="results-area"><div class="metrics">
@@ -227,7 +271,7 @@
           <div class="card-body" id="summary">
             <h3 id="metricLabel">平均目标累计伤害 ↓</h3><div class="metric-primary"><strong id="winRate">—</strong><span id="sampleCount">0 局完成</span></div>
             <div id="confidence">所有目标伤害之和 · 等待结果</div>
-            <div id="damageReturns" class="return-pair"><div><span>红方平均回报</span><strong id="redReturn" class="red-ink">—</strong></div><div><span>蓝方平均回报</span><strong id="blueReturn" class="blue-ink">—</strong></div></div>
+            <details class="compact-details"><summary>统计详情</summary><div id="damageReturns" class="return-pair"><div><span>红方平均回报</span><strong id="redReturn" class="red-ink">—</strong></div><div><span>蓝方平均回报</span><strong id="blueReturn" class="blue-ink">—</strong></div></div>
             <div class="outcomes" id="survivalOutcomes" aria-label="终局结果分布" hidden>
               <div class="bar-row"><span>红胜</span><div class="bar-track"><div id="winsBar" class="bar-fill"></div></div><span id="winsValue" class="bar-value">—</span></div>
               <div class="bar-row"><span>失守</span><div class="bar-track"><div id="lossBar" class="bar-fill loss"></div></div><span id="lossValue" class="bar-value">—</span></div>
@@ -238,20 +282,34 @@
               <div><dt>边界裁剪率</dt><dd id="clipRate">—</dd></div><div><dt>平均对局步数</dt><dd id="meanSteps">—</dd></div>
               <div><dt id="terminalLabel">到达时限 / 蓝方耗尽</dt><dd id="terminalCounts">—</dd></div><div id="zeroDamageRow"><dt>零伤害对局</dt><dd id="zeroDamage">—</dd></div>
             </dl>
+          <div class="distribution-details"><h3 id="histTitle">对局伤害分布</h3><span class="muted" id="histUnit">横轴：累计伤害</span><div id="histogram" class="histogram" hidden></div><p id="histHint" class="muted">完成评估后显示。</p><div id="targetDamagePanel" class="details"><h3>逐目标平均伤害</h3><div id="targetDamageBars" class="outcomes"></div><p id="targetDamageHint" class="muted">等待统计。</p></div></div></details>
           </div>
         </section>
-        <section class="card" aria-labelledby="histTitle"><div class="card-head"><h2 id="histTitle">对局伤害分布</h2><span class="muted" id="histUnit">横轴：累计伤害</span></div><div class="card-body"><div id="histogram" class="histogram" hidden></div><p id="histHint" class="muted">完成评估后显示各局累计伤害的分布。</p><div id="targetDamagePanel" class="details"><h3>逐目标平均伤害</h3><div id="targetDamageBars" class="outcomes"></div><p id="targetDamageHint" class="muted">等待逐目标统计。</p></div></div></section>
-      </div><section class="card" aria-labelledby="comparisonTitle"><div class="card-head"><h2 id="comparisonTitle">策略对比</h2><span class="section-id">已完成评估 · 当前会话</span></div><div class="comparison-scroll"><table><thead><tr><th>红方 / 蓝方策略</th><th>任务 / 条件</th><th>样本</th><th>平均伤害</th><th>红 / 蓝回报</th><th>任务指标</th><th>可比性</th></tr></thead><tbody id="comparisonRows"></tbody></table></div><p class="comparison-note" id="comparisonHint">完成评估后自动加入。相同任务、种子、规模、时限和目标血量的任务可直接比较。</p></section></div>
+      </div><section class="card" aria-labelledby="comparisonTitle"><div class="card-head"><h2 id="comparisonTitle">策略对比</h2><span class="section-id">完整任务 · 当前会话</span></div><div class="comparison-tools"><label for="comparisonScope">图表范围</label><select id="comparisonScope"><option value="opponent">同条件、同蓝方策略</option><option value="scenario">同场景（允许不同蓝方策略）</option></select></div><div id="comparisonChart" class="comparison-chart" role="img" aria-label="完整任务算法指标比较"></div><details class="comparison-history"><summary>历史结果与回放</summary><div class="comparison-scroll"><table><thead><tr><th>红方 / 蓝方策略</th><th>任务 / 条件</th><th>样本</th><th>平均伤害</th><th>红 / 蓝回报</th><th>任务指标</th><th>可比性</th><th>历史任务</th></tr></thead><tbody id="comparisonRows"></tbody></table></div><p class="comparison-note" id="comparisonHint">完整评估后自动加入。</p></details></section></div>
     </div>
-    <footer>HAD ENVIRONMENT · 原生实体符号 / 等比例投影 · 所有图表均来自实际评估记录</footer>
   </main>
 <script>
 'use strict';
 let job = null, episode = null, playing = false, timer = null, meta = null;
 let pollTimer = null, jobConfig = null, running = false, startedAt = null, elapsedBase = 0, elapsedAnchor = 0;
 let episodeRequest = 0, records = [], loadedIndex = null, pollFailures = 0, submissionUnconfirmed = false;
+let evaluationQueue = [], queueActive = false, queueCurrent = null, queueSerial = 0, queueMessage = '';
 const episodeCache = new Map();
 const $ = id => document.getElementById(id);
+const methodNames = {b0_qmix:'QMIX-Base',b2_qmix_atten:'QMIX-Atten',alma:'ALMA'};
+const blueGroupingNames = {reactive:'自适应集火单目标（训练）',concentrated:'集火最近目标',balanced:'均分攻击多目标'};
+function displayMetadata(data) {
+  // Display-only names also apply when refreshing an already-running API 5 server.
+  Object.assign(data.methods || (data.methods={}),methodNames);
+  const blue=data.strategy_catalog?.blue;
+  if (blue?.end_to_end?.policies?.nearest_target) blue.end_to_end.policies.nearest_target='各自冲最近目标';
+  const grouping=blue?.hierarchical?.layers?.find(layer=>layer.id==='grouping');
+  if (grouping) for (const key of Object.keys(grouping.policies)) {
+    if (blueGroupingNames[key]) grouping.policies[key]=blueGroupingNames[key];
+  }
+  for (const item of data.checkpoints || []) if (methodNames[item.method]) item.method_label=methodNames[item.method];
+  return data;
+}
 const numericFields = ['targets','red','blue','seed0','display','stats','max_steps','target_health','spatial_dim'];
 const fields = [...numericFields,'task_mode','target_initialization'];
 const storageKey = 'open-score-viewer-job';
@@ -263,7 +321,7 @@ const number = (v, digits = 2) => finite(v) ? Number(v).toFixed(digits) : '—';
 const percent = (v, digits = 1) => finite(v) ? `${(Number(v) * 100).toFixed(digits)}%` : '—';
 const modeOf = source => source?.task_mode || jobConfig?.task_mode || 'survival';
 const dimensionOf = source => Number(source?.spatial_dim ?? jobConfig?.spatial_dim ?? (source || jobConfig ? 3 : $('spatial_dim').value || 2));
-const compatibleAPI = () => Number(meta?.viewer_api) >= 4;
+const compatibleAPI = () => Number(meta?.viewer_api) >= 5;
 const duration = seconds => {
   if (seconds === null || seconds === undefined || !Number.isFinite(Number(seconds))) return '—';
   const total = Math.max(0, Math.round(Number(seconds)));
@@ -276,7 +334,12 @@ function status(message, state = '') {
   $('jobBadge').dataset.state = state;
   $('jobBadge').textContent = ({running:'运行中',complete:'已完成',error:'需处理'})[state] || '待运行';
 }
-function lockSettings(value) { running = value; $('settings').disabled = value; $('run').disabled = value || !compatibleAPI(); $('run').textContent = value ? '评估运行中…' : '开始评估'; }
+function lockSettings(value) {
+  running = value; $('settings').disabled = value || queueActive;
+  $('run').disabled = value || queueActive || submissionUnconfirmed || !compatibleAPI();
+  $('run').textContent = value ? '评估运行中…' : '开始评估'; renderQueue();
+  document.querySelectorAll('[data-history-action]').forEach(button=>button.disabled=value || queueActive || submissionUnconfirmed);
+}
 function saveJob() {
   try { sessionStorage.setItem(storageKey, JSON.stringify({job,config:jobConfig,startedAt})); } catch (_) {}
   const url = new URL(location.href); url.searchParams.set('job', job); history.replaceState(null, '', url);
@@ -305,12 +368,130 @@ async function request(url, options = {}) {
 }
 function strategyFromForm(side) {
   const architecture = $(`${side}_architecture`).value;
+  if (architecture === 'checkpoint') return {architecture,checkpoint:$(`${side}_checkpoint`)?.value || ''};
   if (architecture === 'end_to_end') return {architecture,policy:$(`${side}_action_policy`)?.value || ''};
   const layers = Object.fromEntries(Array.from($(`${side}_strategy_layers`).querySelectorAll('select[data-layer]')).map(select => [select.dataset.layer,select.value]));
   return {architecture,layers};
 }
+function checkpointText(checkpoint) {
+  if (!checkpoint) return '权重未登记';
+  const label=methodNames[checkpoint.method]
+    ? `${methodNames[checkpoint.method]} · ${checkpoint.version} / ${checkpoint.run} · seed ${checkpoint.seed ?? '未知'} · ${checkpoint.kind}`
+    : checkpoint.label || checkpoint.path || checkpoint.id;
+  return label + (finite(checkpoint.training_steps) && !String(label).includes('步') ? ` · ${Number(checkpoint.training_steps).toLocaleString()} 训练步` : '');
+}
+function checkpointOptionText(item) {
+  const kind=({best:'best',final:'final',latest:'latest'})[item.kind] || item.kind || '';
+  return `${methodNames[item.method] || item.method_label || item.method} · ${item.version || '自定义'} · ${item.run || ''} · s${item.seed ?? '?'} · ${kind}`;
+}
+function renderCheckpoint(spec = null) {
+  const container=$('red_model_fields'); container.replaceChildren(); container.hidden=false;
+  $('red_strategy_layers').replaceChildren(); $('red_rule_settings').hidden=true;
+  const label=document.createElement('label'), select=document.createElement('select');
+  label.htmlFor='red_checkpoint'; label.textContent='模型权重'; select.id='red_checkpoint'; select.required=true;
+  select.addEventListener('change',()=>{ syncAlgorithmChoice('red'); updateHint(); });
+  const details=document.createElement('details'), summary=document.createElement('summary'), filters=document.createElement('div');
+  details.className='checkpoint-details'; summary.textContent='筛选 / 模型详情'; filters.className='checkpoint-filters';
+  const checkpoints=meta?.checkpoints || [];
+  for (const [key,title] of [['version','版本'],['method','算法'],['seed','种子'],['kind','权重类型']]) {
+    const field=document.createElement('div'), filterLabel=document.createElement('label'), filter=document.createElement('select');
+    filter.id=`checkpointFilter_${key}`; filterLabel.htmlFor=filter.id; filterLabel.textContent=title;
+    filter.append(new Option('全部',''));
+    const values=[...new Set(checkpoints.filter(item=>item.available).map(item=>item[key]).filter(value=>value!==null && value!==undefined).map(String))];
+    values.sort((a,b)=>a.localeCompare(b,'zh-CN',{numeric:true})).forEach(value=>filter.append(new Option(key==='method' ? meta?.methods?.[value] || value : value,value)));
+    filter.addEventListener('change',()=>{ populateCheckpointOptions(); syncAlgorithmChoice('red'); }); field.append(filterLabel,filter); filters.append(field);
+  }
+  const info=document.createElement('div'); info.id='checkpointInfo'; info.className='checkpoint-info';
+  const count=document.createElement('div'); count.id='checkpointCount'; count.className='model-count';
+  details.append(summary,filters,info); container.append(label,select,count,details);
+  const selected=checkpoints.find(item=>item.id===spec?.checkpoint);
+  $('checkpointFilter_method').value=spec?.filterMethod ?? selected?.method ?? '';
+  populateCheckpointOptions(spec?.checkpoint);
+}
+function populateCheckpointOptions(preferred = null) {
+  const select=$('red_checkpoint'); if (!select || !$('checkpointFilter_method')) return;
+  const previous=preferred ?? select.value;
+  const checkpoints=meta?.checkpoints || [];
+  const visible=checkpoints.filter(item=>item.available && ['version','method','seed','kind'].every(key=>{
+    const value=$(`checkpointFilter_${key}`).value; return !value || String(item[key])===value;
+  }));
+  select.replaceChildren(...visible.map(item=>new Option(checkpointOptionText(item),item.id)));
+  if (visible.some(item=>item.id===previous)) select.value=previous;
+  else if (preferred) {
+    const missing=checkpoints.find(item=>item.id===preferred);
+    select.append(new Option(missing ? `[不可用] ${checkpointOptionText(missing)}` : `[目录中不存在] ${preferred}`,preferred)); select.value=preferred;
+  }
+  else if (visible.length) select.value=visible[0].id;
+  else select.append(new Option(compatibleAPI() ? '没有匹配的可用模型' : '旧版服务未提供模型目录',''));
+  $('checkpointCount').textContent=`${visible.length} 个可用权重`;
+  updateHint();
+}
+function syncAlgorithmChoice(side) {
+  const spec=strategyFromForm(side), select=$(`${side}_algorithm`);
+  const checkpoint=side==='red' && (meta?.checkpoints || []).find(item=>item.id===spec.checkpoint);
+  const value=spec.architecture==='checkpoint' ? `checkpoint:${checkpoint?.method || $('checkpointFilter_method')?.value || ''}` : spec.architecture==='end_to_end' ? `policy:${spec.policy}` : side==='blue' ? `grouping:${spec.layers?.grouping}` : 'hierarchical';
+  if (Array.from(select.options).some(option=>option.value===value)) select.value=value;
+  else if (spec.architecture==='checkpoint') select.value='checkpoint:';
+}
+function populateAlgorithmChoices(side) {
+  const select=$(`${side}_algorithm`), catalog=meta?.strategy_catalog?.[side] || {}, options=[];
+  if (side==='red') {
+    options.push(new Option(compatibleAPI() ? '全部训练模型' : '训练模型（旧服务不支持）','checkpoint:'));
+    const methods=[...new Set((meta?.checkpoints || []).filter(item=>item.available).map(item=>item.method))];
+    methods.forEach(method=>options.push(new Option(meta?.methods?.[method] || method,`checkpoint:${method}`)));
+  }
+  for (const [key,label] of Object.entries(catalog.end_to_end?.policies || {})) options.push(new Option(label,`policy:${key}`));
+  if (catalog.hierarchical) {
+    if (side==='blue') {
+      const grouping=catalog.hierarchical.layers.find(layer=>layer.id==='grouping');
+      for (const [key,label] of Object.entries(grouping?.policies || {})) options.push(new Option(label,`grouping:${key}`));
+    } else options.push(new Option('分层规则','hierarchical'));
+  }
+  select.replaceChildren(...options);
+}
+function chooseAlgorithm(side) {
+  const value=$(`${side}_algorithm`).value;
+  if (value.startsWith('checkpoint:')) {
+    $(`${side}_architecture`).value='checkpoint'; renderCheckpoint({filterMethod:value.slice('checkpoint:'.length)});
+  } else if (value.startsWith('policy:')) {
+    $(`${side}_architecture`).value='end_to_end'; renderStrategy(side,{policy:value.slice('policy:'.length)});
+  } else if (side==='blue' && value.startsWith('grouping:')) {
+    $(`${side}_architecture`).value='hierarchical';
+    renderStrategy(side,{layers:{grouping:value.slice('grouping:'.length),control:'rush'}});
+  } else {
+    $(`${side}_architecture`).value='hierarchical'; renderStrategy(side,meta?.defaults?.[`${side}_strategy`]);
+  }
+  updateHint();
+}
+function validateCheckpoint(config) {
+  const select=$('red_checkpoint'), info=$('checkpointInfo');
+  $('checkpointError').hidden=true;
+  if (config.red_strategy.architecture!=='checkpoint' || !select) return;
+  const checkpoint=(meta?.checkpoints || []).find(item=>item.id===config.red_strategy.checkpoint);
+  const errors=[];
+  if (!checkpoint) errors.push('请从目录中选择模型，或添加本地模型路径。');
+  else {
+    if (!checkpoint.available) errors.push(checkpoint.reason || '此权重暂不可用。');
+    if (checkpoint.task_mode && config.task_mode!==checkpoint.task_mode) errors.push(`此模型仅支持${checkpoint.task_mode==='damage' ? '累计伤害' : checkpoint.task_mode}任务。`);
+    if (checkpoint.spatial_dim && config.spatial_dim!==Number(checkpoint.spatial_dim)) errors.push(`此模型仅支持 ${checkpoint.spatial_dim}D。`);
+    for (const [key,label] of [['red','红方规模'],['blue','蓝方规模'],['targets','目标数'],['max_steps','对局步数']]) {
+      const limit=checkpoint.limits?.[key];
+      if (finite(limit) && config[key]>Number(limit)) errors.push(`${label} ${config[key]} 超过该模型上限 ${limit}。`);
+    }
+  }
+  select.setCustomValidity(errors.join(' '));
+  $('checkpointError').textContent=errors.join(' '); $('checkpointError').hidden=!errors.length;
+  if (info) {
+    const limits=checkpoint?.limits;
+    const details=checkpoint ? [checkpoint.path,`版本 ${checkpoint.version ?? '自定义'} · 运行 ${checkpoint.run ?? '—'} · 训练种子 ${checkpoint.seed ?? '—'} · ${checkpoint.kind ?? '权重'}`,limits ? `容量 R≤${limits.red ?? '—'} / B≤${limits.blue ?? '—'} / K≤${limits.targets ?? '—'} · 最多 ${limits.max_steps ?? '—'} 步` : ''].filter(Boolean) : [];
+    info.textContent=[...details,...errors].join('\n'); info.classList.toggle('invalid',errors.length>0);
+  }
+
+}
 function renderStrategy(side, spec = null) {
   const architecture = $(`${side}_architecture`).value;
+  if (side==='red') { $('red_model_fields').hidden=architecture!=='checkpoint'; $('red_rule_settings').hidden=architecture==='checkpoint'; if (architecture!=='checkpoint') $('red_model_fields').replaceChildren(); }
+  if (architecture==='checkpoint' && side==='red') { renderCheckpoint(spec); return; }
   const catalog = meta?.strategy_catalog?.[side]?.[architecture];
   const rows = architecture === 'end_to_end' ? [{id:'policy',label:'动作策略',policies:catalog?.policies || {}}] : catalog?.layers || [];
   const container = $(`${side}_strategy_layers`); container.replaceChildren();
@@ -322,19 +503,21 @@ function renderStrategy(side, spec = null) {
     select.replaceChildren(...Object.entries(row.policies).map(([value,text]) => new Option(text,value)));
     const selected = architecture === 'end_to_end' ? spec?.policy : spec?.layers?.[row.id];
     if (selected && Object.hasOwn(row.policies,selected)) select.value = selected;
-    select.addEventListener('change',updateHint); field.append(label,select); container.append(field);
+    select.addEventListener('change',()=>{ syncAlgorithmChoice(side); updateHint(); }); field.append(label,select); container.append(field);
   }
-  $(`${side}_strategy_hint`).textContent = architecture === 'end_to_end'
-    ? '观测直接输出动作。当前提供规则与随机基线，可接入训练后的策略。'
-    : side === 'red' ? '上层每步完成 nv1 分组，下层按一步预测位置控制飞行。' : '上层每 5 步或伤亡时分配目标，下层每步控制飞行。';
+  syncAlgorithmChoice(side);
 }
 function setStrategy(side, spec) {
-  if (!spec || !meta?.strategy_catalog?.[side]?.[spec.architecture]) return;
-  $(`${side}_architecture`).value = spec.architecture; renderStrategy(side,spec);
+  if (!spec || !(meta?.strategy_catalog?.[side]?.[spec.architecture] || (side==='red' && spec.architecture==='checkpoint' && compatibleAPI()))) return;
+  $(`${side}_architecture`).value = spec.architecture; renderStrategy(side,spec); syncAlgorithmChoice(side);
 }
 function strategyText(config, side) {
   const spec = config?.[`${side}_strategy`];
   if (!spec) return '历史记录（未记录架构）';
+  if (spec.architecture==='checkpoint') {
+    const checkpoint=config.model_snapshots?.[side] || (meta?.checkpoints || []).find(item=>item.id===spec.checkpoint);
+    return `训练模型 · ${checkpoint ? checkpointText(checkpoint) : spec.checkpoint}`;
+  }
   const catalog = meta?.strategy_catalog?.[side]?.[spec.architecture];
   if (spec.architecture === 'end_to_end') return `端到端 · ${catalog?.policies?.[spec.policy] || spec.policy}`;
   const labels = Object.entries(spec.layers || {}).map(([id,value]) => catalog?.layers?.find(row=>row.id===id)?.policies?.[value] || value);
@@ -344,7 +527,7 @@ function configFromForm() {
   return {...Object.fromEntries(fields.map(id => [id,numericFields.includes(id) ? Number($(id).value) : $(id).value])),
     red_strategy:strategyFromForm('red'),blue_strategy:strategyFromForm('blue')};
 }
-function applyConfig(config) {
+function applyConfig(config, updateContext = true) {
   if (config) {
     const currentSchema = config.red_strategy && config.blue_strategy && (!config.physics_protocol || config.physics_protocol === meta?.physics_protocol);
     if (currentSchema) fields.forEach(id => {
@@ -352,41 +535,77 @@ function applyConfig(config) {
       $(id).value = config[id];
     });
     if (currentSchema) { setStrategy('red',config.red_strategy); setStrategy('blue',config.blue_strategy); }
+    if (updateContext) {
     setSummaryMode(config.task_mode || 'survival');
     $('runContext').textContent = `当前回放：${config.spatial_dim || 3}D · ${config.task_mode === 'damage' ? '累计伤害' : '目标生存'} · 红 ${strategyText(config,'red')} / 蓝 ${strategyText(config,'blue')} · R${config.red} : B${config.blue} · K${config.targets} · 种子 ${config.seed0}–${config.seed0 + config.stats - 1} · 时限 ${config.max_steps ?? '未记录'} 步`;
     $('runContext').textContent += ` · ${config.target_initialization === 'random' ? '随机目标' : config.target_initialization === 'fixed' ? '固定目标' : '历史目标布局（未记录模式）'}`;
     if (config.physics_protocol && meta?.physics_protocol && config.physics_protocol !== meta.physics_protocol) {
       $('runContext').textContent += ' · 旧物理协议回放；新评估使用修正后的环境，旧回放不会自动重算。';
     }
+    }
   }
   updateHint();
 }
-function populatePolicies() {
+function populatePolicies(config = null) {
   for (const [id, key] of [['task_mode','task_modes'],['spatial_dim','spatial_dims'],['target_initialization','target_initializations']]) {
     const values = meta?.[key];
     if (values && typeof values === 'object') $(id).replaceChildren(...Object.entries(values).map(([value,label]) => new Option(typeof label === 'string' ? label : label.label || value,value)));
   }
-  if (compatibleAPI()) applyConfig(meta.defaults || {});
+  for (const side of ['red','blue']) {
+    const architectures=Object.keys(meta?.strategy_catalog?.[side] || {});
+    if (side==='red' && !architectures.includes('checkpoint')) architectures.unshift('checkpoint');
+    if (architectures.length) $(`${side}_architecture`).replaceChildren(...architectures.map(value=>new Option(({checkpoint:'训练模型',end_to_end:'端到端 / 动作策略',hierarchical:'分层规则'})[value] || value,value)));
+    populateAlgorithmChoices(side); renderStrategy(side);
+  }
+  for (const side of ['red','blue']) $(side).max=Number(meta?.limits?.[side] || 40);
+  $('targets').replaceChildren(...Array.from({length:Number(meta?.limits?.targets || 6)},(_,index)=>new Option(`${index+1} 个目标`,index+1)));
+  $('scalePreset').replaceChildren(new Option('自定义规模',''),...(meta?.scale_presets || []).map((preset,index)=>new Option(preset.label,index)));
+  $('checkpointMethod').replaceChildren(new Option('自动识别',''),...Object.entries(meta?.methods || {}).map(([value,label])=>new Option(label,value)));
+  const checkpoints=meta?.checkpoints || [];
+  $('checkpointCatalogHint').textContent=`已发现 ${checkpoints.length} 个权重，${checkpoints.filter(item=>item.available).length} 个可用。`;
+  if (compatibleAPI()) {
+    applyConfig(config || meta.defaults || {},false);
+    if (!config) {
+      const first=checkpoints.find(item=>item.available);
+      if (first) setStrategy('red',{architecture:'checkpoint',checkpoint:first.id});
+      updateHint();
+    }
+  }
+  for (const side of ['red','blue']) syncAlgorithmChoice(side);
 }
 function updateHint() {
   const config = configFromForm();
-  const region=meta?.parameters?.DefaultTargetRegion;
-  const height=config.spatial_dim === 2 ? `固定高度 ${number(meta?.constants?.plane_altitude ?? 100,0)} m` : region ? `高度 ${number(region[2][0],0)}–${number(region[2][1],0)} m` : '三维区域';
-  $('targetInitHint').textContent=config.target_initialization === 'random'
-    ? `每局按区域重新采样目标，${height}；同一配置和种子可复现。`
-    : '目标 x 取区域中点、y 在区域内等间距排列；三维 z 取高度区间中点，二维使用固定平面高度。切换种子仅改变无人机开局。';
-  if (meta?.constants) {
-    const c=meta.constants, ranges=meta.attack_ranges?.[String(config.spatial_dim)];
-    const rangeText=ranges ? ` ${config.spatial_dim}D 满伤 / 自动开火半径 ${number(ranges[0],0)} m，伤害归零半径 ${number(ranges[1],0)} m。` : '';
-    $('balanceHint').textContent=`双方满伤 ${number(c.attack_intensity,0)} 点 · 无人机血量 1 · 最高速度 红 ${number(c.vmax_red,0)} / 蓝 ${number(c.vmax_blue,0)} m/s · 加速度 红 ${number(c.amax_red,0)} / 蓝 ${number(c.amax_blue,0)} m/s²。${rangeText} 同阵营不触发开火、不受爆炸伤害；碰撞半径 ${number(c.avoid,0)} m。`;
-  }
   $('display').setCustomValidity(config.display > config.stats ? '回放局数 D 不能大于统计局数 S。' : '');
   $('seed0').setCustomValidity(Number.isSafeInteger(config.seed0 + config.stats - 1) ? '' : '最后一局的种子超出安全整数范围。');
-  $('runHint').textContent = `共评估 ${config.stats} 局，种子 ${config.seed0}–${config.seed0 + config.stats - 1}；保存前 ${config.display} 局回放。` + (config.red_strategy.layers?.grouping === 'nv1' && config.red < config.blue ? ` 开局仅分配最近的 ${config.red} 个蓝方。` : '');
-  $('taskHint').textContent = config.task_mode === 'damage' ? '目标不会消亡；伤害不受初始血量截断。逐步回报红方 −ΔD、蓝方 +ΔD，整局累计为 −D / +D。' : '保留原目标生存任务：任一目标血量耗尽即失守；以红方胜率统计结果。';
+  const presetIndex=(meta?.scale_presets || []).findIndex(preset=>['red','blue','targets'].every(key=>Number(preset[key])===config[key]));
+  $('scalePreset').value=presetIndex>=0 ? String(presetIndex) : '';
+  validateCheckpoint(config);
 }
 fields.forEach(id => $(id).addEventListener('input', updateHint));
+for (const side of ['red','blue']) $(`${side}_algorithm`).addEventListener('change',()=>chooseAlgorithm(side));
+$('runForm').addEventListener('invalid',event=>{ const details=event.target.closest('details'); if (details) details.open=true; },true);
 for (const side of ['red','blue']) $(`${side}_architecture`).addEventListener('change',()=>{ renderStrategy(side); updateHint(); });
+$('scalePreset').addEventListener('change',()=>{
+  const preset=meta?.scale_presets?.[$('scalePreset').value];
+  if (preset) for (const key of ['red','blue','targets']) $(key).value=preset[key];
+  updateHint();
+});
+async function updateCheckpointCatalog(register = false) {
+  if (running || queueActive || !compatibleAPI()) return;
+  const config=configFromForm(), path=$('checkpointPath').value.trim();
+  if (register && !path) { $('checkpointCatalogHint').textContent='请输入本地 .pt 文件路径。'; $('checkpointPath').focus(); return; }
+  $('registerCheckpoint').disabled=true; $('refreshCheckpoints').disabled=true;
+  $('checkpointCatalogHint').textContent=register ? '正在读取本地权重…' : '正在刷新权重目录…';
+  try {
+    const data=register ? await request('/api/checkpoints',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path,method:$('checkpointMethod').value || undefined})}) : await request('/api/meta?refresh=1');
+    meta=displayMetadata(register ? data.meta : data);
+    if (register && data.checkpoint?.id) config.red_strategy={architecture:'checkpoint',checkpoint:data.checkpoint.id};
+    populatePolicies(config); updateHint(); renderComparisons();
+  } catch (error) { $('checkpointCatalogHint').textContent=error.message; }
+  finally { $('registerCheckpoint').disabled=false; $('refreshCheckpoints').disabled=false; }
+}
+$('registerCheckpoint').onclick=()=>updateCheckpointCatalog(true);
+$('refreshCheckpoints').onclick=()=>updateCheckpointCatalog(false);
 function stopPlayback() { playing = false; clearTimeout(timer); timer = null; $('play').textContent = '播放'; }
 function replayEnabled(enabled) { ['play','stepBtn','slider'].forEach(id => $(id).disabled = !enabled); }
 function resetResults() {
@@ -410,8 +629,10 @@ function resetResults() {
 }
 $('runForm').addEventListener('submit', async event => {
   event.preventDefault(); updateHint();
-  if (running || !compatibleAPI() || !$('runForm').reportValidity()) return;
-  const config = configFromForm();
+  if (running || queueActive || submissionUnconfirmed || !compatibleAPI() || !$('runForm').reportValidity()) return;
+  await submitEvaluation(configFromForm());
+});
+async function submitEvaluation(config) {
   applyConfig(config);
   clearTimeout(pollTimer); clearSavedJob(); job = null; jobConfig = config; startedAt = Date.now() / 1000;
   submissionUnconfirmed = true;
@@ -428,14 +649,67 @@ $('runForm').addEventListener('submit', async event => {
     elapsedBase = 0; elapsedAnchor = performance.now(); pollFailures = 0;
     resetResults(); saveJob(); poll(job);
   } catch (error) {
-    lockSettings(false);
     if (error.status >= 400 && error.status < 500) {
       submissionUnconfirmed = false; clearSavedJob(); status('任务提交失败', 'error'); notice(error.message);
+      finishQueuedTask('failed',error.message);
     } else {
       status('任务提交未确认', 'error'); notice(`${error.message} 请先点击重试查询活动任务，避免重复提交。`); $('run').disabled = true; $('retry').hidden = false;
+      finishQueuedTask('unconfirmed','提交结果尚未确认，队列已停止；请先重新连接。');
     }
+    lockSettings(false);
   }
-});
+}
+function renderQueue() {
+  const pending=evaluationQueue.filter(item=>item.state==='pending');
+  const total=evaluationQueue.reduce((sum,item)=>sum+item.config.stats,0);
+  const completed=evaluationQueue.reduce((sum,item)=>sum+(item.state==='complete' ? item.config.stats : item.current || 0),0);
+  $('addQueue').disabled=running || queueActive || submissionUnconfirmed || !compatibleAPI();
+  $('runQueue').disabled=running || queueActive || submissionUnconfirmed || !compatibleAPI() || !pending.length;
+  $('clearQueue').disabled=running || queueActive || !evaluationQueue.length;
+  $('stopQueue').hidden=!queueActive;
+  $('queueProgress').textContent=evaluationQueue.length
+    ? `${evaluationQueue.length} 项 · 总计 ${total} 局 · 已完成 ${completed} 局 · 待运行 ${pending.length} 项。${queueActive ? ' 正在按顺序运行。' : queueMessage}`
+    : '队列为空。';
+  $('queueItems').replaceChildren(...evaluationQueue.map((item,index)=>{
+    const li=document.createElement('li'), title=document.createElement('strong'), detail=document.createElement('span'), remove=document.createElement('button');
+    const state=({pending:'待运行',running:'运行中',complete:'已完成',failed:'失败',unconfirmed:'提交未确认'})[item.state];
+    title.textContent=`${index+1}. ${state} · 红：${strategyText(item.config,'red')}`;
+    detail.textContent=`蓝：${strategyText(item.config,'blue')} · R${item.config.red}:B${item.config.blue}/K${item.config.targets} · ${item.config.stats} 局 · seed ${item.config.seed0}–${item.config.seed0+item.config.stats-1} · ${item.config.max_steps} 步`;
+    remove.type='button'; remove.textContent='移除'; remove.disabled=running || queueActive;
+    remove.onclick=()=>{ evaluationQueue=evaluationQueue.filter(row=>row.id!==item.id); renderQueue(); };
+    li.append(title,detail,remove); return li;
+  }));
+}
+$('addQueue').onclick=()=>{
+  updateHint();
+  if (running || queueActive || submissionUnconfirmed || !compatibleAPI() || !$('runForm').reportValidity()) return;
+  evaluationQueue.push({id:++queueSerial,config:configFromForm(),state:'pending',current:0});
+  queueMessage=' 点击“运行队列”后开始。'; renderQueue();
+};
+async function runNextQueued() {
+  if (!queueActive || running) return;
+  const next=evaluationQueue.find(item=>item.state==='pending');
+  if (!next) { queueActive=false; queueMessage=evaluationQueue.every(item=>item.state==='complete') ? ' 所有排队任务已完成。' : ' 本轮排队已结束，请查看各项状态。'; lockSettings(false); return; }
+  queueCurrent=next; next.state='running'; next.current=0; renderQueue();
+  await submitEvaluation(next.config);
+}
+function finishQueuedTask(state, message = '') {
+  if (!queueCurrent) return;
+  queueCurrent.state=state;
+  if (state==='complete') { queueCurrent.current=queueCurrent.config.stats; queueCurrent.config={...jobConfig}; }
+  queueCurrent=null;
+  if (state!=='complete') { queueActive=false; queueMessage=` 队列已停止：${message || '当前任务失败。'}`; }
+  else if (!queueActive) queueMessage=evaluationQueue.some(item=>item.state==='pending') ? ' 当前任务已完成，剩余项等待点击“运行队列”。' : ' 当前任务已完成。';
+  renderQueue();
+}
+$('runQueue').onclick=()=>{
+  if (running || queueActive || submissionUnconfirmed || !compatibleAPI() || !evaluationQueue.some(item=>item.state==='pending')) return;
+  queueActive=true; queueMessage=''; lockSettings(false); runNextQueued();
+};
+$('stopQueue').onclick=()=>{
+  queueActive=false; queueMessage=' 已停止排队；当前任务继续，未开始的项保留。'; lockSettings(running);
+};
+$('clearQueue').onclick=()=>{ if (!running && !queueActive) { evaluationQueue=[]; queueMessage=''; renderQueue(); } };
 function showRecords(data) {
   const available = Array.isArray(data.recorded) ? data.recorded : (data.done && !data.error && jobConfig ? Array.from({length:Math.min(jobConfig.display, data.total)},(_,index) => ({index,seed:jobConfig.seed0 + index})) : []);
   if (available.length === records.length) {
@@ -464,6 +738,7 @@ async function poll(expectedJob) {
     if (data.started_at) startedAt = data.started_at;
     saveJob();
     const current = data.current || 0, total = data.total || jobConfig?.stats || 0;
+    if (queueCurrent) { queueCurrent.current=current; renderQueue(); }
     $('progressCount').textContent = `${current} / ${total}`; $('progress').max = Math.max(1,total);
     if (!data.done && !meta?.viewer_api) $('progress').removeAttribute('value'); else $('progress').value = current;
     elapsedBase = data.elapsed_seconds ?? (startedAt ? Date.now()/1000 - startedAt : 0); elapsedAnchor = performance.now();
@@ -472,6 +747,7 @@ async function poll(expectedJob) {
     showRecords(data);
     if (data.summary) renderSummary(data.summary, data.done && !data.error);
     if (data.error) {
+      finishQueuedTask('failed',data.error);
       lockSettings(false); status(`运行失败：${data.error}`, 'error');
       $('summaryState').textContent = '未完成统计'; $('sampleCount').textContent = `${current} 局完成`;
       $('histHint').textContent = '本次评估未全部完成；已有结果仅代表已完成的对局。';
@@ -481,15 +757,17 @@ async function poll(expectedJob) {
       lockSettings(false); status('评估完成', 'complete'); $('progressHint').textContent = `已完成全部 ${total} 局。${records.length ? '可切换各局回放查看。' : '本次未记录回放。'}`;
       if (!data.summary) $('summaryState').textContent = '暂无汇总';
       if (data.summary) rememberCompleted(data.summary);
+      finishQueuedTask('complete');
+      if (queueActive) await runNextQueued();
       return;
     }
-    lockSettings(true); status(current ? '正在评估' : '正在计算首局…', 'running');
+    lockSettings(true); status(data.phase==='queued' ? '服务端排队中…' : data.phase==='loading' ? '正在载入模型权重…' : current ? '正在评估' : '正在计算首局…', 'running');
     $('summaryState').textContent = '统计中'; $('sampleCount').textContent = `${current} 局完成`;
     $('progressHint').textContent = meta?.viewer_api ? (current ? `平均 ${Number(data.seconds_per_episode || elapsedBase/current).toFixed(1)} 秒/局；耗时预估随进度更新。` : '首局完成后显示耗时预估，已完成的回放会陆续开放。') : '当前服务将在全部局数完成后一次性返回结果。';
     pollTimer = setTimeout(() => poll(expectedJob), 1000);
   } catch (error) {
     if (expectedJob !== job) return;
-    if (error.status === 404) { lockSettings(false); clearSavedJob(); status('未找到此任务', 'error'); $('eta').textContent = '—'; $('progressHint').textContent = '服务可能已重启，可以重新提交评估。'; job = null; return; }
+    if (error.status === 404) { finishQueuedTask('failed','服务中未找到当前任务。'); lockSettings(false); clearSavedJob(); status('未找到此任务', 'error'); $('eta').textContent = '—'; $('progressHint').textContent = '服务可能已重启，可以重新提交评估。'; job = null; return; }
     ++pollFailures; status('连接中断，正在重连…', 'error');
     $('progressHint').textContent = '连接恢复后将继续读取进度，不会重复提交任务。'; $('eta').textContent = '—';
     $('retry').hidden = false;
@@ -540,8 +818,8 @@ setInterval(() => { if (running) $('elapsed').textContent = duration(elapsedBase
 async function initialize() {
   if (location.protocol === 'file:') { status('请通过本地服务打开', 'error'); notice('请运行 python viewer.py，然后访问 http://127.0.0.1:8765/。'); return; }
   try {
-    meta = await request('/api/meta'); populatePolicies(); drawFrame(Number($('slider').value)); renderComparisons();
-    notice(compatibleAPI() ? '' : '当前服务尚未加载任务类型与策略接口。已有任务仍可查看；任务结束后重启 viewer.py 并刷新页面，再开始新评估。');
+    meta = displayMetadata(await request('/api/meta')); populatePolicies(); drawFrame(Number($('slider').value)); renderComparisons();
+    notice(compatibleAPI() ? '' : `你打开的是旧版 viewer 服务（端口 ${location.port || '80'}），它没有模型选择接口。请重新运行更新后的 viewer.py，并打开终端本次打印的完整地址。`);
     $('progressHint').textContent = meta.viewer_api ? '每局完成后更新进度，已保存的局可立即回放。' : '当前服务会在整批完成后返回进度和回放。';
     $('retry').hidden = true;
     const saved = readSavedJob();
@@ -557,13 +835,13 @@ async function initialize() {
     else if (submissionUnconfirmed) {
       lockSettings(false);
       if (meta.viewer_api) {
-        submissionUnconfirmed = false; clearSavedJob(); status('未发现活动任务');
+        submissionUnconfirmed = false; clearSavedJob(); lockSettings(false); status('未发现活动任务');
         notice('当前没有可恢复的活动任务，上次提交的结果无法确认。如再次运行，将创建新的评估。');
       } else {
         $('run').disabled = true; $('retry').hidden = false; status('提交结果未确认', 'error');
         notice('旧版服务无法查询活动任务。请保留服务运行，待任务结束后再重启 viewer.py；当前不要重复提交。');
       }
-    } else { lockSettings(false); status('准备就绪'); }
+    } else { lockSettings(false); status(compatibleAPI() ? '准备就绪' : '旧版服务：请打开新的启动地址',compatibleAPI() ? '' : 'error'); }
   } catch (error) { status('无法连接本地服务', 'error'); notice(error.message); $('retry').hidden = false; }
 }
 // Original HAD DisplayPlayer drawing, from f8009fe:Open-SCORE/src/HAD_Env/render/render.py.
@@ -694,8 +972,7 @@ function frameReturns(frame,damage) {
 }
 function drawFrame(index) {
   const dimension=dimensionOf(episode);
-  $('altitudePlot').hidden=dimension===2; $('planeNote').hidden=dimension!==2;
-  $('planeDescription').textContent=`固定高度 ${number(episode?.plane_altitude ?? meta?.constants?.plane_altitude ?? 100,0)} m · 9 个平面动作。平面坐标等比例，缩放不改变物理距离。`;
+  $('altitudePlot').hidden=dimension===2;
   const xy=plotLayout($('world'),1), xz=dimension===3 ? plotLayout($('altitude'),2) : null;
   drawGrid(xy); if (xz) drawGrid(xz);
   const frame = episode?.frames?.[index];
@@ -807,9 +1084,53 @@ function rememberCompleted(summary) {
   try { sessionStorage.setItem(comparisonKey,JSON.stringify(completedJobs)); } catch (_) {}
   renderComparisons();
 }
+function sameOpponent(config, baseline) {
+  return Boolean(config?.blue_strategy && baseline?.blue_strategy)
+    && JSON.stringify(canonicalValue(config.blue_strategy))===JSON.stringify(canonicalValue(baseline.blue_strategy));
+}
+function restoreHistoryConfig(row) {
+  if (running || queueActive || submissionUnconfirmed) return;
+  if (row.config.physics_protocol && row.config.physics_protocol!==meta?.physics_protocol) {
+    notice('该记录来自旧物理协议，已保留结果。请按当前环境重新配置新评估。'); return;
+  }
+  applyConfig(row.config,false);
+  notice('已恢复该任务的配置；点击开始评估或加入队列。结果与回放仍显示当前选中的任务。');
+  $('configTitle').scrollIntoView({block:'start',behavior:'smooth'});
+}
+async function openHistory(row) {
+  if (running || queueActive || submissionUnconfirmed) return;
+  clearTimeout(pollTimer); job=row.job; jobConfig={...row.config}; startedAt=null;
+  applyConfig(jobConfig); resetResults(); renderSummary(row.summary,true); saveJob();
+  lockSettings(true); status('正在读取历史任务…','running'); await poll(job);
+}
+function renderComparisonChart(rows, baseline) {
+  const reference=conditionKey(baseline), allowDifferent=$('comparisonScope').value==='scenario';
+  const comparable=reference===null ? [] : rows.filter(row=>conditionKey(row.config)===reference && (allowDifferent || sameOpponent(row.config,baseline)));
+  const damage=baseline?.task_mode==='damage', metric=damage ? 'mean_target_damage' : 'win_rate';
+  const chartRows=comparable.filter(row=>finite(row.summary[metric]));
+  const chart=$('comparisonChart'); chart.replaceChildren();
+  const note=document.createElement('p'); note.className='muted';
+  const differentOpponents=chartRows.some(row=>!sameOpponent(row.config,baseline));
+  note.textContent=!chartRows.length
+    ? '暂无符合当前图表条件的完整结果；运行评估后自动加入，历史任务可切换为比较参照。'
+    : `${differentOpponents ? '同场景 · 含不同蓝方对手' : '同条件 · 同蓝方策略'}：${damage ? '平均目标累计伤害，红方越低越好' : '红方胜率，越高越好'}。${chartRows.length} 个完整任务；每行标明红蓝双方。${differentOpponents ? ' 不同对手的结果不能单独归因于红方算法。' : ''}`;
+  chart.append(note);
+  const maximum=damage ? Math.max(0.000001,...chartRows.map(row=>Number(row.summary[metric]))) : 1;
+  for (const row of chartRows) {
+    const barRow=document.createElement('div'), labels=document.createElement('div'), opponent=document.createElement('small'), values=document.createElement('div');
+    barRow.className='comparison-chart-row'; labels.textContent=`红：${strategyText(row.config,'red')}`;
+    opponent.textContent=`蓝：${strategyText(row.config,'blue')} · ${row.summary.n} 局${sameOpponent(row.config,baseline) ? '' : ' · 与参照任务的对手不同'}`; labels.append(opponent);
+    const track=document.createElement('div'), bar=document.createElement('div'), value=document.createElement('strong');
+    values.className='comparison-chart-value'; track.className='bar-track'; bar.className='bar-fill';
+    const amount=Number(row.summary[metric]); bar.style.width=`${Math.max(0,Math.min(100,amount/maximum*100))}%`;
+    value.textContent=damage ? number(amount) : percent(amount); track.append(bar); values.append(track,value);
+    barRow.append(labels,values); chart.append(barRow);
+  }
+}
 function renderComparisons() {
   const baseline=jobConfig || completedJobs.at(-1)?.config;
-  const rows=completedJobs.filter(row=>row && row.config && row.summary);
+  const rows=completedJobs.filter(row=>row && row.config && row.summary && Number(row.summary.n)===Number(row.config.stats));
+  renderComparisonChart(rows,baseline);
   $('comparisonRows').replaceChildren(...rows.slice().reverse().map(row=>{
     const tr=document.createElement('tr'); if (row.job===job) tr.className='current';
     const config=row.config, s=row.summary, damage=(s.task_mode || config.task_mode || 'survival')==='damage';
@@ -822,17 +1143,24 @@ function renderComparisons() {
       [number(s.mean_target_damage),''],
       [damage ? `${number(s.mean_red_return)} / ${number(s.mean_blue_return)}` : '—',''],
       [damage ? `零伤害 ${s.zero_damage_count ?? '—'} 局` : `红方胜率 ${percent(s.win_rate)}`,''],
-      [row.job===job ? '当前任务' : same ? '相同条件' : known ? '条件不同' : '元数据不足',row.job===job && !known ? '环境身份未完整记录' : '']
+      [row.job===job ? '当前参照任务' : same ? sameOpponent(config,baseline) ? '同条件 · 同对手' : '同场景 · 不同对手' : known ? '条件不同' : '元数据不足',row.job===job && !known ? '环境身份未完整记录' : '']
     ];
     cells.forEach(([value,sub],index)=>{
       const td=document.createElement('td'); td.textContent=value;
       if (sub) { const small=document.createElement('small'); small.textContent=sub; td.append(small); }
-      if (index===6) td.className=same ? 'comparable' : 'different'; tr.append(td);
+      if (index===6) td.className=same && sameOpponent(config,baseline) ? 'comparable' : 'different'; tr.append(td);
     });
+    const actions=document.createElement('td'), controls=document.createElement('div'); controls.className='button-row';
+    for (const [label,action] of [['恢复配置',()=>restoreHistoryConfig(row)],['结果 / 回放',()=>openHistory(row)]]) {
+      const button=document.createElement('button'); button.type='button'; button.textContent=label; button.dataset.historyAction='true';
+      button.disabled=running || queueActive || submissionUnconfirmed; button.onclick=action; controls.append(button);
+    }
+    actions.append(controls); tr.append(actions);
     return tr;
   }));
-  $('comparisonHint').textContent=rows.length ? `已记录 ${rows.length} 个完整任务。相对于${jobConfig ? '当前任务' : '最近完成任务'}，任务、维度、目标初始化方式、种子、规模、时限、目标血量、物理协议及实际环境参数全部一致才标为相同条件。缺失身份的旧记录保留原值，不参与直接比较。` : '完成评估后自动加入；相同任务条件、物理协议及实际环境参数的完整记录可直接比较。';
+  $('comparisonHint').textContent=rows.length ? `已记录 ${rows.length} 个完整任务。参照${jobConfig ? '当前任务' : '最近完成任务'}：任务、维度、目标初始化、种子范围、规模、时限、目标血量、物理协议及实际环境参数一致才属于同场景；蓝方策略也一致才属于同条件对比。点击“结果 / 回放”可切换参照，回放需要服务仍保留该任务。缺失环境身份的旧记录不进入图表。` : '完整评估后自动加入；相同环境、任务、种子和蓝方策略的记录可比较红方算法。回放任务保存在当前服务内存中。';
 }
+$('comparisonScope').addEventListener('change',renderComparisons);
 ['showAssignments','showTrails','showLabels'].forEach(id=>$(id).addEventListener('change',()=>drawFrame(Number($('slider').value))));
 let resizeFrame = null;
 const replayResizeObserver=new ResizeObserver(()=>{

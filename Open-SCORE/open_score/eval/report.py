@@ -62,7 +62,7 @@ def _report_lock(output):
                 raise ctypes.WinError(ctypes.get_last_error())
             acquired = False
             try:
-                result = api.WaitForSingleObject(handle, 30000)
+                result = api.WaitForSingleObject(handle, 120000)
                 if result not in (0, 0x80):
                     raise TimeoutError("The previous experiment-report update is still running")
                 acquired = True
@@ -1026,6 +1026,10 @@ def _refresh_report(output=DEFAULT_OUTPUT, *, run=FORMAL_RUN, report_stream=None
 def refresh_report(output=DEFAULT_OUTPUT, *, run=FORMAL_RUN):
     """Render the one report of this version; a side run never replaces it."""
     output = Path(output)
-    with _report_lock(output) as stream:
-        return _refresh_report(output, run=run if run == FORMAL_RUN else FORMAL_RUN,
-                               report_stream=stream)
+    try:
+        with _report_lock(output) as stream:
+            return _refresh_report(output, run=run if run == FORMAL_RUN else FORMAL_RUN,
+                                   report_stream=stream)
+    except TimeoutError:
+        print("report refresh skipped: previous update still running", flush=True)
+        return None
