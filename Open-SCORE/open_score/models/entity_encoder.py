@@ -480,6 +480,7 @@ class GlobalBranch(nn.Module):
                 self.norm_cross = nn.LayerNorm(dim)
             if kind == "feedback":
                 self.pref_proj = nn.Linear(int(args.n_actions), dim)
+                self.pref_logits = nn.Linear(dim, int(args.n_actions))
 
     def project(self, tokens):
         return self.token_proj(tokens)
@@ -548,7 +549,24 @@ class GlobalBranch(nn.Module):
         slots = slots + self.self_attn(self.norm_attn(slots), slots, slots)
         return slots + self.ffn(self.norm_ffn(slots))
 
-    def build_memories(self, tokens, key_mask, types, depth_t):
+    def _own_prefs(self, memory, key_mask):
+        zeros = memory.new_zeros(memory.shape[0], int(self.args.rnn_hidden_dim))
+        query = self._agent_query(memory[:, 0], zeros)
+        read = self.read_attn(query, memory, memory, key_mask).squeeze(1)
+        return th.softmax(self.pref_logits(read), dim=-1)
+
+    def _inject_packed(self, tokens, origin, prefs, key_mask, pack):
+        n_agents = int(pack["na"])
+        dense = prefs.new_zeros(pack["n_obs"], prefs.shape[-1])
+        dense.index_copy_(0, pack["idx"], prefs)
+        embed = self.pref_proj(dense.reshape(pack["bs"] * pack["ts"], n_agents, -1))
+        agent_ids = origin.clamp(0, n_agents - 1).long().unsqueeze(-1).expand(-1, -1, embed.shape[-1])
+        gathered = embed.index_select(0, pack["idx"] // n_agents).gather(1, agent_ids)
+        red = (origin < n_agents).unsqueeze(-1).to(tokens.dtype)
+        live = (~key_mask).unsqueeze(-1).to(tokens.dtype)
+        return tokens + gathered * red * live
+
+    def build_memories(self, tokens, key_mask, types, depth_t, origin=None, pack=None):
         count = self.allowed_count(key_mask, types)
         n_rounds = max(int(depth_t.max().item()), 1)
         states = []
@@ -559,9 +577,14 @@ class GlobalBranch(nn.Module):
                 states.append(memory)
             return states, None
         memory = tokens
-        for _ in range(n_rounds):
+        prefs = None
+        for round_id in range(n_rounds):
+            if self.kind == "feedback" and prefs is not None:
+                memory = self._inject_packed(memory, origin, prefs, key_mask, pack)
             memory = self._maybe_checkpoint(self._cycle_round, memory, key_mask, count)
             states.append(memory)
+            if self.kind == "feedback" and round_id + 1 < n_rounds:
+                prefs = self._own_prefs(memory, key_mask)
         return states, key_mask
 
     def read_context(self, states, tokens, key_mask, hidden, depth_t, local, mem_mask=None):
@@ -579,56 +602,6 @@ class GlobalBranch(nn.Module):
         read = self.card_attn(query, tokens, tokens, key_mask, types).squeeze(1)
         context = self.card_mix(th.cat((read, count), dim=-1))
         return local + self.fuse(context)
-
-    def _inject_prefs(self, tokens, origin, prefs, key_mask, n_agents):
-        embed = self.pref_proj(prefs)
-        batch_obs, n_ent, dim = tokens.shape
-        batch = prefs.shape[0]
-        n_a = prefs.shape[1]
-        repeated = embed.unsqueeze(1).expand(batch, n_a, n_a, dim).reshape(batch_obs, n_a, dim)
-        agent_ids = origin.clamp(0, n_agents - 1).long().unsqueeze(-1).expand(-1, -1, dim)
-        gathered = repeated.gather(1, agent_ids)
-        red = (origin < n_agents).unsqueeze(-1).to(tokens.dtype)
-        live = (~key_mask).unsqueeze(-1).to(tokens.dtype)
-        return tokens + gathered * red * live
-
-    def context(self, tokens, key_mask, types, origin, hidden, depth, local, avail=None,
-                n_agents=None, gru=None, alive=None):
-        batch, n_ent, dim = tokens.shape
-        env = hidden.shape[0]
-        agents = hidden.shape[1]
-        origin = origin.long()
-        own = tokens[:, 0]
-        query = self._agent_query(own, hidden.reshape(batch, -1))
-        count = self.allowed_count(key_mask, types)
-        depth_t = self.expand_depth(depth, env, 1, agents, hidden.device)
-        n_rounds = max(int(depth_t.max().item()), 1)
-        prefs = tokens.new_zeros(env, agents, int(self.args.n_actions))
-        states = []
-        q_out = local.new_zeros(env, agents, int(self.args.n_actions))
-        h_out = hidden
-        memory = tokens
-        for round_id in range(n_rounds):
-            if round_id:
-                memory = self._inject_prefs(memory, origin, prefs, key_mask, n_agents)
-            memory = self._maybe_checkpoint(self._cycle_round, memory, key_mask, count)
-            states.append(memory)
-            context = self._jk(states, query, key_mask, depth_t.clamp(max=round_id + 1))
-            fused = local + self.fuse(context)
-            q_cand, h_cand = gru.step(fused.reshape(env, agents, -1), hidden, alive)
-            logits = q_cand.clone()
-            if avail is not None:
-                logits = logits.masked_fill(avail == 0, float("-inf"))
-            empty = ~th.isfinite(logits).any(dim=-1, keepdim=True)
-            logits = logits.masked_fill(empty, 0)
-            prefs = th.softmax(logits, dim=-1)
-            if avail is not None:
-                prefs = prefs.masked_fill(avail == 0, 0)
-            prefs = prefs.masked_fill(~alive.unsqueeze(-1), 0)
-            chosen = (depth_t.reshape(env, agents) == (round_id + 1))
-            q_out = th.where(chosen.unsqueeze(-1), q_cand, q_out)
-            h_out = th.where(chosen.unsqueeze(-1), h_cand, h_out)
-        return None, q_out, h_out
 
 
 class EntityAgent(ALMAAgent):
@@ -740,10 +713,9 @@ class EntityAgent(ALMAAgent):
         depth = getattr(self, "cycle_depth", 1)
         if depth is None:
             depth = 1
-        avail = inputs.get("avail_actions")
         kind = self.global_branch
         outputs = []
-        if kind in ("cycle", "slot"):
+        if kind in ("cycle", "slot", "feedback"):
             n_obs = bs * ts * na
             live = ~dead.reshape(-1)
             idx = live.nonzero(as_tuple=False).flatten()
@@ -755,7 +727,11 @@ class EntityAgent(ALMAAgent):
                 km = key_mask.reshape(n_obs, n_ent).index_select(0, idx)
                 ty = types.reshape(n_obs, n_ent, 3).index_select(0, idx)
                 dpt = depth_flat.index_select(0, idx)
-                states_live, mem_mask_live = self.global_net.build_memories(tok, km, ty, dpt)
+                extra = {}
+                if kind == "feedback":
+                    extra["origin"] = origin.reshape(n_obs, n_ent).index_select(0, idx)
+                    extra["pack"] = dict(idx=idx, n_obs=n_obs, bs=bs, ts=ts, na=na)
+                states_live, mem_mask_live = self.global_net.build_memories(tok, km, ty, dpt, **extra)
                 n_mem = states_live[0].shape[1]
                 states_full = []
                 for memory in states_live:
@@ -783,23 +759,12 @@ class EntityAgent(ALMAAgent):
         else:
             for t in range(ts):
                 alive = ~dead[:, t]
-                if kind == "card":
-                    fused = self.global_net.card_fuse(
-                        tokens[:, t].reshape(bs * na, n_ent, gdim),
-                        key_mask[:, t].reshape(bs * na, n_ent),
-                        types[:, t].reshape(bs * na, n_ent, 3),
-                        h, local[:, t].reshape(bs * na, hidden_dim))
-                    q_t, h = self._head.step(fused.reshape(bs, na, hidden_dim), h, alive)
-                else:
-                    unused_fused, direct_q, h_next = self.global_net.context(
-                        tokens[:, t].reshape(bs * na, n_ent, gdim),
-                        key_mask[:, t].reshape(bs * na, n_ent),
-                        types[:, t].reshape(bs * na, n_ent, 3),
-                        origin[:, t].reshape(bs * na, n_ent),
-                        h, depth, local[:, t].reshape(bs * na, hidden_dim),
-                        avail=None if avail is None else avail[:, t],
-                        n_agents=na, gru=self._head, alive=alive)
-                    q_t, h = direct_q, h_next
+                fused = self.global_net.card_fuse(
+                    tokens[:, t].reshape(bs * na, n_ent, gdim),
+                    key_mask[:, t].reshape(bs * na, n_ent),
+                    types[:, t].reshape(bs * na, n_ent, 3),
+                    h, local[:, t].reshape(bs * na, hidden_dim))
+                q_t, h = self._head.step(fused.reshape(bs, na, hidden_dim), h, alive)
                 outputs.append(q_t)
         q = th.stack(outputs, dim=1)
         agent_mask = inputs["entity_mask"][:, :, :na]

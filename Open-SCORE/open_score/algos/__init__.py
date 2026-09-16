@@ -71,6 +71,7 @@ V5_OVERRIDES = {
         "imagine_group": "original",
         "count_cond": "phi2",
         "global_branch": "feedback",
+        "global_feedback_mode": "token",
         "global_slots": 4,
         "global_depths": [1, 2, 3, 4],
         "global_eval_depth": 4,
@@ -100,7 +101,8 @@ RESUME_MUTABLE = frozenset(("resume", "output", "device", "use_cuda",
 RESUME_DEFAULTS = {"reward_mode": "damage", "friendly_penalty": 1.0,
                    "count_ln": True, "global_branch": None, "global_slots": 4,
                    "global_depths": [1, 2, 3, 4], "global_eval_depth": 4,
-                   "global_embed_dim": 64, "global_ffn_mult": 2, "global_n_heads": 4}
+                   "global_embed_dim": 64, "global_ffn_mult": 2, "global_n_heads": 4,
+                   "global_feedback_mode": "gru"}
 
 
 def setup_runtime():
@@ -169,6 +171,7 @@ def load_config(name, overrides=None):
     base.setdefault("global_embed_dim", 64)
     base.setdefault("global_ffn_mult", 2)
     base.setdefault("global_n_heads", 4)
+    base.setdefault("global_feedback_mode", "gru")
     base["global_depths"] = [int(value) for value in base["global_depths"]]
     base["global_slots"] = int(base["global_slots"])
     base["global_eval_depth"] = int(base["global_eval_depth"])
@@ -352,11 +355,13 @@ def train(name, cfg):
                 int(saved_cfg["global_embed_dim"]) if "global_embed_dim" in saved_cfg else 128,
                 int(saved_cfg["global_ffn_mult"]) if "global_ffn_mult" in saved_cfg else 4,
                 int(saved_cfg["global_n_heads"]) if "global_n_heads" in saved_cfg else int(saved_cfg.get("attn_n_heads", 4)),
+                saved_cfg.get("global_feedback_mode", "gru") if saved_cfg.get("global_branch") == "feedback" else "gru",
             )
             current_arch = (
                 int(getattr(args, "global_embed_dim", 64)),
                 int(getattr(args, "global_ffn_mult", 2)),
                 int(getattr(args, "global_n_heads", 4)),
+                getattr(args, "global_feedback_mode", "gru") if getattr(args, "global_branch", None) == "feedback" else "gru",
             )
             if saved_arch != current_arch:
                 print(f"[{name}] global module {saved_arch} -> {current_arch}; "
@@ -613,6 +618,9 @@ def train(name, cfg):
                     state["updates"] += 1
                     if isinstance(metrics, dict):
                         update_metrics.append(metrics)
+                    heartbeat()
+                    if stop_requested:
+                        break
                     if args.hier_agent["task_allocation"] == "aql":
                         # ALMA trains the allocation layer on its own draw, so
                         # its Q-loss can drop episodes older than decay_old.
