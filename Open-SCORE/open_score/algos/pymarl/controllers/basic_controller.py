@@ -21,6 +21,7 @@ class BasicMAC:
         self.action_selector = action_REGISTRY[args.action_selector](args)
 
         self.hidden_states = None
+        self._episode_depth = None
 
     def select_actions(self, ep_batch, t_ep, t_env, bs=slice(None), test_mode=False):
         # Only select actions for the selected batch elements in bs
@@ -56,6 +57,7 @@ class BasicMAC:
                 ep_batch['entity2task_mask'][:, t_ep, :self.n_agents] = (1 - self.task_allocations).detach().to(th.uint8)
                 active_allocs = self.task_allocations.detach()[bs]
 
+        self._prepare_global_depth(ep_batch.batch_size, t_ep, test_mode, ep_batch.device)
         agent_outputs, _ = self.forward(ep_batch, t_ep, test_mode=test_mode, acting=True)
         chosen_actions = self.action_selector.select_action(agent_outputs[bs], avail_actions[bs], t_env, allocs=active_allocs, test_mode=test_mode)
         return chosen_actions
@@ -70,6 +72,9 @@ class BasicMAC:
 
         agent_inputs, imagine_inps = self._build_inputs(ep_batch, t, target=target, imagine_inps=imagine_inps)
         agent_inputs['hidden_state'] = self.hidden_states
+        if test_mode and getattr(self.args, "global_branch", None) in ("cycle", "slot", "feedback"):
+            self._episode_depth = int(getattr(self.args, "global_eval_depth", 4))
+        self.agent.cycle_depth = self._episode_depth
         if self.use_copa:
             if acting:
                 agent_inputs['coach_z'] = self.coach_z.unsqueeze(1)
@@ -82,6 +87,25 @@ class BasicMAC:
         if int_t:
             agent_outs = agent_outs.squeeze(1)
         return agent_outs, info
+
+    def set_global_depth(self, depth):
+        self._episode_depth = depth
+        if hasattr(self, "agent"):
+            self.agent.cycle_depth = depth
+
+    def _prepare_global_depth(self, batch_size, t_ep, test_mode, device):
+        branch = getattr(self.args, "global_branch", None)
+        if branch not in ("cycle", "slot", "feedback"):
+            self._episode_depth = 1
+            return
+        if test_mode:
+            self._episode_depth = int(getattr(self.args, "global_eval_depth", 4))
+            return
+        if t_ep != 0 and self._episode_depth is not None:
+            return
+        choices = [int(value) for value in getattr(self.args, "global_depths", (1, 2, 3, 4))]
+        index = th.randint(len(choices), (batch_size,), device=device)
+        self._episode_depth = th.tensor(choices, device=device, dtype=th.long)[index]
 
     def init_hidden(self, batch_size):
         hidden = self.agent.init_hidden()

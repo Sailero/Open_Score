@@ -82,6 +82,54 @@ def trajectory_frame(adapter, native_actions):
             "step_damage": float(adapter.env.step_target_damage)}
 
 
+def red_friendly_collision_pairs(env):
+    """Unique Red-Red collision incidents this physics step."""
+    red_ids = {int(agent.Id) for agent in env.red_agents}
+    pairs = set()
+    for event in env.last_physics_events:
+        if event.get("kind") != "collision":
+            continue
+        target = event.get("target_id")
+        if target is None:
+            continue
+        pair = tuple(sorted((int(event["source_id"]), int(target))))
+        if all(identity in red_ids for identity in pair):
+            pairs.add(pair)
+    return pairs
+
+
+def red_overkill_self_destructs(env):
+    """Extra Red intercept suicides beyond the Blues those shots hit.
+
+    Splash does not damage allies. A Red inside fire_range of a live Blue
+    attacker auto-fires and self-destructs, so a cluster all die together.
+    One suicide per engaged Blue is the intended intercept; extras are waste.
+    """
+    red_ids = {int(agent.Id) for agent in env.red_agents}
+    blue_ids = {int(agent.Id) for agent in env.blue_agents}
+    fired, engaged = set(), set()
+    for event in env.last_physics_events:
+        kind = event.get("kind")
+        source = event.get("source_id")
+        if source is None:
+            continue
+        source = int(source)
+        if source not in red_ids:
+            continue
+        if kind == "self_destruct":
+            fired.add(source)
+        elif kind == "attack_damage":
+            target = event.get("target_id")
+            if target is not None and int(target) in blue_ids:
+                engaged.add(int(target))
+    return max(0, len(fired) - len(engaged))
+
+
+def red_friendly_waste(env):
+    """Collision pairs plus surplus intercept suicides this physics step."""
+    return len(red_friendly_collision_pairs(env)) + red_overkill_self_destructs(env)
+
+
 class EpisodeDiagnostics:
     """Accumulate evaluation diagnostics from actual actions and native events."""
     def __init__(self, adapter, seed, blue_upper="reactive", blue_lower="rush", enabled=True,
@@ -94,6 +142,7 @@ class EpisodeDiagnostics:
         self.red_deaths = dict.fromkeys(("shot_down", "friendly_collision", "enemy_collision", "boundary", "self_destruct"), 0)
         self.blue_deaths = dict.fromkeys(("intercepted", "self_destruct", "collision"), 0)
         self.friendly_collisions = 0
+        self.friendly_overkill = 0
         # Steps where Red is wiped out but Blue survives: the entity-based
         # critics structurally output zero there (see diff_log). Counted
         # during training sampling too, so the real rate is on record.
@@ -137,16 +186,12 @@ class EpisodeDiagnostics:
         if self.enabled and env.record_events:
             red_ids = {int(a.Id) for a in env.red_agents}
             by_target = {}
-            collision_pairs = set()
             for event in env.last_physics_events:
                 target = event.get("target_id")
                 if target is not None:
                     by_target.setdefault(int(target), []).append(event)
-                if event["kind"] == "collision":
-                    pair = tuple(sorted((int(event["source_id"]), int(target))))
-                    if all(i in red_ids for i in pair):
-                        collision_pairs.add(pair)
-            self.friendly_collisions += len(collision_pairs)
+            self.friendly_collisions += len(red_friendly_collision_pairs(env))
+            self.friendly_overkill += red_overkill_self_destructs(env)
             for agent in env.agents:
                 identity = int(agent.Id)
                 if not self.before_alive[identity] or agent.Health > 0:
@@ -194,6 +239,7 @@ class EpisodeDiagnostics:
             "mean_pairwise_dist": mean(self.distance_sum, self.distance_count),
             "mean_dist_to_nearest_target": mean(self.target_distance_sum, self.target_distance_count),
             "friendly_collisions": int(self.friendly_collisions) if known_causes else None,
+            "friendly_overkill": int(self.friendly_overkill) if known_causes else None,
             "wipeout_steps": int(self.wipeout_steps),
             "min_pairwise_dist_p05": float(np.quantile(self.minimum_distances, .05)) if self.minimum_distances else None,
         }
@@ -206,7 +252,8 @@ class HADWrapper:
                  gamma=0.99, fold_wipeout_tail=True, pool_slots=None,
                  shaping_coef=0.0, shaping_range=4000.0, pad="eval",
                  subtask_set="targets", allocation_clock="interval",
-                 action_length=5, max_alloc_hold=10, **kwargs):
+                 action_length=5, max_alloc_hold=10, reward_mode="damage",
+                 friendly_penalty=1.0, **kwargs):
         self.scale = as_scale(scale)
         self.max_steps = int(max_steps)
         self.blue_upper, self.blue_lower = blue_upper, blue_lower
@@ -217,6 +264,12 @@ class HADWrapper:
         self.shaping_range = float(shaping_range)
         if self.shaping_range <= 0:
             raise ValueError("shaping_range must be positive")
+        if reward_mode not in ("damage", "friendly"):
+            raise ValueError("reward_mode must be 'damage' or 'friendly'")
+        if friendly_penalty < 0:
+            raise ValueError("friendly_penalty must be non-negative")
+        self.reward_mode = reward_mode
+        self.friendly_penalty = float(friendly_penalty)
         if subtask_set not in ("targets", "blues"):
             raise ValueError("subtask_set must be 'targets' or 'blues'")
         if allocation_clock not in ("interval", "event"):
@@ -259,7 +312,7 @@ class HADWrapper:
                       blue_assignment={i: None for i in adapter.blue_ids})
         enabled = (bool(evaluate) or bool(self.diagnostics_enabled)) if diagnostics is None else bool(diagnostics)
         retain = self.retain_trajectory if retain_trajectory is None else retain_trajectory
-        adapter.env.record_events = enabled
+        adapter.env.record_events = enabled or self.reward_mode == "friendly"
         adapter._policy_last_actions = {}
         self.opponent_rng = np.random.default_rng(int(seed) ^ 0x375AC18F)
         self.red_grouping = Grouping((), adapter.red_ids)
@@ -358,6 +411,15 @@ class HADWrapper:
     def _potential_parts(self):
         return self._potential_by_blue() if self.subtask_set == "blues" else self._potential_by_target()
 
+    def _friendly_penalty_parts(self, n_incidents):
+        """Optional extra cost; not potential-based, so it can change the optimum."""
+        parts = np.zeros(self.n_tasks(), dtype=np.float64)
+        if self.reward_mode != "friendly" or n_incidents <= 0 or not self.friendly_penalty:
+            return parts
+        width = self.scale.N_B if self.subtask_set == "blues" else self.scale.K
+        parts[:width] = (self.friendly_penalty * n_incidents) / width
+        return parts
+
     def _attribute_damage_to_blues(self, damage_by_target, nearest):
         values = np.zeros(self.n_blue, dtype=np.float64)
         nearest = np.asarray(nearest)
@@ -434,9 +496,12 @@ class HADWrapper:
         if not np.isclose(damage.sum(), -reward, atol=1e-6, rtol=0):
             raise AssertionError("per-target damage does not sum to the step damage")
         damage_parts = self._damage_parts(nearest_before)
-        # return_sum stays the physical return, so D and the episode summary
-        # never see the shaping term.
+        # return_sum stays the physical -D, so D and the episode summary never
+        # see shaping or the optional friendly-waste cost.
         self.return_sum += reward
+        incidents = red_friendly_waste(env) if self.reward_mode == "friendly" else 0
+        ff_parts = self._friendly_penalty_parts(incidents)
+        reward = reward - float(ff_parts.sum())
         terminated = bool(env.is_episode_done())
         truncated = bool(adapter.step_count >= self.max_steps and not terminated)
         self.diagnostics.after_step(native_red)
@@ -449,7 +514,7 @@ class HADWrapper:
         # convention; truncation keeps the real one because it bootstraps.
         successor_parts = np.zeros(self.n_tasks()) if terminated else self._potential_parts()
         shaped = reward + self.gamma * float(successor_parts.sum()) - potential
-        by_task = -damage_parts + self.gamma * successor_parts - potential_parts
+        by_task = -damage_parts - ff_parts + self.gamma * successor_parts - potential_parts
         if not np.isclose(by_task.sum(), shaped, atol=1e-6, rtol=0):
             raise AssertionError("per-subtask rewards do not sum to the team reward")
         self._update_hier_decision(terminated, truncated)

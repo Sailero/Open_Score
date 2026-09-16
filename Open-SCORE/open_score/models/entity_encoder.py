@@ -18,12 +18,13 @@ from modules.agents.agent import Agent as ALMAAgent
 from modules.layers.attention import EntityAttentionLayer
 
 
-def relative_entity_views(inputs, args):
+def relative_entity_views(inputs, args, extras=()):
     """Construct temporary observer-centred views; replay stays global.
 
     Each observer is moved to row zero. Other geometry is relative to it;
     its own absolute position and velocity are retained, so own speed is not
     lost by subtracting it from itself. Native FF inputs have no HAD geometry.
+    Extra per-entity tensors use the same observer order and visibility mask.
     """
     entities = inputs["entities"]
     bs, ts, ne, ed = entities.shape
@@ -49,7 +50,17 @@ def relative_entity_views(inputs, args):
     # query still uses its own physical features (as in official attention).
     # Zeroing that query would silently change the imagined architecture.
     views[:, :, :, 0] = own.masked_fill(dead.unsqueeze(-1), 0)
-    return views.reshape(-1, ne, ed), hidden.reshape(-1, ne), dead.reshape(-1), (bs, ts, na)
+    packed = (views.reshape(-1, ne, ed), hidden.reshape(-1, ne), dead.reshape(-1), (bs, ts, na))
+    if not extras:
+        return packed
+    extra_out = []
+    for extra in extras:
+        width = extra.shape[-1]
+        gathered = extra.unsqueeze(2).expand(bs, ts, na, ne, width)
+        gathered = gathered.gather(3, order.unsqueeze(-1).expand(bs, ts, na, ne, width))
+        gathered = gathered.masked_fill(hidden.unsqueeze(-1), 0)
+        extra_out.append(gathered.reshape(-1, ne, width))
+    return packed + (extra_out,)
 
 
 class _EntityEncoder(nn.Module):
@@ -61,7 +72,12 @@ class _EntityEncoder(nn.Module):
         return next(self.parameters()).new_zeros(1, self.args.rnn_hidden_dim)
 
     def forward(self, inputs):
-        views, hidden, dead, shape = relative_entity_views(inputs, self.args)
+        extras = ()
+        if getattr(self, "pre_attn_task", False) and inputs.get("task_embeds") is not None:
+            extras = (inputs["task_embeds"],)
+        unpacked = relative_entity_views(inputs, self.args, extras=extras)
+        views, hidden, dead, shape = unpacked[:4]
+        task_x = unpacked[4][0] if len(unpacked) > 4 else None
         chunk_size = int(getattr(self.args, "encoder_chunk_size", 1024))
         if chunk_size < 1:
             raise ValueError("encoder_chunk_size must be positive")
@@ -72,6 +88,8 @@ class _EntityEncoder(nn.Module):
             # a LIVE REFIL observer with an empty key set must still run.
             active = (~dead).nonzero(as_tuple=False).flatten()
             views, hidden, dead = views[active], hidden[active], dead[active]
+            if task_x is not None:
+                task_x = task_x[active]
         if views.shape[0] == 0:
             result = views.new_zeros(*shape, self.args.rnn_hidden_dim)
             if th.is_grad_enabled():
@@ -89,10 +107,16 @@ class _EntityEncoder(nn.Module):
         for start in range(0, views.shape[0], chunk_size):
             v = views[start:start + chunk_size]
             m, d = hidden[start:start + chunk_size], dead[start:start + chunk_size]
-            if self.training and th.is_grad_enabled():
-                out = checkpoint(self._encode, v, m, d, use_reentrant=False)
+            extra = None if task_x is None else task_x[start:start + chunk_size]
+            if extra is None:
+                if self.training and th.is_grad_enabled():
+                    out = checkpoint(self._encode, v, m, d, use_reentrant=False)
+                else:
+                    out = self._encode(v, m, d)
+            elif self.training and th.is_grad_enabled():
+                out = checkpoint(self._encode, v, m, d, extra, use_reentrant=False)
             else:
-                out = self._encode(v, m, d)
+                out = self._encode(v, m, d, extra)
             outputs.append(out)
         encoded = th.cat(outputs, dim=0)
         if active is not None:
@@ -134,16 +158,111 @@ class AttentionEncoder(_EntityEncoder):
         self.attn = EntityAttentionLayer(args.attn_embed_dim, args.attn_embed_dim,
                                          args.attn_embed_dim, args)
         self.fc2 = nn.Linear(args.attn_embed_dim, args.rnn_hidden_dim)
+        agent = args.agent if isinstance(getattr(args, "agent", None), dict) else {}
+        self.pre_attn_task = bool(agent.get("task_embed_in_attn"))
 
-    def _encode(self, views, hidden, dead):
+    def _encode(self, views, hidden, dead, task_x=None):
         # An inactive observer has a dummy zero self token, preventing an
         # all-minus-infinity softmax before its output is zeroed.
         pre = hidden.clone()
         pre[dead, 0] = False
-        x = F.relu(self.fc1(views))
+        # Official No Mask adds the shared task embedding to every entity
+        # before attention, so the mixer/policy can see who shares a task
+        # without hiding the rest of the field.
+        x = self.fc1(views)
+        if task_x is not None:
+            x = x + task_x
+        x = F.relu(x)
         x = self.attn(x, pre_mask=pre[:, None], post_mask=dead[:, None])
         x = F.relu(self.fc2(F.relu(x[:, 0])))
         return x.masked_fill(dead[:, None], 0)
+
+    def _encode_bundle(self, views, hidden, dead, task_x=None):
+        pre = hidden.clone()
+        pre[dead, 0] = False
+        tokens = self.fc1(views)
+        if task_x is not None:
+            tokens = tokens + task_x
+        tokens = F.relu(tokens)
+        x = self.attn(tokens, pre_mask=pre[:, None], post_mask=dead[:, None])
+        local = F.relu(self.fc2(F.relu(x[:, 0]))).masked_fill(dead[:, None], 0)
+        tokens = tokens.masked_fill(hidden.unsqueeze(-1), 0)
+        return local, tokens
+
+    def encode_bundle(self, inputs):
+        """Local REFIL encoding plus observer-centred tokens for a global branch."""
+        entities = inputs["entities"]
+        bs, ts, ne, _ = entities.shape
+        types = entities[..., 7:10]
+        origin = th.arange(ne, device=entities.device, dtype=entities.dtype)
+        origin = origin.view(1, 1, ne, 1).expand(bs, ts, ne, 1)
+        unpacked = relative_entity_views(inputs, self.args, extras=(types, origin))
+        views, hidden, dead, shape = unpacked[:4]
+        types_f, origin_f = unpacked[4]
+        chunk_size = int(getattr(self.args, "encoder_chunk_size", 1024))
+        if chunk_size < 1:
+            raise ValueError("encoder_chunk_size must be positive")
+        active = None
+        if getattr(self.args, "encoder_skip_dead", True):
+            active = (~dead).nonzero(as_tuple=False).flatten()
+            views, hidden, dead = views[active], hidden[active], dead[active]
+            types_f, origin_f = types_f[active], origin_f[active]
+        attn_dim = int(self.args.attn_embed_dim)
+        hid = int(self.args.rnn_hidden_dim)
+        if views.shape[0] == 0:
+            local = views.new_zeros(*shape, hid)
+            tokens = views.new_zeros(*shape, ne, attn_dim)
+            type_out = views.new_zeros(*shape, ne, 3)
+            origin_out = views.new_zeros(*shape, ne)
+            key_mask = views.new_ones(*shape, ne, dtype=th.bool)
+            dead_out = views.new_ones(*shape, dtype=th.bool)
+            if th.is_grad_enabled():
+                zero = views.sum() * 0
+                for parameter in self.parameters():
+                    zero = zero + parameter.reshape(-1)[0] * 0
+                local = local + zero
+            return local, tokens, key_mask, dead_out, type_out, origin_out
+        locals_, tokens_, types_, origins_, masks_, deads_ = [], [], [], [], [], []
+        for start in range(0, views.shape[0], chunk_size):
+            sl = slice(start, start + chunk_size)
+            v, m, d = views[sl], hidden[sl], dead[sl]
+            if self.training and th.is_grad_enabled():
+                local, tokens = checkpoint(self._encode_bundle, v, m, d, use_reentrant=False)
+            else:
+                local, tokens = self._encode_bundle(v, m, d)
+            locals_.append(local)
+            tokens_.append(tokens)
+            types_.append(types_f[sl])
+            origins_.append(origin_f[sl])
+            masks_.append(m)
+            deads_.append(d)
+        local = th.cat(locals_, dim=0)
+        tokens = th.cat(tokens_, dim=0)
+        types_f = th.cat(types_, dim=0)
+        origin_f = th.cat(origins_, dim=0)
+        hidden = th.cat(masks_, dim=0)
+        dead = th.cat(deads_, dim=0)
+        rows = shape[0] * shape[1] * shape[2]
+        if active is not None:
+            def scatter(src, fill=None):
+                out = src.new_zeros((rows,) + src.shape[1:])
+                if fill is True:
+                    out = out.fill_(True)
+                return out.index_copy(0, active, src)
+            local = scatter(local, None).reshape(*shape, hid)
+            tokens = scatter(tokens, None).reshape(*shape, ne, attn_dim)
+            types_f = scatter(types_f, None).reshape(*shape, ne, 3)
+            origin_f = scatter(origin_f, None).reshape(*shape, ne, 1)
+            hidden = scatter(hidden, True).reshape(*shape, ne)
+            dead = scatter(dead, True).reshape(*shape)
+        else:
+            local = local.reshape(*shape, hid)
+            tokens = tokens.reshape(*shape, ne, attn_dim)
+            types_f = types_f.reshape(*shape, ne, 3)
+            origin_f = origin_f.reshape(*shape, ne, 1)
+            hidden = hidden.reshape(*shape, ne)
+            dead = dead.reshape(*shape)
+        return local, tokens, hidden.bool(), dead.bool(), types_f, origin_f.squeeze(-1)
 
 
 class GraphEncoder(_EntityEncoder):
@@ -214,6 +333,303 @@ class TemporalHead(nn.Module):
         hs = th.stack(outputs, dim=1)
         return self.fc_out(hs), h.reshape(bs, na, hd)
 
+    def step(self, x, hidden, alive):
+        bs, na, hd = x.shape
+        if hidden.shape[0] != bs:
+            hidden = hidden.repeat(bs // hidden.shape[0], 1, 1)
+        flat = self.rnn(x.reshape(bs * na, hd), hidden.reshape(bs * na, hd))
+        flat = flat.masked_fill(~alive.reshape(-1, 1), 0)
+        hidden = flat.reshape(bs, na, hd)
+        return self.fc_out(hidden), hidden
+
+
+def _phi2_from_counts(*counts):
+    parts = []
+    for count in counts:
+        shifted = (count - 1).clamp_min(0).to(dtype=th.float32)
+        parts.append(th.stack((th.square(shifted / (shifted + 2)),
+                               (count == 0).to(dtype=th.float32)), dim=-1))
+    return th.cat(parts, dim=-1)
+
+
+class _MHA(nn.Module):
+    def __init__(self, dim, n_heads):
+        super().__init__()
+        if dim % n_heads != 0:
+            raise ValueError("embed dim must be divisible by n_heads")
+        self.n_heads = n_heads
+        self.head_dim = dim // n_heads
+        self.query = nn.Linear(dim, dim, bias=False)
+        self.key = nn.Linear(dim, dim, bias=False)
+        self.value = nn.Linear(dim, dim, bias=False)
+        self.out = nn.Linear(dim, dim, bias=False)
+        self.scale = self.head_dim ** 0.5
+
+    def forward(self, query, key, value, mask=None):
+        batch, n_q, dim = query.shape
+        n_k = key.shape[1]
+        heads = self.n_heads
+        query = self.query(query).view(batch, n_q, heads, self.head_dim).transpose(1, 2)
+        key = self.key(key).view(batch, n_k, heads, self.head_dim).transpose(1, 2)
+        value = self.value(value).view(batch, n_k, heads, self.head_dim).transpose(1, 2)
+        logits = th.matmul(query, key.transpose(-2, -1)) / self.scale
+        if mask is not None:
+            hide = mask[:, None, None, :]
+            logits = logits.masked_fill(hide, float("-inf"))
+            empty = hide.all(dim=-1, keepdim=True)
+            logits = logits.masked_fill(empty, 0)
+        weights = th.softmax(logits, dim=-1)
+        if mask is not None:
+            weights = weights.masked_fill(hide, 0)
+            weights = weights.masked_fill(empty, 0)
+        out = th.matmul(weights, value).transpose(1, 2).contiguous().view(batch, n_q, dim)
+        return self.out(out)
+
+
+class CardinalityMHA(nn.Module):
+    def __init__(self, dim, n_heads):
+        super().__init__()
+        if dim % n_heads != 0:
+            raise ValueError("embed dim must be divisible by n_heads")
+        self.n_heads = n_heads
+        self.head_dim = dim // n_heads
+        self.query = nn.Linear(dim, dim, bias=False)
+        self.key = nn.Linear(dim, dim, bias=False)
+        self.value = nn.Linear(dim, dim, bias=False)
+        self.out = nn.Linear(dim, dim, bias=False)
+        self.scale = self.head_dim ** 0.5
+
+    def forward(self, query, key, value, mask, types):
+        batch, n_q, dim = query.shape
+        n_k = key.shape[1]
+        heads = self.n_heads
+        mask = mask.reshape(batch, n_k)
+        types = types.reshape(batch, n_k, 3)
+        query = self.query(query).view(batch, n_q, heads, self.head_dim).transpose(1, 2)
+        key = self.key(key).view(batch, n_k, heads, self.head_dim).transpose(1, 2)
+        value = self.value(value).view(batch, n_k, heads, self.head_dim).transpose(1, 2)
+        logits = th.matmul(query, key.transpose(-2, -1)) / self.scale
+        mixed = logits.new_zeros(batch, heads, n_q, self.head_dim)
+        type_logits = []
+        contexts = []
+        present = []
+        for kind in range(3):
+            hide = mask | ~(types[..., kind] > 0)
+            hide_b = hide.reshape(batch, 1, 1, n_k)
+            empty = hide.all(dim=-1)
+            empty_b = empty.reshape(batch, 1, 1, 1)
+            kind_logits = logits.masked_fill(hide_b, float("-inf")).masked_fill(empty_b, 0)
+            weights = th.softmax(kind_logits, dim=-1).masked_fill(hide_b | empty_b, 0)
+            contexts.append(th.matmul(weights, value))
+            visible = (~hide).to(logits.dtype)
+            denom = visible.sum(dim=-1).clamp_min(1).reshape(batch, 1, 1)
+            pooled = (logits.masked_fill(hide_b, 0) * visible.reshape(batch, 1, 1, n_k)).sum(-1)
+            pooled = (pooled / denom).masked_fill(empty.reshape(batch, 1, 1), float("-inf"))
+            type_logits.append(pooled)
+            present.append(~empty)
+        stacked = th.stack(type_logits, dim=-1)
+        missing = ~th.isfinite(stacked).any(dim=-1, keepdim=True)
+        stacked = stacked.masked_fill(missing, 0)
+        gates = th.softmax(stacked, dim=-1).masked_fill(missing, 0)
+        gates = gates.masked_fill(~th.stack(present, dim=-1).reshape(batch, 1, 1, 3), 0)
+        for context, gate in zip(contexts, gates.unbind(-1)):
+            mixed = mixed + gate.unsqueeze(-1) * context
+        mixed = mixed.masked_fill(mask.all(dim=-1).reshape(batch, 1, 1, 1), 0)
+        return self.out(mixed.transpose(1, 2).contiguous().reshape(batch, n_q, dim))
+
+
+def _global_width(args):
+    src = int(args.attn_embed_dim)
+    dim = int(getattr(args, "global_embed_dim", 64))
+    heads = int(getattr(args, "global_n_heads", 4))
+    ffn_mult = int(getattr(args, "global_ffn_mult", 2))
+    if dim % heads != 0:
+        raise ValueError("global_embed_dim must be divisible by global_n_heads")
+    return src, dim, heads, ffn_mult
+
+
+class GlobalBranch(nn.Module):
+    def __init__(self, args, kind):
+        super().__init__()
+        self.kind = kind
+        self.args = args
+        src, dim, heads, ffn_mult = _global_width(args)
+        hidden = int(args.rnn_hidden_dim)
+        self.n_slots = int(getattr(args, "global_slots", 4))
+        self.token_proj = nn.Identity() if src == dim else nn.Linear(src, dim)
+        self.count_mlp = nn.Sequential(nn.Linear(6, 32), nn.ReLU(), nn.Linear(32, 32), nn.ReLU())
+        self.query_proj = nn.Linear(dim + hidden, dim)
+        self.fuse = nn.Linear(dim, hidden)
+        nn.init.zeros_(self.fuse.weight)
+        nn.init.zeros_(self.fuse.bias)
+        self.count_to_token = nn.Linear(32, dim)
+        if kind == "card":
+            self.card_attn = CardinalityMHA(dim, heads)
+            self.card_mix = nn.Linear(dim + 32, dim)
+        else:
+            self.self_attn = _MHA(dim, heads)
+            self.read_attn = _MHA(dim, heads)
+            self.read_score = nn.Linear(dim, 1)
+            self.norm_attn = nn.LayerNorm(dim)
+            self.norm_ffn = nn.LayerNorm(dim)
+            self.ffn = nn.Sequential(nn.Linear(dim, dim * ffn_mult), nn.ReLU(),
+                                     nn.Linear(dim * ffn_mult, dim))
+            if kind == "slot":
+                self.init_slots = nn.Parameter(th.randn(1, self.n_slots, dim) * 0.02)
+                self.cross_attn = _MHA(dim, heads)
+                self.norm_cross = nn.LayerNorm(dim)
+            if kind == "feedback":
+                self.pref_proj = nn.Linear(int(args.n_actions), dim)
+
+    def project(self, tokens):
+        return self.token_proj(tokens)
+
+    def allowed_count(self, key_mask, types):
+        batch, n_k = key_mask.shape[0], key_mask.shape[-1]
+        key_mask = key_mask.reshape(batch, n_k)
+        types = types.reshape(batch, n_k, 3)
+        visible = ~key_mask
+        red = (visible & (types[..., 0] > 0)).sum(-1)
+        blue = (visible & (types[..., 1] > 0)).sum(-1)
+        tgt = (visible & (types[..., 2] > 0)).sum(-1)
+        return self.count_mlp(_phi2_from_counts(red, blue, tgt))
+
+    def expand_depth(self, depth, n_env, n_time, n_agents, device):
+        total = n_env * n_time * n_agents
+        if isinstance(depth, th.Tensor):
+            depth_t = depth.to(device=device, dtype=th.long).reshape(-1)
+            if depth_t.numel() == 1:
+                return depth_t.expand(total).contiguous()
+            if n_env % depth_t.shape[0] == 0 and depth_t.shape[0] != n_env:
+                depth_t = depth_t.repeat(n_env // depth_t.shape[0])
+            if depth_t.shape[0] == n_env:
+                return depth_t[:, None, None].expand(n_env, n_time, n_agents).reshape(-1)
+            if depth_t.shape[0] == n_env * n_agents:
+                return depth_t.reshape(n_env, 1, n_agents).expand(n_env, n_time, n_agents).reshape(-1)
+            if depth_t.shape[0] == total:
+                return depth_t
+            raise ValueError("global depth batch does not match observers")
+        return th.full((total,), int(1 if depth is None else depth), dtype=th.long, device=device)
+
+    def _agent_query(self, own, hidden):
+        return self.query_proj(th.cat((own, hidden), dim=-1)).unsqueeze(1)
+
+    def _jk(self, states, query, mem_mask, depth):
+        scores, values = [], []
+        for memory in states:
+            read = self.read_attn(query, memory, memory, mem_mask).squeeze(1)
+            values.append(read)
+            scores.append(self.read_score(read))
+        scores = th.cat(scores, dim=-1)
+        index = th.arange(scores.shape[-1], device=scores.device)
+        valid = index.unsqueeze(0) < depth.unsqueeze(-1)
+        scores = scores.masked_fill(~valid, float("-inf"))
+        empty = ~valid.any(dim=-1, keepdim=True)
+        scores = scores.masked_fill(empty, 0)
+        alpha = th.softmax(scores, dim=-1)
+        alpha = alpha.masked_fill(~valid, 0)
+        stacked = th.stack(values, dim=-1)
+        return (stacked * alpha.unsqueeze(1)).sum(-1)
+
+    def _maybe_checkpoint(self, fn, *tensors):
+        if self.training and th.is_grad_enabled():
+            return checkpoint(fn, *tensors, use_reentrant=False)
+        return fn(*tensors)
+
+    def _cycle_round(self, tokens, mask, count):
+        injected = self.norm_attn(tokens) + self.count_to_token(count).unsqueeze(1)
+        tokens = tokens + self.self_attn(injected, tokens, tokens, mask)
+        tokens = tokens + self.ffn(self.norm_ffn(tokens))
+        return tokens.masked_fill(mask.unsqueeze(-1), 0)
+
+    def _slot_round(self, slots, tokens, mask, count):
+        query = self.norm_cross(slots) + self.count_to_token(count).unsqueeze(1)
+        slots = slots + self.cross_attn(query, tokens, tokens, mask)
+        slots = slots + self.self_attn(self.norm_attn(slots), slots, slots)
+        return slots + self.ffn(self.norm_ffn(slots))
+
+    def build_memories(self, tokens, key_mask, types, depth_t):
+        count = self.allowed_count(key_mask, types)
+        n_rounds = max(int(depth_t.max().item()), 1)
+        states = []
+        if self.kind == "slot":
+            memory = self.init_slots.expand(tokens.shape[0], -1, -1)
+            for _ in range(n_rounds):
+                memory = self._maybe_checkpoint(self._slot_round, memory, tokens, key_mask, count)
+                states.append(memory)
+            return states, None
+        memory = tokens
+        for _ in range(n_rounds):
+            memory = self._maybe_checkpoint(self._cycle_round, memory, key_mask, count)
+            states.append(memory)
+        return states, key_mask
+
+    def read_context(self, states, tokens, key_mask, hidden, depth_t, local, mem_mask=None):
+        query = self._agent_query(tokens[:, 0], hidden.reshape(tokens.shape[0], -1))
+        if self.kind == "slot":
+            mask = None
+        else:
+            mask = key_mask if mem_mask is None else mem_mask
+        context = self._jk(states, query, mask, depth_t)
+        return local + self.fuse(context)
+
+    def card_fuse(self, tokens, key_mask, types, hidden, local):
+        query = self._agent_query(tokens[:, 0], hidden.reshape(tokens.shape[0], -1))
+        count = self.allowed_count(key_mask, types)
+        read = self.card_attn(query, tokens, tokens, key_mask, types).squeeze(1)
+        context = self.card_mix(th.cat((read, count), dim=-1))
+        return local + self.fuse(context)
+
+    def _inject_prefs(self, tokens, origin, prefs, key_mask, n_agents):
+        embed = self.pref_proj(prefs)
+        batch_obs, n_ent, dim = tokens.shape
+        batch = prefs.shape[0]
+        n_a = prefs.shape[1]
+        repeated = embed.unsqueeze(1).expand(batch, n_a, n_a, dim).reshape(batch_obs, n_a, dim)
+        agent_ids = origin.clamp(0, n_agents - 1).long().unsqueeze(-1).expand(-1, -1, dim)
+        gathered = repeated.gather(1, agent_ids)
+        red = (origin < n_agents).unsqueeze(-1).to(tokens.dtype)
+        live = (~key_mask).unsqueeze(-1).to(tokens.dtype)
+        return tokens + gathered * red * live
+
+    def context(self, tokens, key_mask, types, origin, hidden, depth, local, avail=None,
+                n_agents=None, gru=None, alive=None):
+        batch, n_ent, dim = tokens.shape
+        env = hidden.shape[0]
+        agents = hidden.shape[1]
+        origin = origin.long()
+        own = tokens[:, 0]
+        query = self._agent_query(own, hidden.reshape(batch, -1))
+        count = self.allowed_count(key_mask, types)
+        depth_t = self.expand_depth(depth, env, 1, agents, hidden.device)
+        n_rounds = max(int(depth_t.max().item()), 1)
+        prefs = tokens.new_zeros(env, agents, int(self.args.n_actions))
+        states = []
+        q_out = local.new_zeros(env, agents, int(self.args.n_actions))
+        h_out = hidden
+        memory = tokens
+        for round_id in range(n_rounds):
+            if round_id:
+                memory = self._inject_prefs(memory, origin, prefs, key_mask, n_agents)
+            memory = self._maybe_checkpoint(self._cycle_round, memory, key_mask, count)
+            states.append(memory)
+            context = self._jk(states, query, key_mask, depth_t.clamp(max=round_id + 1))
+            fused = local + self.fuse(context)
+            q_cand, h_cand = gru.step(fused.reshape(env, agents, -1), hidden, alive)
+            logits = q_cand.clone()
+            if avail is not None:
+                logits = logits.masked_fill(avail == 0, float("-inf"))
+            empty = ~th.isfinite(logits).any(dim=-1, keepdim=True)
+            logits = logits.masked_fill(empty, 0)
+            prefs = th.softmax(logits, dim=-1)
+            if avail is not None:
+                prefs = prefs.masked_fill(avail == 0, 0)
+            prefs = prefs.masked_fill(~alive.unsqueeze(-1), 0)
+            chosen = (depth_t.reshape(env, agents) == (round_id + 1))
+            q_out = th.where(chosen.unsqueeze(-1), q_cand, q_out)
+            h_out = th.where(chosen.unsqueeze(-1), h_cand, h_out)
+        return None, q_out, h_out
+
 
 class EntityAgent(ALMAAgent):
     def __init__(self, input_shape, args):
@@ -226,15 +642,77 @@ class EntityAgent(ALMAAgent):
                       "gnn": GraphEncoder}[kind](input_shape, args)
         if args.agent.get("recurrent", False):
             self._head = TemporalHead(args)
-        if args.agent.get("subtask_cond") == "full_obs":
+        # The completed full-obs probe arms add a task label only after
+        # attention, and their checkpoints contain task_cond. Official No Mask
+        # puts the label on every entity first; do not keep both paths.
+        if (args.agent.get("subtask_cond") == "full_obs"
+                and not args.agent.get("task_embed_in_attn")):
             self.task_cond = nn.Linear(args.attn_embed_dim, args.rnn_hidden_dim)
+        self.count_cond = getattr(args, "count_cond", None)
+        # v4 REFIL-C checkpoints have no count_ln flag and expect LayerNorm.
+        self.use_count_ln = bool(getattr(args, "count_ln", True))
+        self.global_branch = getattr(args, "global_branch", None)
+        if self.global_branch in (None, False, "off", "none", ""):
+            self.global_branch = None
+        elif self.global_branch not in ("card", "cycle", "slot", "feedback"):
+            raise ValueError(f"Unknown global_branch {self.global_branch!r}")
+        if self.global_branch is not None:
+            if kind != "attention":
+                raise ValueError("global_branch requires encoder=attention")
+            if not args.agent.get("recurrent", False):
+                raise ValueError("global_branch requires a recurrent head")
+            self.global_net = GlobalBranch(args, self.global_branch)
+        elif self.count_cond == "phi2":
+            hidden = args.rnn_hidden_dim
+            self.count_mlp = nn.Linear(6, 32)
+            if self.use_count_ln:
+                self.count_ln = nn.LayerNorm(hidden)
+            self.count_alpha = nn.Linear(32, hidden)
+            self.count_beta = nn.Linear(32, hidden)
+            nn.init.zeros_(self.count_alpha.weight)
+            nn.init.zeros_(self.count_alpha.bias)
+            nn.init.zeros_(self.count_beta.weight)
+            nn.init.zeros_(self.count_beta.bias)
+        elif self.count_cond not in (None, False, "off", "none"):
+            raise ValueError(f"Unknown count_cond {self.count_cond!r}")
+
+    def _count_embedding(self, entity_mask):
+        n_red = int(self.args.n_agents)
+        n_entities = int(entity_mask.shape[-1])
+        n_tasks = int(getattr(self.args, "n_tasks", 0))
+        if n_tasks <= 0 or n_red + n_tasks > n_entities:
+            raise ValueError("count_cond=phi2 needs red, blue and target slots")
+        n_blue = n_entities - n_red - n_tasks
+        live = ~entity_mask
+        counts = (live[..., :n_red].sum(-1),
+                  live[..., n_red:n_red + n_blue].sum(-1),
+                  live[..., n_red + n_blue:n_red + n_blue + n_tasks].sum(-1))
+
+        def rho(count):
+            shifted = (count - 1).clamp_min(0).to(dtype=th.float32)
+            return th.stack((th.square(shifted / (shifted + 2)), (count == 0).to(dtype=th.float32)), dim=-1)
+
+        return th.cat([rho(count) for count in counts], dim=-1)
+
+    def _apply_count_cond(self, encoded, entity_mask):
+        if self.count_cond != "phi2":
+            return encoded
+        embed = F.relu(self.count_mlp(self._count_embedding(entity_mask)))
+        scale = 1 + self.count_alpha(embed).unsqueeze(2)
+        shift = self.count_beta(embed).unsqueeze(2)
+        hidden = self.count_ln(encoded) if self.use_count_ln else encoded
+        conditioned = scale * hidden + shift
+        return conditioned.masked_fill(entity_mask[:, :, :self.args.n_agents].unsqueeze(-1), 0)
 
     def _compute_network(self, inputs):
         # Modern torch requires bool masks; official ALMA stores uint8 replay.
         inputs = dict(inputs)
         inputs["entity_mask"] = inputs["entity_mask"].bool()
         inputs["obs_mask"] = inputs["obs_mask"].bool()
+        if self.global_branch is not None:
+            return self._compute_global(inputs)
         encoded = self._base(inputs)
+        encoded = self._apply_count_cond(encoded, inputs["entity_mask"])
         if hasattr(self, "task_cond") and "task_embeds" in inputs:
             encoded = encoded + self.task_cond(inputs["task_embeds"][:, :, :self.args.n_agents])
         if self.use_copa:
@@ -242,6 +720,90 @@ class EntityAgent(ALMAAgent):
         q, hidden = self._head(encoded, inputs)
         agent_mask = inputs["entity_mask"][:, :, :self.args.n_agents]
         return q.masked_fill(agent_mask.unsqueeze(3), 0), hidden
+
+    def _compute_global(self, inputs):
+        local, tokens, key_mask, dead, types, origin = self._base.encode_bundle(inputs)
+        if hasattr(self, "task_cond") and "task_embeds" in inputs:
+            local = local + self.task_cond(inputs["task_embeds"][:, :, :self.args.n_agents])
+        if self.use_copa:
+            local = local + inputs["coach_z"]
+        tokens = self.global_net.project(tokens)
+        bs, ts, na, hidden_dim = local.shape
+        n_ent = tokens.shape[-2]
+        gdim = tokens.shape[-1]
+        n_act = int(self.args.n_actions)
+        h = inputs.get("hidden_state")
+        if h is None:
+            h = local.new_zeros(bs, na, hidden_dim)
+        if h.shape[0] != bs:
+            h = h.repeat(bs // h.shape[0], 1, 1)
+        depth = getattr(self, "cycle_depth", 1)
+        if depth is None:
+            depth = 1
+        avail = inputs.get("avail_actions")
+        kind = self.global_branch
+        outputs = []
+        if kind in ("cycle", "slot"):
+            n_obs = bs * ts * na
+            live = ~dead.reshape(-1)
+            idx = live.nonzero(as_tuple=False).flatten()
+            depth_flat = self.global_net.expand_depth(depth, bs, ts, na, tokens.device)
+            states_full = None
+            mem_mask_full = None
+            if idx.numel():
+                tok = tokens.reshape(n_obs, n_ent, gdim).index_select(0, idx)
+                km = key_mask.reshape(n_obs, n_ent).index_select(0, idx)
+                ty = types.reshape(n_obs, n_ent, 3).index_select(0, idx)
+                dpt = depth_flat.index_select(0, idx)
+                states_live, mem_mask_live = self.global_net.build_memories(tok, km, ty, dpt)
+                n_mem = states_live[0].shape[1]
+                states_full = []
+                for memory in states_live:
+                    packed = memory.new_zeros(n_obs, n_mem, gdim)
+                    packed.index_copy_(0, idx, memory)
+                    states_full.append(packed.reshape(bs, ts, na, n_mem, gdim))
+                if mem_mask_live is not None:
+                    mem_mask_full = key_mask.new_ones(n_obs, n_ent)
+                    mem_mask_full.index_copy_(0, idx, mem_mask_live)
+                    mem_mask_full = mem_mask_full.reshape(bs, ts, na, n_ent)
+            for t in range(ts):
+                alive = ~dead[:, t]
+                if states_full is None:
+                    outputs.append(local.new_zeros(bs, na, n_act))
+                    continue
+                mask_t = None if mem_mask_full is None else mem_mask_full[:, t].reshape(bs * na, n_ent)
+                fused = self.global_net.read_context(
+                    [state[:, t].reshape(bs * na, -1, gdim) for state in states_full],
+                    tokens[:, t].reshape(bs * na, n_ent, gdim),
+                    key_mask[:, t].reshape(bs * na, n_ent),
+                    h, depth_flat.reshape(bs, ts, na)[:, t].reshape(-1),
+                    local[:, t].reshape(bs * na, hidden_dim), mem_mask=mask_t)
+                q_t, h = self._head.step(fused.reshape(bs, na, hidden_dim), h, alive)
+                outputs.append(q_t)
+        else:
+            for t in range(ts):
+                alive = ~dead[:, t]
+                if kind == "card":
+                    fused = self.global_net.card_fuse(
+                        tokens[:, t].reshape(bs * na, n_ent, gdim),
+                        key_mask[:, t].reshape(bs * na, n_ent),
+                        types[:, t].reshape(bs * na, n_ent, 3),
+                        h, local[:, t].reshape(bs * na, hidden_dim))
+                    q_t, h = self._head.step(fused.reshape(bs, na, hidden_dim), h, alive)
+                else:
+                    unused_fused, direct_q, h_next = self.global_net.context(
+                        tokens[:, t].reshape(bs * na, n_ent, gdim),
+                        key_mask[:, t].reshape(bs * na, n_ent),
+                        types[:, t].reshape(bs * na, n_ent, 3),
+                        origin[:, t].reshape(bs * na, n_ent),
+                        h, depth, local[:, t].reshape(bs * na, hidden_dim),
+                        avail=None if avail is None else avail[:, t],
+                        n_agents=na, gru=self._head, alive=alive)
+                    q_t, h = direct_q, h_next
+                outputs.append(q_t)
+        q = th.stack(outputs, dim=1)
+        agent_mask = inputs["entity_mask"][:, :, :na]
+        return q.masked_fill(agent_mask.unsqueeze(3), 0), h
 
     def make_imagined_inputs(self, inputs):
         imagined, groups = super().make_imagined_inputs(inputs)

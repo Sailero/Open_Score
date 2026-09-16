@@ -26,3 +26,7 @@ Open-SCORE/outputs/**
 !Open-SCORE/outputs/v7/metrics.json
 !Open-SCORE/outputs/v7/figures/
 !Open-SCORE/outputs/v7/figures/*.png
+!Open-SCORE/outputs/main_v5/
+!Open-SCORE/outputs/main_v5/*.md
+!Open-SCORE/outputs/main_v5/figures/
+!Open-SCORE/outputs/main_v5/figures/*.png

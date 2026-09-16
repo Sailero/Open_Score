@@ -12,12 +12,15 @@ from pathlib import Path
 import threading
 import time
 
-VERSION = "crossscale_v3"
+VERSION = "main_v5"
 # The formal training run of this version. v2 called it "stage3" after a
 # staged plan that no longer exists; the anchors it produced are policy- and
 # version-independent and are carried over instead of being re-run.
 FORMAL_RUN = "train"
 DEFAULT_OUTPUT = Path(__file__).resolve().parents[2] / "outputs" / VERSION
+V3_OUTPUT = Path(__file__).resolve().parents[2] / "outputs" / "main_v3"
+V4_OUTPUT = Path(__file__).resolve().parents[2] / "outputs" / "main_v4"
+V5_OUTPUT = Path(__file__).resolve().parents[2] / "outputs" / "main_v5"
 IDENTITY = ("version", "run", "method", "seed", "recorded_at")
 EPISODE_FIELDS = (
     "train_dist", "t_env", "eval_point", "phase", "config", "episode_seed",
@@ -160,25 +163,25 @@ def read_latest(output, stream_name, *, run=None, method=None, seed=None, keys=N
     path = Path(output) / f"{stream_name}.csv"
     if not path.exists():
         return {}
-    latest = {}
     with _locked_file(path) as stream:
         stream.seek(0)
-        text = io.TextIOWrapper(stream, encoding="utf-8", newline="")
-        try:
-            for cells in csv.DictReader(text):
-                row = _decode_row(cells, path)
-                if run is not None and row.get("run") != run:
-                    continue
-                if method is not None and row.get("method") != method:
-                    continue
-                if seed is not None and row.get("seed") != int(seed):
-                    continue
-                identity = (row.get("method"), row.get("run"), row.get("seed"))
-                if keys is not None and identity not in keys:
-                    continue
-                latest[identity] = row
-        finally:
-            text.detach()
+        raw = stream.read()
+    raw = raw[:raw.rfind(b"\n") + 1]
+    if not raw:
+        return {}
+    latest = {}
+    for cells in csv.DictReader(io.StringIO(raw.decode("utf-8"), newline="")):
+        row = _decode_row(cells, path)
+        if run is not None and row.get("run") != run:
+            continue
+        if method is not None and row.get("method") != method:
+            continue
+        if seed is not None and row.get("seed") != int(seed):
+            continue
+        identity = (row.get("method"), row.get("run"), row.get("seed"))
+        if keys is not None and identity not in keys:
+            continue
+        latest[identity] = row
     return latest
 
 
@@ -215,7 +218,7 @@ class ExperimentLogger:
             missing = set(EPISODE_FIELDS) - row.keys()
             if missing:
                 raise ValueError(f"Missing episode fields: {sorted(missing)}")
-            if row["phase"] not in ("train_eval", "final_eval", "anchor"):
+            if row["phase"] not in ("train_eval", "final_eval", "depth_eval", "anchor"):
                 raise ValueError(f"Not a frozen evaluation phase: {row['phase']}")
             for field in ("D", "rho", "ep_len"):
                 if row[field] is None or not math.isfinite(float(row[field])):

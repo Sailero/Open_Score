@@ -255,6 +255,12 @@ class FrozenPolicyAdapter:
             self.mixer.eval()
         self.reset()
 
+    def set_eval_depth(self, depth):
+        depth = int(depth)
+        self.args.global_eval_depth = depth
+        if hasattr(self.mac, "set_global_depth"):
+            self.mac.set_global_depth(depth)
+
     def reset(self):
         from components.episode_buffer import EpisodeBatch
         self.batch = EpisodeBatch(self.scheme, self.groups, 1, int(self.args.episode_limit) + 1,

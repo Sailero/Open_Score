@@ -69,16 +69,44 @@ class Agent(nn.Module):
         attn_mask = 1 - th.bmm(in1, in2)
         return attn_mask.reshape(bs, ts, ne, ne).to(th.uint8)
 
+    def _sample_group_labels(self, inputs):
+        """Episode-constant entity split for imagined within/cross branches."""
+        entities = inputs['entities']
+        entity_mask = inputs['entity_mask']
+        bs, _, ne, _ = entities.shape
+        p_rand = th.rand(bs, 1, 1, device=entities.device)
+        mode = getattr(self.args, 'imagine_group', 'original')
+        if mode in (None, 'original'):
+            return th.bernoulli(p_rand.repeat(1, 1, ne)).to(th.uint8)
+        if mode != 'mixed_distance':
+            raise ValueError(f"Unknown imagine_group {mode!r}")
+        eta = float(getattr(self.args, 'imagine_group_eta', 0.0))
+        radius = float(getattr(self.args, 'imagine_group_radius', 0.4))
+        if radius <= 0:
+            raise ValueError("imagine_group_radius must be positive")
+        live = ~entity_mask[:, 0, :self.args.n_agents].bool()
+        has_center = live.any(dim=1)
+        weights = live.float()
+        weights[~has_center, 0] = 1
+        weights = weights / weights.sum(dim=1, keepdim=True)
+        center = th.multinomial(weights, 1).squeeze(1)
+        pos = entities[:, 0, :, :2]
+        center_xy = pos[th.arange(bs, device=pos.device), center]
+        dist_sq = (pos - center_xy.unsqueeze(1)).pow(2).sum(-1)
+        p_dist = th.exp(-dist_sq / (2.0 * radius * radius))
+        scale = (1.0 - eta) + eta * p_dist
+        p = p_rand.reshape(bs, 1) * scale
+        p[th.arange(bs, device=p.device), center] = p_rand.reshape(-1)
+        p = th.where(has_center.unsqueeze(1), p, p_rand.reshape(bs, 1).expand_as(p))
+        return th.bernoulli(p.clamp(0, 1).unsqueeze(1)).to(th.uint8)
+
     def make_imagined_inputs(self, inputs):
         entities = inputs['entities']
         obs_mask = inputs['obs_mask']
         entity_mask = inputs['entity_mask']
         bs, ts, ne, ed = entities.shape
 
-        # create random split of entities (once per episode)
-        groupA_probs = th.rand(bs, 1, 1, device=entities.device).repeat(1, 1, ne)
-
-        groupA = th.bernoulli(groupA_probs).to(th.uint8)
+        groupA = self._sample_group_labels(inputs)
         groupB = self._logical_not(groupA)
         # mask out entities not present in env
         groupA = self._logical_or(groupA, entity_mask[:, [0]])

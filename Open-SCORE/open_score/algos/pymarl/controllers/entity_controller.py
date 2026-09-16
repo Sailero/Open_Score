@@ -129,7 +129,10 @@ class EntityMAC(BasicMAC):
         rets = {'entities': entities,
                 'obs_mask': batch["obs_mask"][:, t],
                 'entity_mask': batch["entity_mask"][:, t],
-                'reset': batch["reset"][:, t].float()}
+                'reset': batch["reset"][:, t].float(),
+                'avail_actions': batch["avail_actions"][:, t]}
+        if imagine_inps is not None:
+            imagine_inps['avail_actions'] = rets['avail_actions'].repeat(2, 1, 1, 1)
         if self.args.multi_task:
             rets['entity2task_mask'] = batch['entity2task_mask'][:, t]
             rets['task_mask'] = batch['task_mask'][:, t]

@@ -562,7 +562,7 @@ def run_episode(targets=2, red=8, blue=8, seed=0, *, red_strategy=None,
         if fired:
             fires.append({"step": adapter.step_count, "red": fired, "kills": kills})
         if record:
-            frames.append(_frame(adapter, grouping, executor, reason, info, fired))
+            frames.append(_frame(adapter, grouping, blue_grouping, executor, reason, info, fired))
         events.extend(info.get("events", []))
         if done:
             outcome = int(info.get("outcome", info.get("outcome_red", 0)))
@@ -607,7 +607,7 @@ def run_episode(targets=2, red=8, blue=8, seed=0, *, red_strategy=None,
                         update_blue=not blue_layered or casualty or periodic)
 
 
-def _frame(adapter, grouping, executor, reason, info, fired):
+def _frame(adapter, grouping, blue_grouping, executor, reason, info, fired):
     def pack(rows):
         return {int(i): {
             "p": [float(x) for x in row["position"]],
@@ -632,6 +632,8 @@ def _frame(adapter, grouping, executor, reason, info, fired):
         "targets": pack(adapter.target_states()),
         "stations": getattr(executor, "last_stations", {}),
         "assignment": grouping.assignment(),
+        "blue_assignment": {int(identity): (None if target is None else int(target))
+                            for identity, target in blue_grouping.assignment().items()},
         "interception": dict(getattr(executor, "last_interception", {})),
         "selected_blue": (list(executor.selected_blue) if hasattr(executor, "selected_blue") else None),
         "ignored_blue": (list(executor.ignored_blue) if hasattr(executor, "ignored_blue") else None),

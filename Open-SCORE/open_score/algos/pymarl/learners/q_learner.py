@@ -376,6 +376,13 @@ class QLearner:
         if self.args.agent['imagine']:
             batch_mult += 2
 
+        branch = getattr(self.args, "global_branch", None)
+        if branch in ("cycle", "slot", "feedback"):
+            choices = [int(value) for value in getattr(self.args, "global_depths", (1, 2, 3, 4))]
+            depth = choices[int(th.randint(len(choices), (1,)).item())]
+            self.mac.set_global_depth(depth)
+            self.target_mac.set_global_depth(depth)
+
         all_mac_out, mac_info = self.mac.forward(
             batch, t=None,
             coach_z=coach_z,

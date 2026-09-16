@@ -1,7 +1,7 @@
 """Evaluation protocol and the single experiment report."""
 from .protocol import (
-    VALIDATION_CONFIGS, compute_nds, config_dict, config_key, config_label,
-    evaluate_checkpoint, evaluation_thresholds, final_jobs, remaining_jobs, validation_jobs, validation_score,
+    CYCLE_SERIES_METHODS, DEPTH_SWEEP_DEPTHS, VALIDATION_CONFIGS, compute_nds, config_dict, config_key, config_label,
+    evaluate_checkpoint, evaluate_depth_sweep, evaluation_thresholds, final_jobs, remaining_jobs, validation_jobs, validation_score,
 )
 
 

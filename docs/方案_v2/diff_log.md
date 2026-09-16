@@ -1,6 +1,6 @@
 # 跨规模 v2：官方实现与 HAD 迁移差异
 
-本清单记录方法和接口差异；实际验证、训练数据及图表统一见 [唯一实验报告](../../Open-SCORE/outputs/crossscale_v2/实验报告.md)。原 v2.3 方案与本次用户确认冲突时，以本文列出的已确认决定为准。
+本清单记录方法和接口差异；实际验证、训练数据及图表统一见 [唯一实验报告](../../Open-SCORE/outputs/main_v2/实验报告.md)。原 v2.3 方案与本次用户确认冲突时，以本文列出的已确认决定为准。
 
 ## 来源与版本
 
@@ -43,7 +43,7 @@
 - 使用方案允许的 CSV；复杂字段为可解析 JSON 单元格。不新增 Parquet 依赖。所有方法合并到同类数据表，用运行/方法/种子字段区分，只有一份正式 Markdown 报告。
 - 恢复点包含在线/目标网络、优化器、回放、随机流、步数与评估进度；中断后优先完成同一策略的未完成验证点，再继续训练。先提交必要轨迹，再提交对应逐局结果。恢复时比对全部配置项，只放行 output、device/use_cuda、两个 interval、implementation_revision、concurrency、entity_pad 与 resume 本身；改动 `gamma`、探索调度、`buffer_size`、`lr` 或 `env_args` 会被拒绝并要求改用新 `--run`，避免旧回放与新配置混用。选优先提交权重再更新分数，写盘失败不会留下"新分数＋旧模型"。
 - 正式运行名与非 HAD 环境互斥；`--stage single` 在原生环境下默认运行名为 `single_<env>`，不会误入需要伤害 D 字段的 HAD 评估协议。
-- 修复后的一轮记为版本 `crossscale_v3`，输出目录 `Open-SCORE/outputs/crossscale_v3/`。正式运行名由散落的字面量 `stage3` 改为单一常量 `open_score.utils.logging.FORMAL_RUN = "train"`，`--stage stage3` 相应改名 `--stage train`；分阶段的命名已无对应计划。旧的 `stage3` 记录留在 v2 目录不动，避免 `remaining_jobs` 把旧验证点当成新运行的已完成配额。
+- 修复后的一轮现记为版本 `main_v3`，输出目录 `Open-SCORE/outputs/main_v3/`。正式运行名由散落的字面量 `stage3` 改为单一常量 `open_score.utils.logging.FORMAL_RUN = "train"`，`--stage stage3` 相应改名 `--stage train`；分阶段的命名已无对应计划。旧的 `stage3` 记录留在 v2 目录不动，避免 `remaining_jobs` 把旧验证点当成新运行的已完成配额。
 - 规则与随机锚点走 `rules.run_episode` 的原生 HAD 环境，不经过 `HADWrapper`，因此尾段折算对锚点 D 没有影响；v2 的 8400 局锚点已并入 v3 的 `episodes.csv`（改写 `version`/`run` 两列），不重复运行。`--stage train` 不再附带锚点任务。
 - 正式训练的准备门槛收窄为 `--stage validate` 的正确性检查。E0 学习链路与吞吐基准属于 v2 分阶段计划，吞吐已测且与本轮的价值/槽位修复无关；实测同一负载在本机的重复测量为 597–873 步/秒（8v8），开关尾段折算无差异，该阈值本身落在测量噪声带内。
 
@@ -136,7 +136,7 @@ v3 第一次正式训练在 B0 59.1 万步、B2 40.9 万步、REFIL 30.0 万步�
 
 ## ALMA 分层臂的接入（v3 追加）
 
-此前本项目只把 ALMA 当作共享主干，方法本身未适配：`METHODS` 无 `alma`、`load_config` 把 `hier_agent.task_allocation` 与 `copa` 硬置为关闭、回放 scheme 缺 `entity2task_mask`/`task_mask`/`hier_decision`、runner 的观测白名单挡掉子任务掩码、`SharedEntityMAC._build_agents` 不构造上层网络、训练循环不调用 `alloc_train_aql`、检查点不保存上层权重与其两个优化器、最终评估的 `FrozenPolicyAdapter` 不提供子任务输入。本轮按用户决定补全该链路并作为第六条正式臂并入 `crossscale_v3`，不新建输出目录或报告。
+此前本项目只把 ALMA 当作共享主干，方法本身未适配：`METHODS` 无 `alma`、`load_config` 把 `hier_agent.task_allocation` 与 `copa` 硬置为关闭、回放 scheme 缺 `entity2task_mask`/`task_mask`/`hier_decision`、runner 的观测白名单挡掉子任务掩码、`SharedEntityMAC._build_agents` 不构造上层网络、训练循环不调用 `alloc_train_aql`、检查点不保存上层权重与其两个优化器、最终评估的 `FrozenPolicyAdapter` 不提供子任务输入。本轮按用户决定补全该链路并作为第六条正式臂并入 `main_v3`，不新建输出目录或报告。
 
 **形态。** 低层与 B2-QMIX-Atten 同构（同一注意力编码器、FlexQMIX、GRU、`softmax_mixing_weights`、8 次批次更新），差异只有分层：`hier_agent.task_allocation: aql`，`agent.subtask_cond: mask`，`mixer_subtask_cond` 按上游 `run.py` 的关系跟随为 `mask`。选 `mask` 而非 `full_obs`：掩码在编码器之前改 `obs_mask`，本项目的共享编码器原样兼容；`full_obs` 走 `inputs['task_embeds']`，而该键只有上游 `EntityBase` 会读，本项目的编码器会静默丢弃它。其余 `hier_agent` 超参数保持 `config/default.yaml` 的官方默认（`action_length: 5`、`n_proposals: 32`、`alloc_critic: standard`、`alloc_policy: autoreg`、`pi_pointer_net: true`、`decay_old: 150000`、`entropy_loss: 0.01`、`max_bs: 400`），上游未提供 ALMA 的算法 yaml。
 

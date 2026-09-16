@@ -20,18 +20,20 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("MKL_NUM_THREADS", "1")
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 
-from open_score.algos import METHODS, PROBE_METHODS, setup_runtime
+from open_score.algos import METHODS, PROBE_METHODS, V4_METHODS, V5_METHODS, setup_runtime
 from open_score.utils.logging import DEFAULT_OUTPUT, FORMAL_RUN
 
 BASELINE_METHODS = METHODS[:3]
 MAIN_METHODS = ("dcg", "spectra")
-PROBE_OUTPUT = DEFAULT_OUTPUT.parent / "alma_probe"
+PROBE_OUTPUT = DEFAULT_OUTPUT.parent / "alma_probe_v3"
 METHOD_GROUPS = {
     "baseline": BASELINE_METHODS,
     "main": MAIN_METHODS,
     "alma": ("alma",),
     "dcg_alma": ("dcg", "alma"),
     "alma_probe": PROBE_METHODS,
+    "v4": V4_METHODS,
+    "v5": V5_METHODS,
 }
 FORMAL_METHODS = BASELINE_METHODS
 FORMAL_SEEDS = (0, 1, 2)
@@ -41,6 +43,13 @@ _METHOD_ALIAS = {
     "b0_qmix": "b0",
     "b2_qmix_atten": "b2",
     "refil": "refil",
+    "refil_local_mild": "Lmild",
+    "refil_local_mid": "Lmid",
+    "refil_count": "count",
+    "refil_cycle": "cycle",
+    "refil_card": "card",
+    "refil_feedback": "fb",
+    "refil_slot": "slot",
     "dcg": "dcg",
     "gnn_qmix": "gnn",
     "spectra": "spectra",
@@ -48,6 +57,7 @@ _METHOD_ALIAS = {
     "alma_fullobs": "fullobs",
     "alma_blue": "blue",
     "alma_event": "event",
+    "alma_nomask": "nomask",
 }
 _STATUS_ALIAS = {
     "starting": "init",
@@ -58,6 +68,7 @@ _STATUS_ALIAS = {
     "stopped": "stop",
     "failed": "fail",
     "running": "run",
+    "queued": "queue",
 }
 
 
@@ -88,25 +99,51 @@ def _hms(seconds):
 
 
 def _status_line(method, row, name_width, seed=None):
-    name = _status_name(method, seed if seed is not None else row.get("seed"))
+    display = row.get("target_method", method)
+    if row.get("job") == "depth_eval" or method == "depth_eval":
+        name = f"{_METHOD_ALIAS.get(display, display)} R"
+    else:
+        name = _status_name(display, seed if seed is not None else row.get("seed"))
     status = _STATUS_ALIAS.get(row.get("status", "starting"), row.get("status", "init"))
+    evaluating = (row.get("job") == "depth_eval" or method == "depth_eval"
+                  or row.get("phase") in ("final_eval", "depth_eval"))
+    if evaluating:
+        completed = int(row.get("completed", row.get("eval_completed")) or 0)
+        total = int(row.get("total", row.get("eval_total")) or 0)
+        depth = row.get("cycle_depth")
+        rbit = f"R={int(depth)}" if depth is not None else ""
+        eta = row.get("remaining_seconds")
+        eta_bit = f"  eta {_hms(eta)}" if eta is not None and total else ""
+        progress = f"{completed:,}/{total:,}" if total else ""
+        return f"{name:<{name_width}}  {status:<6}  {rbit:<4}  {progress}{eta_bit}"
     t_env = int(row.get("t_env") or 0)
     budget = int(row.get("budget_steps") or 0)
+    if status in ("queue", "queued"):
+        return f"{name:<{name_width}}  {status:<6}  {t_env:>9,}"
     sps = float(row.get("steps_per_second") or 0)
     loss, dval = row.get("loss"), row.get("latest_validation_D")
     loss_s = "-" if loss is None else f"{float(loss):.4f}"
     d_s = "-" if dval is None else f"{float(dval):.3f}"
-    extra = f"  ev {row.get('eval_completed', 0)}/{row['eval_total']}" if row.get("eval_total") else ""
+    extra = ""
+    completed = row.get("completed", row.get("eval_completed"))
+    total = row.get("total", row.get("eval_total"))
+    if total:
+        extra = f"  val {int(completed or 0)}/{int(total)}"
     return (f"{name:<{name_width}}  {status:<6}  {_hms(row.get('elapsed_seconds')):>8}  "
-            f"{t_env:>9,}/{budget:<9,}  {sps:5.1f}/s  L={loss_s:<8} D={d_s}{extra}")
+            f"{t_env:>9,}/{budget:<9,}  {sps:5.1f}/s  L={loss_s}  D={d_s}{extra}")
 
 
 def _rewrite_block(lines, previous, use_ansi):
+    block = "\n".join(lines) + "\n"
     if use_ansi and previous:
-        sys.stdout.write(f"\x1b[{previous}F\x1b[J")
-    sys.stdout.write("\n".join(lines) + "\n")
+        sys.stdout.write(f"\x1b[{previous}F\x1b[J{block}")
+        sys.stdout.flush()
+        return len(lines)
+    if not use_ansi:
+        sys.stdout.write("\n")
+    sys.stdout.write(block)
     sys.stdout.flush()
-    return len(lines)
+    return len(lines) if use_ansi else 0
 
 
 class _JobAlreadyRunning(RuntimeError):
@@ -200,6 +237,51 @@ def _job_entry(method, options, stop_event, results):
                 results.put(dict(method=method, run=options["run"], seed=options["seed"], status="failed", error=detail))
 
 
+def _training_finished(directory, row):
+    if not (Path(directory) / "best.pt").exists() or not (Path(directory) / "final.pt").exists():
+        return False
+    if row.get("status") in ("completed", "complete"):
+        return True
+    return row.get("phase") in ("depth_eval", "final_eval")
+
+
+def _depth_eval_entry(options, stop_event, results):
+    from open_score.eval.protocol import evaluate_depth_sweep
+    method = options["target_method"]
+    directory = Path(options["output"]) / method / options["run"] / f"seed_{options['seed']}"
+    checkpoint = directory / "best.pt"
+
+    def on_progress(progress):
+        payload = dict(progress)
+        payload.update(kind="progress", method=method, run=options["run"], seed=options["seed"])
+        try:
+            results.put_nowait(payload)
+        except Exception:
+            pass
+
+    directory.mkdir(parents=True, exist_ok=True)
+    with (directory / "console.log").open("a", encoding="utf-8", buffering=1) as log:
+        with redirect_stdout(log), redirect_stderr(log):
+            try:
+                with _exclusive_job(f"{method}_depth", options["run"], options["seed"]):
+                    result = evaluate_depth_sweep(
+                        method, checkpoint, output=options["output"], run=options["run"],
+                        seed=options["seed"], device="cpu", on_progress=on_progress,
+                        stop_requested=stop_event.is_set)
+                results.put(dict(kind="depth_eval", method=method, run=options["run"],
+                                 seed=options["seed"], status=result.get("status", "completed"),
+                                 completed=result.get("completed"), total=result.get("total")))
+            except _JobAlreadyRunning as error:
+                print(error, flush=True)
+                results.put(dict(kind="depth_eval", method=method, run=options["run"],
+                                 seed=options["seed"], status="skipped", error=str(error)))
+            except BaseException:
+                detail = traceback.format_exc()
+                print(detail, flush=True)
+                results.put(dict(kind="depth_eval", method=method, run=options["run"],
+                                 seed=options["seed"], status="failed", error=detail))
+
+
 def _anchor_entry(output, stop_event, results):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     from open_score.eval.anchors import run_anchors
@@ -211,20 +293,60 @@ def _anchor_entry(output, stop_event, results):
 
 
 def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_concurrent=MAX_CONCURRENT):
-    """Run a job pool with a fixed number of live slots; a finished job frees a slot."""
+    """Run trainers up to max_concurrent; one cycle-depth eval may run beside them."""
     from open_score.utils.logging import read_latest
-    from open_score.eval.report import refresh_report
+    from open_score.eval.report import refresh_report, refresh_report_async
+    from open_score.eval.protocol import CYCLE_SERIES_METHODS, depth_eval_finished, infer_best_t_env
     if max_concurrent < 1 or max_concurrent > 4:
         raise ValueError("Concurrent experiment tasks must be between 1 and 4")
-    pending_jobs = []
+    pending_train, pending_eval = [], []
+    live, finished, roster = [], [], []
+    eval_ids = set()
     latest = read_latest(output, "progress")
     occupied = _occupied_train_jobs()
-    for method, options in jobs:
-        options = dict(options)
+    original = [(method, dict(options)) for method, options in jobs]
+    options_by_key = {(method, options["run"], options["seed"]): options for method, options in original}
+
+    def roster_key(method, options):
+        if method == "anchors" or not options:
+            return ("anchors", None, None, None)
+        if method == "depth_eval":
+            return ("depth_eval", options["run"], options["seed"], options["target_method"])
+        return (method, options["run"], options["seed"], None)
+
+    def add_roster(method, options):
+        key = roster_key(method, options)
+        if key not in roster:
+            roster.append(key)
+
+    def queue_depth(method, options, bucket):
+        if method not in CYCLE_SERIES_METHODS:
+            return
+        ident = (method, options["run"], options["seed"])
+        if ident in eval_ids:
+            return
+        directory = Path(output) / method / options["run"] / f"seed_{options['seed']}"
+        if not (directory / "best.pt").exists():
+            return
+        t_env = infer_best_t_env(output, method, options["run"], options["seed"], options.get("t_max"))
+        if t_env is None:
+            return
+        if depth_eval_finished(output, method, options["run"], options["seed"], t_env):
+            print(f"{method} [{options['run']} seed={options['seed']}] depth_eval already done", flush=True)
+            return
+        eval_ids.add(ident)
+        payload = {**options, "target_method": method, "job": "depth_eval"}
+        bucket.append(("depth_eval", payload))
+        add_roster("depth_eval", payload)
+
+    for method, options in original:
         directory = Path(output) / method / options["run"] / f"seed_{options['seed']}"
         row = latest.get((method, options["run"], options["seed"]), {})
-        if row.get("status") in ("completed", "complete") and any((directory / name).exists() for name in ("final.pt", "best.pt")):
+        if _training_finished(directory, row) or (
+                row.get("status") in ("completed", "complete")
+                and any((directory / name).exists() for name in ("final.pt", "best.pt"))):
             print(f"{method} [{options['run']} seed={options['seed']}] already done", flush=True)
+            queue_depth(method, options, pending_eval)
             continue
         key = (method, options["run"], options["seed"])
         if key in occupied:
@@ -234,26 +356,28 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
             saved_config = directory / "config.json"
             if saved_config.exists():
                 saved = json.loads(saved_config.read_text(encoding="utf-8"))
-                for key in ("seed", "env", "batch_size_run", "t_max"):
-                    if saved[key] != options[key]:
-                        raise ValueError(f"Resume configuration differs: {method}/{key}")
+                for field in ("seed", "env", "batch_size_run", "t_max"):
+                    if saved[field] != options[field]:
+                        raise ValueError(f"Resume configuration differs: {method}/{field}")
             if not (directory / "resume.pt").exists():
                 if saved_config.exists():
                     raise RuntimeError(f"Recorded run has no recoverable checkpoint: {directory}")
                 options["resume"] = False
-        pending_jobs.append((method, options))
+        pending_train.append((method, options))
+        add_roster(method, options)
     if with_anchors:
-        pending_jobs.append(("anchors", None))
-    if not pending_jobs:
+        pending_train.append(("anchors", None))
+        add_roster("anchors", None)
+    if not pending_train and not pending_eval:
         return True
     context = get_context("spawn")
     stop_event, queue = context.Event(), context.Queue()
-    waiting = deque(pending_jobs)
-    live = []
-    finished = []
+    waiting_train, waiting_eval = deque(pending_train), deque(pending_eval)
     use_ansi = _enable_ansi()
     status_height = 0
     previous = signal.getsignal(signal.SIGINT)
+    eval_live_status = {}
+    pool = [len(pending_train) + len(pending_eval)]
 
     def request_stop(signum, frame):
         nonlocal status_height
@@ -261,43 +385,85 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
         status_height = 0
         print("stop requested: finish batch and save resume", flush=True)
 
+    def train_live():
+        return sum(1 for item in live if item["method"] != "depth_eval")
+
+    def eval_live():
+        return sum(1 for item in live if item["method"] == "depth_eval")
+
     def launch():
-        while waiting and len(live) < max_concurrent and not stop_event.is_set():
-            method, options = waiting.popleft()
+        while waiting_train and train_live() < max_concurrent and not stop_event.is_set():
+            method, options = waiting_train.popleft()
             if method == "anchors":
                 child = context.Process(target=_anchor_entry, args=(str(output), stop_event, queue))
-                identity = ("anchors", None, None)
+                identity = ("anchors", None, None, None)
             else:
                 child = context.Process(target=_job_entry, args=(method, options, stop_event, queue))
-                identity = (method, options["run"], options["seed"])
+                identity = (method, options["run"], options["seed"], None)
             child.start()
             live.append({"child": child, "method": method, "options": options, "key": identity})
+        while waiting_eval and eval_live() < 1 and not stop_event.is_set():
+            method, options = waiting_eval.popleft()
+            child = context.Process(target=_depth_eval_entry, args=(options, stop_event, queue))
+            identity = ("depth_eval", options["run"], options["seed"], options["target_method"])
+            child.start()
+            live.append({"child": child, "method": "depth_eval", "options": options, "key": identity})
+            print(f"{options['target_method']} [{options['run']} seed={options['seed']}] "
+                  f"depth_eval started (1:1 R=1..6, beside training)", flush=True)
 
     signal.signal(signal.SIGINT, request_stop)
     try:
         launch()
-        pool = len(pending_jobs)
-        runs = {options["run"] for _, options in pending_jobs if options}
+        runs = {options["run"] for _, options in original if options}
         header = []
         if len(runs) == 1:
             header.append(f"run={next(iter(runs))}")
-        header.append(f"live={len(live)}")
-        header.append(f"queue={len(waiting)}")
-        header.append(f"pool={pool}")
+        header.append(f"live={train_live()}")
+        header.append(f"eval={eval_live()}")
+        header.append(f"queue={len(waiting_train)}")
+        header.append(f"pool={pool[0]}")
         print("  ".join(header), flush=True)
         last_status, last_report = 0.0, time.monotonic()
         results, failures, abnormal_exits = [], [], set()
 
+        def progress_key(key):
+            if key[0] == "depth_eval":
+                return (key[3], key[1], key[2])
+            return (key[0], key[1], key[2])
+
+        def display_name(key):
+            if key[0] == "depth_eval":
+                return f"{_METHOD_ALIAS.get(key[3], key[3])} R"
+            return _status_name(key[0], key[2])
+
         def accept_result(result):
             nonlocal last_report, status_height
+            if result.get("kind") == "progress":
+                ident = (result.get("method"), result.get("run"), result.get("seed"))
+                eval_live_status[ident] = result
+                return
             results.append(result)
-            if result["status"] == "failed":
+            if result.get("kind") == "depth_eval":
+                if result.get("status") == "failed":
+                    status_height = 0
+                    print(f"depth_eval {result.get('method')} failed:\n{result.get('error', '')}\n"
+                          "training continues", flush=True)
+                return
+            if result.get("status") == "failed":
                 failures.append(result)
                 stop_event.set()
                 status_height = 0
                 print(f"{result.get('method', 'worker')} failed:\n{result['error']}\n"
                       "other jobs will finish the current batch and save", flush=True)
                 last_report = 0.0
+                return
+            if result.get("status") == "completed":
+                opts = options_by_key.get((result.get("method"), result.get("run"), result.get("seed")))
+                if opts:
+                    before = len(eval_ids)
+                    queue_depth(result["method"], opts, waiting_eval)
+                    if len(eval_ids) > before:
+                        pool[0] += 1
 
         def reap():
             nonlocal status_height
@@ -312,15 +478,20 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
                 finished.append(item)
                 if child.exitcode not in (None, 0) and child.pid not in abnormal_exits:
                     abnormal_exits.add(child.pid)
-                    failure = dict(status="failed", error=f"Worker {child.pid} exit code {child.exitcode}")
-                    failures.append(failure)
-                    stop_event.set()
-                    status_height = 0
-                    print(f"{failure['error']}; other jobs asked to save and stop", flush=True)
+                    failure = dict(status="failed", kind=item["method"],
+                                   error=f"Worker {child.pid} exit code {child.exitcode}")
+                    if item["method"] == "depth_eval":
+                        status_height = 0
+                        print(f"{failure['error']}; training continues", flush=True)
+                    else:
+                        failures.append(failure)
+                        stop_event.set()
+                        status_height = 0
+                        print(f"{failure['error']}; other jobs asked to save and stop", flush=True)
             live[:] = still
             return progressed
 
-        while live or (waiting and not stop_event.is_set()):
+        while live or ((waiting_train or waiting_eval) and not stop_event.is_set()):
             if (Path(output) / "stop.request").exists():
                 stop_event.set()
             while True:
@@ -332,40 +503,60 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
                 launch()
             now = time.monotonic()
             if now - last_status >= 10:
-                keys = {item["key"] for item in live if item["key"][0] != "anchors"}
+                live_keys = {item["key"] for item in live}
+                wait_keys = set()
+                for method, options in list(waiting_train) + list(waiting_eval):
+                    wait_keys.add(roster_key(method, options))
+                keys = [key for key in roster if key[0] != "anchors"]
+                lookup = {progress_key(key) for key in keys}
                 try:
-                    latest = read_latest(output, "progress", keys=keys)
-                except MemoryError:
-                    latest = {}
-                    print("status skipped: MemoryError", flush=True)
-                if latest or keys:
-                    width = max(len(_status_name(key[0], key[2])) for key in keys)
-                    lines = [_status_line(key[0], latest.get(key, {}), width, seed=key[2])
-                             for key in sorted(keys)]
+                    snapshot = read_latest(output, "progress", keys=lookup) if lookup else {}
+                    latest = snapshot
+                except (MemoryError, OSError, TimeoutError) as error:
+                    print(f"status skipped: {type(error).__name__}", flush=True)
+                if keys:
+                    width = max(len(display_name(key)) for key in keys)
+                    lines = []
+                    for key in keys:
+                        row = dict(latest.get(progress_key(key), {}))
+                        row.update(eval_live_status.get(progress_key(key), {}))
+                        if key[0] == "depth_eval":
+                            row["job"] = "depth_eval"
+                            row["target_method"] = key[3]
+                        if key in wait_keys:
+                            row["status"] = "queued"
+                        elif key not in live_keys:
+                            row.setdefault("status", "starting")
+                        lines.append(_status_line(key[0], row, width, seed=key[2]))
                     status_height = _rewrite_block(lines, status_height, use_ansi)
                 last_status = now
-            if now - last_report >= 300:
-                try:
-                    refresh_report(output, run=report_run)
-                except (MemoryError, TimeoutError, OSError) as error:
-                    print(f"report refresh skipped: {type(error).__name__}", flush=True)
+            if now - last_report >= (60 if eval_live() else 300):
+                refresh_report_async(output, run=report_run)
                 last_report = now
-            for item in live:
-                item["child"].join(timeout=0.2)
+            try:
+                accept_result(queue.get(timeout=1.0))
+                while True:
+                    try:
+                        accept_result(queue.get_nowait())
+                    except Empty:
+                        break
+            except Empty:
+                pass
         while True:
             try:
                 accept_result(queue.get_nowait())
             except Empty:
                 break
         failures.extend(dict(status="failed", error=f"Worker {item['child'].pid} exit code {item['child'].exitcode}")
-                        for item in finished if item["child"].exitcode and item["child"].pid not in abnormal_exits)
+                        for item in finished if item["child"].exitcode and item["child"].pid not in abnormal_exits
+                        and item["method"] != "depth_eval")
         try:
             refresh_report(output, run=report_run)
         except (MemoryError, TimeoutError, OSError) as error:
             print(f"report refresh skipped: {type(error).__name__}", flush=True)
         if failures:
             raise RuntimeError("\n".join(item["error"] for item in failures))
-        expected = len(finished) if stop_event.is_set() else pool
+        expected = len(finished) if stop_event.is_set() else pool[0]
         if len(results) != expected:
             raise RuntimeError("An experiment process exited without reporting completion")
         return not stop_event.is_set()
@@ -507,10 +698,14 @@ def validate(output):
 def parser():
     result = argparse.ArgumentParser(description=__doc__)
     result.add_argument("--stage", choices=("validate", "e0", "benchmark", "train", "single", "stop"), required=True)
-    result.add_argument("--method", choices=METHODS + PROBE_METHODS)
+    result.add_argument("--method", choices=METHODS + PROBE_METHODS + V4_METHODS + V5_METHODS)
     result.add_argument("--group", choices=tuple(METHOD_GROUPS), default="main",
                         help="train pool: main=DCG/SPECTra, baseline=B0/B2/REFIL, alma=ALMA, "
-                             "dcg_alma=DCG/ALMA, alma_probe=three HAD-adapted ALMA arms")
+                             "dcg_alma=DCG/ALMA, alma_probe=HAD-adapted ALMA arms, "
+                             "v4=REFIL local-mild/local-mid/count seed 0, "
+                             "v5=count then B/A/F/K4, seed 0; 1:1 cycle-depth eval runs beside training")
+    result.add_argument("--max-concurrent", type=int, choices=(1, 2, 3, 4), default=MAX_CONCURRENT,
+                        help="live trainers in this train.py; one 1:1 cycle-depth eval may run beside them")
     result.add_argument("--steps", type=int)
     result.add_argument("--batch-size-run", type=int, choices=(4, 8), default=4)
     result.add_argument("--seed", type=int, default=0)
@@ -518,6 +713,13 @@ def parser():
     result.add_argument("--resume", action="store_true")
     result.add_argument("--cpu", action="store_true")
     result.add_argument("--env", choices=("had", "ff", "rel_overgen"), default="had")
+    result.add_argument("--reward-mode", choices=("damage", "friendly"), default="damage",
+                        help="damage: learn -ΔD only. friendly: also subtract --friendly-penalty "
+                             "per Red-Red collision pair and per extra Red self-destruct beyond "
+                             "the Blues those shots hit. Reported D is always physical.")
+    result.add_argument("--friendly-penalty", type=float, default=1.0,
+                        help="Extra cost per collision pair or surplus intercept suicide "
+                             "when --reward-mode friendly")
     # Left unset so a single-method run cannot inherit the formal run name.
     result.add_argument("--run", default=None)
     return result
@@ -581,7 +783,8 @@ def main():
     if options.stage in ("e0", "benchmark", "train", "single"):
         (output / "stop.request").unlink(missing_ok=True)
     base = dict(output=str(output), seed=options.seed, batch_size_run=options.batch_size_run,
-                use_cuda=not options.cpu, resume=options.resume)
+                use_cuda=not options.cpu, resume=options.resume,
+                reward_mode=options.reward_mode, friendly_penalty=options.friendly_penalty)
     if options.stage == "validate":
         validate(output)
     elif options.stage == "e0":
@@ -609,24 +812,25 @@ def main():
         if options.steps < 50:
             raise SystemExit("formal budget must support 50 validation points")
         methods = METHOD_GROUPS[options.group]
-        if options.group == "alma_probe":
-            jobs = [(method, {**base, "seed": options.seed, "t_max": options.steps, "env": "had", "run": FORMAL_RUN})
-                    for method in methods]
-            run_group(jobs, output)
+        if options.group in ("alma_probe", "v4", "v5"):
+            seeds = (0,) if options.group in ("v4", "v5") else (options.seed,)
+            jobs = [(method, {**base, "seed": seed, "t_max": options.steps, "env": "had", "run": FORMAL_RUN})
+                    for seed in seeds for method in methods]
+            run_group(jobs, output, max_concurrent=options.max_concurrent)
             return
         require_preparation(output)
         # Default group is DCG / SPECTra. GNN seed 0 is already done; later
         # GNN seeds are not queued. B0 / B2 / REFIL stay in baseline.
         jobs = [(method, {**base, "seed": seed, "t_max": options.steps, "env": "had", "run": FORMAL_RUN})
                 for seed in FORMAL_SEEDS for method in methods]
-        run_group(jobs, output)
+        run_group(jobs, output, max_concurrent=options.max_concurrent)
     else:
         if options.method is None or options.steps is None:
             raise SystemExit("single requires --method and --steps")
         # A native sanity environment must never default into the HAD protocol.
         run = options.run or (FORMAL_RUN if options.env == "had" else f"single_{options.env}")
         run_group([(options.method, {**base, "t_max": options.steps, "env": options.env, "run": run})], output,
-                  report_run=run)
+                  report_run=run, max_concurrent=options.max_concurrent)
 
 
 if __name__ == "__main__":

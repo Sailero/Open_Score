@@ -1,4 +1,4 @@
-﻿"""Frozen validation and final-evaluation quotas; no environment construction."""
+"""Frozen validation and final-evaluation quotas; no environment construction."""
 from __future__ import annotations
 
 import math
@@ -25,6 +25,9 @@ FINAL_EPISODES = len(FINAL_CONFIGS) * FINAL_EPISODES_PER_CONFIG
 # Ordered fixed-slot baselines are sized to the training pool, so they have no
 # parameters for a larger roster and are reported on the pool axis only.
 POOL_ONLY_METHODS = ("b0_qmix",)
+# Shared SelfAttn cycle / slot / feedback. Cardinality attention has no R.
+CYCLE_SERIES_METHODS = ("refil_cycle", "refil_slot", "refil_feedback")
+DEPTH_SWEEP_DEPTHS = (1, 2, 3, 4, 5, 6)
 _POLICY_IDS = count()
 
 
@@ -117,6 +120,82 @@ def remaining_jobs(jobs, recorded_rows):
             int(job["episode_seed"]), job.get("checkpoint")) not in done]
 
 
+def is_cycle_series(method):
+    return method in CYCLE_SERIES_METHODS
+
+
+def depth_checkpoint_tag(stem, t_env, depth):
+    return f"{checkpoint_tag(stem, t_env)}/R{int(depth)}"
+
+
+def parse_sweep_depth(checkpoint):
+    text = str(checkpoint or "")
+    marker = "/R"
+    if marker not in text:
+        return None
+    try:
+        return int(text.rsplit(marker, 1)[-1])
+    except ValueError:
+        return None
+
+
+def depth_eval_total():
+    return len(EQUAL_SCALE_CONFIGS) * FINAL_EPISODES_PER_CONFIG * len(DEPTH_SWEEP_DEPTHS)
+
+
+def depth_jobs(t_env=0, checkpoint="best", depth=4):
+    tag = depth_checkpoint_tag(checkpoint, t_env, depth)
+    return [dict(config=config_dict(config), episode_seed=9000 + offset, phase="depth_eval",
+                 eval_point=50, t_env=int(t_env), checkpoint=tag, cycle_depth=int(depth),
+                 retain_trajectory=False)
+            for config in EQUAL_SCALE_CONFIGS for offset in range(FINAL_EPISODES_PER_CONFIG)]
+
+
+def _reuse_final_as_depth(recorded_rows, t_env, checkpoint="best"):
+    """Formal 1:1 final_eval is already greedy R=4; do not rerun those episodes."""
+    tag = checkpoint_tag(checkpoint, t_env)
+    equal = set(EQUAL_SCALE_CONFIGS)
+    reused = []
+    for row in recorded_rows:
+        if row.get("phase") != "final_eval" or row.get("checkpoint") != tag:
+            continue
+        if config_key(row["config"]) not in equal:
+            continue
+        reused.append(dict(row, phase="depth_eval",
+                           checkpoint=depth_checkpoint_tag(checkpoint, t_env, 4)))
+    return reused
+
+
+def remaining_depth_jobs(t_env, recorded_rows, checkpoint="best"):
+    recorded = list(recorded_rows) + _reuse_final_as_depth(recorded_rows, t_env, checkpoint)
+    jobs = []
+    for depth in DEPTH_SWEEP_DEPTHS:
+        jobs.extend(remaining_jobs(depth_jobs(t_env, checkpoint, depth), recorded))
+    return jobs
+
+
+def depth_eval_finished(output, method, run, seed, t_env, checkpoint="best"):
+    from open_score.utils.logging import read_records, unique_episodes
+    existing = unique_episodes(read_records(output, "episodes", run=run, method=method, seed=seed))
+    return not remaining_depth_jobs(t_env, existing, checkpoint)
+
+
+def infer_best_t_env(output, method, run, seed, fallback=None):
+    from open_score.utils.logging import read_records
+    for row in reversed(read_records(output, "episodes", run=run, method=method, seed=seed)):
+        ckpt = str(row.get("checkpoint") or "")
+        if "@" not in ckpt:
+            continue
+        stem, _, rest = ckpt.partition("@")
+        if stem != "best":
+            continue
+        try:
+            return int(rest.split("/")[0])
+        except ValueError:
+            continue
+    return None if fallback is None else int(fallback)
+
+
 def compute_nds(rho, rho_random, rho_rule):
     if any(value is None for value in (rho, rho_random, rho_rule)):
         return None
@@ -187,11 +266,15 @@ def evaluate_checkpoint(method, checkpoint, *, output=None, run=None, seed=None,
             completed += 1
             elapsed = time.monotonic() - started
             progress = dict(phase="final_eval", status="running", completed=completed, total=total,
-                            t_env=t_env, checkpoint=checkpoint_label,
+                            eval_completed=completed, eval_total=total, t_env=t_env,
+                            budget_steps=t_env, checkpoint=checkpoint_label,
                             remaining_seconds=(total-completed)*elapsed/max(1, completed-initial))
             logger.progress(**progress)
             if on_progress is not None:
-                on_progress(progress)
+                try:
+                    on_progress(dict(progress))
+                except Exception as error:
+                    print(f"[{method}] final_eval progress callback: {type(error).__name__}: {error}", flush=True)
             if completed % 25 == 0:
                 print(f"[{method}/{actual_seed}] final_eval {completed}/{total}", flush=True)
             if time.monotonic() - last_report >= 300:
@@ -206,3 +289,116 @@ def evaluate_checkpoint(method, checkpoint, *, output=None, run=None, seed=None,
     finally:
         refresh_report(output, run=run)
     return dict(status="complete", completed=completed, total=total)
+
+
+def evaluate_depth_sweep(method, checkpoint, *, output=None, run=None, seed=None,
+                         device="cpu", on_progress=None, stop_requested=None):
+    """1:1 equal-scale sweep over cycle depths R=1..6 for a retained checkpoint."""
+    import torch
+    from open_score.algos import load_policy
+    from open_score.rules import register_end_to_end_policy, run_episode
+    from open_score.utils.logging import DEFAULT_OUTPUT, FORMAL_RUN, ExperimentLogger, read_records, unique_episodes
+    from .anchors import BLUE_STRATEGY
+    from .report import refresh_report, refresh_report_async
+
+    if method not in CYCLE_SERIES_METHODS:
+        raise ValueError(f"{method} has no cycle depth to sweep")
+    run = FORMAL_RUN if run is None else run
+    output = Path(DEFAULT_OUTPUT if output is None else output)
+    checkpoint = Path(checkpoint)
+    saved = torch.load(checkpoint, map_location="cpu", weights_only=False)
+    actual_seed = int(saved["config"]["seed"])
+    if seed is not None and int(seed) != actual_seed:
+        raise ValueError("Evaluation seed must identify the checkpoint training seed")
+    t_env = int(saved["progress"]["t_env"])
+    if run == FORMAL_RUN and checkpoint.stem != "best":
+        raise ValueError(f"The formal {FORMAL_RUN} evaluation uses best.pt; use a distinct --run for another checkpoint")
+    del saved
+    policy = load_policy(method, checkpoint)
+    if hasattr(policy, "set_device"):
+        policy.set_device(device)
+    elif device != "cpu":
+        raise ValueError("This policy adapter supports CPU evaluation only")
+    policy_name = f"crossscale_depth_{next(_POLICY_IDS)}"
+    register_end_to_end_policy("red", policy_name, f"{method} cycle-depth sweep", lambda _: policy)
+    logger = ExperimentLogger(output, method, actual_seed, run)
+    existing = unique_episodes(read_records(output, "episodes", run=run, method=method, seed=actual_seed))
+    jobs = remaining_depth_jobs(t_env, existing, checkpoint.stem)
+    total = depth_eval_total()
+    completed = total - len(jobs)
+    started, last_report, initial = time.monotonic(), time.monotonic(), completed
+    last_depth = None
+    print(f"[{method}/{actual_seed}] depth_eval {completed}/{total}", flush=True)
+
+    def report(status, depth=None, extra=None, persist=True):
+        progress = dict(phase="depth_eval", status=status, completed=completed, total=total,
+                        eval_completed=completed, eval_total=total, t_env=t_env, budget_steps=t_env,
+                        checkpoint=depth_checkpoint_tag(checkpoint.stem, t_env, depth or last_depth or 4),
+                        cycle_depth=None if depth is None and last_depth is None else int(depth or last_depth))
+        if extra:
+            progress.update(extra)
+        if persist:
+            logger.progress(**progress)
+            if on_progress is not None:
+                try:
+                    on_progress(dict(progress))
+                except Exception as error:
+                    print(f"[{method}] depth_eval progress callback: {type(error).__name__}: {error}", flush=True)
+        return progress
+
+    try:
+        if not jobs:
+            report("complete", DEPTH_SWEEP_DEPTHS[-1])
+            return dict(status="complete", completed=completed, total=total)
+        for job in jobs:
+            if stop_requested is not None and stop_requested():
+                report("stopped", job.get("cycle_depth"))
+                return dict(status="stopped", completed=completed, total=total)
+            depth = int(job["cycle_depth"])
+            if depth != last_depth:
+                if last_depth is not None:
+                    refresh_report_async(output, run=run)
+                    last_report = time.monotonic()
+                if hasattr(policy, "set_eval_depth"):
+                    policy.set_eval_depth(depth)
+                last_depth = depth
+                print(f"[{method}/{actual_seed}] depth_eval R{depth} {completed}/{total}", flush=True)
+            red, blue, targets = config_key(job["config"])
+            result = run_episode(targets=targets, red=red, blue=blue, seed=job["episode_seed"],
+                                 red_strategy={"architecture": "end_to_end", "policy": policy_name},
+                                 blue_strategy=BLUE_STRATEGY, max_steps=100, record=False,
+                                 task_mode="damage", spatial_dim=2, target_initialization="random",
+                                 diagnostics=True, record_events=True, retain_trajectory=False)
+            summary = dict(result["episode_summary"])
+            summary.update(job)
+            summary.pop("cycle_depth", None)
+            summary.pop("retain_trajectory", None)
+            if hasattr(policy, "episode_q_statistics"):
+                summary.update(policy.episode_q_statistics())
+            logger.episodes([summary])
+            completed += 1
+            elapsed = time.monotonic() - started
+            remaining = (total - completed) * elapsed / max(1, completed - initial)
+            persist = completed % 10 == 0 or completed == total
+            report("running", depth, extra=dict(remaining_seconds=remaining), persist=persist)
+            if persist:
+                label = config_label(job["config"])
+                print(f"[{method}/{actual_seed}] depth_eval R{depth} {completed}/{total} {label}", flush=True)
+            if time.monotonic() - last_report >= 60:
+                refresh_report_async(output, run=run)
+                last_report = time.monotonic()
+        report("complete", last_depth)
+    except BaseException as error:
+        logger.progress(phase="depth_eval", status="interrupted" if isinstance(error, KeyboardInterrupt) else "failed",
+                        completed=completed, total=total, t_env=t_env, error=str(error),
+                        eval_completed=completed, eval_total=total,
+                        checkpoint=depth_checkpoint_tag(checkpoint.stem, t_env, last_depth or 4),
+                        cycle_depth=last_depth)
+        raise
+    finally:
+        pending = refresh_report_async(output, run=run)
+        if pending is not None:
+            pending.join(timeout=180)
+        refresh_report(output, run=run)
+    return dict(status="complete", completed=completed, total=total)
+

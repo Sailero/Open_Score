@@ -12,19 +12,95 @@ import sys
 import time
 from types import SimpleNamespace
 
-from open_score.utils.logging import DEFAULT_OUTPUT, FORMAL_RUN
+from open_score.utils.logging import DEFAULT_OUTPUT, FORMAL_RUN, VERSION
 
 PACKAGE = Path(__file__).resolve().parents[1]
 PROJECT = PACKAGE.parent
 UPSTREAM = Path(__file__).resolve().parent / "pymarl"
 METHODS = ("b0_qmix", "b2_qmix_atten", "refil", "dcg", "gnn_qmix", "spectra", "alma")
-PROBE_METHODS = ("alma_fullobs", "alma_blue", "alma_event")
+PROBE_METHODS = ("alma_fullobs", "alma_blue", "alma_event", "alma_nomask")
+V4_METHODS = ("refil_local_mild", "refil_local_mid", "refil_count")
+V5_GLOBAL_METHODS = ("refil_cycle", "refil_card", "refil_feedback", "refil_slot")
+V5_METHODS = ("refil_count",) + V5_GLOBAL_METHODS
+POLICY_METHODS = METHODS + PROBE_METHODS + tuple(dict.fromkeys((*V4_METHODS, *V5_METHODS)))
+V4_OVERRIDES = {
+    "refil_local_mild": {
+        "imagine_group": "mixed_distance",
+        "imagine_group_eta": 0.15,
+        "imagine_group_radius": 0.4,
+    },
+    "refil_local_mid": {
+        "imagine_group": "mixed_distance",
+        "imagine_group_eta": 0.30,
+        "imagine_group_radius": 0.4,
+    },
+    "refil_count": {
+        "imagine_group": "original",
+        "count_cond": "phi2",
+    },
+}
+V5_OVERRIDES = {
+    "refil_count": {
+        "imagine_group": "original",
+        "count_cond": "phi2",
+        "count_ln": False,
+    },
+    "refil_cycle": {
+        "imagine_group": "original",
+        "count_cond": "phi2",
+        "global_branch": "cycle",
+        "global_slots": 4,
+        "global_depths": [1, 2, 3, 4],
+        "global_eval_depth": 4,
+        "global_embed_dim": 64,
+        "global_ffn_mult": 2,
+        "global_n_heads": 4,
+    },
+    "refil_card": {
+        "imagine_group": "original",
+        "count_cond": "phi2",
+        "global_branch": "card",
+        "global_slots": 4,
+        "global_depths": [1, 2, 3, 4],
+        "global_eval_depth": 4,
+        "global_embed_dim": 64,
+        "global_ffn_mult": 2,
+        "global_n_heads": 4,
+    },
+    "refil_feedback": {
+        "imagine_group": "original",
+        "count_cond": "phi2",
+        "global_branch": "feedback",
+        "global_slots": 4,
+        "global_depths": [1, 2, 3, 4],
+        "global_eval_depth": 4,
+        "global_embed_dim": 64,
+        "global_ffn_mult": 2,
+        "global_n_heads": 4,
+    },
+    "refil_slot": {
+        "imagine_group": "original",
+        "count_cond": "phi2",
+        "global_branch": "slot",
+        "global_slots": 4,
+        "global_depths": [1, 2, 3, 4],
+        "global_eval_depth": 4,
+        "global_embed_dim": 64,
+        "global_ffn_mult": 2,
+        "global_n_heads": 4,
+    },
+}
 # Everything else defines the experiment and must match on resume, so that a
 # single run never mixes old replay data with changed learning conditions.
 RESUME_MUTABLE = frozenset(("resume", "output", "device", "use_cuda",
                             "report_interval", "progress_interval",
                             "implementation_revision", "concurrency",
                             "entity_pad"))
+# Keys added after some runs started; missing saved values equal these defaults.
+RESUME_DEFAULTS = {"reward_mode": "damage", "friendly_penalty": 1.0,
+                   "count_ln": True, "global_branch": None, "global_slots": 4,
+                   "global_depths": [1, 2, 3, 4], "global_eval_depth": 4,
+                   "global_embed_dim": 64, "global_ffn_mult": 2, "global_n_heads": 4}
 
 
 def setup_runtime():
@@ -46,10 +122,15 @@ def _merge(base, update):
 
 def load_config(name, overrides=None):
     import yaml
-    if name not in METHODS and name not in PROBE_METHODS:
+    if name not in POLICY_METHODS:
         raise ValueError(f"Unknown method: {name}")
+    config_name = "refil" if name in V4_METHODS or name in V5_METHODS else name
     base = yaml.safe_load((UPSTREAM / "config/default.yaml").read_text(encoding="utf-8-sig"))
-    base = _merge(base, yaml.safe_load((PROJECT / f"configs/{name}.yaml").read_text(encoding="utf-8-sig")))
+    base = _merge(base, yaml.safe_load((PROJECT / f"configs/{config_name}.yaml").read_text(encoding="utf-8-sig")))
+    if VERSION == "main_v5" and name in V5_OVERRIDES:
+        _merge(base, V5_OVERRIDES[name])
+    elif name in V4_OVERRIDES:
+        _merge(base, V4_OVERRIDES[name])
     base.update(method=name, name=name, env="had", seed=0, entity_scheme=True,
                 max_traj_len=-1, popart=False, buffer_cpu_only=True,
                 buffer_opt_mem=True, use_cuda=True, learner_log_interval=1000,
@@ -78,6 +159,25 @@ def load_config(name, overrides=None):
     base["output"] = str(Path(base.get("output", DEFAULT_OUTPUT)).resolve())
     base["feature_layout"] = "had" if base["env"] == "had" else "native"
     base["device"] = "cuda" if base["use_cuda"] else "cpu"
+    base.setdefault("imagine_group", "original")
+    base.setdefault("count_cond", None)
+    base.setdefault("count_ln", True)
+    base.setdefault("global_branch", None)
+    base.setdefault("global_slots", 4)
+    base.setdefault("global_depths", [1, 2, 3, 4])
+    base.setdefault("global_eval_depth", 4)
+    base.setdefault("global_embed_dim", 64)
+    base.setdefault("global_ffn_mult", 2)
+    base.setdefault("global_n_heads", 4)
+    base["global_depths"] = [int(value) for value in base["global_depths"]]
+    base["global_slots"] = int(base["global_slots"])
+    base["global_eval_depth"] = int(base["global_eval_depth"])
+    base["global_embed_dim"] = int(base["global_embed_dim"])
+    base["global_ffn_mult"] = int(base["global_ffn_mult"])
+    base["global_n_heads"] = int(base["global_n_heads"])
+    base.setdefault("reward_mode", "damage")
+    base.setdefault("friendly_penalty", 1.0)
+    base["friendly_penalty"] = float(base["friendly_penalty"])
     return SimpleNamespace(**base)
 
 
@@ -94,6 +194,10 @@ def make_runtime_env(args_dict, rank=0):
         for key in ("shaping_coef", "shaping_range"):
             if args_dict.get(key) is not None:
                 env_args.setdefault(key, float(args_dict[key]))
+        if args_dict.get("reward_mode") is not None:
+            env_args.setdefault("reward_mode", args_dict["reward_mode"])
+        if args_dict.get("friendly_penalty") is not None:
+            env_args.setdefault("friendly_penalty", float(args_dict["friendly_penalty"]))
         if args_dict.get("pool_slots") is not None:
             env_args.setdefault("pool_slots", args_dict["pool_slots"])
         env_args.setdefault("pad", args_dict.get("entity_pad", "train"))
@@ -240,6 +344,24 @@ def train(name, cfg):
     resume_path = run_dir / "resume.pt"
     if resume_path.exists() and not args.resume:
         raise FileExistsError(f"Existing run: {run_dir}; use --resume to continue it")
+    if args.resume and getattr(args, "global_branch", None) not in (None, False, "off", "none", ""):
+        saved_cfg_path = run_dir / "config.json"
+        if saved_cfg_path.exists():
+            saved_cfg = json.loads(saved_cfg_path.read_text(encoding="utf-8"))
+            saved_arch = (
+                int(saved_cfg["global_embed_dim"]) if "global_embed_dim" in saved_cfg else 128,
+                int(saved_cfg["global_ffn_mult"]) if "global_ffn_mult" in saved_cfg else 4,
+                int(saved_cfg["global_n_heads"]) if "global_n_heads" in saved_cfg else int(saved_cfg.get("attn_n_heads", 4)),
+            )
+            current_arch = (
+                int(getattr(args, "global_embed_dim", 64)),
+                int(getattr(args, "global_ffn_mult", 2)),
+                int(getattr(args, "global_n_heads", 4)),
+            )
+            if saved_arch != current_arch:
+                print(f"[{name}] global module {saved_arch} -> {current_arch}; "
+                      "start this arm from step 0 (eval protocol unchanged)", flush=True)
+                args.resume = False
     run_dir.mkdir(parents=True, exist_ok=True)
     record = ExperimentLogger(output, name, args.seed, args.run)
     logger = LearnerLogger()
@@ -331,7 +453,7 @@ def train(name, cfg):
             current = vars(args)
             differing = sorted(key for key in set(saved_config) | set(current)
                                if key not in RESUME_MUTABLE
-                               and saved_config.get(key) != current.get(key))
+                               and saved_config.get(key, RESUME_DEFAULTS.get(key)) != current.get(key))
             if differing:
                 raise ValueError(
                     "Resume configuration differs: " + ", ".join(differing)
@@ -641,4 +763,5 @@ def load_policy(name, checkpoint):
     return FrozenPolicyAdapter(mac, args, scheme, groups, preprocess, mixer)
 
 
-__all__ = ["train", "load_policy", "load_config", "METHODS", "PROBE_METHODS"]
+__all__ = ["train", "load_policy", "load_config", "METHODS", "PROBE_METHODS",
+           "V4_METHODS", "V5_METHODS", "V5_GLOBAL_METHODS", "POLICY_METHODS"]

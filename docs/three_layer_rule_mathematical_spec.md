@@ -118,7 +118,7 @@ c_{ib}=\|p_i-\hat p_b(t+1)\|_2.
 
 网页人数、目标数、种子、局数、任务、维度、步数和血量直接在前端设置。训练工厂用 `make_env(task_mode="damage", spatial_dim=2, target_health=2.0, max_cycles=100)`；旧三维存活任务显式传 `task_mode="survival", spatial_dim=3`。网页与训练均支持 `target_initialization="random"/"fixed"`，默认 random。随机模式每局从 `DefaultTargetRegion` 重新采样；固定模式以区域 x/z 中点和内部等距 y 生成确定布局。三维目标高度默认 500–1500 米，二维目标固定为 `PlanarAltitude`。`target_positions` 可显式指定固定坐标。红方在已确定的目标周围初始化，网页不再覆盖底层随机目标。
 
-修改公共配置后，在已有任务结束后重启 `viewer.py` 并刷新页面，让引擎导入值和规则常量一起重新加载。不要仅修改 `outputs/v7/metrics.json` 或报告里的参数快照。
+修改公共配置后，在已有任务结束后重启 `viewer.py` 并刷新页面，让引擎导入值和规则常量一起重新加载。不要仅修改 `outputs/main_v1/snapshots/v7_metrics.json` 或报告里的参数快照。
 
 存活任务的网页时限胜负由 `HADStage3Adapter` 的 `horizon_policy="red_win"` 默认参数控制；若要改变时限胜负，应在 `run_episode` 创建适配器处显式传入该参数，不能只改公共配置里的 `HorizonPolicy`。伤害任务忽略此胜负奖励，在上限处按累计伤害报告结果。
 

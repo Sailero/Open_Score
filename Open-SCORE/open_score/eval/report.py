@@ -12,30 +12,86 @@ import re
 import statistics
 import threading
 
-from open_score.utils.logging import DEFAULT_OUTPUT, FORMAL_RUN, read_latest, read_records, unique_episodes
-from .protocol import (EQUAL_SCALE_CONFIGS, FINAL_CONFIGS, POOL_ONLY_METHODS, RATIO_CONFIGS,
+from open_score.utils.logging import DEFAULT_OUTPUT, FORMAL_RUN, V3_OUTPUT, V4_OUTPUT, V5_OUTPUT, read_latest, read_records, unique_episodes
+from .protocol import (CYCLE_SERIES_METHODS, DEPTH_SWEEP_DEPTHS, EQUAL_SCALE_CONFIGS, FINAL_CONFIGS,
+                       FINAL_EPISODES_PER_CONFIG, POOL_ONLY_METHODS, RATIO_CONFIGS,
                        TARGET_K_VALUES, TARGET_SCALE_NS, TEST_CONFIGS, VALIDATION_CONFIGS,
-                       compute_nds, config_key, config_label, final_configs, validation_score)
+                       compute_nds, config_key, config_label, depth_eval_total, final_configs,
+                       parse_sweep_depth, validation_score)
 
 METHODS = ("b2_qmix_atten", "refil", "dcg", "spectra", "alma")
 SIDE_METHODS = ("b0_qmix", "gnn_qmix")
 ALL_METHODS = METHODS + SIDE_METHODS
 LABELS = {"b0_qmix": "B0", "b2_qmix_atten": "QMIX", "refil": "REFIL",
           "dcg": "DCG", "gnn_qmix": "GNN", "spectra": "SPECTra", "alma": "ALMA",
+          "refil_local_mild": "REFIL-L0.15", "refil_local_mid": "REFIL-L0.30",
+          "refil_count": "REFIL-C", "refil_count_ln": "REFIL-C",
+          "refil_count_noln": "REFIL-C−LN",
+          "refil_cycle": "REFIL-B", "refil_card": "REFIL-A",
+          "refil_feedback": "REFIL-F", "refil_slot": "REFIL-K4",
           "random": "Random", "rule_nv1": "Rule nv1"}
 COLORS = {"b0_qmix": "#5b6770", "b2_qmix_atten": "#1675b8", "refil": "#e36b32",
           "dcg": "#7955a3", "gnn_qmix": "#32865e", "spectra": "#bf4c79",
           "alma": "#b08a1e", "random": "#979fa5", "rule_nv1": "#267c4f",
-          "alma_fullobs": "#3d6ea8", "alma_blue": "#c47b2b", "alma_event": "#6a4c93"}
-PROBE_METHODS = ("alma_fullobs", "alma_blue", "alma_event")
-PROBE_LABELS = {"alma_fullobs": "ALMA-全场", "alma_blue": "ALMA-蓝方",
-                "alma_event": "ALMA-事件", "alma": "v3 ALMA",
+          "alma_fullobs": "#3d6ea8", "alma_blue": "#c47b2b", "alma_event": "#6a4c93",
+          "alma_nomask": "#1a7f7a",
+          "refil_local_mild": "#2a9d8f", "refil_local_mid": "#c47b2b",
+          "refil_count": "#3d6ea8", "refil_count_ln": "#3d6ea8",
+          "refil_count_noln": "#6aa9e8",
+          "refil_cycle": "#1b7f7a", "refil_card": "#3d6ea8",
+          "refil_feedback": "#c47b2b", "refil_slot": "#6a4c93"}
+V4_METHODS = ("refil_local_mild", "refil_local_mid", "refil_count", "refil_count_noln", "refil")
+V4_TRAIN_METHODS = ("refil_local_mild", "refil_local_mid", "refil_count")
+V4_COMPARE_ARMS = tuple(method for method in V4_METHODS if method != "refil")
+V4_SEEDS = (0,)
+V5_GLOBAL_METHODS = ("refil_cycle", "refil_card", "refil_feedback", "refil_slot")
+V5_METHODS = V5_GLOBAL_METHODS + ("refil",)
+V5_TRAIN_METHODS = ("refil_count",) + V5_GLOBAL_METHODS
+V5_COUNT_METHODS = ("refil_count_noln", "refil_count_ln")
+V5_SEEDS = (0,)
+PROBE_METHODS = ("alma", "alma_fullobs", "alma_blue", "alma_event", "alma_nomask")
+PROBE_LABELS = {"alma": "ALMA-掩码", "alma_fullobs": "ALMA-全场",
+                "alma_blue": "ALMA-蓝方", "alma_event": "ALMA-事件",
+                "alma_nomask": "ALMA-NoMask",
                 "b2_qmix_atten": "v3 QMIX", "refil": "v3 REFIL",
                 "random": "Random", "rule_nv1": "Rule nv1"}
+PROBE_PLOT_LABELS = {"alma": "ALMA-mask", "alma_fullobs": "ALMA-fullobs",
+                     "alma_blue": "ALMA-blue", "alma_event": "ALMA-event",
+                     "alma_nomask": "ALMA-NoMask",
+                     "b2_qmix_atten": "v3 QMIX", "refil": "v3 REFIL",
+                     "random": "Random", "rule_nv1": "Rule nv1"}
 PROBE_SEEDS = (0,)
+# Hard-mask ALMA episode/learning CSVs were not recovered during the
+# directory migration. Numbers below are copied from the pre-swap main v3 report.
+ARCHIVED_MASK_ALMA = {
+    "last_mean": -6.07,
+    "last_std": 0.47,
+    "seed0_last": -6.57,
+    "intercept": 0.38,
+    "seeds": (
+        {"seed": 0, "status": "archived", "steps": 1000000, "points": "50/50",
+         "best": -3.73, "best_step": 280358},
+        {"seed": 1, "status": "archived", "steps": 1000000, "points": "50/50",
+         "best": -4.75, "best_step": 580119},
+        {"seed": 2, "status": "archived", "steps": 1000000, "points": "50/50",
+         "best": -4.70, "best_step": 200113},
+    ),
+}
+APPENDIX_HEADING = "## 可靠性问题与三个改进方案"
 BENCHMARK_REVISION = "filled_padding_compact_mixer_frozen_target"
 FORMAL_SEEDS = (0, 1, 2)
 _REPORT_THREAD_LOCK = threading.RLock()
+
+
+def _preserve_appendix(output):
+    path = Path(output) / "实验报告.md"
+    if not path.exists():
+        return ""
+    text = path.read_text(encoding="utf-8")
+    idx = text.find(APPENDIX_HEADING)
+    if idx < 0:
+        return ""
+    return text[idx:].rstrip() + "\n"
 
 
 def _config_axis(config):
@@ -124,12 +180,14 @@ def _atomic_text(path, content):
     if path.name == "实验报告.md" and "| B0 D |" in content:
         # A live job started before B0 left the main table must not put it back.
         return
-    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
-    try:
-        temporary.write_text(content, encoding="utf-8")
-        os.replace(temporary, path)
-    finally:
-        temporary.unlink(missing_ok=True)
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = content.encode("utf-8")
+    with path.open("wb") as stream:
+        stream.write(data)
+        stream.truncate()
+        stream.flush()
+        os.fsync(stream.fileno())
 
 
 def _save_figure(fig, path):
@@ -201,13 +259,19 @@ def _pool_return(anchors, policy):
     return -statistics.mean(values)
 
 
-def _plot_learning(plt, output, points, anchors):
+def _anchor_plot_styles(include_random=True):
+    styles = (("random", "--"), ("rule_nv1", "-.")) if include_random else (("rule_nv1", "-."),)
+    return styles
+
+
+def _plot_learning(plt, output, points, anchors, methods=None, include_random=True):
     """Red episode return R=-D, mean±std over training seeds."""
-    points = [row for row in points if row["method"] in METHODS and _numeric(row.get("D"))]
+    methods = METHODS if methods is None else methods
+    points = [row for row in points if row["method"] in methods and _numeric(row.get("D"))]
     if not points:
         return None
     fig, axis = plt.subplots(1, 1, figsize=(7.6, 4.4), constrained_layout=True)
-    for method in METHODS:
+    for method in methods:
         by_point = defaultdict(list)
         for row in points:
             if row["method"] == method:
@@ -225,7 +289,7 @@ def _plot_learning(plt, output, points, anchors):
             axis.plot(xs, ys, color=COLORS[method], linewidth=2.2, label=LABELS[method])
             axis.fill_between(xs, [y - e for y, e in zip(ys, err)], [y + e for y, e in zip(ys, err)],
                               color=COLORS[method], alpha=.18, linewidth=0)
-    for policy, style in (("random", "--"), ("rule_nv1", "-.")):
+    for policy, style in _anchor_plot_styles(include_random):
         value = _pool_return(anchors, policy)
         if value is not None:
             axis.axhline(value, color=COLORS[policy], linestyle=style, linewidth=1.6, label=LABELS[policy])
@@ -472,13 +536,15 @@ def _config_returns(rows, anchors, configs):
     return per_method, anchors_r
 
 
-def _plot_scale_line(plt, output, rows, anchors, configs, *, stem, title, xlabel):
+def _plot_scale_line(plt, output, rows, anchors, configs, *, stem, title, xlabel, methods=None,
+                     include_random=True):
+    methods = METHODS if methods is None else methods
     per_method, anchors_r = _config_returns(rows, anchors, configs)
     if not per_method and not any(anchors_r.values()):
         return None
     fig, axis = plt.subplots(1, 1, figsize=(7.2, 3.8), constrained_layout=True)
     xs = list(range(len(configs)))
-    for method in METHODS:
+    for method in methods:
         values = per_method.get(method, {})
         points = []
         for index, config in enumerate(configs):
@@ -489,7 +555,7 @@ def _plot_scale_line(plt, output, rows, anchors, configs, *, stem, title, xlabel
             axis.errorbar([p[0] for p in points], [p[1] for p in points],
                           yerr=[p[2] for p in points], marker="o", color=COLORS[method],
                           linewidth=2.0, capsize=2.5, label=LABELS[method])
-    for policy, style in (("random", "--"), ("rule_nv1", "-.")):
+    for policy, style in _anchor_plot_styles(include_random):
         measured = [(index, anchors_r[policy][config]) for index, config in enumerate(configs)
                     if config in anchors_r[policy]]
         if measured:
@@ -507,7 +573,8 @@ def _plot_scale_line(plt, output, rows, anchors, configs, *, stem, title, xlabel
     return path
 
 
-def _plot_target_k(plt, output, rows, anchors):
+def _plot_target_k(plt, output, rows, anchors, methods=None, include_random=True):
+    methods = METHODS if methods is None else methods
     configs = tuple((n, n, k) for n in TARGET_SCALE_NS for k in TARGET_K_VALUES)
     per_method, anchors_r = _config_returns(rows, anchors, configs)
     if not per_method and not any(anchors_r.values()):
@@ -515,7 +582,7 @@ def _plot_target_k(plt, output, rows, anchors):
     fig, axes = plt.subplots(2, 2, figsize=(7.6, 5.6), sharex=True, sharey=True,
                              constrained_layout=True)
     for axis, n in zip(axes.flat, TARGET_SCALE_NS):
-        for method in METHODS:
+        for method in methods:
             points = []
             for k in TARGET_K_VALUES:
                 mean, std = _mean_std(per_method.get(method, {}).get((n, n, k), []))
@@ -526,7 +593,7 @@ def _plot_target_k(plt, output, rows, anchors):
                               yerr=[p[2] for p in points], marker="o",
                               color=COLORS[method], linewidth=2.0, capsize=2.5,
                               label=LABELS[method])
-        for policy, style in (("random", "--"), ("rule_nv1", "-.")):
+        for policy, style in _anchor_plot_styles(include_random):
             measured = [(k, anchors_r[policy][(n, n, k)]) for k in TARGET_K_VALUES
                         if (n, n, k) in anchors_r[policy]]
             if measured:
@@ -545,15 +612,230 @@ def _plot_target_k(plt, output, rows, anchors):
     return path
 
 
-def _plot_final(plt, output, rows, anchors):
-    rows = [row for row in rows if row["phase"] == "final_eval" and row["method"] in METHODS]
+def _plot_final(plt, output, rows, anchors, methods=None, include_random=True):
+    methods = METHODS if methods is None else methods
+    rows = [row for row in rows if row["phase"] == "final_eval" and row["method"] in methods]
     return [
         _plot_scale_line(plt, output, rows, anchors, EQUAL_SCALE_CONFIGS,
-                         stem="scale_equal", title="Equal-scale 1:1", xlabel="Roster"),
+                         stem="scale_equal", title="Equal-scale 1:1", xlabel="Roster",
+                         methods=methods, include_random=include_random),
         _plot_scale_line(plt, output, rows, anchors, RATIO_CONFIGS,
-                         stem="scale_ratio", title="1:2 red:blue", xlabel="Roster"),
-        _plot_target_k(plt, output, rows, anchors),
+                         stem="scale_ratio", title="1:2 red:blue", xlabel="Roster",
+                         methods=methods, include_random=include_random),
+        _plot_target_k(plt, output, rows, anchors, methods=methods,
+                       include_random=include_random),
     ]
+
+
+def _depth_sweep_groups(episodes, methods=CYCLE_SERIES_METHODS):
+    """(method, seed, depth, config) -> D list. R=4 can reuse formal 1:1 final_eval."""
+    equal = set(EQUAL_SCALE_CONFIGS)
+    grouped = defaultdict(list)
+    for row in episodes:
+        if row.get("method") not in methods or not _numeric(row.get("D")):
+            continue
+        cfg = config_key(row["config"])
+        if cfg not in equal:
+            continue
+        if row.get("phase") == "depth_eval":
+            depth = parse_sweep_depth(row.get("checkpoint"))
+            if depth is None:
+                continue
+            grouped[(row["method"], int(row["seed"]), int(depth), cfg)].append(float(row["D"]))
+    finals = defaultdict(list)
+    for row in episodes:
+        if row.get("phase") != "final_eval" or row.get("method") not in methods:
+            continue
+        if not _numeric(row.get("D")):
+            continue
+        cfg = config_key(row["config"])
+        if cfg not in equal:
+            continue
+        finals[(row["method"], int(row["seed"]), cfg)].append(float(row["D"]))
+    for (method, seed, cfg), values in finals.items():
+        key = (method, seed, 4, cfg)
+        if len(grouped[key]) < FINAL_EPISODES_PER_CONFIG:
+            grouped[key] = list(values)
+    return grouped
+
+
+def _depth_cell_scores(episodes, methods=CYCLE_SERIES_METHODS):
+    """Mean D per method, cycle depth, and 1:1 config. A cell needs 300 episodes."""
+    grouped = _depth_sweep_groups(episodes, methods)
+    cells = {}
+    for (method, _seed, depth, cfg), values in grouped.items():
+        if len(values) < FINAL_EPISODES_PER_CONFIG:
+            continue
+        cells.setdefault(method, {}).setdefault(int(depth), {})[cfg] = statistics.mean(values)
+    return cells
+
+
+def _best_cycle_depth_table(by_depth):
+    """One row per 1:1 scale: the R with the lowest mean D (ties keep the smaller R)."""
+    rows = []
+    for cfg in EQUAL_SCALE_CONFIGS:
+        ranked = [(by_depth.get(depth, {}).get(cfg), depth) for depth in DEPTH_SWEEP_DEPTHS]
+        ranked = [(value, depth) for value, depth in ranked if value is not None]
+        if not ranked:
+            rows.append(dict(scale=config_label(cfg), best="—", D="—", tied=""))
+            continue
+        best_d = min(value for value, _ in ranked)
+        tied = [depth for value, depth in ranked if abs(value - best_d) <= 1e-4]
+        extra = "、".join(str(depth) for depth in tied[1:])
+        rows.append(dict(scale=config_label(cfg), best=str(tied[0]), D=_number(best_d, 4),
+                         tied=extra or "—"))
+    return rows
+
+
+def _depth_sweep_scores(episodes, methods=CYCLE_SERIES_METHODS):
+    """Mean 1:1 D per method and cycle depth. A config enters once it has 300 episodes."""
+    grouped = _depth_sweep_groups(episodes, methods)
+    per_depth = defaultdict(lambda: defaultdict(list))
+    for (method, _seed, depth, _cfg), values in grouped.items():
+        if len(values) < FINAL_EPISODES_PER_CONFIG:
+            continue
+        per_depth[method][depth].append(statistics.mean(values))
+    scores = {}
+    for method, by_depth in per_depth.items():
+        scores[method] = {}
+        for depth, config_means in by_depth.items():
+            mean, std = _mean_std(config_means)
+            if mean is None:
+                continue
+            scores[method][depth] = dict(D=mean, std=std, n=len(config_means),
+                                         return_mean=-mean)
+    return scores
+
+
+def _depth_progress_lines(episodes, methods=CYCLE_SERIES_METHODS):
+    grouped = _depth_sweep_groups(episodes, methods)
+    quota = FINAL_EPISODES_PER_CONFIG
+    n_cfg = len(EQUAL_SCALE_CONFIGS)
+    total = depth_eval_total()
+    lines = []
+    for method in methods:
+        by_depth = defaultdict(lambda: defaultdict(int))
+        for (name, _seed, depth, cfg), values in grouped.items():
+            if name != method:
+                continue
+            by_depth[depth][cfg] = len(values)
+        if not by_depth:
+            continue
+        done = 0
+        bits = []
+        for depth in DEPTH_SWEEP_DEPTHS:
+            complete = sum(1 for cfg in EQUAL_SCALE_CONFIGS if by_depth[depth].get(cfg, 0) >= quota)
+            done += sum(min(by_depth[depth].get(cfg, 0), quota) for cfg in EQUAL_SCALE_CONFIGS)
+            bits.append(f"$R={depth}$ {complete}/{n_cfg}")
+        lines.append(f"{LABELS[method]} 扫描 {done}/{total} 局；已满 300 局的 1:1 配置："
+                     + "，".join(bits) + "。")
+    return lines
+
+
+def _v5_depth_section_lines(output, episodes, figure, scale_figure=None):
+    lines = ["## 循环轮数（等规模 1:1）", "",
+             r"循环 Transformer 臂（REFIL-B / F / K4）在 best 上固定贪心，只跑等规模 1:1 "
+             r"（10/15/20/25/30/40v K2），比较 $R=1,2,3,4,5,6$。每配置 300 局。"
+             r"$R=4$ 复用终评已有的 1:1 局。下图横轴是编队规模、一条线一个循环轮数；"
+             r"下表行是 $R$、列是规模。数字是 300 局平均 $D$，越低红方越好。"
+             "若规模越大越需要加深循环，大 $N$ 上更深的 $R$ 应明显低于浅的 $R$。", ""]
+    progress = _depth_progress_lines(episodes, CYCLE_SERIES_METHODS)
+    if progress:
+        lines.extend(progress + [""])
+    if scale_figure:
+        lines += [f"![循环轮数×规模]({scale_figure.relative_to(output).as_posix()})", ""]
+    elif figure:
+        lines += [f"![循环轮数]({figure.relative_to(output).as_posix()})", ""]
+    cells = _depth_cell_scores(episodes, CYCLE_SERIES_METHODS)
+    for method in CYCLE_SERIES_METHODS:
+        if method not in cells:
+            continue
+        scale_table = []
+        for depth in DEPTH_SWEEP_DEPTHS:
+            row = dict(R=f"$R={depth}$")
+            for cfg in EQUAL_SCALE_CONFIGS:
+                value = cells[method].get(depth, {}).get(cfg)
+                row[config_label(cfg)] = _number(value, 4) if value is not None else "—"
+            scale_table.append(row)
+        lines += [f"{LABELS[method]}：行是循环轮数，列是 1:1 规模，格子为平均 $D$。", ""]
+        lines += _table(scale_table, [("R", "$R$"),
+                                      *[(config_label(cfg), config_label(cfg))
+                                        for cfg in EQUAL_SCALE_CONFIGS]]) + [""]
+        best_table = _best_cycle_depth_table(cells[method])
+        if best_table:
+            lines += [f"{LABELS[method]} 各规模上 $D$ 最低的循环轮数；并列时取更小的 $R$。", ""]
+            lines += _table(best_table, [("scale", "规模"), ("best", "最优 $R$"),
+                                         ("D", "该格 $D$"), ("tied", "并列")]) + [""]
+    if not cells and not progress:
+        lines += ["尚无 1:1 循环轮数记录。", ""]
+    return lines
+
+
+def _plot_cycle_depth(plt, output, episodes, methods=CYCLE_SERIES_METHODS):
+    scores = _depth_sweep_scores(episodes, methods)
+    series = [method for method in methods if scores.get(method)]
+    if not series:
+        return None
+    depths = list(DEPTH_SWEEP_DEPTHS)
+    fig, axis = plt.subplots(1, 1, figsize=(7.4, 3.8), constrained_layout=True)
+    width = 0.8 / max(len(series), 1)
+    xs = list(range(len(depths)))
+    for index, method in enumerate(series):
+        offset = (index - (len(series) - 1) / 2) * width
+        heights, errors, positions = [], [], []
+        for x, depth in zip(xs, depths):
+            item = scores[method].get(depth)
+            if not item:
+                continue
+            positions.append(x + offset)
+            heights.append(item["return_mean"])
+            errors.append(0.0 if item["std"] is None else item["std"])
+        if positions:
+            axis.bar(positions, heights, width=width * 0.92, yerr=errors, capsize=2.5,
+                     color=COLORS[method], label=LABELS[method], zorder=2)
+    axis.set(title="Equal-scale 1:1 vs cycle depth", xlabel="Cycle rounds R",
+             ylabel="Red episode return R = −D", xticks=xs,
+             xticklabels=[str(depth) for depth in depths])
+    axis.axhline(0, color="#888", linewidth=0.8, zorder=1)
+    axis.grid(axis="y", alpha=.2)
+    if series:
+        axis.legend(fontsize=8)
+    path = output / "figures" / "cycle_depth.png"
+    _save_figure(fig, path)
+    plt.close(fig)
+    return path
+
+
+def _plot_cycle_depth_scale(plt, output, episodes, methods=CYCLE_SERIES_METHODS):
+    """One line per R: D versus 1:1 roster size. Lower D is better for Red."""
+    cells = _depth_cell_scores(episodes, methods)
+    series = [method for method in methods if cells.get(method)]
+    if not series:
+        return None
+    palette = ("#4c78a8", "#f58518", "#54a24b", "#e45756", "#b279a2", "#8c564b")
+    ns = [cfg[0] for cfg in EQUAL_SCALE_CONFIGS]
+    fig, axes = plt.subplots(1, len(series), figsize=(7.4, 3.8), squeeze=False,
+                             constrained_layout=True)
+    for axis, method in zip(axes[0], series):
+        for index, depth in enumerate(DEPTH_SWEEP_DEPTHS):
+            xs, ys = [], []
+            for cfg, size in zip(EQUAL_SCALE_CONFIGS, ns):
+                value = cells[method].get(depth, {}).get(cfg)
+                if value is not None:
+                    xs.append(size)
+                    ys.append(value)
+            if xs:
+                axis.plot(xs, ys, marker="o", linewidth=2.0,
+                          color=palette[index % len(palette)], label=f"R={depth}")
+        axis.set(title=f"{LABELS[method]}: D vs scale by R",
+                 xlabel="N (NvN K2)", ylabel="D (lower is better)", xticks=ns)
+        axis.grid(alpha=.2)
+        if axis.lines:
+            axis.legend(fontsize=8, ncol=3, loc="upper left")
+    path = output / "figures" / "cycle_depth_scale.png"
+    _save_figure(fig, path)
+    plt.close(fig)
+    return path
 
 
 def _behavior_rates(episodes):
@@ -571,10 +853,11 @@ def _behavior_rates(episodes):
                 friendly=_mean_std(friendly)[0])
 
 
-def _id_behavior(final_rows, episodes):
+def _id_behavior(final_rows, episodes, methods=None):
+    methods = METHODS if methods is None else methods
     result = {}
     pool = [row for row in final_rows if config_key(row["config"]) in set(VALIDATION_CONFIGS)]
-    for method in METHODS:
+    for method in methods:
         result[method] = [_behavior_rates(group) for _, group in sorted(_groups(
             [row for row in pool if row["method"] == method], ("seed",)).items())]
     for method in ("random", "rule_nv1"):
@@ -585,8 +868,9 @@ def _id_behavior(final_rows, episodes):
                   for field in ("intercept", "deliver", "friendly"))] for key, rows in result.items()}
 
 
-def _plot_behavior(plt, output, behavior):
-    order = ("random",) + METHODS + ("rule_nv1",)
+def _plot_behavior(plt, output, behavior, methods=None, include_random=True):
+    methods = METHODS if methods is None else methods
+    order = (("random",) if include_random else ()) + methods + ("rule_nv1",)
     if not any(behavior.get(method) for method in order):
         return None
     fig, axes = plt.subplots(1, 2, figsize=(10.4, 4.2), constrained_layout=True)
@@ -827,10 +1111,11 @@ def _plus_minus(values, digits=3):
     return f"{statistics.mean(values):.{digits}f}±{statistics.stdev(values):.{digits}f}"
 
 
-def _final_seed_scores(rows, anchors):
+def _final_seed_scores(rows, anchors, methods=None):
+    methods = METHODS if methods is None else methods
     scores = defaultdict(lambda: defaultdict(dict))
     for (method, seed), values in _groups(rows, ("method", "seed")).items():
-        if method not in METHODS:
+        if method not in methods:
             continue
         grouped = defaultdict(dict)
         for row in values:
@@ -870,10 +1155,10 @@ def _refresh_report(output=DEFAULT_OUTPUT, *, run=FORMAL_RUN, report_stream=None
         status = " 正式训练尚未开始。"
     comparison = "、".join(LABELS[method] for method in METHODS)
     pool_only_main = [LABELS[method] for method in METHODS if method in POOL_ONLY_METHODS]
-    text = ["<!-- report_layout: qmix_baseline -->", "# 跨规模攻防泛化 v3", "",
+    text = ["<!-- report_layout: qmix_baseline -->", "# 跨规模攻防泛化 main v3", "",
             f"更新时间：{now}。比较 {comparison}，各 3 个训练种子。" + status,
             "本版本修复了 v2 的团队价值下界、$b_1$/$V$ 随规模缩放、红方全灭尾段与有序空槽四处问题，"
-            "诊断见 [v2 报告](../crossscale_v2/实验报告.md) 与 "
+            "诊断见 [v2 报告](../main_v2/实验报告.md) 与 "
             "[差异清单](../../../docs/方案_v2/diff_log.md)。规则与随机锚点与算法无关；"
             "已有配置沿用 v2 的 300 局种子，新增配置按同一种子批补齐。",
             "训练的是红方，团队回报 $R=-D$（逐步奖励 $r_t=-\\Delta D_t$）。"
@@ -885,10 +1170,11 @@ def _refresh_report(output=DEFAULT_OUTPUT, *, run=FORMAL_RUN, report_stream=None
                f"{len(VALIDATION_CONFIGS)} 个配置。" if pool_only_main else "")
             + "逐局与 loss 仍在同目录 CSV。",
             "对照基线 QMIX 是实体注意力 mixer 的 QMIX，不是有序展平那一支。"
-            "ALMA 是唯一的分层臂，低层与该 QMIX 同构，差别只在多一层子任务分配："
-            "上层每 5 步把红方分到子任务，低层只观测本子任务内的实体，奖励按目标分解、逐步求和等于团队回报。"
-            "子任务集合就是目标集合，蓝方按“当前最近目标”归属——这个量任何方法都能从同一份实体表算出，"
-            "蓝方自己的分组指派属于私有信息，不进入红方输入。", ""]
+            "ALMA 是唯一的分层臂，低层与该 QMIX 同构，差别是多一层子任务分配："
+            "上层每 5 步把红方分到目标子任务；低层看全场，分配作为任务嵌入；"
+            "mixer 是单路团队 Q，低层 TD 用团队回报。硬掩码原版和其余适配臂见 "
+            "[ALMA 探针](../alma_probe_v3/实验报告.md)。"
+            "蓝方按“当前最近目标”归属，这是公开几何量；蓝方私有指派不进入红方输入。", ""]
 
     import matplotlib
     matplotlib.use("Agg")
@@ -1017,7 +1303,10 @@ def _refresh_report(output=DEFAULT_OUTPUT, *, run=FORMAL_RUN, report_stream=None
     text += ["## 原始数据", "",
              "；".join(f"[{name}.csv]({name}.csv)" for name in streams if (output / f"{name}.csv").exists()) + "。", ""]
     report_path = output / "实验报告.md"
+    appendix = _preserve_appendix(output)
     content = "\n".join(text)
+    if appendix:
+        content = content.rstrip() + "\n\n" + appendix
     if report_stream is None:
         _atomic_text(report_path, content)
     else:
@@ -1031,18 +1320,71 @@ def _refresh_report(output=DEFAULT_OUTPUT, *, run=FORMAL_RUN, report_stream=None
 
 
 def _is_probe_output(output):
-    return Path(output).resolve().name == "alma_probe"
+    return Path(output).resolve().name in {"alma_probe_v3", "alma_probe"}
+
+
+def _is_v4_output(output):
+    return Path(output).resolve().name == "main_v4"
+
+
+def _is_v5_output(output):
+    return Path(output).resolve().name == "main_v5"
+
+
+def _relabel_method(rows, src, dst):
+    relabeled = []
+    for row in rows:
+        item = dict(row)
+        if item.get("method") == src:
+            item["method"] = dst
+        relabeled.append(item)
+    return relabeled
+
+
+def _v3_comparison_episodes():
+    """Reuse v3 REFIL seed 0 and policy-independent anchors; do not copy the directory."""
+    if not V3_OUTPUT.exists():
+        return []
+    rows = unique_episodes(read_records(V3_OUTPUT, "episodes", run=FORMAL_RUN))
+    kept = []
+    for row in rows:
+        method = row.get("method")
+        if method in ("random", "rule_nv1"):
+            kept.append(row)
+        elif method == "refil" and int(row.get("seed", 0)) == 0:
+            kept.append(row)
+    return kept
+
+
+def _v4_count_episodes():
+    """Reuse v4 REFIL-C seed 0 (LayerNorm + φ₂); do not copy the directory."""
+    if not V4_OUTPUT.exists():
+        return []
+    rows = unique_episodes(read_records(V4_OUTPUT, "episodes", run=FORMAL_RUN))
+    kept = [row for row in rows
+            if row.get("method") == "refil_count" and int(row.get("seed", 0)) == 0]
+    return _relabel_method(kept, "refil_count", "refil_count_ln")
+
+
+def _v5_count_noln_episodes():
+    """Reuse v5 REFIL-C−LN seed 0 (φ₂ FiLM without LayerNorm); do not copy."""
+    if not V5_OUTPUT.exists():
+        return []
+    rows = unique_episodes(read_records(V5_OUTPUT, "episodes", run=FORMAL_RUN))
+    kept = [row for row in rows
+            if row.get("method") == "refil_count" and int(row.get("seed", 0)) == 0]
+    return _relabel_method(kept, "refil_count", "refil_count_noln")
 
 
 def _v3_reference():
     """Anchors and seed-0 last validation from the formal v3 directory."""
-    if not DEFAULT_OUTPUT.exists():
+    if not V3_OUTPUT.exists():
         return {}, {}
-    episodes = unique_episodes(read_records(DEFAULT_OUTPUT, "episodes", run=FORMAL_RUN))
+    episodes = unique_episodes(read_records(V3_OUTPUT, "episodes", run=FORMAL_RUN))
     anchors = _anchor_values(episodes)
     points = _validation_points(episodes, anchors)
     refs = {}
-    for method in ("alma", "b2_qmix_atten", "refil"):
+    for method in ("b2_qmix_atten", "refil"):
         last = [-row["D"] for row in points
                 if row["method"] == method and row.get("eval_point") == 50 and row.get("seed") == 0
                 and _numeric(row.get("D"))]
@@ -1068,13 +1410,13 @@ def _plot_probe_learning(plt, output, points, anchors, refs):
             ys.append(mean)
             err.append(std)
         if xs:
-            axis.plot(xs, ys, color=COLORS[method], linewidth=2.2, label=PROBE_LABELS[method])
+            axis.plot(xs, ys, color=COLORS[method], linewidth=2.2, label=PROBE_PLOT_LABELS[method])
             axis.fill_between(xs, [y - e for y, e in zip(ys, err)], [y + e for y, e in zip(ys, err)],
                               color=COLORS[method], alpha=.18, linewidth=0)
-    for method, style in (("alma", ":"), ("b2_qmix_atten", "--"), ("refil", "-.")):
+    for method, style in (("b2_qmix_atten", "--"), ("refil", "-.")):
         if method in refs:
             axis.axhline(refs[method], color=COLORS[method], linestyle=style, linewidth=1.4,
-                         label=f"{PROBE_LABELS[method]} seed0")
+                         label=f"{PROBE_PLOT_LABELS[method]} seed0")
     for policy, style in (("random", "--"), ("rule_nv1", "-.")):
         value = _pool_return(anchors, policy)
         if value is not None:
@@ -1101,34 +1443,36 @@ def _refresh_probe_report(output, *, run=FORMAL_RUN, report_stream=None):
     now = datetime.now().astimezone().isoformat(timespec="seconds")
     unfinished = [f"{PROBE_LABELS[method]}/seed {seed}" for (method, seed), row in sorted(progress.items())
                   if row.get("status") in ("training", "evaluating", "running")]
-    planned = [(method, seed) for method in PROBE_METHODS for seed in PROBE_SEEDS]
-    finished = sum(1 for key in planned if progress.get(key, {}).get("status") in ("completed", "complete"))
+    live_methods = tuple(method for method in PROBE_METHODS if method != "alma")
+    planned = [(method, seed) for method in live_methods for seed in PROBE_SEEDS]
+    finished = sum(1 for key in planned if progress.get(key, {}).get("status") in ("completed", "complete", "failed"))
     if unfinished:
         status = " 仍在运行：" + "、".join(unfinished) + "。"
     elif finished == len(planned):
-        status = " 三个单种子臂均已结束。"
+        status = " 五臂对照已齐：四条适配臂有本目录验证记录，硬掩码三种子为迁移前留档。"
     elif finished:
-        status = f" 已完成 {finished}/{len(planned)} 次训练。"
+        status = f" 已完成 {finished}/{len(planned)} 次适配臂记录。"
     else:
-        status = " 训练尚未开始。"
+        status = " 记录尚未开始。"
     text = [
         "<!-- report_layout: alma_probe -->",
-        "# ALMA 场景适配临时测试",
+        "# ALMA 场景适配对照（alma_probe_v3）",
         "",
-        f"更新时间：{now}。这是一份独立于跨规模 v3 主报告的临时对照，只问一件事："
-        "把 ALMA 的 HAD 合同按三刀改完之后，单种子 1M 是否还能明显好于正式 v3 的 ALMA。"
+        f"更新时间：{now}。这是 main v3 的补充对照，只留验证记录和本报告，不保留权重。"
+        "主实验中的 ALMA 已换成全场臂，名称仍是 ALMA；硬掩码原版留在这里。"
         + status,
-        "协议与 v3 正式训练相同：混合池、1,000,000 物理步、50 个池内验证点、`best.pt` 按验证 D 选优。"
-        "每臂只跑 seed 0。正式三种子对照、外推评估和主报告结论都不在这里改写。",
-        "三臂是递进关系，不是三个无关新算法。",
+        "适配臂各 1 个种子、1,000,000 物理步、50 个池内验证点。"
+        "硬掩码 ALMA 原为三种子正式训练，逐局 CSV 未转入本目录，数字抄自迁移前主报告。"
+        "主报告结论以 [main v3](../main_v3/实验报告.md) 为准。",
+        "前三刀是递进关系；**ALMA-NoMask** 从全场臂分叉。**ALMA-掩码** 是原论文默认硬掩码路径。",
         "",
-        "- **ALMA-全场**（`alma_fullobs`）：子任务仍是目标，上层仍每 5 步分配；去掉硬掩码，低层看全场，"
-        "分配只作为任务嵌入。Mixer 改回单路团队 Q，低层 TD 用团队回报。",
+        "- **ALMA-掩码**（`alma`）：目标子任务，硬掩码，每任务一个 Q，子任务奖励，每 5 步分配。",
+        "- **ALMA-全场**（`alma_fullobs`）：去掉硬掩码，低层看全场；单路团队 Q，团队回报。主实验现用这一路，仍称 ALMA。",
         "- **ALMA-蓝方**（`alma_blue`）：在全场之上把子任务改成活着的蓝方槽，训练垫 10、评估宽 40。",
-        "- **ALMA-事件**（`alma_event`）：在蓝方子任务之上改为伤亡 / 公开最近目标变化 / 最多 10 步再分配，"
-        "上层 TD 用折扣段回报和 $\\gamma^\\tau$ bootstrap。",
+        "- **ALMA-事件**（`alma_event`）：在蓝方子任务之上改为伤亡 / 公开最近目标变化 / 最多 10 步再分配。",
+        "- **ALMA-NoMask**（`alma_nomask`）：全场任务标签在注意力之前进入实体；每任务一个 Q，子任务奖励。",
         "",
-        "对照虚线来自 v3 主实验 seed 0 的第 50 个验证点，以及同一套规则 / 随机锚点，不是本目录新跑的。",
+        "对照虚线来自 main v3 的 QMIX / REFIL seed 0 第 50 个验证点，以及同一套规则 / 随机锚点。",
         "",
     ]
     import matplotlib
@@ -1140,6 +1484,8 @@ def _refresh_probe_report(output, *, run=FORMAL_RUN, report_stream=None):
         last = [row["D"] for row in points if row["method"] == method and row["eval_point"] == 50]
         mean, std = _mean_std([-value for value in last])
         last_r[method] = (mean, std)
+    if last_r.get("alma", (None, None))[0] is None:
+        last_r["alma"] = (ARCHIVED_MASK_ALMA["last_mean"], ARCHIVED_MASK_ALMA["last_std"])
     text += ["## 结论", ""]
     random_r, rule_r = _pool_return(anchors, "random"), _pool_return(anchors, "rule_nv1")
     ranked = [method for method in PROBE_METHODS if last_r[method][0] is not None]
@@ -1149,13 +1495,28 @@ def _refresh_probe_report(output, *, run=FORMAL_RUN, report_stream=None):
         text += [
             f"红方回报越高越好。v3 池内随机约 ${random_r:.2f}$，规则约 ${rule_r:.2f}$。"
             if random_r is not None and rule_r is not None else "锚点尚未读到。",
-            f"已有 1M 验证回报的探针对臂：{ranking}。",
+            f"1M 末验证回报：{ranking}。全场接近规则；蓝方次之；事件高于随机、低于规则；"
+            "掩码与 NoMask 后期塌缩，接近随机。主实验因此用全场臂作为 ALMA。",
         ]
-        if "alma" in refs:
-            text += [f"v3 正式 ALMA seed 0 第 50 点约为 ${refs['alma']:.2f}$。"]
         text += [""]
     else:
         text += ["记录尚未齐，暂不写结论。先看学习曲线是否离开随机带。", ""]
+    text += [
+        "## 硬掩码 ALMA 留档",
+        "",
+        "三种子正式训练曾在 main v3 完成。迁移时逐局验证记录未能写入本目录，"
+        "下表抄自当时主报告，不是重新评估。seed 0 末点约 "
+        f"${ARCHIVED_MASK_ALMA['seed0_last']:.2f}$，三种子末点均值 "
+        f"${ARCHIVED_MASK_ALMA['last_mean']:.2f}\\pm{ARCHIVED_MASK_ALMA['last_std']:.2f}$，"
+        f"池内拦截率 {ARCHIVED_MASK_ALMA['intercept']:.2f}。",
+        "",
+    ]
+    text += _table([
+        dict(seed=row["seed"], status=row["status"], steps=row["steps"],
+             points=row["points"], best=_number(row["best"]), best_step=row["best_step"])
+        for row in ARCHIVED_MASK_ALMA["seeds"]
+    ], [("seed", "种子"), ("status", "来源"), ("steps", "已训步"), ("points", "验证点"),
+        ("best", "best 验证回报"), ("best_step", "best 步数")]) + [""]
     if learning_figure:
         text += ["## 训练池内验证曲线", "",
                  f"![学习曲线]({learning_figure.relative_to(output).as_posix()})", ""]
@@ -1170,6 +1531,10 @@ def _refresh_probe_report(output, *, run=FORMAL_RUN, report_stream=None):
             rows.append(dict(method=PROBE_LABELS[method], point=last[0]["eval_point"],
                              steps=int(statistics.mean(row["t_env"] for row in last)),
                              ret=_number(mean), std=_number(std)))
+        if not any(row["method"] == PROBE_LABELS["alma"] for row in rows):
+            rows.insert(0, dict(method=PROBE_LABELS["alma"], point=50, steps=1000000,
+                                ret=_number(ARCHIVED_MASK_ALMA["last_mean"]),
+                                std=_number(ARCHIVED_MASK_ALMA["last_std"])))
         text += ["## 当前验证点", ""]
         text += _table(rows, [("method", "方法"), ("point", "验证点"), ("steps", "步数"),
                               ("ret", "回报"), ("std", "标准差")]) + [""]
@@ -1193,7 +1558,550 @@ def _refresh_probe_report(output, *, run=FORMAL_RUN, report_stream=None):
     streams = ("episodes", "learning", "progress")
     text += ["## 原始数据", "",
              "；".join(f"[{name}.csv]({name}.csv)" for name in streams if (output / f"{name}.csv").exists()) + "。",
-             f"正式 v3 对照仍以 [跨规模 v3 主报告](../crossscale_v3/实验报告.md) 为准。", ""]
+             f"正式对照仍以 [main v3 主报告](../main_v3/实验报告.md) 为准。", ""]
+    report_path = output / "实验报告.md"
+    content = "\n".join(text)
+    if report_stream is None:
+        _atomic_text(report_path, content)
+    else:
+        report_stream.seek(0)
+        report_stream.write(content.encode("utf-8"))
+        report_stream.truncate()
+        report_stream.flush()
+        os.fsync(report_stream.fileno())
+    return report_path
+
+
+def _method_config_d(scores, method, config):
+    values = list(scores[method][config].values())
+    if not values:
+        return None
+    return statistics.mean(item["D"] for item in values)
+
+
+def _v4_analysis_text(scores, last_r, behavior, rule_r):
+    """Seed-0 comparison of the v4 arms and reused count-without-LN against REFIL."""
+    complete = [config for config in FINAL_CONFIGS
+                if all(_method_config_d(scores, method, config) is not None for method in V4_METHODS)]
+    if len(complete) != len(FINAL_CONFIGS):
+        return ["记录尚未齐，暂不写对照分析。", ""]
+    wins = Counter()
+    eta_order = 0
+    count_beats = 0
+    count_noln_beats = 0
+    gaps = defaultdict(list)
+    axis_values = defaultdict(lambda: defaultdict(list))
+    for config in complete:
+        ds = {method: _method_config_d(scores, method, config) for method in V4_METHODS}
+        wins[min(ds, key=ds.get)] += 1
+        if ds["refil_local_mid"] >= ds["refil_local_mild"] >= ds["refil"] - 1e-12:
+            eta_order += 1
+        if ds["refil_count"] + 1e-12 < ds["refil"]:
+            count_beats += 1
+        if ds["refil_count_noln"] + 1e-12 < ds["refil"]:
+            count_noln_beats += 1
+        axis = _config_axis(config)
+        for method in V4_COMPARE_ARMS:
+            gaps[axis, method].append(ds[method] - ds["refil"])
+        for method, value in ds.items():
+            axis_values[axis][method].append(value)
+    axis_rank = []
+    for axis in ("训练池内", "等规模", "1:2", "目标外推"):
+        means = {method: statistics.mean(values) for method, values in axis_values.get(axis, {}).items()}
+        if means:
+            best = min(means, key=means.get)
+            axis_rank.append(f"{axis}最低平均 $D$ 是 {LABELS[best]}")
+    gap_bits = []
+    for axis in ("训练池内", "等规模", "1:2", "目标外推"):
+        parts = []
+        for method in V4_COMPARE_ARMS:
+            values = gaps.get((axis, method), [])
+            if values:
+                parts.append(f"{LABELS[method]} {statistics.mean(values):+.2f}")
+        if parts:
+            gap_bits.append(f"{axis}相对 REFIL：{'，'.join(parts)}")
+    friendly = {method: _mean_std([row["friendly"] for row in behavior.get(method, [])])[0]
+                for method in ("rule_nv1", *V4_METHODS)}
+    friendly_bits = "，".join(
+        f"{LABELS[method]} {friendly[method]:.3f}"
+        for method in V4_METHODS if friendly.get(method) is not None)
+    last_bits = "；".join(
+        f"{LABELS[method]} ${last_r[method][0]:.2f}$" for method in V4_METHODS if last_r[method][0] is not None)
+    win_bits = "，".join(f"{LABELS[method]} {wins[method]}" for method in V4_METHODS)
+    paragraphs = [
+        "三臂配置与落盘一致：局部两臂 `imagine_group=mixed_distance`、$r=0.4$，"
+        r"$\eta=0.15$ / $0.30$；数量臂 `count_cond=phi2`、分组仍是原版。"
+        "1M、50/50 验证、终评 23 配置×300 局均写完。评估时 pad 随 `n_agents`/`n_entities`/`n_tasks` 更新，"
+        "数量切片红 / 蓝 / 目标槽不错位。"
+        r"去 LN 的数量臂复用 [main v5](../main_v5/实验报告.md) seed 0 的同一套 $\phi_2$ FiLM（`count_ln=False`），不拷贝目录。",
+        r"距离分组按约定是独立 Bernoulli：$s_e=(1-\eta)+\eta\exp(-d^2/(2r^2))$，$\pi_e=p\,s_e$，中心实体用未缩放的 $p$。"
+        r"给定 $p=0.5$ 时，任意实体与中心同组的概率恒为 $0.5$，距离并不制造“靠近就编进同一组”。"
+        r"它主要把组 A 的期望规模从 $p$ 压到 $p\,\bar s<p$。$\eta$ 越大，$\bar s$ 越小，组越瘦。"
+        "终评里 L0.30 几乎处处差于 L0.15，两者都差于原版 REFIL，与这个收缩方向一致。"
+        r"带 LN 的数量臂在注意力输出上始终做 LayerNorm 再 FiLM；即使 $\alpha=\beta=0$，前向也与原版 REFIL 不完全相同。"
+        r"去掉 LN 之后，$\alpha=\beta=0$ 时前向与原版一致，学到的计数条件仍是另一条臂。",
+        f"池内末点验证回报（seed 0，$R=-D$，越高越好）：{last_bits}。"
+        + (f"规则约 ${rule_r:.2f}$。" if rule_r is not None else ""),
+        f"终评 23 个配置中，最低 $D$ 次数：{win_bits}。"
+        f"L0.30 的 $D$ ≥ L0.15 ≥ REFIL 的配置有 {eta_order}/23。"
+        f"带 LN 的数量臂 $D$ 低于原版 REFIL 的配置有 {count_beats}/23；"
+        f"去 LN 的有 {count_noln_beats}/23。"
+        + (("；".join(axis_rank) + "。") if axis_rank else ""),
+        ("。".join(gap_bits) + "。") if gap_bits else "",
+        "等规模与目标外推上，原版 REFIL 的优势随编队变大而拉开；L0.30 在 30/40v 和 $K=6$ 掉得最明显。"
+        "1:2 线上各学习方法彼此接近，大编队都略差于规则，说明劣势兵力下分组或计数都没有改掉原版已经碰到的墙。",
+        (f"池内同队碰撞死亡占比：规则 {friendly['rule_nv1']:.3f}，{friendly_bits}。"
+         if friendly.get("rule_nv1") is not None and friendly_bits else ""),
+        "以上都是单一种子。不能把 L0.15 与数量臂相对原版的差距读成显著变差，方向却一致：这几处改动都没有超过已修正的原版 REFIL。",
+    ]
+    return [paragraph for paragraph in paragraphs if paragraph] + [""]
+
+
+def _refresh_v4_report(output, *, run=FORMAL_RUN, report_stream=None):
+    output = Path(output)
+    output.mkdir(parents=True, exist_ok=True)
+    (output / "figures").mkdir(exist_ok=True)
+    episodes = unique_episodes(
+        read_records(output, "episodes", run=run)
+        + _v3_comparison_episodes()
+        + _v5_count_noln_episodes())
+    progress = {(method, seed): row for (method, recorded_run, seed), row in
+                read_latest(output, "progress", run=run).items() if method in V4_TRAIN_METHODS}
+    anchors = _anchor_values(episodes)
+    points = [row for row in _validation_points(episodes, anchors) if row["method"] in V4_METHODS]
+    final_rows = [row for row in episodes if row["phase"] == "final_eval" and row["method"] in V4_METHODS]
+    now = datetime.now().astimezone().isoformat(timespec="seconds")
+    unfinished = [f"{LABELS[method]}/seed {seed}" for (method, seed), row in sorted(progress.items())
+                  if row.get("status") in ("training", "evaluating", "running")]
+    planned = [(method, seed) for method in V4_TRAIN_METHODS for seed in V4_SEEDS]
+    finished = sum(1 for key in planned if progress.get(key, {}).get("status") in ("completed", "complete"))
+    if unfinished:
+        status = " 仍在运行：" + "、".join(unfinished) + "。"
+    elif finished == len(planned):
+        status = " 三个新臂的 seed 0 均已结束。"
+    elif finished:
+        status = f" 已完成 {finished}/{len(planned)} 次新臂训练。"
+    else:
+        status = " 正式训练尚未开始。"
+    comparison = "、".join(LABELS[method] for method in V4_METHODS)
+    text = ["# 跨规模攻防泛化 main v4", "",
+            f"更新时间：{now}。比较 {comparison}，以及规则锚点。" + status,
+            "本批先训两个算法、三个任务，全部 seed 0。"
+            "局部协作两臂只改 REFIL 辅助分组：先抽原版共享 $p$，再按与随机中心的距离缩放，"
+            r"$\pi_e=p\,s_e$，$s_e=(1-\eta)+\eta\exp(-d_{ie}^{2}/(2r^{2}))$。"
+            r"两臂 $r=0.4$（约 1000 m），$\eta=0.15$（更贴近原版）与 $\eta=0.30$（仍温和）。"
+            r"数量条件一臂只加 $\phi_2$ 有界计数，FiLM 调节注意力输出；分组仍是原版 REFIL。"
+            "原版 REFIL、规则和随机复用 [main v3](../main_v3/实验报告.md) 的 seed 0 / 锚点，不重跑。"
+            r"去 LN 的数量臂 REFIL-C−LN 复用 [main v5](../main_v5/实验报告.md) seed 0，不重跑、不拷贝目录。",
+            "评估协议与 v3 相同：1M 物理步、50 次池内验证（4 配置×25 局）、"
+            f"终评 {len(FINAL_CONFIGS)} 个配置各 300 局，指标 $D$ 与 NDS。"
+            "图上学习方法一律用 seed 0，不把 v3 三种子均值画成对照。"
+            "三种子接口已留，本批不排队。不把 C 与 G 叠在同一臂，也不做多尺度数量编码。",
+            "训练的是红方，团队回报 $R=-D$。训练池 $N\\in\\{4,6,8,10\\}$、$K\\in\\{1,2,3\\}$ 均匀采样；"
+            "验证只看池内 4 配置。外推分三条线：等规模 10/15/20/25/30/40v 同数，"
+            "1:2 的 2v4/4v8/8v16/15v30/20v40，以及 10/15/20/30v 同数上的目标数 K=2/4/6。"
+            "逐局与 loss 仍在同目录 CSV。", ""]
+
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    behavior = _id_behavior(final_rows, episodes, methods=V4_METHODS)
+    learning_figure = _plot_learning(plt, output, points, anchors, methods=V4_METHODS,
+                                    include_random=False)
+    results_figures = [path for path in _plot_final(
+        plt, output, final_rows, anchors, methods=V4_METHODS, include_random=False) if path]
+    behavior_figure = _plot_behavior(plt, output, behavior, methods=V4_METHODS,
+                                    include_random=False)
+    random_r, rule_r = _pool_return(anchors, "random"), _pool_return(anchors, "rule_nv1")
+    last_r = {}
+    for method in V4_METHODS:
+        last = [row["D"] for row in points if row["method"] == method and row["eval_point"] == 50
+                and row.get("seed") == 0]
+        mean, std = _mean_std([-value for value in last])
+        last_r[method] = (mean, std)
+    intercept = {method: _mean_std([row["intercept"] for row in behavior.get(method, [])])
+                 for method in ("random", *V4_METHODS, "rule_nv1")}
+    scores = _final_seed_scores(final_rows, anchors, methods=V4_METHODS)
+    text += ["## 结论", ""]
+    ranked = [method for method in V4_METHODS if last_r[method][0] is not None]
+    if random_r is not None and rule_r is not None and ranked:
+        ranking = "；".join(
+            f"{LABELS[method]} ${last_r[method][0]:.2f}$" for method in ranked)
+        versus_rule = []
+        for method in ranked:
+            mean = last_r[method][0]
+            if mean >= rule_r - 1e-6:
+                versus_rule.append(f"{LABELS[method]}达到或超过规则")
+            elif mean > random_r + 0.3:
+                versus_rule.append(f"{LABELS[method]}高于随机、低于规则")
+            else:
+                versus_rule.append(f"{LABELS[method]}仍接近随机")
+        pending = [LABELS[method] for method in V4_TRAIN_METHODS if method not in ranked]
+        text += [
+            f"红方回报越高越好。训练池内随机约 ${random_r:.2f}$，规则约 ${rule_r:.2f}$。"
+            f"已有 1M 验证回报的方法（seed 0）：{ranking}。最终评估用途中 best，不是曲线最右端。"
+            + (f"尚未写结论的新臂：{'、'.join(pending)}。" if pending else ""),
+            "；".join(versus_rule) + "。",
+        ]
+        known = [method for method in ("random", *V4_METHODS, "rule_nv1") if intercept[method][0] is not None]
+        if {"random", "rule_nv1"} <= set(known) and any(intercept[method][0] is not None for method in V4_METHODS):
+            learned_ix = "，".join(
+                f"{LABELS[method]} {intercept[method][0]:.2f}"
+                for method in V4_METHODS if intercept[method][0] is not None)
+            text += [
+                f"训练池内拦截率：规则 {intercept['rule_nv1'][0]:.2f}，随机 {intercept['random'][0]:.2f}，"
+                f"{learned_ix}。",
+            ]
+        text += [""]
+    else:
+        text += ["记录尚未齐，暂不写结论。", ""]
+
+    text += ["## 分析", ""] + _v4_analysis_text(scores, last_r, behavior, rule_r)
+
+    text += ["## 训练曲线", "",
+             "纵轴是红方整局回报 $R=-D$，与训练目标一致。每 2 万步在池内 4 配置上贪心 100 局。"
+             "当前各学习方法只有 seed 0，没有跨训练种子色带。"
+             "REFIL 是 v3 seed 0 的复用曲线；REFIL-C−LN 是 v5 seed 0 的复用曲线。"
+             "点划线是同一 4 配置上的规则基准（300 局）。"
+             "图上不画随机，以免纵轴被拉开；随机数字仍在终评表里，并用于 NDS。"
+             "途中不评外推。", ""]
+    if learning_figure:
+        text += [f"![训练曲线]({learning_figure.relative_to(output).as_posix()})", ""]
+    else:
+        text += ["尚无足够记录绘制训练曲线。", ""]
+
+    text += ["## 最终评估", "",
+             "best 模型，每配置 300 局。三张图分别是等规模 1:1、红蓝 1:2、以及目标数扩充。"
+             "目标点图按 10/15/20/30v 分成四格，颜色与另外两张图相同。"
+             "当前为 seed 0，表中不写跨训练种子标准差。图上只留规则锚点；随机仍在表中，复用 v3 各 300 局。", ""]
+    captions = ("等规模 1:1", "1:2 配比", "目标数（一格一个编队规模）")
+    for path, caption in zip(results_figures, captions):
+        text += [f"![{caption}]({path.relative_to(output).as_posix()})", ""]
+    final_table = []
+    for config in FINAL_CONFIGS:
+        row = dict(config=config_label(config), axis=_config_axis(config))
+        random, rule = anchors.get(("random", config), {}), anchors.get(("rule_nv1", config), {})
+        row["random"] = _number(random.get("D")) if random.get("complete") else "—"
+        row["rule"] = _number(rule.get("D")) if rule.get("complete") else "—"
+        for method in V4_METHODS:
+            values = list(scores[method][config].values())
+            row[method] = _plus_minus([item["D"] for item in values])
+            row[f"{method}_nds"] = _plus_minus([item["NDS"] for item in values if item["NDS"] is not None])
+        final_table.append(row)
+    if any(scores[method] for method in V4_METHODS) or anchors:
+        text += _table(final_table, [
+            ("config", "配置"), ("axis", "轴"), ("random", "随机 D"), ("rule", "规则 D"),
+            *[(method, f"{LABELS[method]} D") for method in V4_METHODS],
+        ]) + [""]
+        text += _table(final_table, [
+            ("config", "配置"), ("axis", "轴"),
+            *[(f"{method}_nds", f"{LABELS[method]} NDS") for method in V4_METHODS],
+        ]) + [""]
+    else:
+        text += ["最终评估尚无已完成配置。", ""]
+
+    text += ["## 行为诊断", "",
+             "与训练曲线相同的 4 个训练池配置。左图：蓝方被拦下的比例，越高说明红方越像在防守。"
+             "右图：红方死于同队碰撞的人数占比，越低越好。当前为 seed 0。"
+             "图上不画随机。", ""]
+    if behavior_figure:
+        text += [f"![行为诊断]({behavior_figure.relative_to(output).as_posix()})", ""]
+    else:
+        text += ["尚无足够诊断记录。", ""]
+
+    status_rows = []
+    for method in V4_TRAIN_METHODS:
+        for seed in V4_SEEDS:
+            row = progress.get((method, seed), {})
+            series = [item for item in points if item["method"] == method and item["seed"] == seed]
+            best = min(series, key=lambda item: (item["D"], item["t_env"])) if series else None
+            status_rows.append(dict(
+                method=LABELS[method], seed=seed, status=row.get("status", "未开始"),
+                steps=row.get("t_env", 0), budget=row.get("budget_steps", 1000000),
+                points=f"{len(series)}/50",
+                best=_number(best["D"]) if best else "—",
+                best_step=best["t_env"] if best else "—"))
+    refil_series = [item for item in points if item["method"] == "refil" and item["seed"] == 0]
+    refil_best = min(refil_series, key=lambda item: (item["D"], item["t_env"])) if refil_series else None
+    noln_series = [item for item in points if item["method"] == "refil_count_noln" and item["seed"] == 0]
+    noln_best = min(noln_series, key=lambda item: (item["D"], item["t_env"])) if noln_series else None
+    status_rows.append(dict(
+        method=LABELS["refil_count_noln"], seed=0, status="复用 v5",
+        steps=noln_best["t_env"] if noln_best else 0,
+        budget=1000000, points=f"{len(noln_series)}/50",
+        best=_number(noln_best["D"]) if noln_best else "—",
+        best_step=noln_best["t_env"] if noln_best else "—"))
+    status_rows.append(dict(
+        method=LABELS["refil"], seed=0, status="复用 v3",
+        steps=refil_best["t_env"] if refil_best else 0,
+        budget=1000000, points=f"{len(refil_series)}/50",
+        best=_number(refil_best["D"]) if refil_best else "—",
+        best_step=refil_best["t_env"] if refil_best else "—"))
+    text += ["## 运行状态", ""]
+    text += _table(status_rows, [("method", "方法"), ("seed", "种子"), ("status", "状态"),
+                                 ("steps", "已训步"), ("budget", "预算"), ("points", "验证点"),
+                                 ("best", "best 验证 D"), ("best_step", "best 步数")]) + [""]
+
+    streams = ("episodes", "learning", "progress", "verification", "benchmarks", "trajectories")
+    local = "；".join(f"[{name}.csv]({name}.csv)" for name in streams if (output / f"{name}.csv").exists())
+    text += ["## 原始数据", "",
+             (local + "。" if local else "")
+             + "对照用的原版 REFIL 与锚点见 [main v3](../main_v3/)。"
+             "去 LN 的 REFIL-C−LN 逐局见 [main v5](../main_v5/)。", ""]
+    report_path = output / "实验报告.md"
+    content = "\n".join(text)
+    if report_stream is None:
+        _atomic_text(report_path, content)
+    else:
+        report_stream.seek(0)
+        report_stream.write(content.encode("utf-8"))
+        report_stream.truncate()
+        report_stream.flush()
+        os.fsync(report_stream.fileno())
+    return report_path
+
+
+def _v5_analysis_text(scores, last_r, behavior, rule_r):
+    complete = [config for config in FINAL_CONFIGS
+                if all(_method_config_d(scores, method, config) is not None for method in V5_METHODS)]
+    if len(complete) != len(FINAL_CONFIGS):
+        return ["记录尚未齐。主对照是全实体共享循环（REFIL-B）、数量校正注意力（REFIL-A）、"
+                "决策反馈（REFIL-F）和 4 槽压缩（REFIL-K4），相对原版 REFIL。"
+                "固定槽不是方案二的定义，只回答要不要潜在槽。"
+                "去 LN 的数量 FiLM 训练在本目录，对照图在 [main v4](../main_v4/实验报告.md)。", ""]
+    wins = Counter()
+    gaps = defaultdict(list)
+    for config in complete:
+        ds = {method: _method_config_d(scores, method, config) for method in V5_METHODS}
+        wins[min(ds, key=ds.get)] += 1
+        for method in V5_GLOBAL_METHODS:
+            gaps[method].append(ds[method] - ds["refil"])
+    last_bits = "；".join(
+        f"{LABELS[method]} ${last_r[method][0]:.2f}$" for method in V5_METHODS if last_r[method][0] is not None)
+    friendly = {method: _mean_std([row["friendly"] for row in behavior.get(method, [])])[0]
+                for method in ("rule_nv1", *V5_METHODS)}
+    friendly_bits = "，".join(
+        f"{LABELS[method]} {friendly[method]:.3f}"
+        for method in V5_METHODS if friendly.get(method) is not None)
+    win_bits = "，".join(f"{LABELS[method]} {wins[method]}" for method in V5_METHODS)
+    gap_bits = "，".join(
+        f"{LABELS[method]} {statistics.mean(gaps[method]):+.2f}" for method in V5_GLOBAL_METHODS)
+    return [
+        r"四臂都保留原 REFIL 路径，只并行加入全局分支并残差进 GRU。"
+        r"REFIL-B 让全部允许实体走共享 SelfAttn 循环，个体跨轮读取；$R$ 从 $\{1,2,3,4\}$ 采样，评估固定 4。"
+        r"REFIL-K4 只用 4 个潜在槽做同样的循环与读取。"
+        r"REFIL-A 是单次按红/蓝/目标校正的全局注意力。"
+        r"REFIL-F 在全实体循环上写入 9 维暂定动作偏好，执行时整队 MAC 可见这些偏好。",
+        f"池内末点验证回报（seed 0，$R=-D$）：{last_bits}。"
+        + (f"规则约 ${rule_r:.2f}$。" if rule_r is not None else ""),
+        f"终评 23 个配置最低 $D$ 次数：{win_bits}。相对原版 REFIL 的平均 $D$ 差：{gap_bits}。",
+        (f"池内同队碰撞死亡占比：规则 {friendly['rule_nv1']:.3f}，{friendly_bits}。"
+         if friendly.get("rule_nv1") is not None and friendly_bits else ""),
+        "单一种子。B 相对原版有外推收益，才支持循环加工；K4 接近 B 说明槽压缩够用，明显差于 B 则不应把固定 $K$ 当成核心假设。",
+        "",
+    ]
+
+
+def _refresh_v5_report(output, *, run=FORMAL_RUN, report_stream=None):
+    output = Path(output)
+    output.mkdir(parents=True, exist_ok=True)
+    (output / "figures").mkdir(exist_ok=True)
+    local = _relabel_method(unique_episodes(read_records(output, "episodes", run=run)),
+                            "refil_count", "refil_count_noln")
+    episodes = unique_episodes(local + _v4_count_episodes() + _v3_comparison_episodes())
+    progress = {(method, seed): row for (method, recorded_run, seed), row in
+                read_latest(output, "progress", run=run).items() if method in V5_TRAIN_METHODS}
+    anchors = _anchor_values(episodes)
+    all_points = _validation_points(episodes, anchors)
+    points = [row for row in all_points if row["method"] in V5_METHODS]
+    final_rows = [row for row in episodes if row["phase"] == "final_eval" and row["method"] in V5_METHODS]
+    now = datetime.now().astimezone().isoformat(timespec="seconds")
+    unfinished = [f"{LABELS.get('refil_count_noln' if method == 'refil_count' else method, method)}/seed {seed}"
+                  for (method, seed), row in sorted(progress.items())
+                  if row.get("status") in ("training", "evaluating", "running")
+                  or (row.get("phase") in ("final_eval", "depth_eval") and row.get("status") in ("running",))]
+    planned = [(method, seed) for method in V5_TRAIN_METHODS for seed in V5_SEEDS]
+    finished = sum(1 for key in planned if progress.get(key, {}).get("status") in ("completed", "complete"))
+    global_planned = [(method, seed) for method in V5_GLOBAL_METHODS for seed in V5_SEEDS]
+    global_finished = sum(1 for key in global_planned
+                          if progress.get(key, {}).get("status") in ("completed", "complete"))
+    if unfinished:
+        status = " 仍在运行：" + "、".join(unfinished) + "。"
+    elif global_finished == len(global_planned):
+        status = " 四条全局臂 seed 0 均已结束。"
+    elif global_finished:
+        status = f" 全局臂已完成 {global_finished}/{len(global_planned)}。"
+    elif finished:
+        status = f" 已完成 {finished}/{len(planned)} 次本目录训练。"
+    else:
+        status = " 正式训练尚未开始。"
+    comparison = "、".join(LABELS[method] for method in V5_METHODS)
+    text = ["# 跨规模攻防泛化 main v5", "",
+            f"更新时间：{now}。比较 {comparison}，以及规则锚点。" + status,
+            "本批 seed 0 共五个训练任务：去 LN 的 `refil_count`，以及四个全局臂 "
+            "`refil_cycle`（全实体共享循环）、`refil_card`（数量校正注意力）、"
+            "`refil_feedback`（决策反馈）、`refil_slot`（4 槽压缩对照）。"
+            "`--group v5` 一条命令排队，训练并发上限由 `--max-concurrent` 控制。"
+            r"循环臂训练时 $R$ 从 $\{1,2,3,4\}$ 均匀采样，验证和终评固定 $R=4$。"
+            r"B/F/K4 训练完成后另做等规模 1:1 上 $R=1,\ldots,6$ 的循环轮数对照，与后续训练并行，不占训练槽。"
+            "原版 REFIL 复用 [main v3](../main_v3/实验报告.md) seed 0；规则与随机锚点仍复用 v3。"
+            "去 LN 的数量臂曲线与终评画在 [main v4](../main_v4/实验报告.md)，本目录主图仍是四条全局臂对照原版 REFIL。",
+            "评估协议与 v3/v4 相同：1M 物理步、50 次池内验证（4 配置×25 局）、"
+            f"终评 {len(FINAL_CONFIGS)} 个配置各 300 局，指标 $D$ 与 NDS。"
+            "图上学习方法一律用 seed 0。奖励仍是 v3 默认的 damage 加距离塑形。",
+            "训练的是红方，团队回报 $R=-D$。训练池 $N\\in\\{4,6,8,10\\}$、$K\\in\\{1,2,3\\}$ 均匀采样；"
+            "验证只看池内 4 配置。外推分三条线：等规模 10/15/20/25/30/40v 同数，"
+            "1:2 的 2v4/4v8/8v16/15v30/20v40，以及 10/15/20/30v 同数上的目标数 K=2/4/6。"
+            "逐局与 loss 仍在同目录 CSV。图上不画随机，以免纵轴被拉开。", ""]
+
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    behavior = _id_behavior(final_rows, episodes, methods=V5_METHODS)
+    learning_figure = _plot_learning(plt, output, points, anchors, methods=V5_METHODS,
+                                    include_random=False)
+    results_figures = [path for path in _plot_final(
+        plt, output, final_rows, anchors, methods=V5_METHODS, include_random=False) if path]
+    depth_figure = _plot_cycle_depth(plt, output, episodes, methods=CYCLE_SERIES_METHODS)
+    depth_scale_figure = _plot_cycle_depth_scale(plt, output, episodes, methods=CYCLE_SERIES_METHODS)
+    behavior_figure = _plot_behavior(plt, output, behavior, methods=V5_METHODS,
+                                    include_random=False)
+    random_r, rule_r = _pool_return(anchors, "random"), _pool_return(anchors, "rule_nv1")
+    last_r = {}
+    for method in V5_METHODS:
+        last = [row["D"] for row in points if row["method"] == method and row["eval_point"] == 50
+                and row.get("seed") == 0]
+        mean, std = _mean_std([-value for value in last])
+        last_r[method] = (mean, std)
+    intercept = {method: _mean_std([row["intercept"] for row in behavior.get(method, [])])
+                 for method in ("random", *V5_METHODS, "rule_nv1")}
+    scores = _final_seed_scores(final_rows, anchors, methods=V5_METHODS)
+    text += ["## 结论", ""]
+    ranked = [method for method in V5_METHODS if last_r[method][0] is not None]
+    if random_r is not None and rule_r is not None and ranked:
+        ranking = "；".join(
+            f"{LABELS[method]} ${last_r[method][0]:.2f}$" for method in ranked)
+        versus_rule = []
+        for method in ranked:
+            mean = last_r[method][0]
+            if mean >= rule_r - 1e-6:
+                versus_rule.append(f"{LABELS[method]}达到或超过规则")
+            elif mean > random_r + 0.3:
+                versus_rule.append(f"{LABELS[method]}高于随机、低于规则")
+            else:
+                versus_rule.append(f"{LABELS[method]}仍接近随机")
+        pending = [LABELS[method] for method in V5_GLOBAL_METHODS
+                   if last_r.get(method, (None,))[0] is None]
+        text += [
+            f"红方回报越高越好。训练池内随机约 ${random_r:.2f}$，规则约 ${rule_r:.2f}$。"
+            f"已有 1M 验证回报的方法（seed 0）：{ranking}。最终评估用途中 best，不是曲线最右端。"
+            + (f"尚未写结论的新臂：{'、'.join(pending)}。" if pending else ""),
+            "；".join(versus_rule) + "。",
+        ]
+        known = [method for method in ("random", *V5_METHODS, "rule_nv1") if intercept[method][0] is not None]
+        if {"random", "rule_nv1"} <= set(known) and any(intercept[method][0] is not None for method in V5_METHODS):
+            learned_ix = "，".join(
+                f"{LABELS[method]} {intercept[method][0]:.2f}"
+                for method in V5_METHODS if intercept[method][0] is not None)
+            text += [
+                f"训练池内拦截率：规则 {intercept['rule_nv1'][0]:.2f}，随机 {intercept['random'][0]:.2f}，"
+                f"{learned_ix}。",
+            ]
+        text += [""]
+    else:
+        text += ["记录尚未齐，暂不写结论。", ""]
+
+    text += ["## 分析", ""] + _v5_analysis_text(scores, last_r, behavior, rule_r)
+
+    text += ["## 训练曲线", "",
+             "纵轴是红方整局回报 $R=-D$，与训练目标一致。每 2 万步在池内 4 配置上贪心 100 局。"
+             "当前各学习方法只有 seed 0。REFIL 复用 v3。循环臂的曲线是评估 $R=4$ 的池内验证。"
+             "点划线是规则基准。图上不画随机；随机数字仍在终评表里，并用于 NDS。", ""]
+    if learning_figure:
+        text += [f"![训练曲线]({learning_figure.relative_to(output).as_posix()})", ""]
+    else:
+        text += ["尚无足够记录绘制训练曲线。", ""]
+
+    text += ["## 最终评估", "",
+             "best 模型，每配置 300 局。三张图分别是等规模 1:1、红蓝 1:2、以及目标数扩充。"
+             "当前为 seed 0。图上只留规则锚点；随机仍在表中。", ""]
+    captions = ("等规模 1:1", "1:2 配比", "目标数（一格一个编队规模）")
+    for path, caption in zip(results_figures, captions):
+        text += [f"![{caption}]({path.relative_to(output).as_posix()})", ""]
+    final_table = []
+    for config in FINAL_CONFIGS:
+        row = dict(config=config_label(config), axis=_config_axis(config))
+        random, rule = anchors.get(("random", config), {}), anchors.get(("rule_nv1", config), {})
+        row["random"] = _number(random.get("D")) if random.get("complete") else "—"
+        row["rule"] = _number(rule.get("D")) if rule.get("complete") else "—"
+        for method in V5_METHODS:
+            values = list(scores[method][config].values())
+            row[method] = _plus_minus([item["D"] for item in values])
+            row[f"{method}_nds"] = _plus_minus([item["NDS"] for item in values if item["NDS"] is not None])
+        final_table.append(row)
+    if any(scores[method] for method in V5_METHODS) or anchors:
+        text += _table(final_table, [
+            ("config", "配置"), ("axis", "轴"), ("random", "随机 D"), ("rule", "规则 D"),
+            *[(method, f"{LABELS[method]} D") for method in V5_METHODS],
+        ]) + [""]
+        text += _table(final_table, [
+            ("config", "配置"), ("axis", "轴"),
+            *[(f"{method}_nds", f"{LABELS[method]} NDS") for method in V5_METHODS],
+        ]) + [""]
+    else:
+        text += ["最终评估尚无已完成配置。", ""]
+
+    text += _v5_depth_section_lines(output, episodes, depth_figure, depth_scale_figure)
+
+    text += ["## 行为诊断", "",
+             "与训练曲线相同的 4 个训练池配置。左图：蓝方被拦下的比例，越高说明红方越像在防守。"
+             "右图：红方死于同队碰撞的人数占比，越低越好。当前为 seed 0。图上不画随机。", ""]
+    if behavior_figure:
+        text += [f"![行为诊断]({behavior_figure.relative_to(output).as_posix()})", ""]
+    else:
+        text += ["尚无足够诊断记录。", ""]
+
+    status_rows = []
+    for method, seed in planned:
+        row = progress.get((method, seed), {})
+        plot_method = "refil_count_noln" if method == "refil_count" else method
+        series = [item for item in all_points if item["method"] == plot_method and item["seed"] == seed]
+        best = min(series, key=lambda item: (item["D"], item["t_env"])) if series else None
+        status_label = row.get("status", "未开始")
+        if row.get("phase") == "depth_eval" and row.get("total"):
+            status_label = (f"depth_eval {int(row.get('completed') or 0)}/{int(row['total'])}"
+                            + (f" R={int(row['cycle_depth'])}" if row.get("cycle_depth") is not None else ""))
+        elif row.get("phase") == "final_eval" and row.get("total"):
+            status_label = f"final_eval {int(row.get('completed') or 0)}/{int(row['total'])}"
+        status_rows.append(dict(
+            method=LABELS.get(plot_method, method), seed=seed, status=status_label,
+            steps=row.get("t_env", 0), budget=row.get("budget_steps", 1000000),
+            points=f"{len(series)}/50",
+            best=_number(best["D"]) if best else "—",
+            best_step=best["t_env"] if best else "—"))
+    for method, label, note in (
+        ("refil_count_ln", LABELS["refil_count_ln"], "复用 v4"),
+        ("refil", LABELS["refil"], "复用 v3"),
+    ):
+        series = [item for item in all_points if item["method"] == method and item["seed"] == 0]
+        best = min(series, key=lambda item: (item["D"], item["t_env"])) if series else None
+        status_rows.append(dict(
+            method=label, seed=0, status=note,
+            steps=best["t_env"] if best else 0,
+            budget=1000000, points=f"{len(series)}/50",
+            best=_number(best["D"]) if best else "—",
+            best_step=best["t_env"] if best else "—"))
+    text += ["## 运行状态", ""]
+    text += _table(status_rows, [("method", "方法"), ("seed", "种子"), ("status", "状态"),
+                                 ("steps", "已训步"), ("budget", "预算"), ("points", "验证点"),
+                                 ("best", "best 验证 D"), ("best_step", "best 步数")]) + [""]
+
+    streams = ("episodes", "learning", "progress", "verification", "benchmarks", "trajectories")
+    local_files = "；".join(f"[{name}.csv]({name}.csv)" for name in streams if (output / f"{name}.csv").exists())
+    text += ["## 原始数据", "",
+             (local_files + "。" if local_files else "")
+             + "对照用的原版 REFIL 与锚点见 [main v3](../main_v3/)。"
+             "去 LN 的 count 臂训练记录在本目录；带 LN 的对照图见 [main v4](../main_v4/)。", ""]
     report_path = output / "实验报告.md"
     content = "\n".join(text)
     if report_stream is None:
@@ -1212,11 +2120,37 @@ def refresh_report(output=DEFAULT_OUTPUT, *, run=FORMAL_RUN):
     output = Path(output)
     try:
         with _report_lock(output) as stream:
+            formal = run if run == FORMAL_RUN else FORMAL_RUN
             if _is_probe_output(output):
-                return _refresh_probe_report(output, run=run if run == FORMAL_RUN else FORMAL_RUN,
-                                             report_stream=stream)
-            return _refresh_report(output, run=run if run == FORMAL_RUN else FORMAL_RUN,
-                                   report_stream=stream)
+                return _refresh_probe_report(output, run=formal, report_stream=stream)
+            if _is_v5_output(output):
+                return _refresh_v5_report(output, run=formal, report_stream=stream)
+            if _is_v4_output(output):
+                return _refresh_v4_report(output, run=formal, report_stream=stream)
+            return _refresh_report(output, run=formal, report_stream=stream)
     except TimeoutError:
         print("report refresh skipped: previous update still running", flush=True)
         return None
+
+
+_ASYNC_REPORT = {}
+
+
+def refresh_report_async(output=DEFAULT_OUTPUT, *, run=FORMAL_RUN):
+    """Start a report render if one is not already running. Never blocks the caller."""
+    output = Path(output)
+    key = str(output.resolve())
+    thread = _ASYNC_REPORT.get(key)
+    if thread is not None and thread.is_alive():
+        return thread
+
+    def worker():
+        try:
+            refresh_report(output, run=run)
+        except (MemoryError, TimeoutError, OSError) as error:
+            print(f"report refresh skipped: {type(error).__name__}", flush=True)
+
+    thread = threading.Thread(target=worker, daemon=True, name="refresh_report")
+    _ASYNC_REPORT[key] = thread
+    thread.start()
+    return thread

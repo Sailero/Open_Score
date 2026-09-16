@@ -37,13 +37,21 @@ METHOD_LABELS = {
     "b0_qmix": "QMIX-Base", "b2_qmix_atten": "QMIX-Atten",
     "refil": "REFIL", "dcg": "DCG", "gnn_qmix": "GNN-QMIX",
     "spectra": "SPECTra", "alma": "ALMA",
+    "alma_fullobs": "ALMA-全场", "alma_blue": "ALMA-蓝方",
+    "alma_event": "ALMA-事件", "alma_nomask": "ALMA-NoMask",
+    "refil_local_mild": "REFIL-L0.15", "refil_local_mid": "REFIL-L0.30",
+    "refil_count": "REFIL-C",
+    "refil_cycle": "REFIL-B（循环）", "refil_card": "REFIL-A（数量校正）",
+    "refil_feedback": "REFIL-F（决策反馈）", "refil_slot": "REFIL-K4（4 槽）",
 }
+CYCLE_BRANCHES = ("cycle", "slot", "feedback")
 DEFAULTS = {
     "targets": 2, "red": 8, "blue": 8, "seed0": 0,
     "display": 5, "stats": 100,
     "task_mode": "damage",
     "spatial_dim": 2,
     "target_initialization": "random",
+    "cycle_depth": 0,
 }
 MAX_SAFE_INTEGER = 2 ** 53 - 1
 
@@ -56,7 +64,7 @@ def _path_id(path):
 
 
 def _describe_checkpoint(path, cfg):
-    from open_score.algos import METHODS
+    from open_score.algos import POLICY_METHODS
     from open_score.envs.features import MAX_AGENTS, MAX_BLUE, MAX_TARGETS, ENTITY_DIM, N_ACTIONS
     legacy_name = path.parent.parent.name if path.parent.name == "models" else path.stem
     method = cfg.get("method", legacy_name)
@@ -75,7 +83,7 @@ def _describe_checkpoint(path, cfg):
     reason = ""
     if path.name == "resume.pt":
         reason = "训练恢复文件（包含 replay）；请选择 best、final 或 latest 推理权重。"
-    elif method not in METHODS:
+    elif method not in POLICY_METHODS:
         reason = "历史或未知模型格式；需要对应算法的推理实现，不能直接作为当前动作策略加载。"
     elif cfg.get("env") != "had" or cfg.get("feature_layout") != "had":
         reason = "该权重不是 HAD 实体观测模型（原生 E0 环境不能用于 HAD 回放）。"
@@ -85,12 +93,16 @@ def _describe_checkpoint(path, cfg):
         reason = "旧有序展平模型没有 pool_slots，固定输入宽度与当前实体接口不兼容。"
     elif cfg.get("multi_task") and int(cfg.get("n_tasks", 0)) + int(cfg.get("n_extra_tasks", 0)) < MAX_TARGETS:
         reason = "分层模型的子任务嵌入不足以重建当前 6 目标槽接口。"
+    branch = cfg.get("global_branch")
+    eval_depth = int(cfg.get("global_eval_depth", 4)) if branch in CYCLE_BRANCHES else None
     label = f"{METHOD_LABELS.get(method, method)} · {version} / {run} · seed {seed if seed is not None else '未知'} · {path.stem}"
     return dict(id=_path_id(path), path=_path_id(path), label=label, method=method,
                 method_label=METHOD_LABELS.get(method, method), version=version,
                 run=run, seed=seed, kind=path.stem, available=not reason, reason=reason,
                 limits=limits, task_mode="damage", spatial_dim=2,
-                architecture="hierarchical" if cfg.get("multi_task") else "end_to_end")
+                architecture="hierarchical" if cfg.get("multi_task") else "end_to_end",
+                global_branch=branch, global_eval_depth=eval_depth,
+                cycle_depths=list(range(1, 7)) if eval_depth is not None else [])
 
 
 def _scan_checkpoints():
@@ -205,7 +217,7 @@ def _json(handler, code, payload):
 
 
 def _meta(refresh=False):
-    from open_score.algos import METHODS
+    from open_score.algos import POLICY_METHODS
     from open_score.envs import PHYSICS_PROTOCOL
     from open_score.envs.features import MAX_AGENTS, MAX_BLUE, MAX_TARGETS
     from open_score.envs.scales import VALIDATION_POOL, TEST_POOL
@@ -235,7 +247,7 @@ def _meta(refresh=False):
         "physics_protocol": PHYSICS_PROTOCOL,
         "strategy_catalog": catalog,
         "checkpoints": checkpoints,
-        "methods": {method: METHOD_LABELS.get(method, method) for method in METHODS},
+        "methods": {method: METHOD_LABELS.get(method, method) for method in POLICY_METHODS},
         "limits": dict(red=MAX_AGENTS, blue=MAX_BLUE, targets=MAX_TARGETS),
         "scale_presets": [dict(label=scale.name, red=scale.N_R, blue=scale.N_B, targets=scale.K)
                           for scale in dict.fromkeys((*VALIDATION_POOL, *TEST_POOL))],
@@ -268,6 +280,7 @@ def _validate_config(payload):
         "seed0": (0, MAX_SAFE_INTEGER, "起始种子"),
         "max_steps": (1, 500, "每局物理步数上限"),
         "spatial_dim": (2, 3, "空间维度"),
+        "cycle_depth": (0, 6, "循环轮数 R"),
     }
     for name, (low, high, label) in limits.items():
         value = payload.get(name, config[name])
@@ -301,11 +314,17 @@ def _validate_config(payload):
                 raise ValueError("训练模型只支持红方，需提供 architecture 和 checkpoint。")
             row = _checkpoint_row(spec["checkpoint"])
             _check_model_config(row, config)
+            if row.get("global_branch") in CYCLE_BRANCHES:
+                config["cycle_depth"] = config["cycle_depth"] or int(row.get("global_eval_depth") or 4)
+            elif config["cycle_depth"]:
+                raise ValueError("循环轮数 R 只用于循环 / 槽压缩 / 决策反馈权重。")
             config[f"{side}_strategy"] = dict(spec)
         else:
             if isinstance(spec, dict) and spec.get("policy") == CHECKPOINT_POLICY:
                 raise ValueError("请通过训练模型入口选择 checkpoint。")
             config[f"{side}_strategy"] = validate_strategy(side, spec)
+    if config["red_strategy"].get("architecture") != "checkpoint" and config["cycle_depth"]:
+        raise ValueError("循环轮数 R 只用于循环 / 槽压缩 / 决策反馈权重。")
     try:
         value = payload.get("target_health", config["target_health"])
         if isinstance(value, bool):
@@ -367,6 +386,8 @@ def _evaluate_job(job_id, payload):
                 del saved
                 source.seek(0)
                 POLICY_CONTEXT.policy = load_policy(snapshot["method"], source)
+            if snapshot.get("global_branch") in CYCLE_BRANCHES:
+                POLICY_CONTEXT.policy.set_eval_depth(int(payload.get("cycle_depth") or snapshot.get("global_eval_depth") or 4))
             payload = {**payload, "model_snapshots": {"red": snapshot}}
             strategies["red"] = {"architecture": "end_to_end", "policy": CHECKPOINT_POLICY}
         with LOCK:
