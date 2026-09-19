@@ -253,6 +253,19 @@ class FrozenPolicyAdapter:
         self.mac.agent.eval()
         if self.mixer is not None:
             self.mixer.eval()
+        self.device = "cpu"
+        self.reset()
+
+    def set_device(self, device):
+        self.device = str(device)
+        self.mac.agent.to(self.device)
+        if self.mixer is not None:
+            self.mixer.to(self.device)
+        if hasattr(self.mac, "cuda") and self.device == "cuda":
+            try:
+                self.mac.cuda()
+            except Exception:
+                pass
         self.reset()
 
     def set_eval_depth(self, depth):
@@ -264,7 +277,7 @@ class FrozenPolicyAdapter:
     def reset(self):
         from components.episode_buffer import EpisodeBatch
         self.batch = EpisodeBatch(self.scheme, self.groups, 1, int(self.args.episode_limit) + 1,
-                                  preprocess=self.preprocess, device="cpu")
+                                  preprocess=self.preprocess, device=getattr(self, "device", "cpu"))
         self.mac.init_hidden(batch_size=1)
         self.last_step, self.last_result = -1, None
         self.q_tot, self.q_i = [], []

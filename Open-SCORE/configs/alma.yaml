@@ -39,7 +39,7 @@ learner: q_learner
 mixer: flex_qmix
 encoder: attention
 entity_last_action: true
-n_extra_tasks: 3
+n_extra_tasks: 9
 mixer_subtask_cond: off
 agent:
   recurrent: true

@@ -1,4 +1,4 @@
-﻿"""Refresh the one illustrated report from committed experiment records."""
+"""Refresh the one illustrated report from committed experiment records."""
 from __future__ import annotations
 
 from collections import Counter, defaultdict
@@ -15,7 +15,7 @@ import threading
 from open_score.utils.logging import DEFAULT_OUTPUT, FORMAL_RUN, V3_OUTPUT, V4_OUTPUT, V5_OUTPUT, read_latest, read_records, unique_episodes
 from .protocol import (CYCLE_SERIES_METHODS, DEPTH_SWEEP_DEPTHS, EQUAL_SCALE_CONFIGS, FINAL_CONFIGS,
                        FINAL_EPISODES_PER_CONFIG, POOL_ONLY_METHODS, RATIO_CONFIGS,
-                       TARGET_K_VALUES, TARGET_SCALE_NS, TEST_CONFIGS, VALIDATION_CONFIGS,
+                       TARGET_K_VALUES, TARGET_PLOT_NS, TARGET_SCALE_NS, TEST_CONFIGS, VALIDATION_CONFIGS,
                        compute_nds, config_key, config_label, depth_eval_total, final_configs,
                        parse_sweep_depth, validation_score)
 
@@ -28,7 +28,9 @@ LABELS = {"b0_qmix": "B0", "b2_qmix_atten": "QMIX", "refil": "REFIL",
           "refil_count": "REFIL-C", "refil_count_ln": "REFIL-C",
           "refil_count_noln": "REFIL-C−LN",
           "refil_cycle": "REFIL-B", "refil_card": "REFIL-A",
-          "refil_feedback": "REFIL-F", "refil_slot": "REFIL-K4",
+          "refil_feedback": "REFIL-F", "refil_slot": "REFIL-K10",
+          "regir": "ReGIR", "regir_norefil": "ReGIR−REFIL", "regir_nocount": "ReGIR−zn",
+          "regir_r1": "ReGIR-R1", "regir_last": "ReGIR-last", "refil_matched": "REFIL-matched",
           "random": "Random", "rule_nv1": "Rule nv1"}
 COLORS = {"b0_qmix": "#5b6770", "b2_qmix_atten": "#1675b8", "refil": "#e36b32",
           "dcg": "#7955a3", "gnn_qmix": "#32865e", "spectra": "#bf4c79",
@@ -39,7 +41,9 @@ COLORS = {"b0_qmix": "#5b6770", "b2_qmix_atten": "#1675b8", "refil": "#e36b32",
           "refil_count": "#3d6ea8", "refil_count_ln": "#3d6ea8",
           "refil_count_noln": "#6aa9e8",
           "refil_cycle": "#1b7f7a", "refil_card": "#3d6ea8",
-          "refil_feedback": "#c47b2b", "refil_slot": "#6a4c93"}
+          "refil_feedback": "#c47b2b", "refil_slot": "#6a4c93",
+          "regir": "#1b7f7a", "regir_norefil": "#5b8a72", "regir_nocount": "#3d6ea8",
+          "regir_r1": "#c47b2b", "regir_last": "#6a4c93", "refil_matched": "#8c4b23"}
 V4_METHODS = ("refil_local_mild", "refil_local_mid", "refil_count", "refil_count_noln", "refil")
 V4_TRAIN_METHODS = ("refil_local_mild", "refil_local_mid", "refil_count")
 V4_COMPARE_ARMS = tuple(method for method in V4_METHODS if method != "refil")
@@ -734,7 +738,7 @@ def _depth_progress_lines(episodes, methods=CYCLE_SERIES_METHODS):
 
 def _v5_depth_section_lines(output, episodes, figure, scale_figure=None):
     lines = ["## 循环轮数（等规模 1:1）", "",
-             r"循环 Transformer 臂（REFIL-B / F / K4）在 best 上固定贪心，只跑等规模 1:1 "
+             r"循环 Transformer 臂（REFIL-B / F / K10）在 best 上固定贪心，只跑等规模 1:1 "
              r"（10/15/20/25/30/40v K2），比较 $R=1,2,3,4,5,6$。每配置 300 局。"
              r"$R=4$ 复用终评已有的 1:1 局。下图横轴是编队规模、一条线一个循环轮数；"
              r"下表行是 $R$、列是规模。数字是 300 局平均 $D$，越低红方越好。"
@@ -1866,7 +1870,7 @@ def _v5_analysis_text(scores, last_r, behavior, rule_r):
                 if all(_method_config_d(scores, method, config) is not None for method in V5_METHODS)]
     if len(complete) != len(FINAL_CONFIGS):
         return ["记录尚未齐。主对照是全实体共享循环（REFIL-B）、数量校正注意力（REFIL-A）、"
-                "决策反馈（REFIL-F）和 4 槽压缩（REFIL-K4），相对原版 REFIL。"
+                "决策反馈（REFIL-F）和 10 槽压缩（REFIL-K10），相对原版 REFIL。"
                 "固定槽不是方案二的定义，只回答要不要潜在槽。"
                 "去 LN 的数量 FiLM 训练在本目录，对照图在 [main v4](../main_v4/实验报告.md)。", ""]
     wins = Counter()
@@ -1889,7 +1893,7 @@ def _v5_analysis_text(scores, last_r, behavior, rule_r):
     return [
         r"四臂都保留原 REFIL 路径，只并行加入全局分支并残差进 GRU。"
         r"REFIL-B 让全部允许实体走共享 SelfAttn 循环，个体跨轮读取；$R$ 从 $\{1,2,3,4\}$ 采样，评估固定 4。"
-        r"REFIL-K4 只用 4 个潜在槽做同样的循环与读取。"
+        r"REFIL-K10 只用 10 个潜在槽做同样的循环与读取。"
         r"REFIL-A 是单次按红/蓝/目标校正的全局注意力。"
         r"REFIL-F 在全实体循环上写入 9 维暂定动作偏好，执行时整队 MAC 可见这些偏好。",
         f"池内末点验证回报（seed 0，$R=-D$）：{last_bits}。"
@@ -1897,7 +1901,7 @@ def _v5_analysis_text(scores, last_r, behavior, rule_r):
         f"终评 23 个配置最低 $D$ 次数：{win_bits}。相对原版 REFIL 的平均 $D$ 差：{gap_bits}。",
         (f"池内同队碰撞死亡占比：规则 {friendly['rule_nv1']:.3f}，{friendly_bits}。"
          if friendly.get("rule_nv1") is not None and friendly_bits else ""),
-        "单一种子。B 相对原版有外推收益，才支持循环加工；K4 接近 B 说明槽压缩够用，明显差于 B 则不应把固定 $K$ 当成核心假设。",
+        "单一种子。B 相对原版有外推收益，才支持循环加工；K10 接近 B 说明槽压缩够用，明显差于 B 则不应把固定 $K$ 当成核心假设。",
         "",
     ]
 
@@ -1940,10 +1944,10 @@ def _refresh_v5_report(output, *, run=FORMAL_RUN, report_stream=None):
             f"更新时间：{now}。比较 {comparison}，以及规则锚点。" + status,
             "本批 seed 0 共五个训练任务：去 LN 的 `refil_count`，以及四个全局臂 "
             "`refil_cycle`（全实体共享循环）、`refil_card`（数量校正注意力）、"
-            "`refil_feedback`（决策反馈）、`refil_slot`（4 槽压缩对照）。"
+            "`refil_feedback`（决策反馈）、`refil_slot`（10 槽压缩对照）。"
             "`--group v5` 一条命令排队，训练并发上限由 `--max-concurrent` 控制。"
             r"循环臂训练时 $R$ 从 $\{1,2,3,4\}$ 均匀采样，验证和终评固定 $R=4$。"
-            r"B/F/K4 训练完成后另做等规模 1:1 上 $R=1,\ldots,6$ 的循环轮数对照，与后续训练并行，不占训练槽。"
+            r"B/F/K10 训练完成后另做等规模 1:1 上 $R=1,\ldots,6$ 的循环轮数对照，与后续训练并行，不占训练槽。"
             "原版 REFIL 复用 [main v3](../main_v3/实验报告.md) seed 0；规则与随机锚点仍复用 v3。"
             "去 LN 的数量臂曲线与终评画在 [main v4](../main_v4/实验报告.md)，本目录主图仍是四条全局臂对照原版 REFIL。",
             "评估协议与 v3/v4 相同：1M 物理步、50 次池内验证（4 配置×25 局）、"
@@ -2115,6 +2119,268 @@ def _refresh_v5_report(output, *, run=FORMAL_RUN, report_stream=None):
     return report_path
 
 
+MAIN_COMPARE = ("regir", "refil", "b2_qmix_atten", "dcg", "spectra", "alma")
+MAIN_ABLATION = ("regir", "refil", "regir_norefil", "regir_nocount", "regir_r1", "regir_last")
+MAIN_KEY_CONFIGS = ((5, 5, 2), (10, 10, 2), (30, 30, 2), (50, 50, 2), (10, 10, 12), (30, 30, 12))
+POOL_CONFIGS = VALIDATION_CONFIGS
+TARGET_DETAIL_CONFIGS = tuple((n, n, k) for n in (10, 15, 20, 30) for k in (4, 6)) + (
+    (10, 10, 9), (10, 10, 12), (30, 30, 9), (30, 30, 12))
+
+
+def _is_main_output(output):
+    return Path(output).resolve().name == "main"
+
+
+def _axis_sets():
+    return (("池内", POOL_CONFIGS), ("等规模", EQUAL_SCALE_CONFIGS), ("目标", TARGET_DETAIL_CONFIGS))
+
+
+def _d_by_config(rows, methods):
+    grouped = defaultdict(lambda: defaultdict(list))
+    n_by = defaultdict(lambda: defaultdict(int))
+    for row in rows:
+        if row.get("phase") != "final_eval" or row.get("method") not in methods:
+            continue
+        if not _numeric(row.get("D")):
+            continue
+        cfg = config_key(row["config"])
+        grouped[row["method"]][cfg].append(float(row["D"]))
+        n_by[row["method"]][cfg] += 1
+    return grouped, n_by
+
+
+def _nds_d(d, config, anchors):
+    random = anchors.get(("random", config), {})
+    rule = anchors.get(("rule_nv1", config), {})
+    if not random.get("complete") or not rule.get("complete"):
+        return None
+    return compute_nds(d, random["D"], rule["D"])
+
+
+def _axis_mean_d(grouped, method, configs, anchors):
+    values, nds_values, counts = [], [], []
+    for cfg in configs:
+        series = grouped.get(method, {}).get(cfg)
+        if not series:
+            continue
+        d = statistics.mean(series)
+        values.append(d)
+        counts.append(len(series))
+        nds = _nds_d(d, cfg, anchors)
+        if nds is not None:
+            nds_values.append(nds)
+    if not values:
+        return None, None, 0
+    return statistics.mean(values), (statistics.mean(nds_values) if nds_values else None), min(counts)
+
+
+def _plot_equal_d(plt, output, grouped, anchors, methods):
+    fig, axis = plt.subplots(1, 1, figsize=(7.4, 3.9), constrained_layout=True)
+    xs = list(range(len(EQUAL_SCALE_CONFIGS)))
+    drawn = False
+    for method in methods:
+        points = []
+        for index, cfg in enumerate(EQUAL_SCALE_CONFIGS):
+            series = grouped.get(method, {}).get(cfg)
+            if series:
+                points.append((index, statistics.mean(series)))
+        if points:
+            axis.plot([p[0] for p in points], [p[1] for p in points], marker="o",
+                      color=COLORS.get(method, "#444"), linewidth=2.0, label=LABELS.get(method, method))
+            drawn = True
+    for policy, style in (("random", "--"), ("rule_nv1", "-.")):
+        ys = []
+        for cfg in EQUAL_SCALE_CONFIGS:
+            row = anchors.get((policy, cfg), {})
+            ys.append(row["D"] if row.get("n") else None)
+        xs_ok = [i for i, y in enumerate(ys) if y is not None]
+        if xs_ok:
+            axis.plot(xs_ok, [ys[i] for i in xs_ok], linestyle=style, marker="s",
+                      color=COLORS[policy], label=LABELS[policy])
+            drawn = True
+    axis.set(title="Equal-scale damage (lower is better)", xlabel="Roster", ylabel="D",
+             xticks=xs, xticklabels=[config_label(cfg) for cfg in EQUAL_SCALE_CONFIGS])
+    axis.tick_params(axis="x", labelrotation=30, labelsize=8)
+    axis.grid(alpha=.2)
+    if drawn:
+        axis.legend(fontsize=8)
+    path = output / "figures" / "scale_equal.png"
+    _save_figure(fig, path)
+    plt.close(fig)
+    return path
+
+
+def _plot_target_d(plt, output, grouped, anchors, methods):
+    fig, axes = plt.subplots(1, 2, figsize=(7.6, 3.6), sharey=True, constrained_layout=True)
+    ks = (2, 4, 6, 9, 12)
+    drawn = False
+    for axis, n in zip(axes, TARGET_PLOT_NS):
+        for method in methods:
+            points = []
+            for k in ks:
+                series = grouped.get(method, {}).get((n, n, k))
+                if series:
+                    points.append((k, statistics.mean(series)))
+            if points:
+                axis.plot([p[0] for p in points], [p[1] for p in points], marker="o",
+                          color=COLORS.get(method, "#444"), linewidth=2.0, label=LABELS.get(method, method))
+                drawn = True
+        for policy, style in (("random", "--"), ("rule_nv1", "-.")):
+            points = []
+            for k in ks:
+                row = anchors.get((policy, (n, n, k)), {})
+                if row.get("n"):
+                    points.append((k, row["D"]))
+            if points:
+                axis.plot([p[0] for p in points], [p[1] for p in points], linestyle=style,
+                          marker="s", color=COLORS[policy], label=LABELS[policy])
+                drawn = True
+        axis.set(title=f"{n}v{n}", xlabel="K", xticks=list(ks))
+        axis.grid(alpha=.2)
+        if axis is axes[0] and drawn:
+            axis.legend(fontsize=7)
+    fig.supylabel("D")
+    path = output / "figures" / "scale_targets.png"
+    _save_figure(fig, path)
+    plt.close(fig)
+    return path
+
+
+def _refresh_main_report(output=DEFAULT_OUTPUT, *, run=FORMAL_RUN, report_stream=None):
+    output = Path(output)
+    output.mkdir(parents=True, exist_ok=True)
+    (output / "figures").mkdir(exist_ok=True)
+    episodes = unique_episodes(read_records(output, "episodes", run=run))
+    progress = {(method, seed): row for (method, recorded_run, seed), row in
+                read_latest(output, "progress", run=run).items()}
+    anchors = _anchor_values(episodes)
+    points = [row for row in _validation_points(episodes, anchors) if row["method"] in MAIN_COMPARE + MAIN_ABLATION]
+    final_rows = [row for row in episodes if row["phase"] == "final_eval"]
+    grouped, n_by = _d_by_config(final_rows, set(MAIN_COMPARE + MAIN_ABLATION + ("refil_matched",)))
+    now = datetime.now().astimezone().isoformat(timespec="seconds")
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    learning = _plot_learning(plt, output, points, anchors, methods=MAIN_COMPARE, include_random=True)
+    equal_fig = _plot_equal_d(plt, output, grouped, anchors, MAIN_COMPARE)
+    target_fig = _plot_target_d(plt, output, grouped, anchors, MAIN_COMPARE)
+    depth_fig = _plot_cycle_depth(plt, output, episodes, methods=("regir",))
+    depth_scale_fig = _plot_cycle_depth_scale(plt, output, episodes, methods=("regir",))
+
+    def cell_d(method, cfg):
+        series = grouped.get(method, {}).get(cfg)
+        if not series:
+            return "—"
+        d = statistics.mean(series)
+        n = len(series)
+        nds = _nds_d(d, cfg, anchors)
+        note = f" n={n}" if n < FINAL_EPISODES_PER_CONFIG else ""
+        if nds is None:
+            return f"{d:.3f}{note}"
+        return f"{d:.3f} ({nds:.2f}){note}"
+
+    def axis_cell(method, configs):
+        mean, nds, nmin = _axis_mean_d(grouped, method, configs, anchors)
+        if mean is None:
+            return "—"
+        extra = f" n≥{nmin}" if nmin < FINAL_EPISODES_PER_CONFIG else ""
+        if nds is None:
+            return f"{mean:.3f}{extra}"
+        return f"{mean:.3f} ({nds:.2f}){extra}"
+
+    table1 = []
+    for method in (*MAIN_COMPARE, "rule_nv1"):
+        if method == "rule_nv1":
+            row = {"method": LABELS[method]}
+            for name, configs in _axis_sets():
+                values = [anchors[(method, cfg)]["D"] for cfg in configs if anchors.get((method, cfg), {}).get("complete")]
+                row[name] = f"{statistics.mean(values):.3f}" if values else "—"
+            table1.append(row)
+            continue
+        table1.append({"method": LABELS.get(method, method),
+                       "池内": axis_cell(method, POOL_CONFIGS),
+                       "等规模": axis_cell(method, EQUAL_SCALE_CONFIGS),
+                       "目标": axis_cell(method, TARGET_DETAIL_CONFIGS)})
+    table2 = []
+    for method in MAIN_ABLATION:
+        table2.append({"method": LABELS.get(method, method),
+                       "池内": axis_cell(method, POOL_CONFIGS),
+                       "等规模": axis_cell(method, EQUAL_SCALE_CONFIGS),
+                       "目标": axis_cell(method, TARGET_DETAIL_CONFIGS)})
+    table3_train = []
+    for method in MAIN_COMPARE + MAIN_ABLATION + ("refil_matched",):
+        for seed in FORMAL_SEEDS:
+            row = progress.get((method, seed), {})
+            table3_train.append(dict(
+                method=LABELS.get(method, method), seed=seed,
+                status=row.get("status", "—"),
+                steps=row.get("t_env"),
+                val=row.get("latest_validation_D"),
+                final=sum(1 for cfg in FINAL_CONFIGS if n_by.get(method, {}).get(cfg, 0) >= FINAL_EPISODES_PER_CONFIG)
+                if seed == 0 else "—"))
+    table3_key = []
+    for method in (*MAIN_COMPARE, "rule_nv1"):
+        row = {"method": LABELS.get(method, method)}
+        for cfg in MAIN_KEY_CONFIGS:
+            row[config_label(cfg)] = cell_d(method, cfg) if method != "rule_nv1" else (
+                f"{anchors[(method, cfg)]['D']:.3f}" if anchors.get((method, cfg), {}).get("n") else "—")
+        table3_key.append(row)
+
+    text = ["# 跨规模攻防泛化 main", "",
+            f"更新时间：{now}。主方法 **ReGIR**（代码键 `regir`，迁入自 `refil_cycle`）。"
+            "训练只见 $N\\in\\{4,6,8,10\\}$、$K\\le 3$；终评 24 配置各 300 局。指标是漏防伤害 $D$（越低越好）和规则归一化 NDS。",
+            "1:2 轴已从主表拿掉。表中括号为 NDS；未满 300 局的格带 `n=`。", ""]
+    text += ["## 一、主要实验结果", ""]
+    if learning:
+        text += [f"![训练曲线](figures/{learning.name})", ""]
+    if equal_fig:
+        text += [f"![等规模外推](figures/{equal_fig.name})", ""]
+    if target_fig:
+        text += [f"![目标数外推](figures/{target_fig.name})", ""]
+    text += ["### 表 1 主对照（三类平均 $D$，括号 NDS）", ""]
+    text += _table(table1, (("method", "方法"), ("池内", "池内"), ("等规模", "等规模"), ("目标", "目标"))) + [""]
+    text += ["### 表 2 消融（三类平均 $D$）", ""]
+    text += _table(table2, (("method", "方法"), ("池内", "池内"), ("等规模", "等规模"), ("目标", "目标"))) + [""]
+    text += ["### 表 3 运行与关键格", "", "训练进度：", ""]
+    text += _table(table3_train, (("method", "方法"), ("seed", "种子"), ("status", "状态"),
+                                  ("steps", "步数"), ("val", "验证 D"), ("final", "终评满格"))) + [""]
+    text += ["关键配置当前 $D$（括号 NDS）：", ""]
+    key_cols = [("method", "方法")] + [(config_label(cfg), config_label(cfg)) for cfg in MAIN_KEY_CONFIGS]
+    text += _table(table3_key, key_cols) + [""]
+    text += ["## 二、详细与次要结果", "", "### 24 配置逐格 $D$", ""]
+    detail = []
+    for method in MAIN_COMPARE:
+        row = {"method": LABELS.get(method, method)}
+        for cfg in FINAL_CONFIGS:
+            row[config_label(cfg)] = cell_d(method, cfg)
+        detail.append(row)
+    # Keep the detailed grid readable by splitting axes.
+    text += ["池内：", ""]
+    text += _table([{"method": row["method"], **{config_label(cfg): row[config_label(cfg)] for cfg in POOL_CONFIGS}}
+                    for row in detail],
+                   (("method", "方法"),) + tuple((config_label(cfg), config_label(cfg)) for cfg in POOL_CONFIGS)) + [""]
+    text += ["等规模：", ""]
+    text += _table([{"method": row["method"], **{config_label(cfg): row[config_label(cfg)] for cfg in EQUAL_SCALE_CONFIGS}}
+                    for row in detail],
+                   (("method", "方法"),) + tuple((config_label(cfg), config_label(cfg)) for cfg in EQUAL_SCALE_CONFIGS)) + [""]
+    if depth_fig:
+        text += ["### ReGIR 循环深度", "", f"![深度](figures/{depth_fig.name})", ""]
+    if depth_scale_fig:
+        text += [f"![深度×规模](figures/{depth_scale_fig.name})", ""]
+    text += ["档案臂、1:2 旧局和未完成训练不进入上表均值。", ""]
+    content = "\n".join(text) + "\n"
+    report_path = output / "实验报告.md"
+    if report_stream is None:
+        _atomic_text(report_path, content)
+    else:
+        report_stream.seek(0)
+        report_stream.write(content.encode("utf-8"))
+        report_stream.truncate()
+        report_stream.flush()
+        os.fsync(report_stream.fileno())
+    return report_path
+
+
 def refresh_report(output=DEFAULT_OUTPUT, *, run=FORMAL_RUN):
     """Render the one report of this version; a side run never replaces it."""
     output = Path(output)
@@ -2123,6 +2389,8 @@ def refresh_report(output=DEFAULT_OUTPUT, *, run=FORMAL_RUN):
             formal = run if run == FORMAL_RUN else FORMAL_RUN
             if _is_probe_output(output):
                 return _refresh_probe_report(output, run=formal, report_stream=stream)
+            if _is_main_output(output):
+                return _refresh_main_report(output, run=formal, report_stream=stream)
             if _is_v5_output(output):
                 return _refresh_v5_report(output, run=formal, report_stream=stream)
             if _is_v4_output(output):

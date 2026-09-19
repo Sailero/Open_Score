@@ -1,8 +1,8 @@
 # Open-SCORE
 
-当前主线为 **main v5**：同一目录 `Open-SCORE/outputs/main_v5/` 共五个 seed 0 任务：去 LN 的 `refil_count`，以及全实体共享循环 `refil_cycle`（REFIL-B）、数量校正注意力 `refil_card`（REFIL-A）、决策反馈 `refil_feedback`（REFIL-F）、4 槽压缩对照 `refil_slot`（REFIL-K4）。`--group v5` 一条命令排队，最多 3 个并行。实际完成量、运行状态和结论以[本版实验报告](Open-SCORE/outputs/main_v5/实验报告.md)为准。原版 REFIL、规则和随机复用 [main v3](Open-SCORE/outputs/main_v3/实验报告.md)；带 LN 的 REFIL-C 复用 [main v4](Open-SCORE/outputs/main_v4/实验报告.md)，不重跑。v4 的距离分组对照仍以该目录为准；v3 的 QMIX-Atten / DCG / SPECTra / ALMA 对照仍以 v3 为准；硬掩码原版与其余适配对照见 [alma_probe_v3](Open-SCORE/outputs/alma_probe_v3/实验报告.md)。
+当前主线为 **main**：唯一写入目录 `Open-SCORE/outputs/main/`，论文方法名暂定 **ReGIR**（代码键 `regir`，迁入自 `refil_cycle`）。主对照为 ReGIR / REFIL / QMIX-Atten / DCG / SPECTra / ALMA / Rule nv1，消融与参数匹配臂按[实验计划](docs/main实验计划.md)排队。训练 `--group main` 最多 2 路并发，评估 `eval.py` 最多 2 路；正式结果只写[本版实验报告](Open-SCORE/outputs/main/实验报告.md)。v3/v4/v5 权重迁入 main 后不再向那些目录写入。历史对照仍可查阅 [main v5](Open-SCORE/outputs/main_v5/实验报告.md)、[main v4](Open-SCORE/outputs/main_v4/实验报告.md)、[main v3](Open-SCORE/outputs/main_v3/实验报告.md)；硬掩码原版与其余适配对照见 [alma_probe_v3](Open-SCORE/outputs/alma_probe_v3/实验报告.md)。
 
-当前代码和 viewer 接入七种方法。正式对照包括 **QMIX-Atten（`b2_qmix_atten`）、REFIL、DCG、SPECTra、ALMA**；前四者各有训练种子 0、1、2 的保留权重，ALMA 目前为全场臂 seed 0。另保留 **QMIX-Base（`b0_qmix`，有序展平 QMIX）与 GNN-QMIX** 的种子 0 备选结果。报告中的 QMIX 指 QMIX-Atten。ALMA 的上层子任务分配和下层动作网络作为一个完整模型加载。`best.pt` 是途中验证选优模型，`final.pt` 是最终保存，部分已有运行保留 `latest.pt`；文件存在不代表该运行的所有正式评估都已结束。
+当前代码和 viewer 接入七种方法及 ReGIR 消融臂。正式对照包括 **ReGIR（`regir`）、QMIX-Atten（`b2_qmix_atten`）、REFIL、DCG、SPECTra、ALMA**；前四者及迁入的 ReGIR seed 0 有保留权重。ALMA 按 `n_extra_tasks=9` 在 main 重训。另保留 **QMIX-Base（`b0_qmix`）与 GNN-QMIX** 的种子 0 档案。报告中的 QMIX 指 QMIX-Atten。ALMA 的上层子任务分配和下层动作网络作为一个完整模型加载。`best.pt` 是途中验证选优模型，`final.pt` 是最终保存，部分已有运行保留 `latest.pt`；文件存在不代表该运行的所有正式评估都已结束。
 
 旧研究主线已于 **2026-09-08 16:00:19 +08:00** 确认停止；探索 final 为 Git `cc2ab86`，历史研究源码可从该提交查阅。随后的环境标定与覆盖式规则已并入 [main v1](Open-SCORE/outputs/main_v1/实验报告.md)。该轮停止决定与“仅保留规则”的描述属于历史轮次。
 
@@ -10,7 +10,7 @@
 
 唯一底层是独立仓库 [HAD Workbench](../Open_Score_HAD_Workbench/README.md)，本仓库通过 `Open-SCORE/open_score/envs/had_wrapper.py` 访问其原生实现，无第二份环境代码。本地依赖路径为 `E:/Code/Open_Score_HAD_Workbench`，当前协议为 `had-workbench-2.1.0` / `rebuild-calibrated-v3-r7-target-initialization`。历史 v7 使用 r2，不代表当前任务与规则的结果。覆盖规则评估在 `open_score.rules`；回放器为仓库根目录的 `viewer.py` 与 `viewer.html`。
 
-跨规模实验使用扁平包 `Open-SCORE/open_score/`，通过仓库内可编辑安装运行。`open_score.envs.make_entity_env` 提供 damage 任务实体接口：当前训练池槽位上限为 10 红方、10 蓝方、3 目标，评估接口上限为 40 红方、40 蓝方、6 目标；每局训练规模独立采样，死亡和 padding 槽保留，模型动作编号为 0–8。仅逐步热路径绕开原生观测；reset 沿用 HAD 原生初始化。评估和规则锚点共享蓝方事件调度、物理过程、动作映射和诊断采集。
+跨规模实验使用扁平包 `Open-SCORE/open_score/`，通过仓库内可编辑安装运行。`open_score.envs.make_entity_env` 提供 damage 任务实体接口：当前训练池槽位上限为 10 红方、10 蓝方、3 目标，评估接口上限为 50 红方、50 蓝方、12 目标；每局训练规模独立采样，死亡和 padding 槽保留，模型动作编号为 0–8。仅逐步热路径绕开原生观测；reset 沿用 HAD 原生初始化。评估和规则锚点共享蓝方事件调度、物理过程、动作映射和诊断采集。
 
 ```powershell
 & 'D:\Software\Anaconda\envs\torch310\python.exe' -m pip install -e './Open-SCORE[training]'
@@ -50,7 +50,7 @@
 
 红方选择训练权重后，可按版本、方法、训练种子和 `best/final/latest` 筛选。清单自动发现输出目录中与 `config.json` 同目录的保留模型，点击刷新可读取新增权重；`resume.pt` 专用于恢复训练，不进入可选推理清单。每项显示来源与适用限制，历史不兼容资产仍可查看其清单和原因。自定义路径接受本机 `.pt` 文件的绝对路径或仓库相对路径，加入当前服务会话后即可选择；文件应包含当前加载器使用的 `config/networks/progress` 字段，`config.method` 必须对应已有算法实现。只添加可信本地权重，加载使用 PyTorch checkpoint 反序列化。
 
-当前七种 checkpoint 都只控制红方，适用于 **二维 `damage`、红蓝各最多 40、目标最多 6、`max_steps` 不超过模型的 `episode_limit`（现有权重为 100）**。QMIX-Base 的 `pool_slots=[10,10,3]` 进一步限制为最多 10 红、10 蓝、3 目标。ALMA 包含整套分层模型，直接选择其权重即可；viewer 使用 CPU 顺序推理，并按每局种子重置模型状态和 PyTorch 随机流，使其评估时的随机分配提案可重现。原生 FF / `rel_overgen` 的 E0 模型不适用于 HAD 回放。
+当前七种 checkpoint 都只控制红方，适用于 **二维 `damage`、红蓝各最多 50、目标最多 12、`max_steps` 不超过模型的 `episode_limit`（现有权重为 100）**。QMIX-Base 的 `pool_slots=[10,10,3]` 进一步限制为最多 10 红、10 蓝、3 目标。旧 ALMA（`n_extra_tasks=3`）不能评 K>6；新 ALMA 按 `n_extra_tasks=9` 训练。viewer 使用 CPU 顺序推理，并按每局种子重置模型状态和 PyTorch 随机流。原生 FF / `rel_overgen` 的 E0 模型不适用于 HAD 回放。
 
 蓝方训练对手是首页默认的 **自适应集火单目标（训练）**，对应 `reactive + rush`：每 5 步或发生伤亡时，根据红方防守覆盖和蓝方距离抽取一个目标，全部存活蓝方冲向该目标，下一次决策可能换目标。**集火最近目标**（`concentrated + rush`）同样全队集中，但按蓝方平均距离选择最近目标；**均分攻击多目标**（`balanced + rush`）将人数均分给各目标。另一个动作基线 **各自冲最近目标** 则是各架飞机独立选最近目标。三个分组策略都可在首页直接选择，飞行控制细选保留在更多设置中。
 
@@ -123,34 +123,28 @@ env.adapter.env.close()
 
 ## 查看运行、停止与恢复
 
-默认输出目录为 `Open-SCORE/outputs/main_v5/`，正式运行标识为 `train`。合并记录通过版本、方法、运行和种子字段区分；模型、配置与控制台日志按 `<方法>/train/seed_<种子>/` 保存。唯一正式 Markdown 报告为该目录的 `实验报告.md`，图表放在 `figures/`。训练终端定期显示进度、吞吐、loss、评估进度和最近完整验证 D；报告按已落盘数据原位刷新。
+默认输出目录为 `Open-SCORE/outputs/main/`，正式运行标识为 `train`。合并记录通过版本、方法、运行和种子字段区分；模型、配置与控制台日志按 `<方法>/train/seed_<种子>/` 保存。唯一正式 Markdown 报告为该目录的 `实验报告.md`，图表放在 `figures/`。训练终端定期显示进度、吞吐、loss、评估进度和最近完整验证 D；报告按已落盘数据原位刷新。
 
-当前训练入口使用 `--stage train` 或 `--stage single`，旧 `--stage stage3` 已不再支持。v5 用 `--group v5` 启动全部五个 seed 0 任务：先开 `refil_count` / `refil_cycle` / `refil_card`，`refil_feedback` 与 `refil_slot` 排队，并发上限 3。`train` 的 `--group main`（默认）仍为 DCG / SPECTra 三种子，`baseline` 为 QMIX-Base / QMIX-Atten / REFIL，`alma` 为 ALMA，`dcg_alma` 为 DCG / ALMA，`v4` 为上一轮三个新臂；这些组若要写回对应目录须显式传 `--output`。`single` 才按 `--method` 与 `--seed` 选择单个任务。预算必须显式传 `--steps`；CLI 的 worker 默认值是 4，而现有正式权重对应的配置为 100 万物理步、8 worker。学习奖励默认 `--reward-mode damage`（仅 −ΔD）。`--reward-mode friendly` 另对每对红方互撞、以及同一物理步里超出所击中蓝方数的多余开火自毁减去 `--friendly-penalty`（默认 1）；这是额外代价不是势函数，会改最优策略，报告和锚点仍用物理 D。不要把正在跑的 damage 任务改成 friendly 再 `--resume`。
+当前训练入口使用 `--stage train` 或 `--stage single`。`--group main` 按 inventory 扫描未完成的 ReGIR / ALMA / 消融 / matched 任务，并发上限 2，但 ReGIR 类按显存一次只跑 1 路；终评与深度扫描由 `eval.py` 负责，最多 2 路。预算必须显式传 `--steps`；现有正式权重对应 100 万物理步、8 worker。学习奖励默认 `--reward-mode damage`（仅 −ΔD）。
 
-以下是 v5 五个任务的启动命令（默认 `--reward-mode damage`）。已有 `resume.pt` 时必须加 `--resume`。count 继续原进度；B/A/F 会因全局模块改成 64 维而从 0 重开。这张卡并行 3 个会 OOM，用 `--max-concurrent 2`；终端会列出全部五个，两个在训、其余 `queue`：
+启动两条、停止两条，训练和评估互不影响。均在仓库根目录 `E:\Code\Open_Score` 执行：
 
 ```powershell
-& 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 .\Open-SCORE\scripts\train.py --stage train --group v5 --steps 1000000 --batch-size-run 8 --resume --max-concurrent 2
+& 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 .\Open-SCORE\scripts\train.py --stage train --group main --steps 1000000 --batch-size-run 8 --resume --max-concurrent 2 --output .\Open-SCORE\outputs\main
+& 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 .\Open-SCORE\scripts\eval.py --group main --resume --max-concurrent 2 --output .\Open-SCORE\outputs\main
 ```
 
-对照误伤惩罚时另开输出目录，不要写入 `main_v5`，也不要 `--resume` 正在跑的 damage 任务：
-
 ```powershell
-& 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 .\Open-SCORE\scripts\train.py --stage single --method refil_count --seed 0 --steps 1000000 --batch-size-run 8 --reward-mode friendly --friendly-penalty 1 --output .\Open-SCORE\outputs\<new_dir> --run train
+& 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 .\Open-SCORE\scripts\train.py --stage stop --output .\Open-SCORE\outputs\main
+& 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 .\Open-SCORE\scripts\eval.py --stage stop --output .\Open-SCORE\outputs\main
 ```
 
-恢复未完成项需要同目录存在 `resume.pt`，并加上 `--resume`。调度器跳过已有完成记录与保留模型的任务。若要继续 v3 的 `main` 组，须显式传 `--output` 指向 `Open-SCORE/outputs/main_v3`。
+恢复未完成项需要同目录存在可读的 `resume.pt`（或 `resume.prev.pt`），并加上 `--resume`。调度器跳过已有完成记录与保留模型的任务。只处理一个任务时使用 `--stage single`。
 
-只处理一个任务时使用单任务入口，例如现有 SPECTra 种子 2：
-
-```powershell
-& 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 .\Open-SCORE\scripts\train.py --stage single --method spectra --seed 2 --steps 1000000 --batch-size-run 8 --run train --resume
-```
-
-查看 v5 count 臂种子 0 的日志。以下相对路径命令均在仓库根目录 `E:\Code\Open_Score` 执行：
+查看 ReGIR 种子 1 的日志：
 
 ```powershell
-Get-Content -LiteralPath '.\Open-SCORE\outputs\main_v5\refil_count\train\seed_0\console.log' -Encoding UTF8 -Tail 30 -Wait
+Get-Content -LiteralPath '.\Open-SCORE\outputs\main\regir\train\seed_1\console.log' -Encoding UTF8 -Tail 30 -Wait
 ```
 
 从已有记录刷新同一份报告和图表：
@@ -159,17 +153,13 @@ Get-Content -LiteralPath '.\Open-SCORE\outputs\main_v5\refil_count\train\seed_0\
 & 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 .\Open-SCORE\scripts\plot.py --run train
 ```
 
-需要停止时，在另一个终端运行下面的命令。调度器会请求训练子任务完成当前采样和学习批次，保存 `resume.pt` 后退出；评价保留已落盘的逐局结果。等待状态显示 `stopped` 与可恢复步数后再关闭终端。
+训练每 10 分钟以及每个验证点会把完整 `resume.pt` 刷盘，并留下上一份 `resume.prev.pt`。意外断电后 `--resume` 会先读 `resume.pt`，读不了再用 pending 或上一份。计划关机用上面的两条 stop：训练写完当前 batch，评估写完当前局。等待状态显示 `stopped` 与可恢复步数后再关闭终端。
 
-```powershell
-& 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 .\Open-SCORE\scripts\train.py --stage stop
-```
-
-若原任务使用了 `--output`，停止与恢复也应指定相同目录。恢复时保留原方法、环境、种子、`--steps`、`--batch-size-run`、运行标识和输出目录，并增加 `--resume`。恢复点包含 replay、优化器、目标网络、随机流和进度；`best/final/latest.pt` 用于模型查看，不能替代恢复点。已运行但尚未保存的日志步数不等同于可恢复步数。上一轮 E0 与吞吐矩阵见 [main v2](Open-SCORE/outputs/main_v2/实验报告.md)。
+若原任务使用了 `--output`，停止与恢复也应指定相同目录。恢复时保留原方法、环境、种子、`--steps`、`--batch-size-run`、运行标识和输出目录，并增加 `--resume`。恢复点包含 replay、优化器、目标网络、随机流和进度；`best/final/latest.pt` 用于模型查看，不能替代恢复点。控制台步数可以新于可恢复步数，最多差一个保存间隔。上一轮 E0 与吞吐矩阵见 [main v2](Open-SCORE/outputs/main_v2/实验报告.md)。
 
 ## 历史研究
 
-[实验记录](实验报告/实验记录.md) 维护跨版本摘要。当前正式对照归 [main v5](Open-SCORE/outputs/main_v5/实验报告.md)；v4 距离分组与带 LN 的数量条件见 [main v4](Open-SCORE/outputs/main_v4/实验报告.md)；v3 完整五臂对照见 [main v3](Open-SCORE/outputs/main_v3/实验报告.md)；上一轮跨规模失败结果见 [main v2](Open-SCORE/outputs/main_v2/实验报告.md)；S1–v7 合并见 [main v1](Open-SCORE/outputs/main_v1/实验报告.md)；ALMA 适配补充见 [alma_probe_v3](Open-SCORE/outputs/alma_probe_v3/实验报告.md)。
+[实验记录](实验报告/实验记录.md) 维护跨版本摘要。当前正式对照归 [main](Open-SCORE/outputs/main/实验报告.md)；上一轮循环结构对照见 [main v5](Open-SCORE/outputs/main_v5/实验报告.md)；v4 距离分组与带 LN 的数量条件见 [main v4](Open-SCORE/outputs/main_v4/实验报告.md)；v3 完整五臂对照见 [main v3](Open-SCORE/outputs/main_v3/实验报告.md)；上一轮跨规模失败结果见 [main v2](Open-SCORE/outputs/main_v2/实验报告.md)；S1–v7 合并见 [main v1](Open-SCORE/outputs/main_v1/实验报告.md)；ALMA 适配补充见 [alma_probe_v3](Open-SCORE/outputs/alma_probe_v3/实验报告.md)。
 
 截至目录重组后，`outputs/main_v3` 保留完整训练权重；`main_v4` 保留上一轮新臂；`main_v5` 写入四条全局臂，去 LN 的 count 仍占用同目录的另一方法名。`main_v2` 保留逐局数据与报告、无 `.pt`。`main_v1` 与 `alma_probe_v3` 只留报告、图和记录。`assets/frozen` 仍有历史 `lcl.pt`、`dlom.pt`，当前 `load_policy` 不加载旧格式。
 

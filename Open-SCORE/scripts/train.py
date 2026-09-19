@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import argparse
-from collections import deque
+from collections import Counter, deque
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 import json
 from multiprocessing import get_context
@@ -20,8 +20,11 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("MKL_NUM_THREADS", "1")
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 
-from open_score.algos import METHODS, PROBE_METHODS, V4_METHODS, V5_METHODS, setup_runtime
-from open_score.utils.logging import DEFAULT_OUTPUT, FORMAL_RUN
+from open_score.algos import METHODS, PROBE_METHODS, V4_METHODS, V5_METHODS, POLICY_METHODS, resume_files, setup_runtime
+from open_score.utils.logging import (
+    DEFAULT_OUTPUT, FORMAL_RUN, live_console_jobs, parse_eval_console,
+    parse_train_console, read_tail,
+)
 
 BASELINE_METHODS = METHODS[:3]
 MAIN_METHODS = ("dcg", "spectra")
@@ -37,7 +40,22 @@ METHOD_GROUPS = {
 }
 FORMAL_METHODS = BASELINE_METHODS
 FORMAL_SEEDS = (0, 1, 2)
-MAX_CONCURRENT = 3
+MAX_CONCURRENT = 2
+# 5070 Ti 16 GiB, WDDM already holds ~1 GiB. Estimates are cuda_reserved
+# from solo training; unknown methods are treated as ReGIR-sized.
+GPU_BUDGET_GIB = 13.0
+GPU_SAFETY_GIB = 1.2
+GPU_RESERVED_GIB = {
+    "regir": 10.5, "regir_norefil": 10.5, "regir_nocount": 10.5,
+    "regir_r1": 10.5, "regir_last": 10.5, "refil_cycle": 10.5,
+    "refil_card": 11.7, "refil_feedback": 10.7, "refil_slot": 7.5,
+    "alma": 6.5, "alma_legacy": 5.8, "refil_matched": 8.0,
+    "refil": 3.2, "refil_count": 2.4, "gnn_qmix": 1.8,
+    "b2_qmix_atten": 1.3, "refil_local_mild": 1.2, "refil_local_mid": 1.2,
+    "b0_qmix": 0.8, "spectra": 0.6, "dcg": 0.5,
+}
+CYCLE_METHODS = frozenset(("regir", "regir_norefil", "regir_nocount", "regir_r1", "regir_last", "refil_cycle"))
+GROUP_MAX_LIVE = {"cycle": 1, "alma": 2, "matched": 1, "light": 2}
 
 _METHOD_ALIAS = {
     "b0_qmix": "b0",
@@ -47,6 +65,12 @@ _METHOD_ALIAS = {
     "refil_local_mid": "Lmid",
     "refil_count": "count",
     "refil_cycle": "cycle",
+    "regir": "regir",
+    "regir_norefil": "noRF",
+    "regir_nocount": "nozn",
+    "regir_r1": "R1",
+    "regir_last": "last",
+    "refil_matched": "RFmat",
     "refil_card": "card",
     "refil_feedback": "fb",
     "refil_slot": "slot",
@@ -73,19 +97,85 @@ _STATUS_ALIAS = {
 
 
 def _enable_ansi():
-    if not sys.stdout.isatty():
-        return False
-    if os.name != "nt":
-        return True
+    """Rewrite in place even when Python reports a pipe (Cursor / ConPTY)."""
+    if os.name == "nt":
+        try:
+            import ctypes
+            handle = ctypes.windll.kernel32.GetStdHandle(-11)
+            mode = ctypes.c_uint()
+            if ctypes.windll.kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+                ctypes.windll.kernel32.SetConsoleMode(handle, mode.value | 0x0004)
+        except OSError:
+            pass
+    return True
+
+
+def _gpu_estimate(method):
+    return GPU_RESERVED_GIB.get(method, 10.5)
+
+
+def _gpu_free_gib():
     try:
-        import ctypes
-        handle = ctypes.windll.kernel32.GetStdHandle(-11)
-        mode = ctypes.c_uint()
-        if not ctypes.windll.kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
-            return False
-        return bool(ctypes.windll.kernel32.SetConsoleMode(handle, mode.value | 0x0004))
-    except OSError:
+        import subprocess
+        out = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=memory.free", "--format=csv,noheader,nounits"],
+            encoding="utf-8", timeout=5)
+        values = [float(part) for part in out.replace(",", " ").split() if part.strip()]
+        return min(values) / 1024.0 if values else None
+    except Exception:
+        return None
+
+
+def _gpu_used_gib():
+    try:
+        import subprocess
+        out = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=memory.used,memory.total", "--format=csv,noheader,nounits"],
+            encoding="utf-8", timeout=5)
+        used, total = [float(part) for part in out.replace(",", " ").split() if part.strip()][:2]
+        return used / 1024.0, total / 1024.0
+    except Exception:
+        return None, None
+
+
+def _job_group(method):
+    if method in CYCLE_METHODS:
+        return "cycle"
+    if method in ("alma", "alma_legacy"):
+        return "alma"
+    if method == "refil_matched":
+        return "matched"
+    return "light"
+
+
+def _fits_gpu(method, live):
+    group = _job_group(method)
+    live_same = sum(1 for item in live if _job_group(item["method"]) == group)
+    if live_same >= GROUP_MAX_LIVE.get(group, 1):
         return False
+    occupied = [item["method"] for item in live if item["method"] not in ("depth_eval", "anchors")]
+    if occupied and sum(_gpu_estimate(name) for name in occupied) + _gpu_estimate(method) > GPU_BUDGET_GIB:
+        return False
+    free = _gpu_free_gib()
+    if free is not None and _gpu_estimate(method) + GPU_SAFETY_GIB > free:
+        return False
+    return True
+
+
+def _print_train_plan(jobs):
+    groups = {"cycle": [], "alma": [], "matched": [], "light": []}
+    for method, options in jobs:
+        seed = None if not options else options.get("seed")
+        groups[_job_group(method)].append(_status_name(method, seed))
+    print("train waves on 16G  (cycle×1, alma×2, matched×1)", flush=True)
+    if groups["cycle"]:
+        print("  1. cycle 1-wide : " + ", ".join(groups["cycle"]), flush=True)
+    if groups["alma"]:
+        print("  2. alma  2-wide : " + ", ".join(groups["alma"]), flush=True)
+    if groups["matched"]:
+        print("  3. match 1-wide : " + ", ".join(groups["matched"]), flush=True)
+    if groups["light"]:
+        print("  4. light 2-wide : " + ", ".join(groups["light"]), flush=True)
 
 
 def _status_name(method, seed):
@@ -129,7 +219,14 @@ def _status_line(method, row, name_width, seed=None):
     total = row.get("total", row.get("eval_total"))
     if total:
         extra = f"  val {int(completed or 0)}/{int(total)}"
-    return (f"{name:<{name_width}}  {status:<6}  {_hms(row.get('elapsed_seconds')):>8}  "
+    reserved = row.get("cuda_reserved_gib")
+    rss = row.get("process_tree_rss_gib")
+    if reserved is not None:
+        extra += f"  V={float(reserved):.1f}G"
+    if rss is not None:
+        extra += f"  ram={float(rss):.1f}G"
+    elapsed = row.get("session_elapsed_seconds", row.get("elapsed_seconds"))
+    return (f"{name:<{name_width}}  {status:<6}  {_hms(elapsed):>8}  "
             f"{t_env:>9,}/{budget:<9,}  {sps:5.1f}/s  L={loss_s}  D={d_s}{extra}")
 
 
@@ -139,11 +236,57 @@ def _rewrite_block(lines, previous, use_ansi):
         sys.stdout.write(f"\x1b[{previous}F\x1b[J{block}")
         sys.stdout.flush()
         return len(lines)
-    if not use_ansi:
-        sys.stdout.write("\n")
     sys.stdout.write(block)
     sys.stdout.flush()
     return len(lines) if use_ansi else 0
+
+
+def _live_row_from_console(output, item):
+    key = item["key"]
+    if key[0] == "depth_eval":
+        method, run, seed = key[3], key[1], key[2]
+        path = Path(output) / method / run / f"seed_{seed}" / "console.log"
+        return parse_eval_console(read_tail(path))
+    method, run, seed = key[0], key[1], key[2]
+    path = Path(output) / method / run / f"seed_{seed}" / "console.log"
+    return parse_train_console(read_tail(path))
+
+
+def run_status_board(output, interval=3.0):
+    """Watch live console logs. Does not start or stop trainers."""
+    use_ansi = _enable_ansi()
+    height = 0
+    print("live status from console.log  (Ctrl+C to close this view only)", flush=True)
+    try:
+        while True:
+            jobs = live_console_jobs(output)
+            used, total = _gpu_used_gib()
+            gpu_bit = f"  gpu={used:.1f}/{total:.1f}G" if used is not None else ""
+            trains = [job for job in jobs if job["kind"] == "train"]
+            evals = [job for job in jobs if job["kind"] == "eval"]
+            lines = [f"now  train={len(trains)}  eval={len(evals)}{gpu_bit}"]
+            width = 12
+            names = [(_status_name(job["method"], job["seed"]), job) for job in trains + evals]
+            if names:
+                width = max(width, max(len(name) for name, _ in names))
+            if not names:
+                lines.append("idle  no console written in the last 3 min")
+            for name, job in names:
+                if job["kind"] == "train":
+                    row = parse_train_console(read_tail(job["path"]))
+                    row.setdefault("status", "starting")
+                    lines.append(_status_line(job["method"], row, width, seed=job["seed"]))
+                else:
+                    row = parse_eval_console(read_tail(job["path"]))
+                    row.setdefault("status", "running")
+                    row.setdefault("phase", "final_eval")
+                    lines.append(f"{name:<{width}}  eval    {row.get('phase', 'eval'):<11}  "
+                                 f"{int(row.get('completed') or 0):,}/{int(row.get('total') or 0):,}"
+                                 + (f"  R={row['cycle_depth']}" if row.get("cycle_depth") else ""))
+            height = _rewrite_block(lines, height, use_ansi)
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        print("\nstatus view closed", flush=True)
 
 
 class _JobAlreadyRunning(RuntimeError):
@@ -238,11 +381,14 @@ def _job_entry(method, options, stop_event, results):
 
 
 def _training_finished(directory, row):
-    if not (Path(directory) / "best.pt").exists() or not (Path(directory) / "final.pt").exists():
-        return False
-    if row.get("status") in ("completed", "complete"):
+    directory = Path(directory)
+    # final.pt is written only after the physical-step budget. Do not requeue
+    # that arm just because progress.csv was briefly unreadable.
+    if (directory / "best.pt").exists() and (directory / "final.pt").exists():
         return True
-    return row.get("phase") in ("depth_eval", "final_eval")
+    if row.get("status") in ("completed", "complete"):
+        return any((directory / name).exists() for name in ("final.pt", "best.pt"))
+    return False
 
 
 def _depth_eval_entry(options, stop_event, results):
@@ -292,7 +438,8 @@ def _anchor_entry(output, stop_event, results):
         results.put(dict(method="anchors", status="failed", error=traceback.format_exc()))
 
 
-def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_concurrent=MAX_CONCURRENT):
+def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_concurrent=MAX_CONCURRENT,
+              with_depth_eval=True):
     """Run trainers up to max_concurrent; one cycle-depth eval may run beside them."""
     from open_score.utils.logging import read_latest
     from open_score.eval.report import refresh_report, refresh_report_async
@@ -302,10 +449,13 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
     pending_train, pending_eval = [], []
     live, finished, roster = [], [], []
     eval_ids = set()
-    latest = read_latest(output, "progress")
     occupied = _occupied_train_jobs()
     original = [(method, dict(options)) for method, options in jobs]
-    options_by_key = {(method, options["run"], options["seed"]): options for method, options in original}
+    options_by_key = {(method, options["run"], options["seed"]): options for method, options in original if options}
+    lookup = {(method, options["run"], options["seed"]) for method, options in original
+              if options and method not in ("anchors", "depth_eval")}
+    print(f"scheduler {len(original)} listed jobs", flush=True)
+    latest = read_latest(output, "progress", keys=lookup) if lookup else {}
 
     def roster_key(method, options):
         if method == "anchors" or not options:
@@ -320,6 +470,8 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
             roster.append(key)
 
     def queue_depth(method, options, bucket):
+        if not with_depth_eval:
+            return
         if method not in CYCLE_SERIES_METHODS:
             return
         ident = (method, options["run"], options["seed"])
@@ -359,7 +511,7 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
                 for field in ("seed", "env", "batch_size_run", "t_max"):
                     if saved[field] != options[field]:
                         raise ValueError(f"Resume configuration differs: {method}/{field}")
-            if not (directory / "resume.pt").exists():
+            if not any(path.exists() for path in resume_files(directory)):
                 if saved_config.exists():
                     raise RuntimeError(f"Recorded run has no recoverable checkpoint: {directory}")
                 options["resume"] = False
@@ -391,17 +543,36 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
     def eval_live():
         return sum(1 for item in live if item["method"] == "depth_eval")
 
+    def start_train_job(method, options):
+        if method == "anchors":
+            child = context.Process(target=_anchor_entry, args=(str(output), stop_event, queue))
+            identity = ("anchors", None, None, None)
+        else:
+            child = context.Process(target=_job_entry, args=(method, options, stop_event, queue))
+            identity = (method, options["run"], options["seed"], None)
+        child.start()
+        live.append({"child": child, "method": method, "options": options, "key": identity})
+
     def launch():
         while waiting_train and train_live() < max_concurrent and not stop_event.is_set():
-            method, options = waiting_train.popleft()
-            if method == "anchors":
-                child = context.Process(target=_anchor_entry, args=(str(output), stop_event, queue))
-                identity = ("anchors", None, None, None)
-            else:
-                child = context.Process(target=_job_entry, args=(method, options, stop_event, queue))
-                identity = (method, options["run"], options["seed"], None)
-            child.start()
-            live.append({"child": child, "method": method, "options": options, "key": identity})
+            picked = None
+            for index, (method, options) in enumerate(waiting_train):
+                if method == "anchors" or _fits_gpu(method, live):
+                    picked = index
+                    break
+            if picked is None:
+                break
+            method, options = waiting_train[picked]
+            del waiting_train[picked]
+            start_train_job(method, options)
+            group = _job_group(method)
+            if GROUP_MAX_LIVE.get(group, 1) < 2 or train_live() >= max_concurrent:
+                continue
+            for index, (other, other_options) in enumerate(waiting_train):
+                if _job_group(other) == group and _fits_gpu(other, live):
+                    del waiting_train[index]
+                    start_train_job(other, other_options)
+                    break
         while waiting_eval and eval_live() < 1 and not stop_event.is_set():
             method, options = waiting_eval.popleft()
             child = context.Process(target=_depth_eval_entry, args=(options, stop_event, queue))
@@ -415,15 +586,7 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
     try:
         launch()
         runs = {options["run"] for _, options in original if options}
-        header = []
-        if len(runs) == 1:
-            header.append(f"run={next(iter(runs))}")
-        header.append(f"live={train_live()}")
-        header.append(f"eval={eval_live()}")
-        header.append(f"queue={len(waiting_train)}")
-        header.append(f"pool={pool[0]}")
-        print("  ".join(header), flush=True)
-        last_status, last_report = 0.0, time.monotonic()
+        last_status, last_report = time.monotonic() - 10, time.monotonic()
         results, failures, abnormal_exits = [], [], set()
 
         def progress_key(key):
@@ -502,33 +665,35 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
             if reap():
                 launch()
             now = time.monotonic()
-            if now - last_status >= 10:
-                live_keys = {item["key"] for item in live}
-                wait_keys = set()
-                for method, options in list(waiting_train) + list(waiting_eval):
-                    wait_keys.add(roster_key(method, options))
-                keys = [key for key in roster if key[0] != "anchors"]
-                lookup = {progress_key(key) for key in keys}
-                try:
-                    snapshot = read_latest(output, "progress", keys=lookup) if lookup else {}
-                    latest = snapshot
-                except (MemoryError, OSError, TimeoutError) as error:
-                    print(f"status skipped: {type(error).__name__}", flush=True)
-                if keys:
-                    width = max(len(display_name(key)) for key in keys)
-                    lines = []
-                    for key in keys:
-                        row = dict(latest.get(progress_key(key), {}))
-                        row.update(eval_live_status.get(progress_key(key), {}))
+            if now - last_status >= 3:
+                live_items = [item for item in live if item["method"] != "anchors"]
+                used, total = _gpu_used_gib()
+                gpu_bit = f"  gpu={used:.1f}/{total:.1f}G" if used is not None else ""
+                run_bit = f"run={next(iter(runs))}  " if len(runs) == 1 else ""
+                pack = Counter(_job_group(item["method"]) for item in live_items)
+                pack_bit = "  ".join(f"{group}×{count}/{GROUP_MAX_LIVE.get(group, 2)}"
+                                     for group, count in pack.items()) if pack else "idle"
+                lines = [f"{run_bit}live={train_live()}  {pack_bit}  queue={len(waiting_train)}{gpu_bit}"]
+                if live_items:
+                    width = max(len(display_name(item["key"])) for item in live_items)
+                    for item in live_items:
+                        key = item["key"]
+                        row = _live_row_from_console(output, item)
                         if key[0] == "depth_eval":
                             row["job"] = "depth_eval"
                             row["target_method"] = key[3]
-                        if key in wait_keys:
-                            row["status"] = "queued"
-                        elif key not in live_keys:
-                            row.setdefault("status", "starting")
+                            row.update({field: value for field, value
+                                        in eval_live_status.get(progress_key(key), {}).items()
+                                        if value is not None})
+                        row.setdefault("status", "starting")
                         lines.append(_status_line(key[0], row, width, seed=key[2]))
-                    status_height = _rewrite_block(lines, status_height, use_ansi)
+                if waiting_train:
+                    names = []
+                    for method, options in list(waiting_train)[:8]:
+                        names.append(_status_name(method, None if options is None else options.get("seed")))
+                    extra = f" +{len(waiting_train) - 8}" if len(waiting_train) > 8 else ""
+                    lines.append("queued: " + ", ".join(names) + extra)
+                status_height = _rewrite_block(lines, status_height, use_ansi)
                 last_status = now
             if now - last_report >= (60 if eval_live() else 300):
                 refresh_report_async(output, run=report_run)
@@ -697,13 +862,11 @@ def validate(output):
 
 def parser():
     result = argparse.ArgumentParser(description=__doc__)
-    result.add_argument("--stage", choices=("validate", "e0", "benchmark", "train", "single", "stop"), required=True)
-    result.add_argument("--method", choices=METHODS + PROBE_METHODS + V4_METHODS + V5_METHODS)
+    result.add_argument("--stage", choices=("validate", "e0", "benchmark", "train", "single", "stop", "status"), required=True)
+    result.add_argument("--method", choices=POLICY_METHODS)
     result.add_argument("--group", choices=tuple(METHOD_GROUPS), default="main",
-                        help="train pool: main=DCG/SPECTra, baseline=B0/B2/REFIL, alma=ALMA, "
-                             "dcg_alma=DCG/ALMA, alma_probe=HAD-adapted ALMA arms, "
-                             "v4=REFIL local-mild/local-mid/count seed 0, "
-                             "v5=count then B/A/F/K4, seed 0; 1:1 cycle-depth eval runs beside training")
+                        help="train pool: main=inventory of pending main jobs; "
+                             "baseline=B0/B2/REFIL; alma=ALMA; v4/v5=archive groups")
     result.add_argument("--max-concurrent", type=int, choices=(1, 2, 3, 4), default=MAX_CONCURRENT,
                         help="live trainers in this train.py; one 1:1 cycle-depth eval may run beside them")
     result.add_argument("--steps", type=int)
@@ -780,6 +943,9 @@ def main():
         (output / "stop.request").write_text("Stop after the current complete sampling/learning batch.\n", encoding="utf-8")
         print("stop.request written; wait for stopped + resume, do not kill", flush=True)
         return
+    if options.stage == "status":
+        run_status_board(output)
+        return
     if options.stage in ("e0", "benchmark", "train", "single"):
         (output / "stop.request").unlink(missing_ok=True)
     base = dict(output=str(output), seed=options.seed, batch_size_run=options.batch_size_run,
@@ -812,6 +978,20 @@ def main():
         if options.steps < 50:
             raise SystemExit("formal budget must support 50 validation points")
         methods = METHOD_GROUPS[options.group]
+        if options.group == "main":
+            from open_score.eval.inventory import pending_train_jobs
+            print("main train: scan inventory, then run pending jobs", flush=True)
+            pending = pending_train_jobs(output)
+            jobs = [(task["method"], {**base, "seed": task["seed"], "t_max": options.steps,
+                                      "env": "had", "run": FORMAL_RUN, "skip_final_eval": True})
+                    for task in pending]
+            print(f"launching {len(jobs)} train jobs, max concurrent {options.max_concurrent}", flush=True)
+            _print_train_plan(jobs)
+            if not jobs:
+                print("no pending main training jobs", flush=True)
+                return
+            run_group(jobs, output, max_concurrent=options.max_concurrent, with_depth_eval=False)
+            return
         if options.group in ("alma_probe", "v4", "v5"):
             seeds = (0,) if options.group in ("v4", "v5") else (options.seed,)
             jobs = [(method, {**base, "seed": seed, "t_max": options.steps, "env": "had", "run": FORMAL_RUN})
@@ -829,6 +1009,8 @@ def main():
             raise SystemExit("single requires --method and --steps")
         # A native sanity environment must never default into the HAD protocol.
         run = options.run or (FORMAL_RUN if options.env == "had" else f"single_{options.env}")
+        if "--" in str(run):
+            raise SystemExit(f"--run {run!r} looks like glued flags; write --run train --resume with a space")
         run_group([(options.method, {**base, "t_max": options.steps, "env": options.env, "run": run})], output,
                   report_run=run, max_concurrent=options.max_concurrent)
 

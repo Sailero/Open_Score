@@ -42,7 +42,7 @@ METHOD_LABELS = {
     "refil_local_mild": "REFIL-L0.15", "refil_local_mid": "REFIL-L0.30",
     "refil_count": "REFIL-C",
     "refil_cycle": "REFIL-B（循环）", "refil_card": "REFIL-A（数量校正）",
-    "refil_feedback": "REFIL-F（决策反馈）", "refil_slot": "REFIL-K4（4 槽）",
+    "refil_feedback": "REFIL-F（决策反馈）", "refil_slot": "REFIL-K10（10 槽）",
 }
 CYCLE_BRANCHES = ("cycle", "slot", "feedback")
 DEFAULTS = {
@@ -81,7 +81,7 @@ def _describe_checkpoint(path, cfg):
             raise ValueError("checkpoint 的 pool_slots 必须包含三个正整数。")
         limits.update({key: min(limits[key], int(n)) for key, n in zip(("red", "blue", "targets"), budget)})
     reason = ""
-    if path.name == "resume.pt":
+    if path.name.startswith("resume"):
         reason = "训练恢复文件（包含 replay）；请选择 best、final 或 latest 推理权重。"
     elif method not in POLICY_METHODS:
         reason = "历史或未知模型格式；需要对应算法的推理实现，不能直接作为当前动作策略加载。"
@@ -178,7 +178,7 @@ def _register_checkpoint(payload):
     path = (ROOT / path).resolve() if not path.is_absolute() else path.resolve()
     if path.suffix.lower() != ".pt" or not path.is_file():
         raise ValueError("路径必须指向已有的 .pt checkpoint 文件。")
-    if path.name == "resume.pt":
+    if path.name.startswith("resume"):
         raise ValueError("请选择 best.pt、final.pt 或 latest.pt；resume.pt 用于恢复训练。")
     import torch
     with path.open("rb") as source:

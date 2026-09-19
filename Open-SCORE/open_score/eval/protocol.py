@@ -8,15 +8,24 @@ import time
 
 from ..envs.scales import SCALE_POOLS, TEST_POOL
 
+
+def _safe_refresh(output, run=None):
+    from .report import refresh_report
+    try:
+        refresh_report(output, run=run)
+    except (OSError, MemoryError, TimeoutError) as error:
+        print(f"report refresh skipped: {type(error).__name__}", flush=True)
+
 # Checkpoint selection may only ever see these; they are inside the training pool.
 VALIDATION_CONFIGS = ((4, 4, 2), (6, 6, 2), (8, 8, 2), (10, 10, 3))
 EQUAL_SCALE_CONFIGS = tuple((s.N_R, s.N_B, s.K) for s in SCALE_POOLS["extrapolation_agents"])
 RATIO_CONFIGS = tuple((s.N_R, s.N_B, s.K) for s in SCALE_POOLS["extrapolation_ratio"])
-TARGET_K_VALUES = (2, 4, 6)
+TARGET_K_VALUES = (2, 4, 6, 9, 12)
 TARGET_SCALE_NS = (10, 15, 20, 30)
-# scales.py is the source of truth for the three reported axes.
+TARGET_PLOT_NS = (10, 30)
+# scales.py is the source of truth. 1:2 stays named for legacy CSV rows only.
 TEST_CONFIGS = tuple((scale.N_R, scale.N_B, scale.K) for scale in TEST_POOL)
-# Pool-in plus the three extrapolation axes. 10v10 K2 sits on the equal-scale
+# Pool-in plus equal-scale and target axes. 10v10 K2 sits on the equal-scale
 # line; 10v10 K3 stays in the validation set.
 FINAL_CONFIGS = tuple(dict.fromkeys(VALIDATION_CONFIGS + TEST_CONFIGS))
 VALIDATION_EPISODES_PER_CONFIG = 25
@@ -26,7 +35,11 @@ FINAL_EPISODES = len(FINAL_CONFIGS) * FINAL_EPISODES_PER_CONFIG
 # parameters for a larger roster and are reported on the pool axis only.
 POOL_ONLY_METHODS = ("b0_qmix",)
 # Shared SelfAttn cycle / slot / feedback. Cardinality attention has no R.
-CYCLE_SERIES_METHODS = ("refil_cycle", "refil_slot", "refil_feedback")
+CYCLE_SERIES_METHODS = ("regir", "refil_cycle", "refil_slot", "refil_feedback")
+MECH_CONFIG = (30, 30, 2)
+MECH_EPISODE_SEEDS = (9000, 9001)
+TIMING_METHODS = ("regir", "refil", "refil_matched", "dcg")
+TIMING_SCALES = ((10, 10, 2), (50, 50, 2))
 DEPTH_SWEEP_DEPTHS = (1, 2, 3, 4, 5, 6)
 _POLICY_IDS = count()
 
@@ -180,9 +193,10 @@ def depth_eval_finished(output, method, run, seed, t_env, checkpoint="best"):
     return not remaining_depth_jobs(t_env, existing, checkpoint)
 
 
-def infer_best_t_env(output, method, run, seed, fallback=None):
+def infer_best_t_env(output, method, run, seed, fallback=None, rows=None):
     from open_score.utils.logging import read_records
-    for row in reversed(read_records(output, "episodes", run=run, method=method, seed=seed)):
+    source = rows if rows is not None else read_records(output, "episodes", run=run, method=method, seed=seed)
+    for row in reversed(source):
         ckpt = str(row.get("checkpoint") or "")
         if "@" not in ckpt:
             continue
@@ -278,7 +292,7 @@ def evaluate_checkpoint(method, checkpoint, *, output=None, run=None, seed=None,
             if completed % 25 == 0:
                 print(f"[{method}/{actual_seed}] final_eval {completed}/{total}", flush=True)
             if time.monotonic() - last_report >= 300:
-                refresh_report(output, run=run)
+                _safe_refresh(output, run)
                 last_report = time.monotonic()
         logger.progress(phase="final_eval", status="complete", completed=completed, total=total,
                         t_env=t_env, checkpoint=checkpoint_label)
@@ -287,7 +301,7 @@ def evaluate_checkpoint(method, checkpoint, *, output=None, run=None, seed=None,
                         completed=completed, total=total, t_env=t_env, error=str(error), checkpoint=checkpoint_label)
         raise
     finally:
-        refresh_report(output, run=run)
+        _safe_refresh(output, run)
     return dict(status="complete", completed=completed, total=total)
 
 
@@ -396,9 +410,6 @@ def evaluate_depth_sweep(method, checkpoint, *, output=None, run=None, seed=None
                         cycle_depth=last_depth)
         raise
     finally:
-        pending = refresh_report_async(output, run=run)
-        if pending is not None:
-            pending.join(timeout=180)
-        refresh_report(output, run=run)
+        _safe_refresh(output, run)
     return dict(status="complete", completed=completed, total=total)
 

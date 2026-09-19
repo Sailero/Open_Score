@@ -12,8 +12,8 @@ class Scale:
     K: int
 
     def __post_init__(self):
-        if not (1 <= self.N_R <= 40 and 1 <= self.N_B <= 40 and 1 <= self.K <= 6):
-            raise ValueError("HAD scale must fit 40 red, 40 blue and 6 target slots")
+        if not (1 <= self.N_R <= 50 and 1 <= self.N_B <= 50 and 1 <= self.K <= 12):
+            raise ValueError("HAD scale must fit 50 red, 50 blue and 12 target slots")
 
     def as_dict(self):
         return {"N_R": int(self.N_R), "N_B": int(self.N_B), "K": int(self.K)}
@@ -41,11 +41,13 @@ SCALE_POOLS = {
     "validation": VALIDATION_POOL,
     # Equal-scale ladder only: both sides intercept by self-destruct, so a
     # red deficit is not a representation-transfer axis. Unseen N at 1:1 is.
-    "extrapolation_agents": tuple(Scale(n, n, 2) for n in (10, 15, 20, 25, 30, 40)),
+    "extrapolation_agents": tuple(Scale(n, n, 2) for n in (5, 10, 15, 20, 25, 30, 40, 50)),
     "extrapolation_ratio": tuple(Scale(n, 2 * n, 2) for n in (2, 4, 8, 15, 20)),
-    "extrapolation_targets": tuple(Scale(n, n, k) for n in (10, 15, 20, 30) for k in (4, 6)),
+    "extrapolation_targets": tuple(Scale(n, n, k) for n in (10, 15, 20, 30) for k in (4, 6))
+    + (Scale(10, 10, 9), Scale(10, 10, 12), Scale(30, 30, 9), Scale(30, 30, 12)),
 }
-TEST_POOL = tuple(c for name, pool in SCALE_POOLS.items() if name.startswith("extrapolation") for c in pool)
+TEST_POOL = tuple(c for name, pool in SCALE_POOLS.items()
+                  if name in ("extrapolation_agents", "extrapolation_targets") for c in pool)
 
 
 class ScaleSampler:

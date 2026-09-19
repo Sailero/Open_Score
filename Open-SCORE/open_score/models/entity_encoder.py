@@ -184,6 +184,10 @@ class AttentionEncoder(_EntityEncoder):
         if task_x is not None:
             tokens = tokens + task_x
         tokens = F.relu(tokens)
+        if getattr(self.args, "skip_refil_local", False):
+            local = F.relu(self.fc2(tokens[:, 0])).masked_fill(dead[:, None], 0)
+            tokens = tokens.masked_fill(hidden.unsqueeze(-1), 0)
+            return local, tokens
         x = self.attn(tokens, pre_mask=pre[:, None], post_mask=dead[:, None])
         local = F.relu(self.fc2(F.relu(x[:, 0]))).masked_fill(dead[:, None], 0)
         tokens = tokens.masked_fill(hidden.unsqueeze(-1), 0)
@@ -382,6 +386,8 @@ class _MHA(nn.Module):
         if mask is not None:
             weights = weights.masked_fill(hide, 0)
             weights = weights.masked_fill(empty, 0)
+        if getattr(self, "capture_attention", False):
+            self.last_weights = weights.detach()
         out = th.matmul(weights, value).transpose(1, 2).contiguous().view(batch, n_q, dim)
         return self.out(out)
 
@@ -516,6 +522,16 @@ class GlobalBranch(nn.Module):
         return self.query_proj(th.cat((own, hidden), dim=-1)).unsqueeze(1)
 
     def _jk(self, states, query, mem_mask, depth):
+        if getattr(self.args, "read_last_round", False):
+            stacked = th.stack(states, dim=0)
+            index = (depth.clamp(min=1) - 1).long().clamp(max=stacked.shape[0] - 1)
+            chosen = stacked[index, th.arange(index.shape[0], device=index.device)]
+            read = self.read_attn(query, chosen, chosen, mem_mask).squeeze(1)
+            if getattr(self, "capture_attention", False):
+                alpha = th.zeros(index.shape[0], stacked.shape[0], device=index.device)
+                alpha[th.arange(index.shape[0], device=index.device), index] = 1
+                self.last_alpha = alpha.detach()
+            return read
         scores, values = [], []
         for memory in states:
             read = self.read_attn(query, memory, memory, mem_mask).squeeze(1)
@@ -529,6 +545,8 @@ class GlobalBranch(nn.Module):
         scores = scores.masked_fill(empty, 0)
         alpha = th.softmax(scores, dim=-1)
         alpha = alpha.masked_fill(~valid, 0)
+        if getattr(self, "capture_attention", False):
+            self.last_alpha = alpha.detach()
         stacked = th.stack(values, dim=-1)
         return (stacked * alpha.unsqueeze(1)).sum(-1)
 
@@ -537,31 +555,44 @@ class GlobalBranch(nn.Module):
             return checkpoint(fn, *tensors, use_reentrant=False)
         return fn(*tensors)
 
+    def _map_chunks(self, fn, *aligned, extra=()):
+        n = aligned[0].shape[0]
+        chunk = int(getattr(self.args, "encoder_chunk_size", 1024))
+        if chunk < 1:
+            raise ValueError("encoder_chunk_size must be positive")
+        if n <= chunk:
+            return self._maybe_checkpoint(fn, *aligned, *extra)
+        parts = []
+        for start in range(0, n, chunk):
+            sl = slice(start, start + chunk)
+            parts.append(self._maybe_checkpoint(fn, *(tensor[sl] for tensor in aligned), *extra))
+        return th.cat(parts, 0)
+
     def _cycle_round(self, tokens, mask, count):
-        injected = self.norm_attn(tokens) + self.count_to_token(count).unsqueeze(1)
+        injected = self.norm_attn(tokens)
+        if not getattr(self.args, "skip_count_inject", False):
+            injected = injected + self.count_to_token(count).unsqueeze(1)
         tokens = tokens + self.self_attn(injected, tokens, tokens, mask)
+        if getattr(self, "capture_attention", False) and hasattr(self.self_attn, "last_weights"):
+            self.last_self_attn.append(self.self_attn.last_weights.mean(1).detach())
         tokens = tokens + self.ffn(self.norm_ffn(tokens))
         return tokens.masked_fill(mask.unsqueeze(-1), 0)
 
     def _slot_round(self, slots, tokens, mask, count):
-        query = self.norm_cross(slots) + self.count_to_token(count).unsqueeze(1)
+        query = self.norm_cross(slots)
+        if not getattr(self.args, "skip_count_inject", False):
+            query = query + self.count_to_token(count).unsqueeze(1)
         slots = slots + self.cross_attn(query, tokens, tokens, mask)
         slots = slots + self.self_attn(self.norm_attn(slots), slots, slots)
         return slots + self.ffn(self.norm_ffn(slots))
 
-    def _own_prefs(self, memory, key_mask):
-        zeros = memory.new_zeros(memory.shape[0], int(self.args.rnn_hidden_dim))
-        query = self._agent_query(memory[:, 0], zeros)
-        read = self.read_attn(query, memory, memory, key_mask).squeeze(1)
-        return th.softmax(self.pref_logits(read), dim=-1)
+    def _own_prefs(self, memory):
+        return th.softmax(self.pref_logits(memory[:, 0]), dim=-1)
 
-    def _inject_packed(self, tokens, origin, prefs, key_mask, pack):
-        n_agents = int(pack["na"])
-        dense = prefs.new_zeros(pack["n_obs"], prefs.shape[-1])
-        dense.index_copy_(0, pack["idx"], prefs)
-        embed = self.pref_proj(dense.reshape(pack["bs"] * pack["ts"], n_agents, -1))
-        agent_ids = origin.clamp(0, n_agents - 1).long().unsqueeze(-1).expand(-1, -1, embed.shape[-1])
-        gathered = embed.index_select(0, pack["idx"] // n_agents).gather(1, agent_ids)
+    def _inject_chunk(self, tokens, origin, key_mask, bt, embed):
+        n_agents = embed.shape[1]
+        gathered = embed.index_select(0, bt).gather(
+            1, origin.clamp(0, n_agents - 1).long().unsqueeze(-1).expand(-1, -1, embed.size(-1)))
         red = (origin < n_agents).unsqueeze(-1).to(tokens.dtype)
         live = (~key_mask).unsqueeze(-1).to(tokens.dtype)
         return tokens + gathered * red * live
@@ -577,24 +608,52 @@ class GlobalBranch(nn.Module):
                 states.append(memory)
             return states, None
         memory = tokens
-        prefs = None
+        embed = None
+        bt = None if pack is None else pack["idx"] // int(pack["na"])
         for round_id in range(n_rounds):
-            if self.kind == "feedback" and prefs is not None:
-                memory = self._inject_packed(memory, origin, prefs, key_mask, pack)
-            memory = self._maybe_checkpoint(self._cycle_round, memory, key_mask, count)
+            if self.kind == "feedback" and embed is not None:
+                memory = self._map_chunks(
+                    self._inject_chunk, memory, origin, key_mask, bt, extra=(embed,))
+            if self.kind == "feedback":
+                memory = self._map_chunks(self._cycle_round, memory, key_mask, count)
+            else:
+                memory = self._maybe_checkpoint(self._cycle_round, memory, key_mask, count)
             states.append(memory)
             if self.kind == "feedback" and round_id + 1 < n_rounds:
-                prefs = self._own_prefs(memory, key_mask)
+                prefs = self._own_prefs(memory)
+                dense = prefs.new_zeros(pack["n_obs"], prefs.shape[-1])
+                dense = dense.index_copy(0, pack["idx"], prefs)
+                embed = self.pref_proj(dense.reshape(pack["bs"] * pack["ts"], pack["na"], -1))
         return states, key_mask
 
     def read_context(self, states, tokens, key_mask, hidden, depth_t, local, mem_mask=None):
+        n = tokens.shape[0]
+        chunk = int(getattr(self.args, "encoder_chunk_size", 1024))
+        if chunk < 1:
+            raise ValueError("encoder_chunk_size must be positive")
+        if n <= chunk:
+            return self._read_context_body(states, tokens, key_mask, hidden, depth_t, local, mem_mask)
+        parts = []
+        for start in range(0, n, chunk):
+            sl = slice(start, start + chunk)
+            mask = None if mem_mask is None else mem_mask[sl]
+            parts.append(self._read_context_body(
+                [state[sl] for state in states], tokens[sl], key_mask[sl],
+                hidden[sl], depth_t[sl], local[sl], mask))
+        return th.cat(parts, 0)
+
+    def _read_context_body(self, states, tokens, key_mask, hidden, depth_t, local, mem_mask):
         query = self._agent_query(tokens[:, 0], hidden.reshape(tokens.shape[0], -1))
         if self.kind == "slot":
             mask = None
         else:
             mask = key_mask if mem_mask is None else mem_mask
-        context = self._jk(states, query, mask, depth_t)
-        return local + self.fuse(context)
+        return local + self.fuse(self._jk(states, query, mask, depth_t))
+
+    def _read_stacked(self, stacked, tokens, key_mask, hidden, depth_t, local, mem_mask):
+        states = [stacked[i] for i in range(stacked.shape[0])]
+        mask = None if self.kind == "slot" else mem_mask
+        return self._read_context_body(states, tokens, key_mask, hidden, depth_t, local, mask)
 
     def card_fuse(self, tokens, key_mask, types, hidden, local):
         query = self._agent_query(tokens[:, 0], hidden.reshape(tokens.shape[0], -1))
@@ -635,6 +694,8 @@ class EntityAgent(ALMAAgent):
             if not args.agent.get("recurrent", False):
                 raise ValueError("global_branch requires a recurrent head")
             self.global_net = GlobalBranch(args, self.global_branch)
+            self.global_net.capture_attention = False
+            self.global_net.last_self_attn = []
         elif self.count_cond == "phi2":
             hidden = args.rnn_hidden_dim
             self.count_mlp = nn.Linear(6, 32)
@@ -648,6 +709,13 @@ class EntityAgent(ALMAAgent):
             nn.init.zeros_(self.count_beta.bias)
         elif self.count_cond not in (None, False, "off", "none"):
             raise ValueError(f"Unknown count_cond {self.count_cond!r}")
+        hidden = int(args.rnn_hidden_dim)
+        extra = int(getattr(args, "matched_hidden", 0) or 0)
+        if extra > 0 and self.global_branch is None:
+            self.matched_mlp = nn.Sequential(nn.Linear(hidden, extra), nn.ReLU(), nn.Linear(extra, hidden))
+            nn.init.zeros_(self.matched_mlp[-1].weight)
+            nn.init.zeros_(self.matched_mlp[-1].bias)
+        self.capture_attention = False
 
     def _count_embedding(self, entity_mask):
         n_red = int(self.args.n_agents)
@@ -686,6 +754,9 @@ class EntityAgent(ALMAAgent):
             return self._compute_global(inputs)
         encoded = self._base(inputs)
         encoded = self._apply_count_cond(encoded, inputs["entity_mask"])
+        if hasattr(self, "matched_mlp"):
+            encoded = encoded + self.matched_mlp(encoded)
+            encoded = encoded.masked_fill(inputs["entity_mask"][:, :, :self.args.n_agents].unsqueeze(-1), 0)
         if hasattr(self, "task_cond") and "task_embeds" in inputs:
             encoded = encoded + self.task_cond(inputs["task_embeds"][:, :, :self.args.n_agents])
         if self.use_copa:
@@ -716,6 +787,10 @@ class EntityAgent(ALMAAgent):
         kind = self.global_branch
         outputs = []
         if kind in ("cycle", "slot", "feedback"):
+            if getattr(self.global_net, "capture_attention", False):
+                self.global_net.last_self_attn = []
+                if hasattr(self.global_net, "self_attn"):
+                    self.global_net.self_attn.capture_attention = True
             n_obs = bs * ts * na
             live = ~dead.reshape(-1)
             idx = live.nonzero(as_tuple=False).flatten()
@@ -735,25 +810,26 @@ class EntityAgent(ALMAAgent):
                 n_mem = states_live[0].shape[1]
                 states_full = []
                 for memory in states_live:
-                    packed = memory.new_zeros(n_obs, n_mem, gdim)
-                    packed.index_copy_(0, idx, memory)
+                    packed = memory.new_zeros(n_obs, n_mem, gdim).index_copy(0, idx, memory)
                     states_full.append(packed.reshape(bs, ts, na, n_mem, gdim))
                 if mem_mask_live is not None:
-                    mem_mask_full = key_mask.new_ones(n_obs, n_ent)
-                    mem_mask_full.index_copy_(0, idx, mem_mask_live)
+                    mem_mask_full = key_mask.new_ones(n_obs, n_ent).index_copy(0, idx, mem_mask_live)
                     mem_mask_full = mem_mask_full.reshape(bs, ts, na, n_ent)
             for t in range(ts):
                 alive = ~dead[:, t]
                 if states_full is None:
                     outputs.append(local.new_zeros(bs, na, n_act))
                     continue
-                mask_t = None if mem_mask_full is None else mem_mask_full[:, t].reshape(bs * na, n_ent)
-                fused = self.global_net.read_context(
-                    [state[:, t].reshape(bs * na, -1, gdim) for state in states_full],
-                    tokens[:, t].reshape(bs * na, n_ent, gdim),
-                    key_mask[:, t].reshape(bs * na, n_ent),
-                    h, depth_flat.reshape(bs, ts, na)[:, t].reshape(-1),
-                    local[:, t].reshape(bs * na, hidden_dim), mem_mask=mask_t)
+                stacked = th.stack(
+                    [state[:, t].reshape(bs * na, -1, gdim) for state in states_full], 0)
+                tok_t = tokens[:, t].reshape(bs * na, n_ent, gdim)
+                km_t = key_mask[:, t].reshape(bs * na, n_ent)
+                mask_t = km_t if mem_mask_full is None else mem_mask_full[:, t].reshape(bs * na, n_ent)
+                fused = self.global_net._maybe_checkpoint(
+                    self.global_net._read_stacked, stacked, tok_t, km_t,
+                    h.reshape(bs * na, hidden_dim),
+                    depth_flat.reshape(bs, ts, na)[:, t].reshape(-1),
+                    local[:, t].reshape(bs * na, hidden_dim), mask_t)
                 q_t, h = self._head.step(fused.reshape(bs, na, hidden_dim), h, alive)
                 outputs.append(q_t)
         else:

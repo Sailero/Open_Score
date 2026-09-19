@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import numpy as np
 
-MAX_AGENTS = 40
-MAX_BLUE = 40
-MAX_TARGETS = 6
+MAX_AGENTS = 50
+MAX_BLUE = 50
+MAX_TARGETS = 12
 MAX_ENTITIES = MAX_AGENTS + MAX_BLUE + MAX_TARGETS
 TRAIN_AGENTS = 10
 TRAIN_BLUE = 10
@@ -20,7 +20,7 @@ FEATURE_NAMES = ("x", "y", "vx", "vy", "alive", "health", "target_damage_share",
 
 
 def resolve_pad(pad):
-    """Train uses the pool ceiling; eval keeps the 40-red / 40-blue interface."""
+    """Train uses the pool ceiling; eval keeps the 50-red / 50-blue interface."""
     if pad in (None, "eval"):
         return MAX_AGENTS, MAX_BLUE, MAX_TARGETS
     if pad == "train":

@@ -22,7 +22,34 @@ PROBE_METHODS = ("alma_fullobs", "alma_blue", "alma_event", "alma_nomask")
 V4_METHODS = ("refil_local_mild", "refil_local_mid", "refil_count")
 V5_GLOBAL_METHODS = ("refil_cycle", "refil_card", "refil_feedback", "refil_slot")
 V5_METHODS = ("refil_count",) + V5_GLOBAL_METHODS
-POLICY_METHODS = METHODS + PROBE_METHODS + tuple(dict.fromkeys((*V4_METHODS, *V5_METHODS)))
+_CYCLE = {
+    "imagine_group": "original",
+    "count_cond": "phi2",
+    "global_branch": "cycle",
+    "global_slots": 4,
+    "global_depths": [1, 2, 3, 4],
+    "global_eval_depth": 4,
+    "global_embed_dim": 64,
+    "global_ffn_mult": 2,
+    "global_n_heads": 4,
+}
+MAIN_METHODS = ("regir", "refil", "b2_qmix_atten", "dcg", "spectra", "alma")
+MAIN_ABLATION_METHODS = ("regir_norefil", "regir_nocount", "regir_r1", "regir_last")
+MAIN_TRAIN_METHODS = MAIN_METHODS + MAIN_ABLATION_METHODS + ("refil_matched",)
+METHOD_ALIASES = {"refil_cycle": "regir", "regia": "regir"}
+MAIN_OVERRIDES = {
+    "regir": dict(_CYCLE),
+    "refil_cycle": dict(_CYCLE),
+    "regir_norefil": {**_CYCLE, "lmbda": 0.0, "skip_refil_local": True,
+                      "agent": {"imagine": False}},
+    "regir_nocount": {**_CYCLE, "skip_count_inject": True},
+    "regir_r1": {**_CYCLE, "global_depths": [1], "global_eval_depth": 1},
+    "regir_last": {**_CYCLE, "read_last_round": True},
+    "refil_matched": {"imagine_group": "original", "global_branch": None},
+}
+POLICY_METHODS = METHODS + PROBE_METHODS + tuple(dict.fromkeys(
+    (*V4_METHODS, *V5_METHODS, *MAIN_TRAIN_METHODS, "refil_cycle", "alma_legacy",
+     "refil_count_ln")))
 V4_OVERRIDES = {
     "refil_local_mild": {
         "imagine_group": "mixed_distance",
@@ -71,7 +98,7 @@ V5_OVERRIDES = {
         "imagine_group": "original",
         "count_cond": "phi2",
         "global_branch": "feedback",
-        "global_feedback_mode": "token",
+        "global_feedback_mode": "cycle_jk",
         "global_slots": 4,
         "global_depths": [1, 2, 3, 4],
         "global_eval_depth": 4,
@@ -83,7 +110,7 @@ V5_OVERRIDES = {
         "imagine_group": "original",
         "count_cond": "phi2",
         "global_branch": "slot",
-        "global_slots": 4,
+        "global_slots": 10,
         "global_depths": [1, 2, 3, 4],
         "global_eval_depth": 4,
         "global_embed_dim": 64,
@@ -94,15 +121,27 @@ V5_OVERRIDES = {
 # Everything else defines the experiment and must match on resume, so that a
 # single run never mixes old replay data with changed learning conditions.
 RESUME_MUTABLE = frozenset(("resume", "output", "device", "use_cuda",
-                            "report_interval", "progress_interval",
+                            "report_interval", "progress_interval", "resume_interval",
                             "implementation_revision", "concurrency",
-                            "entity_pad"))
+                            "entity_pad", "skip_final_eval"))
 # Keys added after some runs started; missing saved values equal these defaults.
 RESUME_DEFAULTS = {"reward_mode": "damage", "friendly_penalty": 1.0,
                    "count_ln": True, "global_branch": None, "global_slots": 4,
                    "global_depths": [1, 2, 3, 4], "global_eval_depth": 4,
                    "global_embed_dim": 64, "global_ffn_mult": 2, "global_n_heads": 4,
-                   "global_feedback_mode": "gru"}
+                   "global_feedback_mode": "gru", "resume_interval": 600,
+                   "skip_refil_local": False, "skip_count_inject": False,
+                   "read_last_round": False, "matched_hidden": 0,
+                   "skip_final_eval": False}
+RESUME_NAMES = ("resume.pt", "resume.pt.pending", "resume.prev.pt")
+DEFAULT_MATCHED_HIDDEN = 576
+
+
+def resolve_matched_hidden(output):
+    path = Path(output) / "matched_hidden.json"
+    if path.exists():
+        return int(json.loads(path.read_text(encoding="utf-8"))["matched_hidden"])
+    return DEFAULT_MATCHED_HIDDEN
 
 
 def setup_runtime():
@@ -122,22 +161,40 @@ def _merge(base, update):
     return base
 
 
+def canonical_method(name):
+    return METHOD_ALIASES.get(name, name)
+
+
+def _config_yaml_name(name):
+    if name in ("refil_matched",) or name in V4_METHODS or name in V5_METHODS:
+        return "refil"
+    if name == "alma_legacy":
+        return "alma"
+    if canonical_method(name).startswith("regir"):
+        return "refil"
+    return name
+
+
 def load_config(name, overrides=None):
     import yaml
     if name not in POLICY_METHODS:
         raise ValueError(f"Unknown method: {name}")
-    config_name = "refil" if name in V4_METHODS or name in V5_METHODS else name
+    config_name = _config_yaml_name(name)
     base = yaml.safe_load((UPSTREAM / "config/default.yaml").read_text(encoding="utf-8-sig"))
     base = _merge(base, yaml.safe_load((PROJECT / f"configs/{config_name}.yaml").read_text(encoding="utf-8-sig")))
-    if VERSION == "main_v5" and name in V5_OVERRIDES:
+    if name in MAIN_OVERRIDES:
+        _merge(base, MAIN_OVERRIDES[name])
+    elif name in V5_OVERRIDES:
         _merge(base, V5_OVERRIDES[name])
     elif name in V4_OVERRIDES:
         _merge(base, V4_OVERRIDES[name])
+    if name == "alma_legacy":
+        base["n_extra_tasks"] = 3
     base.update(method=name, name=name, env="had", seed=0, entity_scheme=True,
                 max_traj_len=-1, popart=False, buffer_cpu_only=True,
                 buffer_opt_mem=True, use_cuda=True, learner_log_interval=1000,
                 mask_subtask_actions=False, feature_layout="had", report_interval=300,
-                progress_interval=10, resume=False, run=FORMAL_RUN,
+                progress_interval=10, resume_interval=600, resume=False, run=FORMAL_RUN,
                 # Potential-based shaping over Blue's closing distance. It only
                 # retimes the signal: the discounted shaping sum telescopes to a
                 # constant of the start state, so D and the anchors are unchanged.
@@ -159,6 +216,8 @@ def load_config(name, overrides=None):
     elif mixer_cond is None:
         base["mixer_subtask_cond"] = base["agent"]["subtask_cond"]
     base["output"] = str(Path(base.get("output", DEFAULT_OUTPUT)).resolve())
+    if name == "refil_matched" and int(base.get("matched_hidden") or 0) <= 0:
+        base["matched_hidden"] = resolve_matched_hidden(base["output"])
     base["feature_layout"] = "had" if base["env"] == "had" else "native"
     base["device"] = "cuda" if base["use_cuda"] else "cpu"
     base.setdefault("imagine_group", "original")
@@ -172,15 +231,27 @@ def load_config(name, overrides=None):
     base.setdefault("global_ffn_mult", 2)
     base.setdefault("global_n_heads", 4)
     base.setdefault("global_feedback_mode", "gru")
+    base.setdefault("skip_refil_local", False)
+    base.setdefault("skip_count_inject", False)
+    base.setdefault("read_last_round", False)
+    base.setdefault("matched_hidden", 0)
     base["global_depths"] = [int(value) for value in base["global_depths"]]
     base["global_slots"] = int(base["global_slots"])
     base["global_eval_depth"] = int(base["global_eval_depth"])
     base["global_embed_dim"] = int(base["global_embed_dim"])
     base["global_ffn_mult"] = int(base["global_ffn_mult"])
     base["global_n_heads"] = int(base["global_n_heads"])
+    base["skip_refil_local"] = bool(base["skip_refil_local"])
+    base["skip_count_inject"] = bool(base["skip_count_inject"])
+    base["read_last_round"] = bool(base["read_last_round"])
+    base["matched_hidden"] = int(base["matched_hidden"])
     base.setdefault("reward_mode", "damage")
     base.setdefault("friendly_penalty", 1.0)
     base["friendly_penalty"] = float(base["friendly_penalty"])
+    base.setdefault("resume_interval", 600)
+    base["resume_interval"] = int(base["resume_interval"])
+    base.setdefault("skip_final_eval", False)
+    base["skip_final_eval"] = bool(base["skip_final_eval"])
     return SimpleNamespace(**base)
 
 
@@ -300,13 +371,60 @@ def _load_network_state(learner, state):
     learner.last_target_update_episode = state["last_target_update_episode"]
 
 
-def _atomic_save(value, path):
+def resume_files(run_dir):
+    run_dir = Path(run_dir)
+    return tuple(run_dir / name for name in RESUME_NAMES)
+
+
+def _fsync_file(path):
+    fd = os.open(path, os.O_RDWR)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def _fsync_dir(path):
+    try:
+        fd = os.open(path, os.O_RDONLY)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+    except OSError:
+        pass
+
+
+def _atomic_save(value, path, *, keep_previous=False):
     import torch
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     pending = path.with_suffix(path.suffix + ".pending")
     torch.save(value, pending)
+    _fsync_file(pending)
+    if keep_previous and path.exists():
+        os.replace(path, path.with_name(path.stem + ".prev" + path.suffix))
     os.replace(pending, path)
+    _fsync_dir(path.parent)
+
+
+def _load_resume(run_dir):
+    import torch
+    candidates = [path for path in resume_files(run_dir) if path.exists()]
+    if not candidates:
+        return None, None
+    errors = []
+    for path in candidates:
+        try:
+            saved = torch.load(path, map_location="cpu", weights_only=False)
+        except Exception as error:
+            errors.append(f"{path.name}: {type(error).__name__}: {error}")
+            continue
+        if not isinstance(saved, dict) or any(key not in saved for key in ("replay", "runner", "rng", "networks")):
+            errors.append(f"{path.name}: incomplete checkpoint")
+            continue
+        return saved, path
+    raise RuntimeError("Resume files exist but none are readable: " + "; ".join(errors))
 
 
 def _set_seed(seed, cuda):
@@ -332,6 +450,12 @@ def train(name, cfg):
     from open_score.eval.protocol import evaluation_thresholds, validation_jobs, validation_score, final_jobs, remaining_jobs
     from open_score.eval.report import refresh_report
 
+    def refresh_report_safe():
+        try:
+            refresh_report(output)
+        except (OSError, MemoryError, TimeoutError) as error:
+            print(f"[{name}] report refresh skipped: {type(error).__name__}", flush=True)
+
     stop_event = cfg.get("_stop_event")
     cfg = {key: value for key, value in cfg.items() if not key.startswith("_")}
     if "t_max" not in cfg:
@@ -344,8 +468,7 @@ def train(name, cfg):
     _set_seed(args.seed, args.device == "cuda")
     output = Path(args.output)
     run_dir = output / name / args.run / f"seed_{args.seed}"
-    resume_path = run_dir / "resume.pt"
-    if resume_path.exists() and not args.resume:
+    if any(path.exists() for path in resume_files(run_dir)) and not args.resume:
         raise FileExistsError(f"Existing run: {run_dir}; use --resume to continue it")
     if args.resume and getattr(args, "global_branch", None) not in (None, False, "off", "none", ""):
         saved_cfg_path = run_dir / "config.json"
@@ -355,18 +478,22 @@ def train(name, cfg):
                 int(saved_cfg["global_embed_dim"]) if "global_embed_dim" in saved_cfg else 128,
                 int(saved_cfg["global_ffn_mult"]) if "global_ffn_mult" in saved_cfg else 4,
                 int(saved_cfg["global_n_heads"]) if "global_n_heads" in saved_cfg else int(saved_cfg.get("attn_n_heads", 4)),
+                int(saved_cfg["global_slots"]) if "global_slots" in saved_cfg else 4,
                 saved_cfg.get("global_feedback_mode", "gru") if saved_cfg.get("global_branch") == "feedback" else "gru",
             )
             current_arch = (
                 int(getattr(args, "global_embed_dim", 64)),
                 int(getattr(args, "global_ffn_mult", 2)),
                 int(getattr(args, "global_n_heads", 4)),
+                int(getattr(args, "global_slots", 4)),
                 getattr(args, "global_feedback_mode", "gru") if getattr(args, "global_branch", None) == "feedback" else "gru",
             )
             if saved_arch != current_arch:
                 print(f"[{name}] global module {saved_arch} -> {current_arch}; "
                       "start this arm from step 0 (eval protocol unchanged)", flush=True)
                 args.resume = False
+                for stale in (*RESUME_NAMES, "best.pt", "final.pt"):
+                    (run_dir / stale).unlink(missing_ok=True)
     run_dir.mkdir(parents=True, exist_ok=True)
     record = ExperimentLogger(output, name, args.seed, args.run)
     logger = LearnerLogger()
@@ -451,30 +578,36 @@ def train(name, cfg):
         replay = ReplayBuffer(scheme, groups, args.buffer_size, args.episode_limit + 1,
                               preprocess=preprocess, device="cpu", efficient_store=True, max_traj_len=-1)
         if args.resume:
-            if not resume_path.exists():
-                raise FileNotFoundError(resume_path)
-            saved = th.load(resume_path, map_location="cpu", weights_only=False)
-            saved_config = saved["config"]
-            current = vars(args)
-            differing = sorted(key for key in set(saved_config) | set(current)
-                               if key not in RESUME_MUTABLE
-                               and saved_config.get(key, RESUME_DEFAULTS.get(key)) != current.get(key))
-            if differing:
-                raise ValueError(
-                    "Resume configuration differs: " + ", ".join(differing)
-                    + ". Old replay data may not be mixed with a changed experiment;"
-                    " start a new --run instead.")
-            _load_network_state(learner, saved["networks"])
-            replay = saved["replay"]
-            replay.to("cpu")
-            runner.load_state_dict(saved["runner"])
-            state.update(saved["progress"])
-            random.setstate(saved["rng"]["python"])
-            np.random.set_state(saved["rng"]["numpy"])
-            th.set_rng_state(saved["rng"]["torch"].cpu())
-            if args.device == "cuda":
-                th.cuda.set_rng_state_all([item.cpu() for item in saved["rng"]["cuda"]])
-            saved_t_env = runner.t_env
+            saved, loaded_from = _load_resume(run_dir)
+            if saved is None:
+                print(f"[{name}] no resume checkpoint; start this arm from step 0", flush=True)
+                args.resume = False
+            else:
+                if loaded_from.name != "resume.pt":
+                    print(f"[{name}] {loaded_from.name} used; resume.pt was missing or unreadable", flush=True)
+                saved_config = saved["config"]
+                current = vars(args)
+                differing = sorted(key for key in set(saved_config) | set(current)
+                                   if key not in RESUME_MUTABLE
+                                   and saved_config.get(key, RESUME_DEFAULTS.get(key)) != current.get(key))
+                if differing:
+                    raise ValueError(
+                        "Resume configuration differs: " + ", ".join(differing)
+                        + ". Old replay data may not be mixed with a changed experiment;"
+                        " start a new --run instead.")
+                _load_network_state(learner, saved["networks"])
+                replay = saved["replay"]
+                replay.to("cpu")
+                runner.load_state_dict(saved["runner"])
+                state.update(saved["progress"])
+                random.setstate(saved["rng"]["python"])
+                np.random.set_state(saved["rng"]["numpy"])
+                th.set_rng_state(saved["rng"]["torch"].cpu())
+                if args.device == "cuda":
+                    th.cuda.set_rng_state_all([item.cpu() for item in saved["rng"]["cuda"]])
+                saved_t_env = runner.t_env
+                print(f"[{name}] resume t_env={runner.t_env:,} from {loaded_from.name}", flush=True)
+        session_start_t_env = runner.t_env
         if state.get("measurement_revision") != args.implementation_revision:
             state.update(measurement_revision=args.implementation_revision,
                          measurement_start_t_env=runner.t_env,
@@ -497,10 +630,12 @@ def train(name, cfg):
                                       torch=th.get_rng_state(),
                                       cuda=th.cuda.get_rng_state_all() if args.device == "cuda" else []))
             path = run_dir / f"{kind}.pt"
-            _atomic_save(value, path)
+            _atomic_save(value, path, keep_previous=(kind == "resume" and full))
             if full:
                 saved_t_env = runner.t_env
                 last_save = time.monotonic()
+                if kind == "resume":
+                    print(f"[{name}] saved resume t_env={runner.t_env:,}", flush=True)
             return path
 
         def heartbeat(evaluating=False, done=0, total=0, in_flight=0):
@@ -511,9 +646,13 @@ def train(name, cfg):
             if now - last_progress < args.progress_interval:
                 return
             elapsed = state["elapsed_seconds"] + now - started
+            session = now - started
+            session_sps = (runner.t_env - session_start_t_env) / max(session, 1e-6)
             metrics = dict(status="evaluating" if evaluating else "training", phase=args.env,
                            t_env=runner.t_env, budget_steps=args.t_max,
-                           steps_per_second=runner.t_env / max(elapsed, 1e-6),
+                           steps_per_second=session_sps,
+                           lifetime_steps_per_second=runner.t_env / max(elapsed, 1e-6),
+                           session_elapsed_seconds=session,
                            eval_completed=eval_progress["completed"] + done if evaluating else 0,
                            eval_total=eval_progress["total"] if evaluating else 0,
                            latest_validation_D=state.get("latest_validation_D"),
@@ -524,10 +663,7 @@ def train(name, cfg):
             record.progress(**metrics)
             loss_label = "-" if metrics["loss"] is None else f"{metrics['loss']:.4f}"
             d_label = "-" if state.get("latest_validation_D") is None else f"{state['latest_validation_D']:.3f}"
-            elapsed_h = int(elapsed // 3600)
-            elapsed_m = int((elapsed % 3600) // 60)
-            elapsed_s = int(elapsed % 60)
-            print(f"[{name}] {elapsed_h}:{elapsed_m:02d}:{elapsed_s:02d}  "
+            print(f"[{name}] {int(session)//3600}:{int(session)%3600//60:02d}:{int(session)%60:02d}  "
                   f"{runner.t_env:,}/{args.t_max:,}  {metrics['steps_per_second']:.1f}/s  "
                   f"upd={state['updates']}  L={loss_label}"
                   + (f"  ev={metrics['eval_completed']}/{metrics['eval_total']}" if evaluating else "")
@@ -595,7 +731,7 @@ def train(name, cfg):
                     state["best_score"] = score
                     state["best_t_env"] = runner.t_env
                 state["next_eval"] += 1
-                refresh_report(output)
+                refresh_report_safe()
                 if stop_requested:
                     break
 
@@ -610,6 +746,9 @@ def train(name, cfg):
             update_metrics = []
             if replay.can_sample(args.batch_size):
                 for _ in range(args.training_iters):
+                    heartbeat()
+                    if stop_requested:
+                        break
                     sample = replay.sample(args.batch_size)
                     max_t = int(sample.max_t_filled().item())
                     sample = sample[:, :max_t]
@@ -654,16 +793,16 @@ def train(name, cfg):
             record.learning(runner.t_env, metrics)
             run_pending_evaluations()
             heartbeat()
-            if time.monotonic() - last_save >= args.report_interval:
+            if time.monotonic() - last_save >= args.resume_interval:
                 save("resume", full=True)
             if time.monotonic() - last_report >= args.report_interval:
-                refresh_report(output)
+                refresh_report_safe()
                 last_report = time.monotonic()
 
         state["status"] = "stopped" if stop_requested else "completed"
         if not stop_requested:
             save("final")
-            if formal:
+            if formal and not bool(getattr(args, "skip_final_eval", False)):
                 from open_score.envs.features import MAX_AGENTS
                 best_path = run_dir / "best.pt"
                 saved = th.load(best_path, map_location="cpu", weights_only=False)
@@ -705,7 +844,7 @@ def train(name, cfg):
                                    current_peak_private_gib=state["measurement_peak_private_gib"],
                                    current_peak_rss_gib=state["measurement_peak_rss_gib"],
                                    status=state["status"])])
-        refresh_report(output)
+        refresh_report_safe()
         return str(path if stop_requested else run_dir / "final.pt")
     except BaseException as error:
         if runner is not None and "save" in locals():
@@ -715,7 +854,7 @@ def train(name, cfg):
                 pass
         record.progress(status="failed", error=f"{type(error).__name__}: {error}",
                         t_env=runner.t_env if runner else 0, checkpoint_t_env=saved_t_env)
-        refresh_report(output)
+        refresh_report_safe()
         raise
     finally:
         if runner is not None:
@@ -728,7 +867,9 @@ def load_policy(name, checkpoint):
     from open_score.models import build_mac
     import torch as th
     saved = th.load(checkpoint, map_location="cpu", weights_only=False)
-    if saved["config"]["method"] != name:
+    saved_method = canonical_method(saved["config"]["method"])
+    requested = canonical_method(name)
+    if saved_method != requested and not (requested == "alma_legacy" and saved_method == "alma"):
         raise ValueError("Checkpoint method does not match requested policy")
     args = SimpleNamespace(**saved["config"])
     args.device = "cpu"
@@ -771,5 +912,6 @@ def load_policy(name, checkpoint):
     return FrozenPolicyAdapter(mac, args, scheme, groups, preprocess, mixer)
 
 
-__all__ = ["train", "load_policy", "load_config", "METHODS", "PROBE_METHODS",
-           "V4_METHODS", "V5_METHODS", "V5_GLOBAL_METHODS", "POLICY_METHODS"]
+__all__ = ["train", "load_policy", "load_config", "canonical_method", "METHODS", "PROBE_METHODS",
+           "V4_METHODS", "V5_METHODS", "V5_GLOBAL_METHODS", "POLICY_METHODS",
+           "MAIN_METHODS", "MAIN_ABLATION_METHODS", "MAIN_TRAIN_METHODS", "MAIN_OVERRIDES"]
