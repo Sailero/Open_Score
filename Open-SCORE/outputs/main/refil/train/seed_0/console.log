@@ -1,0 +1,1322 @@
+[refil] 1,399/1,000,000  126.6/s  upd=8  L=0.0468  D=-
+[refil] 2,169/1,000,000  97.3/s  upd=24  L=0.0415  D=-
+[refil] 2,921/1,000,000  87.3/s  upd=40  L=0.0370  D=-
+[refil] 3,650/1,000,000  83.4/s  upd=56  L=0.0534  D=-
+[refil] 4,332/1,000,000  80.6/s  upd=72  L=0.0463  D=-
+[refil] 5,059/1,000,000  79.2/s  upd=88  L=0.0492  D=-
+[refil] 5,785/1,000,000  78.3/s  upd=104  L=0.0380  D=-
+[refil] 6,426/1,000,000  76.6/s  upd=120  L=0.0436  D=-
+[refil] 7,146/1,000,000  76.1/s  upd=136  L=0.0517  D=-
+[refil] 7,923/1,000,000  76.0/s  upd=152  L=0.0502  D=-
+[refil] 8,643/1,000,000  75.1/s  upd=168  L=0.0553  D=-
+[refil] 9,354/1,000,000  74.8/s  upd=184  L=0.0494  D=-
+[refil] 10,131/1,000,000  74.3/s  upd=200  L=0.0347  D=-
+[refil] 10,978/1,000,000  74.4/s  upd=216  L=0.0447  D=-
+[refil] 11,741/1,000,000  74.0/s  upd=232  L=0.0439  D=-
+[refil] 12,491/1,000,000  74.0/s  upd=248  L=0.0599  D=-
+[refil] 13,263/1,000,000  74.2/s  upd=264  L=0.0489  D=-
+[refil] 14,139/1,000,000  74.2/s  upd=280  L=0.0385  D=-
+[refil] 14,879/1,000,000  73.7/s  upd=296  L=0.0520  D=-
+[refil] 15,656/1,000,000  73.7/s  upd=312  L=0.0311  D=-
+[refil] 16,387/1,000,000  73.6/s  upd=328  L=0.0480  D=-
+[refil] 17,193/1,000,000  73.9/s  upd=344  L=0.0393  D=-
+[refil] 17,932/1,000,000  73.8/s  upd=360  L=0.0380  D=-
+[refil] 18,733/1,000,000  73.5/s  upd=376  L=0.0455  D=-
+[refil] 19,407/1,000,000  73.2/s  upd=392  L=0.0542  D=-
+[refil] 20,150/1,000,000  72.8/s  upd=408  L=0.0340  ev=0/100  D=-
+[refil] 20,150/1,000,000  70.3/s  upd=408  L=0.0340  ev=39/100  D=-
+[refil] 20,150/1,000,000  67.9/s  upd=408  L=0.0340  ev=70/100  D=-
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 20,150/1,000,000  65.7/s  upd=408  L=0.0340  D=4.941
+[refil] 20,834/1,000,000  65.7/s  upd=424  L=0.0371  D=4.941
+[refil] 21,659/1,000,000  65.9/s  upd=440  L=0.0416  D=4.941
+[refil] 22,429/1,000,000  66.0/s  upd=456  L=0.0506  D=4.941
+[refil] 23,146/1,000,000  66.2/s  upd=472  L=0.0618  D=4.941
+[refil] 23,896/1,000,000  66.2/s  upd=488  L=0.0296  D=4.941
+[refil] 24,624/1,000,000  66.3/s  upd=504  L=0.0450  D=4.941
+[refil] 25,355/1,000,000  66.3/s  upd=520  L=0.0581  D=4.941
+[refil] 26,011/1,000,000  66.3/s  upd=536  L=0.0494  D=4.941
+[refil] 26,768/1,000,000  66.2/s  upd=552  L=0.0490  D=4.941
+[refil] 27,595/1,000,000  66.4/s  upd=568  L=0.0469  D=4.941
+[refil] 28,462/1,000,000  66.6/s  upd=584  L=0.0499  D=4.941
+[refil] 29,234/1,000,000  66.6/s  upd=600  L=0.0422  D=4.941
+[refil] 29,908/1,000,000  66.6/s  upd=616  L=0.0373  D=4.941
+[refil] 30,701/1,000,000  66.6/s  upd=632  L=0.0528  D=4.941
+[refil] 31,541/1,000,000  66.8/s  upd=648  L=0.0472  D=4.941
+[refil] 32,354/1,000,000  67.0/s  upd=664  L=0.0454  D=4.941
+[refil] 33,161/1,000,000  67.2/s  upd=680  L=0.0531  D=4.941
+[refil] 33,892/1,000,000  67.3/s  upd=696  L=0.0634  D=4.941
+[refil] 34,695/1,000,000  67.4/s  upd=712  L=0.0439  D=4.941
+[refil] 35,525/1,000,000  67.5/s  upd=728  L=0.0427  D=4.941
+[refil] 36,321/1,000,000  67.5/s  upd=744  L=0.0517  D=4.941
+[refil] 37,126/1,000,000  67.7/s  upd=760  L=0.0424  D=4.941
+[refil] 37,828/1,000,000  67.7/s  upd=776  L=0.0467  D=4.941
+[refil] 38,561/1,000,000  67.7/s  upd=792  L=0.0372  D=4.941
+[refil] 39,242/1,000,000  67.6/s  upd=808  L=0.0433  D=4.941
+[refil] 39,959/1,000,000  67.6/s  upd=824  L=0.0619  D=4.941
+[refil] 40,328/1,000,000  67.1/s  upd=832  L=0.0383  ev=14/100  D=4.941
+[refil] 40,328/1,000,000  66.0/s  upd=832  L=0.0383  ev=58/100  D=4.941
+[refil] 40,328/1,000,000  64.9/s  upd=832  L=0.0383  ev=95/100  D=4.941
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 40,682/1,000,000  64.5/s  upd=840  L=0.0644  D=4.786
+[refil] 41,448/1,000,000  64.6/s  upd=856  L=0.0445  D=4.786
+[refil] 42,178/1,000,000  64.7/s  upd=872  L=0.0359  D=4.786
+[refil] 42,913/1,000,000  64.7/s  upd=888  L=0.0475  D=4.786
+[refil] 43,678/1,000,000  64.7/s  upd=904  L=0.0517  D=4.786
+[refil] 44,371/1,000,000  64.7/s  upd=920  L=0.0372  D=4.786
+[refil] 45,119/1,000,000  64.7/s  upd=936  L=0.0441  D=4.786
+[refil] 45,898/1,000,000  64.8/s  upd=952  L=0.0462  D=4.786
+[refil] 46,618/1,000,000  64.8/s  upd=968  L=0.0690  D=4.786
+[refil] 47,390/1,000,000  65.0/s  upd=984  L=0.0207  D=4.786
+[refil] 48,168/1,000,000  65.2/s  upd=1000  L=0.0431  D=4.786
+[refil] 49,285/1,000,000  65.5/s  upd=1024  L=0.0418  D=4.786
+[refil] 49,975/1,000,000  65.5/s  upd=1040  L=0.0362  D=4.786
+[refil] 50,798/1,000,000  65.6/s  upd=1056  L=0.0866  D=4.786
+[refil] 51,508/1,000,000  65.6/s  upd=1072  L=0.0364  D=4.786
+[refil] 52,327/1,000,000  65.7/s  upd=1088  L=0.0462  D=4.786
+[refil] 53,116/1,000,000  65.7/s  upd=1104  L=0.0300  D=4.786
+[refil] 53,815/1,000,000  65.8/s  upd=1120  L=0.0509  D=4.786
+[refil] 54,538/1,000,000  65.8/s  upd=1136  L=0.0467  D=4.786
+[refil] 55,271/1,000,000  65.8/s  upd=1152  L=0.0517  D=4.786
+[refil] 56,052/1,000,000  65.8/s  upd=1168  L=0.0359  D=4.786
+[refil] 56,788/1,000,000  65.8/s  upd=1184  L=0.0482  D=4.786
+[refil] 57,525/1,000,000  65.8/s  upd=1200  L=0.0427  D=4.786
+[refil] 58,340/1,000,000  65.9/s  upd=1216  L=0.0584  D=4.786
+[refil] 59,040/1,000,000  65.8/s  upd=1232  L=0.0422  D=4.786
+[refil] 59,829/1,000,000  65.9/s  upd=1248  L=0.0432  D=4.786
+[refil] 60,182/1,000,000  65.6/s  upd=1256  L=0.0369  ev=16/100  D=4.786
+[refil] 60,182/1,000,000  64.9/s  upd=1256  L=0.0369  ev=64/100  D=4.786
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 60,182/1,000,000  64.1/s  upd=1256  L=0.0369  D=4.334
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 60,916/1,000,000  64.0/s  upd=1272  L=0.0525  D=4.334
+[refil] 61,702/1,000,000  64.1/s  upd=1288  L=0.0424  D=4.334
+[refil] 62,559/1,000,000  64.3/s  upd=1304  L=0.0503  D=4.334
+[refil] 63,314/1,000,000  64.5/s  upd=1320  L=0.0484  D=4.334
+[refil] 64,101/1,000,000  64.6/s  upd=1336  L=0.0490  D=4.334
+[refil] 64,793/1,000,000  64.6/s  upd=1352  L=0.0387  D=4.334
+[refil] 65,459/1,000,000  64.7/s  upd=1368  L=0.0493  D=4.334
+[refil] 66,240/1,000,000  64.8/s  upd=1384  L=0.0502  D=4.334
+[refil] 66,955/1,000,000  64.8/s  upd=1400  L=0.0614  D=4.334
+[refil] 67,666/1,000,000  64.9/s  upd=1416  L=0.0380  D=4.334
+[refil] 68,437/1,000,000  64.9/s  upd=1432  L=0.0546  D=4.334
+[refil] 69,245/1,000,000  64.9/s  upd=1448  L=0.0536  D=4.334
+[refil] 69,909/1,000,000  64.9/s  upd=1464  L=0.0338  D=4.334
+[refil] 70,770/1,000,000  65.0/s  upd=1480  L=0.0433  D=4.334
+[refil] 71,541/1,000,000  65.0/s  upd=1496  L=0.0541  D=4.334
+[refil] 72,262/1,000,000  65.1/s  upd=1512  L=0.0350  D=4.334
+[refil] 73,058/1,000,000  65.1/s  upd=1528  L=0.0439  D=4.334
+[refil] 73,918/1,000,000  65.3/s  upd=1544  L=0.0387  D=4.334
+[refil] 74,603/1,000,000  65.3/s  upd=1560  L=0.0487  D=4.334
+[refil] 75,416/1,000,000  65.3/s  upd=1576  L=0.0476  D=4.334
+[refil] 76,126/1,000,000  65.4/s  upd=1592  L=0.0435  D=4.334
+[refil] 76,744/1,000,000  65.3/s  upd=1608  L=0.0437  D=4.334
+[refil] 77,484/1,000,000  65.3/s  upd=1624  L=0.0444  D=4.334
+[refil] 78,175/1,000,000  65.3/s  upd=1640  L=0.0513  D=4.334
+[refil] 78,947/1,000,000  65.3/s  upd=1656  L=0.0419  D=4.334
+[refil] 79,691/1,000,000  65.4/s  upd=1672  L=0.0600  D=4.334
+[refil] 80,073/1,000,000  65.2/s  upd=1680  L=0.0515  ev=16/100  D=4.334
+[refil] 80,073/1,000,000  64.7/s  upd=1680  L=0.0515  ev=64/100  D=4.334
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 80,073/1,000,000  64.1/s  upd=1680  L=0.0515  D=4.102
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 80,840/1,000,000  64.0/s  upd=1696  L=0.0465  D=4.102
+[refil] 81,580/1,000,000  64.0/s  upd=1712  L=0.0417  D=4.102
+[refil] 82,392/1,000,000  64.1/s  upd=1728  L=0.0494  D=4.102
+[refil] 83,158/1,000,000  64.1/s  upd=1744  L=0.0392  D=4.102
+[refil] 83,884/1,000,000  64.2/s  upd=1760  L=0.0412  D=4.102
+[refil] 84,574/1,000,000  64.2/s  upd=1776  L=0.0535  D=4.102
+[refil] 85,374/1,000,000  64.3/s  upd=1792  L=0.0502  D=4.102
+[refil] 86,141/1,000,000  64.3/s  upd=1808  L=0.0438  D=4.102
+[refil] 86,864/1,000,000  64.3/s  upd=1824  L=0.0525  D=4.102
+[refil] 87,573/1,000,000  64.3/s  upd=1840  L=0.0396  D=4.102
+[refil] 88,315/1,000,000  64.4/s  upd=1856  L=0.0442  D=4.102
+[refil] 89,061/1,000,000  64.4/s  upd=1872  L=0.0373  D=4.102
+[refil] 89,770/1,000,000  64.4/s  upd=1888  L=0.0516  D=4.102
+[refil] 90,586/1,000,000  64.4/s  upd=1904  L=0.0380  D=4.102
+[refil] 91,357/1,000,000  64.5/s  upd=1920  L=0.0384  D=4.102
+[refil] 92,142/1,000,000  64.5/s  upd=1936  L=0.0358  D=4.102
+[refil] 92,817/1,000,000  64.5/s  upd=1952  L=0.0358  D=4.102
+[refil] 93,529/1,000,000  64.5/s  upd=1968  L=0.0470  D=4.102
+[refil] 94,284/1,000,000  64.6/s  upd=1984  L=0.0593  D=4.102
+[refil] 95,126/1,000,000  64.6/s  upd=2000  L=0.0387  D=4.102
+[refil] 95,847/1,000,000  64.7/s  upd=2016  L=0.0502  D=4.102
+[refil] 96,762/1,000,000  64.8/s  upd=2032  L=0.0444  D=4.102
+[refil] 97,435/1,000,000  64.9/s  upd=2048  L=0.0352  D=4.102
+[refil] 98,205/1,000,000  64.9/s  upd=2064  L=0.0470  D=4.102
+[refil] 99,045/1,000,000  65.0/s  upd=2080  L=0.0506  D=4.102
+[refil] 99,825/1,000,000  65.0/s  upd=2096  L=0.0324  D=4.102
+[refil] 100,213/1,000,000  64.9/s  upd=2104  L=0.0518  ev=8/100  D=4.102
+[refil] 100,213/1,000,000  64.4/s  upd=2104  L=0.0518  ev=38/100  D=4.102
+[refil] 100,213/1,000,000  64.0/s  upd=2104  L=0.0518  ev=71/100  D=4.102
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 100,213/1,000,000  63.6/s  upd=2104  L=0.0518  D=4.802
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 100,899/1,000,000  63.5/s  upd=2120  L=0.0568  D=4.802
+[refil] 101,616/1,000,000  63.6/s  upd=2136  L=0.0373  D=4.802
+[refil] 102,411/1,000,000  63.6/s  upd=2152  L=0.0293  D=4.802
+[refil] 103,317/1,000,000  63.7/s  upd=2168  L=0.0546  D=4.802
+[refil] 104,111/1,000,000  63.8/s  upd=2184  L=0.0439  D=4.802
+[refil] 104,787/1,000,000  63.8/s  upd=2200  L=0.0462  D=4.802
+[refil] 105,501/1,000,000  63.8/s  upd=2216  L=0.0385  D=4.802
+[refil] 106,372/1,000,000  63.9/s  upd=2232  L=0.0682  D=4.802
+[refil] 107,181/1,000,000  64.0/s  upd=2248  L=0.0362  D=4.802
+[refil] 107,920/1,000,000  64.0/s  upd=2264  L=0.0541  D=4.802
+[refil] 108,649/1,000,000  64.1/s  upd=2280  L=0.0487  D=4.802
+[refil] 109,395/1,000,000  64.1/s  upd=2296  L=0.0333  D=4.802
+[refil] 110,076/1,000,000  64.1/s  upd=2312  L=0.0396  D=4.802
+[refil] 110,778/1,000,000  64.2/s  upd=2328  L=0.0330  D=4.802
+[refil] 111,475/1,000,000  64.2/s  upd=2344  L=0.0374  D=4.802
+[refil] 112,178/1,000,000  64.2/s  upd=2360  L=0.0566  D=4.802
+[refil] 112,932/1,000,000  64.3/s  upd=2376  L=0.0456  D=4.802
+[refil] 113,644/1,000,000  64.3/s  upd=2392  L=0.0301  D=4.802
+[refil] 114,427/1,000,000  64.3/s  upd=2408  L=0.0398  D=4.802
+[refil] 115,268/1,000,000  64.4/s  upd=2424  L=0.0335  D=4.802
+[refil] 116,051/1,000,000  64.4/s  upd=2440  L=0.0374  D=4.802
+[refil] 116,856/1,000,000  64.4/s  upd=2456  L=0.0379  D=4.802
+[refil] 117,476/1,000,000  64.4/s  upd=2472  L=0.0294  D=4.802
+[refil] 118,279/1,000,000  64.5/s  upd=2488  L=0.0345  D=4.802
+[refil] 119,149/1,000,000  64.5/s  upd=2504  L=0.0375  D=4.802
+[refil] 119,932/1,000,000  64.6/s  upd=2520  L=0.0384  D=4.802
+[refil] 120,334/1,000,000  64.5/s  upd=2528  L=0.0629  ev=16/100  D=4.802
+[refil] 120,334/1,000,000  64.1/s  upd=2528  L=0.0629  ev=56/100  D=4.802
+[refil] 120,334/1,000,000  63.8/s  upd=2528  L=0.0629  ev=88/100  D=4.802
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 120,717/1,000,000  63.6/s  upd=2536  L=0.0496  D=5.008
+[refil] 121,402/1,000,000  63.6/s  upd=2552  L=0.0344  D=5.008
+[refil] 122,221/1,000,000  63.7/s  upd=2568  L=0.0409  D=5.008
+[refil] 122,938/1,000,000  63.7/s  upd=2584  L=0.0456  D=5.008
+[refil] 123,665/1,000,000  63.7/s  upd=2600  L=0.0394  D=5.008
+[refil] 124,526/1,000,000  63.8/s  upd=2616  L=0.0382  D=5.008
+[refil] 125,341/1,000,000  63.9/s  upd=2632  L=0.0364  D=5.008
+[refil] 126,100/1,000,000  64.0/s  upd=2648  L=0.0405  D=5.008
+[refil] 126,793/1,000,000  64.0/s  upd=2664  L=0.0297  D=5.008
+[refil] 127,501/1,000,000  64.0/s  upd=2680  L=0.0430  D=5.008
+[refil] 128,243/1,000,000  64.1/s  upd=2696  L=0.0502  D=5.008
+[refil] 129,010/1,000,000  64.1/s  upd=2712  L=0.0317  D=5.008
+[refil] 129,818/1,000,000  64.2/s  upd=2728  L=0.0408  D=5.008
+[refil] 130,612/1,000,000  64.2/s  upd=2744  L=0.0509  D=5.008
+[refil] 131,493/1,000,000  64.3/s  upd=2760  L=0.0352  D=5.008
+[refil] 132,315/1,000,000  64.4/s  upd=2776  L=0.0467  D=5.008
+[refil] 133,074/1,000,000  64.4/s  upd=2792  L=0.0467  D=5.008
+[refil] 133,835/1,000,000  64.4/s  upd=2808  L=0.0415  D=5.008
+[refil] 134,585/1,000,000  64.4/s  upd=2824  L=0.0369  D=5.008
+[refil] 135,342/1,000,000  64.5/s  upd=2840  L=0.0294  D=5.008
+[refil] 136,027/1,000,000  64.5/s  upd=2856  L=0.0454  D=5.008
+[refil] 136,757/1,000,000  64.5/s  upd=2872  L=0.0473  D=5.008
+[refil] 137,504/1,000,000  64.5/s  upd=2888  L=0.0402  D=5.008
+[refil] 138,210/1,000,000  64.5/s  upd=2904  L=0.0327  D=5.008
+[refil] 139,001/1,000,000  64.6/s  upd=2920  L=0.0460  D=5.008
+[refil] 139,884/1,000,000  64.6/s  upd=2936  L=0.0491  D=5.008
+[refil] 140,280/1,000,000  64.5/s  upd=2944  L=0.0539  ev=8/100  D=5.008
+[refil] 140,280/1,000,000  64.2/s  upd=2944  L=0.0539  ev=49/100  D=5.008
+[refil] 140,280/1,000,000  63.9/s  upd=2944  L=0.0539  ev=80/100  D=5.008
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 140,280/1,000,000  63.6/s  upd=2944  L=0.0539  D=4.427
+[refil] 141,420/1,000,000  63.7/s  upd=2968  L=0.0410  D=4.427
+[refil] 142,173/1,000,000  63.8/s  upd=2984  L=0.0410  D=4.427
+[refil] 142,904/1,000,000  63.8/s  upd=3000  L=0.0392  D=4.427
+[refil] 143,612/1,000,000  63.8/s  upd=3016  L=0.0461  D=4.427
+[refil] 144,382/1,000,000  63.9/s  upd=3032  L=0.0434  D=4.427
+[refil] 145,088/1,000,000  63.9/s  upd=3048  L=0.0476  D=4.427
+[refil] 145,845/1,000,000  63.9/s  upd=3064  L=0.0353  D=4.427
+[refil] 146,654/1,000,000  63.9/s  upd=3080  L=0.0363  D=4.427
+[refil] 147,393/1,000,000  63.9/s  upd=3096  L=0.0250  D=4.427
+[refil] 148,101/1,000,000  63.9/s  upd=3112  L=0.0440  D=4.427
+[refil] 148,804/1,000,000  63.9/s  upd=3128  L=0.0321  D=4.427
+[refil] 149,506/1,000,000  63.9/s  upd=3144  L=0.0446  D=4.427
+[refil] 150,215/1,000,000  63.9/s  upd=3160  L=0.0357  D=4.427
+[refil] 150,915/1,000,000  63.9/s  upd=3176  L=0.0518  D=4.427
+[refil] 151,708/1,000,000  64.0/s  upd=3192  L=0.0329  D=4.427
+[refil] 152,333/1,000,000  64.0/s  upd=3208  L=0.0465  D=4.427
+[refil] 153,129/1,000,000  64.0/s  upd=3224  L=0.0569  D=4.427
+[refil] 153,847/1,000,000  64.0/s  upd=3240  L=0.0330  D=4.427
+[refil] 154,545/1,000,000  64.0/s  upd=3256  L=0.0355  D=4.427
+[refil] 155,220/1,000,000  64.1/s  upd=3272  L=0.0404  D=4.427
+[refil] 155,937/1,000,000  64.1/s  upd=3288  L=0.0500  D=4.427
+[refil] 156,708/1,000,000  64.1/s  upd=3304  L=0.0374  D=4.427
+[refil] 157,428/1,000,000  64.1/s  upd=3320  L=0.0410  D=4.427
+[refil] 158,180/1,000,000  64.2/s  upd=3336  L=0.0399  D=4.427
+[refil] 159,187/1,000,000  64.2/s  upd=3360  L=0.0449  D=4.427
+[refil] 159,936/1,000,000  64.3/s  upd=3376  L=0.0433  D=4.427
+[refil] 160,301/1,000,000  64.2/s  upd=3384  L=0.0394  ev=16/100  D=4.427
+[refil] 160,301/1,000,000  63.9/s  upd=3384  L=0.0394  ev=55/100  D=4.427
+[refil] 160,301/1,000,000  63.7/s  upd=3384  L=0.0394  ev=88/100  D=4.427
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 160,609/1,000,000  63.5/s  upd=3392  L=0.0446  D=4.455
+[refil] 161,378/1,000,000  63.5/s  upd=3408  L=0.0353  D=4.455
+[refil] 162,074/1,000,000  63.5/s  upd=3424  L=0.0355  D=4.455
+[refil] 162,839/1,000,000  63.5/s  upd=3440  L=0.0335  D=4.455
+[refil] 163,566/1,000,000  63.6/s  upd=3456  L=0.0473  D=4.455
+[refil] 164,368/1,000,000  63.6/s  upd=3472  L=0.0489  D=4.455
+[refil] 165,138/1,000,000  63.6/s  upd=3488  L=0.0467  D=4.455
+[refil] 165,946/1,000,000  63.7/s  upd=3504  L=0.0454  D=4.455
+[refil] 166,622/1,000,000  63.7/s  upd=3520  L=0.0383  D=4.455
+[refil] 167,311/1,000,000  63.7/s  upd=3536  L=0.0400  D=4.455
+[refil] 168,073/1,000,000  63.7/s  upd=3552  L=0.0482  D=4.455
+[refil] 168,850/1,000,000  63.7/s  upd=3568  L=0.0356  D=4.455
+[refil] 169,593/1,000,000  63.8/s  upd=3584  L=0.0407  D=4.455
+[refil] 170,411/1,000,000  63.8/s  upd=3600  L=0.0458  D=4.455
+[refil] 171,127/1,000,000  63.8/s  upd=3616  L=0.0392  D=4.455
+[refil] 171,850/1,000,000  63.8/s  upd=3632  L=0.0528  D=4.455
+[refil] 172,604/1,000,000  63.9/s  upd=3648  L=0.0391  D=4.455
+[refil] 173,350/1,000,000  63.9/s  upd=3664  L=0.0387  D=4.455
+[refil] 174,363/1,000,000  64.0/s  upd=3688  L=0.0369  D=4.455
+[refil] 175,096/1,000,000  64.0/s  upd=3704  L=0.0410  D=4.455
+[refil] 175,971/1,000,000  64.1/s  upd=3720  L=0.0384  D=4.455
+[refil] 176,652/1,000,000  64.1/s  upd=3736  L=0.0439  D=4.455
+[refil] 177,401/1,000,000  64.1/s  upd=3752  L=0.0466  D=4.455
+[refil] 178,162/1,000,000  64.2/s  upd=3768  L=0.0507  D=4.455
+[refil] 178,841/1,000,000  64.2/s  upd=3784  L=0.0344  D=4.455
+[refil] 179,856/1,000,000  64.2/s  upd=3808  L=0.0406  D=4.455
+[refil] 180,255/1,000,000  64.1/s  upd=3816  L=0.0423  ev=15/100  D=4.455
+[refil] 180,255/1,000,000  63.9/s  upd=3816  L=0.0423  ev=48/100  D=4.455
+[refil] 180,255/1,000,000  63.7/s  upd=3816  L=0.0423  ev=92/100  D=4.455
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 180,669/1,000,000  63.6/s  upd=3824  L=0.0420  D=4.347
+[refil] 181,422/1,000,000  63.6/s  upd=3840  L=0.0483  D=4.347
+[refil] 182,177/1,000,000  63.6/s  upd=3856  L=0.0366  D=4.347
+[refil] 182,863/1,000,000  63.7/s  upd=3872  L=0.0514  D=4.347
+[refil] 183,571/1,000,000  63.7/s  upd=3888  L=0.0404  D=4.347
+[refil] 184,299/1,000,000  63.7/s  upd=3904  L=0.0651  D=4.347
+[refil] 185,071/1,000,000  63.7/s  upd=3920  L=0.0429  D=4.347
+[refil] 185,837/1,000,000  63.7/s  upd=3936  L=0.0411  D=4.347
+[refil] 186,605/1,000,000  63.7/s  upd=3952  L=0.0514  D=4.347
+[refil] 187,364/1,000,000  63.8/s  upd=3968  L=0.0471  D=4.347
+[refil] 188,116/1,000,000  63.8/s  upd=3984  L=0.0414  D=4.347
+[refil] 188,847/1,000,000  63.8/s  upd=4000  L=0.0453  D=4.347
+[refil] 189,931/1,000,000  63.9/s  upd=4024  L=0.0544  D=4.347
+[refil] 190,641/1,000,000  63.9/s  upd=4040  L=0.0431  D=4.347
+[refil] 191,674/1,000,000  64.0/s  upd=4064  L=0.0508  D=4.347
+[refil] 192,385/1,000,000  64.0/s  upd=4080  L=0.0492  D=4.347
+[refil] 193,151/1,000,000  64.0/s  upd=4096  L=0.0338  D=4.347
+[refil] 193,975/1,000,000  64.1/s  upd=4112  L=0.0331  D=4.347
+[refil] 194,757/1,000,000  64.1/s  upd=4128  L=0.0429  D=4.347
+[refil] 195,552/1,000,000  64.2/s  upd=4144  L=0.0398  D=4.347
+[refil] 196,245/1,000,000  64.2/s  upd=4160  L=0.0474  D=4.347
+[refil] 196,960/1,000,000  64.2/s  upd=4176  L=0.0258  D=4.347
+[refil] 197,778/1,000,000  64.2/s  upd=4192  L=0.0330  D=4.347
+[refil] 198,439/1,000,000  64.3/s  upd=4208  L=0.0421  D=4.347
+[refil] 199,219/1,000,000  64.3/s  upd=4224  L=0.0342  D=4.347
+[refil] 199,998/1,000,000  64.3/s  upd=4240  L=0.0260  D=4.347
+[refil] 200,384/1,000,000  64.3/s  upd=4248  L=0.0394  ev=16/100  D=4.347
+[refil] 200,384/1,000,000  64.1/s  upd=4248  L=0.0394  ev=56/100  D=4.347
+[refil] 200,384/1,000,000  63.8/s  upd=4248  L=0.0394  ev=96/100  D=4.347
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 201,137/1,000,000  63.8/s  upd=4264  L=0.0411  D=4.119
+[refil] 201,882/1,000,000  63.8/s  upd=4280  L=0.0320  D=4.119
+[refil] 202,922/1,000,000  63.9/s  upd=4304  L=0.0373  D=4.119
+[refil] 204,067/1,000,000  64.0/s  upd=4328  L=0.0440  D=4.119
+[refil] 204,746/1,000,000  64.0/s  upd=4344  L=0.0349  D=4.119
+[refil] 205,582/1,000,000  64.1/s  upd=4360  L=0.0516  D=4.119
+[refil] 206,416/1,000,000  64.2/s  upd=4376  L=0.0452  D=4.119
+[refil] 207,250/1,000,000  64.2/s  upd=4392  L=0.0380  D=4.119
+[refil] 207,936/1,000,000  64.2/s  upd=4408  L=0.0395  D=4.119
+[refil] 208,625/1,000,000  64.3/s  upd=4424  L=0.0411  D=4.119
+[refil] 209,397/1,000,000  64.3/s  upd=4440  L=0.0331  D=4.119
+[refil] 210,379/1,000,000  64.4/s  upd=4456  L=0.0427  D=4.119
+[refil] 211,174/1,000,000  64.4/s  upd=4472  L=0.0295  D=4.119
+[refil] 211,878/1,000,000  64.5/s  upd=4488  L=0.0367  D=4.119
+[refil] 212,770/1,000,000  64.5/s  upd=4504  L=0.0451  D=4.119
+[refil] 213,547/1,000,000  64.6/s  upd=4520  L=0.0420  D=4.119
+[refil] 214,695/1,000,000  64.7/s  upd=4544  L=0.0424  D=4.119
+[refil] 215,521/1,000,000  64.7/s  upd=4560  L=0.0361  D=4.119
+[refil] 216,273/1,000,000  64.7/s  upd=4576  L=0.0444  D=4.119
+[refil] 217,384/1,000,000  64.8/s  upd=4600  L=0.0400  D=4.119
+[refil] 218,159/1,000,000  64.9/s  upd=4616  L=0.0383  D=4.119
+[refil] 218,949/1,000,000  64.9/s  upd=4632  L=0.0420  D=4.119
+[refil] 219,763/1,000,000  64.9/s  upd=4648  L=0.0428  D=4.119
+[refil] 220,121/1,000,000  64.8/s  upd=4656  L=0.0479  ev=16/100  D=4.119
+[refil] 220,121/1,000,000  64.6/s  upd=4656  L=0.0479  ev=64/100  D=4.119
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 220,446/1,000,000  64.5/s  upd=4664  L=0.0515  D=4.355
+[refil] 221,194/1,000,000  64.5/s  upd=4680  L=0.0344  D=4.355
+[refil] 221,885/1,000,000  64.5/s  upd=4696  L=0.0370  D=4.355
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 222,656/1,000,000  64.6/s  upd=4712  L=0.0354  D=4.355
+[refil] 223,397/1,000,000  64.6/s  upd=4728  L=0.0415  D=4.355
+[refil] 224,171/1,000,000  64.6/s  upd=4744  L=0.0494  D=4.355
+[refil] 224,970/1,000,000  64.7/s  upd=4760  L=0.0350  D=4.355
+[refil] 226,123/1,000,000  64.8/s  upd=4784  L=0.0378  D=4.355
+[refil] 226,810/1,000,000  64.8/s  upd=4800  L=0.0408  D=4.355
+[refil] 227,522/1,000,000  64.8/s  upd=4816  L=0.0434  D=4.355
+[refil] 228,349/1,000,000  64.9/s  upd=4832  L=0.0452  D=4.355
+[refil] 229,228/1,000,000  64.9/s  upd=4848  L=0.0596  D=4.355
+[refil] 229,913/1,000,000  64.9/s  upd=4864  L=0.0420  D=4.355
+[refil] 231,083/1,000,000  65.0/s  upd=4888  L=0.0396  D=4.355
+[refil] 231,754/1,000,000  65.0/s  upd=4904  L=0.0357  D=4.355
+[refil] 232,520/1,000,000  65.0/s  upd=4920  L=0.0437  D=4.355
+[refil] 233,467/1,000,000  65.1/s  upd=4944  L=0.0482  D=4.355
+[refil] 234,229/1,000,000  65.1/s  upd=4960  L=0.0277  D=4.355
+[refil] 235,017/1,000,000  65.1/s  upd=4976  L=0.0424  D=4.355
+[refil] 235,715/1,000,000  65.1/s  upd=4992  L=0.0558  D=4.355
+[refil] 236,447/1,000,000  65.2/s  upd=5008  L=0.0404  D=4.355
+[refil] 237,642/1,000,000  65.3/s  upd=5032  L=0.0416  D=4.355
+[refil] 238,729/1,000,000  65.3/s  upd=5056  L=0.0436  D=4.355
+[refil] 239,473/1,000,000  65.3/s  upd=5072  L=0.0458  D=4.355
+[refil] 240,236/1,000,000  65.4/s  upd=5088  L=0.0383  ev=0/100  D=4.355
+[refil] 240,236/1,000,000  65.2/s  upd=5088  L=0.0383  ev=40/100  D=4.355
+[refil] 240,236/1,000,000  65.0/s  upd=5088  L=0.0383  ev=80/100  D=4.355
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 240,580/1,000,000  64.9/s  upd=5096  L=0.0457  D=3.788
+[refil] 241,250/1,000,000  64.9/s  upd=5112  L=0.0366  D=3.788
+[refil] 242,057/1,000,000  65.0/s  upd=5128  L=0.0389  D=3.788
+[refil] 242,808/1,000,000  65.0/s  upd=5144  L=0.0393  D=3.788
+[refil] 243,517/1,000,000  65.0/s  upd=5160  L=0.0483  D=3.788
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 244,194/1,000,000  65.0/s  upd=5176  L=0.0483  D=3.788
+[refil] 244,853/1,000,000  65.0/s  upd=5192  L=0.0347  D=3.788
+[refil] 245,557/1,000,000  65.0/s  upd=5208  L=0.0395  D=3.788
+[refil] 246,292/1,000,000  65.0/s  upd=5224  L=0.0488  D=3.788
+[refil] 247,002/1,000,000  65.1/s  upd=5240  L=0.0380  D=3.788
+[refil] 248,059/1,000,000  65.1/s  upd=5264  L=0.0380  D=3.788
+[refil] 248,717/1,000,000  65.1/s  upd=5280  L=0.0411  D=3.788
+[refil] 249,443/1,000,000  65.1/s  upd=5296  L=0.0393  D=3.788
+[refil] 250,158/1,000,000  65.2/s  upd=5312  L=0.0394  D=3.788
+[refil] 251,255/1,000,000  65.2/s  upd=5336  L=0.0326  D=3.788
+[refil] 251,992/1,000,000  65.3/s  upd=5352  L=0.0451  D=3.788
+[refil] 253,236/1,000,000  65.4/s  upd=5376  L=0.0529  D=3.788
+[refil] 254,032/1,000,000  65.4/s  upd=5392  L=0.0329  D=3.788
+[refil] 254,747/1,000,000  65.4/s  upd=5408  L=0.0327  D=3.788
+[refil] 255,531/1,000,000  65.4/s  upd=5424  L=0.0400  D=3.788
+[refil] 256,237/1,000,000  65.4/s  upd=5440  L=0.0541  D=3.788
+[refil] 256,951/1,000,000  65.4/s  upd=5456  L=0.0661  D=3.788
+[refil] 257,652/1,000,000  65.5/s  upd=5472  L=0.0430  D=3.788
+[refil] 258,394/1,000,000  65.5/s  upd=5488  L=0.0522  D=3.788
+[refil] 259,495/1,000,000  65.5/s  upd=5512  L=0.0261  D=3.788
+[refil] 260,264/1,000,000  65.5/s  upd=5528  L=0.0399  ev=0/100  D=3.788
+[refil] 260,264/1,000,000  65.4/s  upd=5528  L=0.0399  ev=40/100  D=3.788
+[refil] 260,264/1,000,000  65.2/s  upd=5528  L=0.0399  ev=80/100  D=3.788
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 260,651/1,000,000  65.1/s  upd=5536  L=0.0558  D=4.093
+[refil] 261,385/1,000,000  65.1/s  upd=5552  L=0.0393  D=4.093
+[refil] 262,439/1,000,000  65.2/s  upd=5576  L=0.0329  D=4.093
+[refil] 263,173/1,000,000  65.2/s  upd=5592  L=0.0375  D=4.093
+[refil] 263,855/1,000,000  65.2/s  upd=5608  L=0.0579  D=4.093
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 264,597/1,000,000  65.2/s  upd=5624  L=0.0379  D=4.093
+[refil] 265,255/1,000,000  65.2/s  upd=5640  L=0.0321  D=4.093
+[refil] 266,271/1,000,000  65.3/s  upd=5664  L=0.0306  D=4.093
+[refil] 267,389/1,000,000  65.3/s  upd=5688  L=0.0462  D=4.093
+[refil] 268,514/1,000,000  65.4/s  upd=5712  L=0.0461  D=4.093
+[refil] 269,247/1,000,000  65.4/s  upd=5728  L=0.0501  D=4.093
+[refil] 269,960/1,000,000  65.4/s  upd=5744  L=0.0373  D=4.093
+[refil] 270,675/1,000,000  65.5/s  upd=5760  L=0.0425  D=4.093
+[refil] 271,344/1,000,000  65.5/s  upd=5776  L=0.0539  D=4.093
+[refil] 272,010/1,000,000  65.5/s  upd=5792  L=0.0475  D=4.093
+[refil] 272,742/1,000,000  65.5/s  upd=5808  L=0.0420  D=4.093
+[refil] 273,378/1,000,000  65.5/s  upd=5824  L=0.0407  D=4.093
+[refil] 274,199/1,000,000  65.5/s  upd=5840  L=0.0372  D=4.093
+[refil] 274,919/1,000,000  65.5/s  upd=5856  L=0.0377  D=4.093
+[refil] 275,738/1,000,000  65.6/s  upd=5872  L=0.0339  D=4.093
+[refil] 276,473/1,000,000  65.6/s  upd=5888  L=0.0501  D=4.093
+[refil] 277,111/1,000,000  65.6/s  upd=5904  L=0.0420  D=4.093
+[refil] 277,928/1,000,000  65.6/s  upd=5920  L=0.0402  D=4.093
+[refil] 278,597/1,000,000  65.6/s  upd=5936  L=0.0296  D=4.093
+[refil] 279,700/1,000,000  65.7/s  upd=5960  L=0.0341  D=4.093
+[refil] 280,042/1,000,000  65.6/s  upd=5968  L=0.0274  ev=16/100  D=4.093
+[refil] 280,042/1,000,000  65.4/s  upd=5968  L=0.0274  ev=60/100  D=4.093
+[refil] 280,042/1,000,000  65.3/s  upd=5968  L=0.0274  ev=99/100  D=4.093
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 280,889/1,000,000  65.3/s  upd=5984  L=0.0497  D=4.482
+[refil] 281,690/1,000,000  65.3/s  upd=6000  L=0.0468  D=4.482
+[refil] 282,494/1,000,000  65.4/s  upd=6016  L=0.0424  D=4.482
+[refil] 283,592/1,000,000  65.4/s  upd=6040  L=0.0294  D=4.482
+[refil] 284,674/1,000,000  65.5/s  upd=6064  L=0.0515  D=4.482
+[refil] 285,480/1,000,000  65.5/s  upd=6080  L=0.0322  D=4.482
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 286,186/1,000,000  65.5/s  upd=6096  L=0.0373  D=4.482
+[refil] 286,898/1,000,000  65.5/s  upd=6112  L=0.0438  D=4.482
+[refil] 287,992/1,000,000  65.6/s  upd=6136  L=0.0376  D=4.482
+[refil] 288,672/1,000,000  65.6/s  upd=6152  L=0.0536  D=4.482
+[refil] 289,356/1,000,000  65.6/s  upd=6168  L=0.0341  D=4.482
+[refil] 290,426/1,000,000  65.6/s  upd=6192  L=0.0262  D=4.482
+[refil] 291,251/1,000,000  65.7/s  upd=6208  L=0.0310  D=4.482
+[refil] 291,922/1,000,000  65.7/s  upd=6224  L=0.0323  D=4.482
+[refil] 292,992/1,000,000  65.7/s  upd=6248  L=0.0370  D=4.482
+[refil] 293,733/1,000,000  65.7/s  upd=6264  L=0.0401  D=4.482
+[refil] 294,430/1,000,000  65.8/s  upd=6280  L=0.0384  D=4.482
+[refil] 295,216/1,000,000  65.8/s  upd=6296  L=0.0549  D=4.482
+[refil] 295,983/1,000,000  65.8/s  upd=6312  L=0.0315  D=4.482
+[refil] 296,703/1,000,000  65.8/s  upd=6328  L=0.0336  D=4.482
+[refil] 297,783/1,000,000  65.9/s  upd=6352  L=0.0365  D=4.482
+[refil] 298,544/1,000,000  65.9/s  upd=6368  L=0.0349  D=4.482
+[refil] 299,331/1,000,000  65.9/s  upd=6384  L=0.0452  D=4.482
+[refil] 300,138/1,000,000  65.9/s  upd=6400  L=0.0483  ev=2/100  D=4.482
+[refil] 300,138/1,000,000  65.8/s  upd=6400  L=0.0483  ev=64/100  D=4.482
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 300,138/1,000,000  65.7/s  upd=6400  L=0.0483  D=4.186
+[refil] 300,997/1,000,000  65.7/s  upd=6416  L=0.0370  D=4.186
+[refil] 301,771/1,000,000  65.7/s  upd=6432  L=0.0407  D=4.186
+[refil] 302,514/1,000,000  65.7/s  upd=6448  L=0.0472  D=4.186
+[refil] 303,238/1,000,000  65.8/s  upd=6464  L=0.0255  D=4.186
+[refil] 303,964/1,000,000  65.8/s  upd=6480  L=0.0483  D=4.186
+[refil] 304,997/1,000,000  65.8/s  upd=6504  L=0.0371  D=4.186
+[refil] 305,786/1,000,000  65.8/s  upd=6520  L=0.0401  D=4.186
+[refil] 306,428/1,000,000  65.8/s  upd=6536  L=0.0464  D=4.186
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 307,200/1,000,000  65.8/s  upd=6552  L=0.0471  D=4.186
+[refil] 307,896/1,000,000  65.8/s  upd=6568  L=0.0532  D=4.186
+[refil] 308,609/1,000,000  65.9/s  upd=6584  L=0.0366  D=4.186
+[refil] 309,320/1,000,000  65.9/s  upd=6600  L=0.0556  D=4.186
+[refil] 310,389/1,000,000  65.9/s  upd=6624  L=0.0401  D=4.186
+[refil] 311,078/1,000,000  65.9/s  upd=6640  L=0.0441  D=4.186
+[refil] 311,897/1,000,000  66.0/s  upd=6656  L=0.0270  D=4.186
+[refil] 312,655/1,000,000  66.0/s  upd=6672  L=0.0446  D=4.186
+[refil] 313,428/1,000,000  66.0/s  upd=6688  L=0.0332  D=4.186
+[refil] 314,214/1,000,000  66.0/s  upd=6704  L=0.0358  D=4.186
+[refil] 314,945/1,000,000  66.0/s  upd=6720  L=0.0304  D=4.186
+[refil] 316,090/1,000,000  66.1/s  upd=6744  L=0.0333  D=4.186
+[refil] 317,194/1,000,000  66.2/s  upd=6768  L=0.0331  D=4.186
+[refil] 317,918/1,000,000  66.2/s  upd=6784  L=0.0375  D=4.186
+[refil] 318,584/1,000,000  66.2/s  upd=6800  L=0.0437  D=4.186
+[refil] 319,296/1,000,000  66.2/s  upd=6816  L=0.0360  D=4.186
+[refil] 320,108/1,000,000  66.2/s  upd=6832  L=0.0557  ev=0/100  D=4.186
+[refil] 320,108/1,000,000  66.1/s  upd=6832  L=0.0557  ev=39/100  D=4.186
+[refil] 320,108/1,000,000  65.9/s  upd=6832  L=0.0557  ev=76/100  D=4.186
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 320,108/1,000,000  65.8/s  upd=6832  L=0.0557  D=4.566
+[refil] 321,259/1,000,000  65.8/s  upd=6856  L=0.0383  D=4.566
+[refil] 321,985/1,000,000  65.9/s  upd=6872  L=0.0681  D=4.566
+[refil] 323,132/1,000,000  65.9/s  upd=6896  L=0.0451  D=4.566
+[refil] 323,920/1,000,000  65.9/s  upd=6912  L=0.0247  D=4.566
+[refil] 324,662/1,000,000  66.0/s  upd=6928  L=0.0547  D=4.566
+[refil] 325,715/1,000,000  66.0/s  upd=6952  L=0.0400  D=4.566
+[refil] 326,579/1,000,000  66.0/s  upd=6968  L=0.0401  D=4.566
+[refil] 327,326/1,000,000  66.1/s  upd=6984  L=0.0326  D=4.566
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 327,988/1,000,000  66.1/s  upd=7000  L=0.0425  D=4.566
+[refil] 328,723/1,000,000  66.1/s  upd=7016  L=0.0284  D=4.566
+[refil] 329,492/1,000,000  66.1/s  upd=7032  L=0.0297  D=4.566
+[refil] 330,308/1,000,000  66.1/s  upd=7048  L=0.0317  D=4.566
+[refil] 331,445/1,000,000  66.2/s  upd=7072  L=0.0352  D=4.566
+[refil] 332,273/1,000,000  66.2/s  upd=7088  L=0.0372  D=4.566
+[refil] 333,308/1,000,000  66.2/s  upd=7112  L=0.0371  D=4.566
+[refil] 334,120/1,000,000  66.3/s  upd=7128  L=0.0442  D=4.566
+[refil] 334,835/1,000,000  66.3/s  upd=7144  L=0.0392  D=4.566
+[refil] 335,643/1,000,000  66.3/s  upd=7160  L=0.0388  D=4.566
+[refil] 336,811/1,000,000  66.4/s  upd=7184  L=0.0316  D=4.566
+[refil] 337,500/1,000,000  66.4/s  upd=7200  L=0.0521  D=4.566
+[refil] 338,279/1,000,000  66.4/s  upd=7216  L=0.0430  D=4.566
+[refil] 339,124/1,000,000  66.4/s  upd=7232  L=0.0392  D=4.566
+[refil] 339,862/1,000,000  66.5/s  upd=7248  L=0.0392  D=4.566
+[refil] 340,241/1,000,000  66.4/s  upd=7256  L=0.0439  ev=21/100  D=4.566
+[refil] 340,241/1,000,000  66.3/s  upd=7256  L=0.0439  ev=54/100  D=4.566
+[refil] 340,241/1,000,000  66.1/s  upd=7256  L=0.0439  ev=86/100  D=4.566
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 340,627/1,000,000  66.1/s  upd=7264  L=0.0411  D=4.701
+[refil] 341,334/1,000,000  66.1/s  upd=7280  L=0.0373  D=4.701
+[refil] 342,068/1,000,000  66.1/s  upd=7296  L=0.0258  D=4.701
+[refil] 342,854/1,000,000  66.1/s  upd=7312  L=0.0437  D=4.701
+[refil] 343,626/1,000,000  66.1/s  upd=7328  L=0.0299  D=4.701
+[refil] 344,285/1,000,000  66.1/s  upd=7344  L=0.0434  D=4.701
+[refil] 344,958/1,000,000  66.1/s  upd=7360  L=0.0403  D=4.701
+[refil] 346,111/1,000,000  66.2/s  upd=7384  L=0.0318  D=4.701
+[refil] 347,106/1,000,000  66.2/s  upd=7408  L=0.0334  D=4.701
+[refil] 348,288/1,000,000  66.3/s  upd=7432  L=0.0294  D=4.701
+[refil] 348,982/1,000,000  66.3/s  upd=7448  L=0.0446  D=4.701
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 349,677/1,000,000  66.3/s  upd=7464  L=0.0347  D=4.701
+[refil] 350,315/1,000,000  66.3/s  upd=7480  L=0.0390  D=4.701
+[refil] 351,004/1,000,000  66.3/s  upd=7496  L=0.0326  D=4.701
+[refil] 352,007/1,000,000  66.4/s  upd=7520  L=0.0452  D=4.701
+[refil] 352,804/1,000,000  66.4/s  upd=7536  L=0.0488  D=4.701
+[refil] 353,576/1,000,000  66.4/s  upd=7552  L=0.0334  D=4.701
+[refil] 354,280/1,000,000  66.4/s  upd=7568  L=0.0370  D=4.701
+[refil] 354,967/1,000,000  66.4/s  upd=7584  L=0.0337  D=4.701
+[refil] 355,954/1,000,000  66.4/s  upd=7608  L=0.0292  D=4.701
+[refil] 356,671/1,000,000  66.4/s  upd=7624  L=0.0351  D=4.701
+[refil] 357,504/1,000,000  66.4/s  upd=7640  L=0.0334  D=4.701
+[refil] 358,267/1,000,000  66.5/s  upd=7656  L=0.0307  D=4.701
+[refil] 358,994/1,000,000  66.5/s  upd=7672  L=0.0372  D=4.701
+[refil] 359,709/1,000,000  66.5/s  upd=7688  L=0.0429  D=4.701
+[refil] 360,086/1,000,000  66.4/s  upd=7696  L=0.0299  ev=22/100  D=4.701
+[refil] 360,086/1,000,000  66.3/s  upd=7696  L=0.0299  ev=64/100  D=4.701
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 360,086/1,000,000  66.2/s  upd=7696  L=0.0299  D=3.481
+[refil] 360,930/1,000,000  66.2/s  upd=7712  L=0.0383  D=3.481
+[refil] 361,766/1,000,000  66.2/s  upd=7728  L=0.0447  D=3.481
+[refil] 362,832/1,000,000  66.3/s  upd=7752  L=0.0347  D=3.481
+[refil] 363,847/1,000,000  66.3/s  upd=7776  L=0.0426  D=3.481
+[refil] 364,573/1,000,000  66.3/s  upd=7792  L=0.0417  D=3.481
+[refil] 365,550/1,000,000  66.4/s  upd=7816  L=0.0493  D=3.481
+[refil] 366,208/1,000,000  66.4/s  upd=7832  L=0.0264  D=3.481
+[refil] 367,242/1,000,000  66.4/s  upd=7856  L=0.0438  D=3.481
+[refil] 367,901/1,000,000  66.4/s  upd=7872  L=0.0285  D=3.481
+[refil] 368,715/1,000,000  66.4/s  upd=7888  L=0.0308  D=3.481
+[refil] 369,477/1,000,000  66.4/s  upd=7904  L=0.0325  D=3.481
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 370,110/1,000,000  66.4/s  upd=7920  L=0.0231  D=3.481
+[refil] 371,235/1,000,000  66.4/s  upd=7944  L=0.0320  D=3.481
+[refil] 371,996/1,000,000  66.5/s  upd=7960  L=0.0350  D=3.481
+[refil] 373,003/1,000,000  66.5/s  upd=7984  L=0.0610  D=3.481
+[refil] 373,716/1,000,000  66.5/s  upd=8000  L=0.0474  D=3.481
+[refil] 374,778/1,000,000  66.5/s  upd=8024  L=0.0357  D=3.481
+[refil] 375,878/1,000,000  66.6/s  upd=8048  L=0.0379  D=3.481
+[refil] 376,901/1,000,000  66.6/s  upd=8072  L=0.0658  D=3.481
+[refil] 377,563/1,000,000  66.6/s  upd=8088  L=0.0251  D=3.481
+[refil] 378,327/1,000,000  66.6/s  upd=8104  L=0.0336  D=3.481
+[refil] 379,020/1,000,000  66.6/s  upd=8120  L=0.0298  D=3.481
+[refil] 380,076/1,000,000  66.6/s  upd=8144  L=0.0318  ev=0/100  D=3.481
+[refil] 380,076/1,000,000  66.5/s  upd=8144  L=0.0318  ev=45/100  D=3.481
+[refil] 380,076/1,000,000  66.4/s  upd=8144  L=0.0318  ev=79/100  D=3.481
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 380,407/1,000,000  66.3/s  upd=8152  L=0.0294  D=2.447
+[refil] 381,029/1,000,000  66.3/s  upd=8168  L=0.0354  D=2.447
+[refil] 381,704/1,000,000  66.3/s  upd=8184  L=0.0394  D=2.447
+[refil] 382,359/1,000,000  66.3/s  upd=8200  L=0.0378  D=2.447
+[refil] 383,139/1,000,000  66.3/s  upd=8216  L=0.0451  D=2.447
+[refil] 383,879/1,000,000  66.3/s  upd=8232  L=0.0286  D=2.447
+[refil] 384,861/1,000,000  66.4/s  upd=8256  L=0.0231  D=2.447
+[refil] 385,515/1,000,000  66.4/s  upd=8272  L=0.0444  D=2.447
+[refil] 386,357/1,000,000  66.4/s  upd=8288  L=0.0304  D=2.447
+[refil] 387,064/1,000,000  66.4/s  upd=8304  L=0.0426  D=2.447
+[refil] 387,776/1,000,000  66.4/s  upd=8320  L=0.0421  D=2.447
+[refil] 388,431/1,000,000  66.4/s  upd=8336  L=0.0390  D=2.447
+[refil] 389,506/1,000,000  66.4/s  upd=8360  L=0.0337  D=2.447
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 390,168/1,000,000  66.4/s  upd=8376  L=0.0396  D=2.447
+[refil] 390,886/1,000,000  66.4/s  upd=8392  L=0.0344  D=2.447
+[refil] 391,620/1,000,000  66.4/s  upd=8408  L=0.0384  D=2.447
+[refil] 392,356/1,000,000  66.4/s  upd=8424  L=0.0388  D=2.447
+[refil] 393,001/1,000,000  66.4/s  upd=8440  L=0.0339  D=2.447
+[refil] 393,791/1,000,000  66.5/s  upd=8456  L=0.0369  D=2.447
+[refil] 394,822/1,000,000  66.5/s  upd=8480  L=0.0405  D=2.447
+[refil] 395,496/1,000,000  66.5/s  upd=8496  L=0.0484  D=2.447
+[refil] 396,612/1,000,000  66.5/s  upd=8520  L=0.0280  D=2.447
+[refil] 397,290/1,000,000  66.5/s  upd=8536  L=0.0310  D=2.447
+[refil] 398,086/1,000,000  66.5/s  upd=8552  L=0.0288  D=2.447
+[refil] 398,748/1,000,000  66.5/s  upd=8568  L=0.0346  D=2.447
+[refil] 399,490/1,000,000  66.6/s  upd=8584  L=0.0340  D=2.447
+[refil] 400,215/1,000,000  66.6/s  upd=8600  L=0.0446  ev=0/100  D=2.447
+[refil] 400,215/1,000,000  66.4/s  upd=8600  L=0.0446  ev=41/100  D=2.447
+[refil] 400,215/1,000,000  66.3/s  upd=8600  L=0.0446  ev=79/100  D=2.447
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 400,507/1,000,000  66.3/s  upd=8608  L=0.0384  D=2.132
+[refil] 401,140/1,000,000  66.3/s  upd=8624  L=0.0404  D=2.132
+[refil] 402,065/1,000,000  66.3/s  upd=8648  L=0.0331  D=2.132
+[refil] 402,659/1,000,000  66.2/s  upd=8664  L=0.0272  D=2.132
+[refil] 403,360/1,000,000  66.3/s  upd=8680  L=0.0253  D=2.132
+[refil] 404,389/1,000,000  66.3/s  upd=8704  L=0.0247  D=2.132
+[refil] 404,961/1,000,000  66.3/s  upd=8720  L=0.0354  D=2.132
+[refil] 406,050/1,000,000  66.3/s  upd=8744  L=0.0461  D=2.132
+[refil] 406,728/1,000,000  66.3/s  upd=8760  L=0.0380  D=2.132
+[refil] 407,774/1,000,000  66.3/s  upd=8784  L=0.0647  D=2.132
+[refil] 408,507/1,000,000  66.4/s  upd=8800  L=0.0342  D=2.132
+[refil] 409,590/1,000,000  66.4/s  upd=8824  L=0.0333  D=2.132
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 410,284/1,000,000  66.4/s  upd=8840  L=0.0608  D=2.132
+[refil] 411,025/1,000,000  66.4/s  upd=8856  L=0.0402  D=2.132
+[refil] 411,705/1,000,000  66.4/s  upd=8872  L=0.0326  D=2.132
+[refil] 412,690/1,000,000  66.4/s  upd=8896  L=0.0313  D=2.132
+[refil] 413,345/1,000,000  66.4/s  upd=8912  L=0.0241  D=2.132
+[refil] 414,410/1,000,000  66.5/s  upd=8936  L=0.0344  D=2.132
+[refil] 415,211/1,000,000  66.5/s  upd=8952  L=0.0322  D=2.132
+[refil] 415,803/1,000,000  66.5/s  upd=8968  L=0.0289  D=2.132
+[refil] 416,532/1,000,000  66.5/s  upd=8984  L=0.0337  D=2.132
+[refil] 417,213/1,000,000  66.5/s  upd=9000  L=0.0375  D=2.132
+[refil] 418,334/1,000,000  66.5/s  upd=9024  L=0.0267  D=2.132
+[refil] 419,238/1,000,000  66.5/s  upd=9048  L=0.0261  D=2.132
+[refil] 420,169/1,000,000  66.5/s  upd=9072  L=0.0302  ev=0/100  D=2.132
+[refil] 420,169/1,000,000  66.4/s  upd=9072  L=0.0302  ev=51/100  D=2.132
+[refil] 420,169/1,000,000  66.3/s  upd=9072  L=0.0302  ev=87/100  D=2.132
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 420,469/1,000,000  66.3/s  upd=9080  L=0.0329  D=1.800
+[refil] 421,202/1,000,000  66.3/s  upd=9096  L=0.0319  D=1.800
+[refil] 421,886/1,000,000  66.3/s  upd=9112  L=0.0434  D=1.800
+[refil] 422,852/1,000,000  66.3/s  upd=9136  L=0.0356  D=1.800
+[refil] 423,878/1,000,000  66.3/s  upd=9160  L=0.0353  D=1.800
+[refil] 424,894/1,000,000  66.3/s  upd=9184  L=0.0554  D=1.800
+[refil] 425,866/1,000,000  66.4/s  upd=9208  L=0.0557  D=1.800
+[refil] 426,647/1,000,000  66.4/s  upd=9224  L=0.0355  D=1.800
+[refil] 427,478/1,000,000  66.4/s  upd=9240  L=0.0338  D=1.800
+[refil] 428,452/1,000,000  66.4/s  upd=9264  L=0.0244  D=1.800
+[refil] 429,175/1,000,000  66.4/s  upd=9280  L=0.0356  D=1.800
+[refil] 430,123/1,000,000  66.5/s  upd=9304  L=0.0336  D=1.800
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 430,757/1,000,000  66.4/s  upd=9320  L=0.0320  D=1.800
+[refil] 431,492/1,000,000  66.5/s  upd=9336  L=0.0516  D=1.800
+[refil] 432,476/1,000,000  66.5/s  upd=9360  L=0.0396  D=1.800
+[refil] 433,191/1,000,000  66.5/s  upd=9376  L=0.0384  D=1.800
+[refil] 434,197/1,000,000  66.5/s  upd=9400  L=0.0312  D=1.800
+[refil] 435,028/1,000,000  66.5/s  upd=9424  L=0.0344  D=1.800
+[refil] 435,675/1,000,000  66.5/s  upd=9440  L=0.0257  D=1.800
+[refil] 436,395/1,000,000  66.5/s  upd=9456  L=0.0361  D=1.800
+[refil] 437,061/1,000,000  66.5/s  upd=9472  L=0.0270  D=1.800
+[refil] 438,004/1,000,000  66.5/s  upd=9496  L=0.0393  D=1.800
+[refil] 438,675/1,000,000  66.5/s  upd=9512  L=0.0308  D=1.800
+[refil] 439,600/1,000,000  66.5/s  upd=9536  L=0.0357  D=1.800
+[refil] 440,211/1,000,000  66.5/s  upd=9552  L=0.0334  ev=2/100  D=1.800
+[refil] 440,211/1,000,000  66.4/s  upd=9552  L=0.0334  ev=63/100  D=1.800
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 440,211/1,000,000  66.3/s  upd=9552  L=0.0334  D=1.731
+[refil] 441,245/1,000,000  66.4/s  upd=9576  L=0.0344  D=1.731
+[refil] 441,956/1,000,000  66.4/s  upd=9592  L=0.0380  D=1.731
+[refil] 442,651/1,000,000  66.4/s  upd=9608  L=0.0508  D=1.731
+[refil] 443,586/1,000,000  66.4/s  upd=9632  L=0.0389  D=1.731
+[refil] 444,249/1,000,000  66.4/s  upd=9648  L=0.0316  D=1.731
+[refil] 445,250/1,000,000  66.4/s  upd=9672  L=0.0267  D=1.731
+[refil] 445,940/1,000,000  66.4/s  upd=9688  L=0.0298  D=1.731
+[refil] 446,924/1,000,000  66.4/s  upd=9712  L=0.0447  D=1.731
+[refil] 447,583/1,000,000  66.4/s  upd=9728  L=0.0247  D=1.731
+[refil] 448,251/1,000,000  66.4/s  upd=9744  L=0.0376  D=1.731
+[refil] 449,319/1,000,000  66.5/s  upd=9768  L=0.0382  D=1.731
+[refil] 449,963/1,000,000  66.5/s  upd=9784  L=0.0387  D=1.731
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 450,620/1,000,000  66.5/s  upd=9800  L=0.0263  D=1.731
+[refil] 451,636/1,000,000  66.5/s  upd=9824  L=0.0298  D=1.731
+[refil] 452,584/1,000,000  66.5/s  upd=9848  L=0.0354  D=1.731
+[refil] 453,581/1,000,000  66.5/s  upd=9872  L=0.0275  D=1.731
+[refil] 454,593/1,000,000  66.5/s  upd=9896  L=0.0334  D=1.731
+[refil] 455,512/1,000,000  66.6/s  upd=9920  L=0.0361  D=1.731
+[refil] 456,432/1,000,000  66.6/s  upd=9944  L=0.0252  D=1.731
+[refil] 457,452/1,000,000  66.6/s  upd=9968  L=0.0298  D=1.731
+[refil] 458,503/1,000,000  66.6/s  upd=9992  L=0.0190  D=1.731
+[refil] 459,253/1,000,000  66.7/s  upd=10008  L=0.0237  D=1.731
+[refil] 459,955/1,000,000  66.7/s  upd=10024  L=0.0307  D=1.731
+[refil] 460,267/1,000,000  66.6/s  upd=10032  L=0.0177  ev=26/100  D=1.731
+[refil] 460,267/1,000,000  66.5/s  upd=10032  L=0.0177  ev=78/100  D=1.731
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 460,557/1,000,000  66.4/s  upd=10040  L=0.0439  D=1.865
+[refil] 461,282/1,000,000  66.4/s  upd=10056  L=0.0255  D=1.865
+[refil] 462,086/1,000,000  66.5/s  upd=10072  L=0.0311  D=1.865
+[refil] 463,070/1,000,000  66.5/s  upd=10096  L=0.0282  D=1.865
+[refil] 464,099/1,000,000  66.5/s  upd=10120  L=0.0274  D=1.865
+[refil] 465,174/1,000,000  66.5/s  upd=10144  L=0.0334  D=1.865
+[refil] 466,099/1,000,000  66.5/s  upd=10168  L=0.0405  D=1.865
+[refil] 466,789/1,000,000  66.6/s  upd=10184  L=0.0402  D=1.865
+[refil] 467,893/1,000,000  66.6/s  upd=10208  L=0.0331  D=1.865
+[refil] 468,545/1,000,000  66.6/s  upd=10224  L=0.0300  D=1.865
+[refil] 469,553/1,000,000  66.6/s  upd=10248  L=0.0198  D=1.865
+[refil] 470,170/1,000,000  66.6/s  upd=10264  L=0.0245  D=1.865
+[refil] 471,017/1,000,000  66.6/s  upd=10280  L=0.0239  D=1.865
+[refil] 471,945/1,000,000  66.7/s  upd=10304  L=0.0269  D=1.865
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 472,568/1,000,000  66.6/s  upd=10320  L=0.0223  D=1.865
+[refil] 473,546/1,000,000  66.7/s  upd=10344  L=0.0303  D=1.865
+[refil] 474,599/1,000,000  66.7/s  upd=10368  L=0.0148  D=1.865
+[refil] 475,335/1,000,000  66.7/s  upd=10384  L=0.0255  D=1.865
+[refil] 476,299/1,000,000  66.7/s  upd=10408  L=0.0291  D=1.865
+[refil] 477,315/1,000,000  66.8/s  upd=10432  L=0.0227  D=1.865
+[refil] 478,267/1,000,000  66.8/s  upd=10456  L=0.0255  D=1.865
+[refil] 479,220/1,000,000  66.8/s  upd=10480  L=0.0308  D=1.865
+[refil] 479,803/1,000,000  66.8/s  upd=10496  L=0.0314  D=1.865
+[refil] 480,202/1,000,000  66.7/s  upd=10504  L=0.0208  ev=29/100  D=1.865
+[refil] 480,202/1,000,000  66.7/s  upd=10504  L=0.0208  ev=72/100  D=1.865
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 480,527/1,000,000  66.6/s  upd=10512  L=0.0383  D=1.750
+[refil] 481,518/1,000,000  66.6/s  upd=10536  L=0.0311  D=1.750
+[refil] 482,442/1,000,000  66.6/s  upd=10560  L=0.0375  D=1.750
+[refil] 483,396/1,000,000  66.6/s  upd=10584  L=0.0357  D=1.750
+[refil] 484,283/1,000,000  66.6/s  upd=10608  L=0.0295  D=1.750
+[refil] 485,262/1,000,000  66.6/s  upd=10632  L=0.0231  D=1.750
+[refil] 486,155/1,000,000  66.7/s  upd=10656  L=0.0281  D=1.750
+[refil] 487,378/1,000,000  66.7/s  upd=10680  L=0.0298  D=1.750
+[refil] 488,350/1,000,000  66.7/s  upd=10704  L=0.0321  D=1.750
+[refil] 489,381/1,000,000  66.8/s  upd=10728  L=0.0232  D=1.750
+[refil] 490,305/1,000,000  66.8/s  upd=10752  L=0.0407  D=1.750
+[refil] 491,170/1,000,000  66.8/s  upd=10776  L=0.0333  D=1.750
+[refil] 492,159/1,000,000  66.8/s  upd=10800  L=0.0193  D=1.750
+[refil] 492,750/1,000,000  66.8/s  upd=10816  L=0.0443  D=1.750
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 493,405/1,000,000  66.8/s  upd=10832  L=0.0291  D=1.750
+[refil] 494,406/1,000,000  66.8/s  upd=10856  L=0.0373  D=1.750
+[refil] 495,113/1,000,000  66.8/s  upd=10872  L=0.0222  D=1.750
+[refil] 496,153/1,000,000  66.9/s  upd=10896  L=0.0309  D=1.750
+[refil] 496,792/1,000,000  66.8/s  upd=10912  L=0.0285  D=1.750
+[refil] 497,810/1,000,000  66.9/s  upd=10936  L=0.0314  D=1.750
+[refil] 498,721/1,000,000  66.9/s  upd=10960  L=0.0238  D=1.750
+[refil] 499,705/1,000,000  66.9/s  upd=10984  L=0.0213  D=1.750
+[refil] 500,033/1,000,000  66.8/s  upd=10992  L=0.0192  ev=31/100  D=1.750
+[refil] 500,033/1,000,000  66.8/s  upd=10992  L=0.0192  ev=85/100  D=1.750
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 500,370/1,000,000  66.7/s  upd=11000  L=0.0200  D=1.840
+[refil] 501,425/1,000,000  66.7/s  upd=11024  L=0.0320  D=1.840
+[refil] 502,401/1,000,000  66.7/s  upd=11048  L=0.0229  D=1.840
+[refil] 503,329/1,000,000  66.8/s  upd=11072  L=0.0187  D=1.840
+[refil] 504,346/1,000,000  66.8/s  upd=11096  L=0.0190  D=1.840
+[refil] 505,387/1,000,000  66.8/s  upd=11120  L=0.0234  D=1.840
+[refil] 506,051/1,000,000  66.8/s  upd=11136  L=0.0200  D=1.840
+[refil] 507,049/1,000,000  66.9/s  upd=11160  L=0.0288  D=1.840
+[refil] 507,674/1,000,000  66.8/s  upd=11176  L=0.0255  D=1.840
+[refil] 508,861/1,000,000  66.9/s  upd=11200  L=0.0293  D=1.840
+[refil] 509,568/1,000,000  66.9/s  upd=11216  L=0.0362  D=1.840
+[refil] 510,616/1,000,000  66.9/s  upd=11240  L=0.0312  D=1.840
+[refil] 511,542/1,000,000  66.9/s  upd=11264  L=0.0269  D=1.840
+[refil] 512,193/1,000,000  66.9/s  upd=11280  L=0.0246  D=1.840
+[refil] 513,274/1,000,000  67.0/s  upd=11304  L=0.0232  D=1.840
+[refil] 514,206/1,000,000  67.0/s  upd=11328  L=0.0397  D=1.840
+[refil] 515,157/1,000,000  67.0/s  upd=11352  L=0.0409  D=1.840
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 515,769/1,000,000  67.0/s  upd=11368  L=0.0292  D=1.840
+[refil] 516,657/1,000,000  67.0/s  upd=11392  L=0.0258  D=1.840
+[refil] 517,301/1,000,000  67.0/s  upd=11408  L=0.0269  D=1.840
+[refil] 518,443/1,000,000  67.0/s  upd=11432  L=0.0285  D=1.840
+[refil] 519,467/1,000,000  67.1/s  upd=11456  L=0.0279  D=1.840
+[refil] 520,199/1,000,000  67.1/s  upd=11472  L=0.0286  ev=0/100  D=1.840
+[refil] 520,199/1,000,000  67.0/s  upd=11472  L=0.0286  ev=61/100  D=1.840
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 520,570/1,000,000  66.9/s  upd=11480  L=0.0317  D=1.596
+[refil] 521,239/1,000,000  66.9/s  upd=11496  L=0.0257  D=1.596
+[refil] 522,241/1,000,000  67.0/s  upd=11520  L=0.0297  D=1.596
+[refil] 522,927/1,000,000  67.0/s  upd=11536  L=0.0333  D=1.596
+[refil] 523,877/1,000,000  67.0/s  upd=11560  L=0.0371  D=1.596
+[refil] 524,886/1,000,000  67.0/s  upd=11584  L=0.0404  D=1.596
+[refil] 525,968/1,000,000  67.0/s  upd=11608  L=0.0228  D=1.596
+[refil] 526,598/1,000,000  67.0/s  upd=11624  L=0.0287  D=1.596
+[refil] 527,628/1,000,000  67.1/s  upd=11648  L=0.0190  D=1.596
+[refil] 528,613/1,000,000  67.1/s  upd=11672  L=0.0302  D=1.596
+[refil] 529,551/1,000,000  67.1/s  upd=11696  L=0.0180  D=1.596
+[refil] 530,543/1,000,000  67.1/s  upd=11720  L=0.0231  D=1.596
+[refil] 531,518/1,000,000  67.1/s  upd=11744  L=0.0262  D=1.596
+[refil] 532,164/1,000,000  67.1/s  upd=11760  L=0.0199  D=1.596
+[refil] 533,103/1,000,000  67.1/s  upd=11784  L=0.0249  D=1.596
+[refil] 533,806/1,000,000  67.1/s  upd=11800  L=0.0211  D=1.596
+[refil] 534,741/1,000,000  67.2/s  upd=11824  L=0.0335  D=1.596
+[refil] 535,455/1,000,000  67.2/s  upd=11840  L=0.0209  D=1.596
+[refil] 536,606/1,000,000  67.2/s  upd=11864  L=0.0280  D=1.596
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 537,205/1,000,000  67.2/s  upd=11880  L=0.0293  D=1.596
+[refil] 538,168/1,000,000  67.2/s  upd=11904  L=0.0274  D=1.596
+[refil] 538,888/1,000,000  67.2/s  upd=11920  L=0.0217  D=1.596
+[refil] 539,876/1,000,000  67.3/s  upd=11944  L=0.0318  D=1.596
+[refil] 540,178/1,000,000  67.2/s  upd=11952  L=0.0277  ev=24/100  D=1.596
+[refil] 540,178/1,000,000  67.1/s  upd=11952  L=0.0277  ev=64/100  D=1.596
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 540,495/1,000,000  67.1/s  upd=11960  L=0.0182  D=1.803
+[refil] 541,169/1,000,000  67.1/s  upd=11976  L=0.0499  D=1.803
+[refil] 542,150/1,000,000  67.1/s  upd=12000  L=0.0288  D=1.803
+[refil] 543,165/1,000,000  67.1/s  upd=12024  L=0.0266  D=1.803
+[refil] 543,814/1,000,000  67.1/s  upd=12040  L=0.0242  D=1.803
+[refil] 544,831/1,000,000  67.1/s  upd=12064  L=0.0270  D=1.803
+[refil] 545,605/1,000,000  67.1/s  upd=12080  L=0.0236  D=1.803
+[refil] 546,264/1,000,000  67.1/s  upd=12096  L=0.0233  D=1.803
+[refil] 547,280/1,000,000  67.2/s  upd=12120  L=0.0418  D=1.803
+[refil] 548,031/1,000,000  67.2/s  upd=12136  L=0.0388  D=1.803
+[refil] 549,079/1,000,000  67.2/s  upd=12160  L=0.0241  D=1.803
+[refil] 550,082/1,000,000  67.2/s  upd=12184  L=0.0298  D=1.803
+[refil] 551,146/1,000,000  67.2/s  upd=12208  L=0.0332  D=1.803
+[refil] 552,154/1,000,000  67.3/s  upd=12232  L=0.0308  D=1.803
+[refil] 553,193/1,000,000  67.3/s  upd=12256  L=0.0306  D=1.803
+[refil] 554,228/1,000,000  67.3/s  upd=12280  L=0.0181  D=1.803
+[refil] 555,205/1,000,000  67.3/s  upd=12304  L=0.0175  D=1.803
+[refil] 555,888/1,000,000  67.3/s  upd=12320  L=0.0273  D=1.803
+[refil] 556,794/1,000,000  67.4/s  upd=12344  L=0.0198  D=1.803
+[refil] 557,514/1,000,000  67.4/s  upd=12360  L=0.0303  D=1.803
+[refil] 558,533/1,000,000  67.4/s  upd=12384  L=0.0272  D=1.803
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 559,167/1,000,000  67.4/s  upd=12400  L=0.0304  D=1.803
+[refil] 559,865/1,000,000  67.4/s  upd=12416  L=0.0247  D=1.803
+[refil] 560,211/1,000,000  67.4/s  upd=12424  L=0.0276  ev=32/100  D=1.803
+[refil] 560,211/1,000,000  67.3/s  upd=12424  L=0.0276  ev=78/100  D=1.803
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 560,565/1,000,000  67.2/s  upd=12432  L=0.0292  D=1.553
+[refil] 561,485/1,000,000  67.2/s  upd=12456  L=0.0199  D=1.553
+[refil] 562,351/1,000,000  67.3/s  upd=12480  L=0.0219  D=1.553
+[refil] 563,290/1,000,000  67.3/s  upd=12504  L=0.0326  D=1.553
+[refil] 563,980/1,000,000  67.3/s  upd=12520  L=0.0320  D=1.553
+[refil] 564,969/1,000,000  67.3/s  upd=12544  L=0.0296  D=1.553
+[refil] 565,920/1,000,000  67.3/s  upd=12568  L=0.0349  D=1.553
+[refil] 566,940/1,000,000  67.3/s  upd=12592  L=0.0205  D=1.553
+[refil] 567,954/1,000,000  67.4/s  upd=12616  L=0.0323  D=1.553
+[refil] 568,878/1,000,000  67.4/s  upd=12640  L=0.0350  D=1.553
+[refil] 569,857/1,000,000  67.4/s  upd=12664  L=0.0264  D=1.553
+[refil] 570,597/1,000,000  67.4/s  upd=12680  L=0.0360  D=1.553
+[refil] 571,621/1,000,000  67.4/s  upd=12704  L=0.0247  D=1.553
+[refil] 572,500/1,000,000  67.4/s  upd=12728  L=0.0176  D=1.553
+[refil] 573,523/1,000,000  67.4/s  upd=12752  L=0.0289  D=1.553
+[refil] 574,514/1,000,000  67.5/s  upd=12776  L=0.0368  D=1.553
+[refil] 575,484/1,000,000  67.5/s  upd=12800  L=0.0353  D=1.553
+[refil] 576,387/1,000,000  67.5/s  upd=12824  L=0.0301  D=1.553
+[refil] 577,356/1,000,000  67.5/s  upd=12848  L=0.0270  D=1.553
+[refil] 578,250/1,000,000  67.5/s  upd=12872  L=0.0311  D=1.553
+[refil] 579,204/1,000,000  67.5/s  upd=12896  L=0.0366  D=1.553
+[refil] 580,189/1,000,000  67.6/s  upd=12920  L=0.0413  ev=0/100  D=1.553
+[refil] 580,189/1,000,000  67.5/s  upd=12920  L=0.0413  ev=56/100  D=1.553
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 580,189/1,000,000  67.4/s  upd=12920  L=0.0413  D=1.389
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 580,805/1,000,000  67.4/s  upd=12936  L=0.0201  D=1.389
+[refil] 581,790/1,000,000  67.4/s  upd=12960  L=0.0313  D=1.389
+[refil] 582,824/1,000,000  67.4/s  upd=12984  L=0.0201  D=1.389
+[refil] 583,991/1,000,000  67.5/s  upd=13008  L=0.0177  D=1.389
+[refil] 584,856/1,000,000  67.5/s  upd=13032  L=0.0186  D=1.389
+[refil] 585,723/1,000,000  67.5/s  upd=13056  L=0.0406  D=1.389
+[refil] 586,656/1,000,000  67.5/s  upd=13080  L=0.0381  D=1.389
+[refil] 587,612/1,000,000  67.5/s  upd=13104  L=0.0280  D=1.389
+[refil] 588,523/1,000,000  67.6/s  upd=13128  L=0.0219  D=1.389
+[refil] 589,427/1,000,000  67.6/s  upd=13152  L=0.0182  D=1.389
+[refil] 590,399/1,000,000  67.6/s  upd=13176  L=0.0279  D=1.389
+[refil] 591,397/1,000,000  67.6/s  upd=13200  L=0.0332  D=1.389
+[refil] 592,311/1,000,000  67.6/s  upd=13224  L=0.0228  D=1.389
+[refil] 593,332/1,000,000  67.6/s  upd=13248  L=0.0203  D=1.389
+[refil] 594,377/1,000,000  67.7/s  upd=13272  L=0.0246  D=1.389
+[refil] 595,306/1,000,000  67.7/s  upd=13296  L=0.0278  D=1.389
+[refil] 596,306/1,000,000  67.7/s  upd=13320  L=0.0292  D=1.389
+[refil] 597,006/1,000,000  67.7/s  upd=13336  L=0.0292  D=1.389
+[refil] 598,032/1,000,000  67.7/s  upd=13360  L=0.0264  D=1.389
+[refil] 599,146/1,000,000  67.8/s  upd=13384  L=0.0202  D=1.389
+[refil] 600,172/1,000,000  67.8/s  upd=13408  L=0.0252  ev=0/100  D=1.389
+[refil] 600,172/1,000,000  67.7/s  upd=13408  L=0.0252  ev=72/100  D=1.389
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 600,508/1,000,000  67.7/s  upd=13416  L=0.0223  D=1.396
+[refil] 601,489/1,000,000  67.7/s  upd=13440  L=0.0219  D=1.396
+[refil] 602,392/1,000,000  67.7/s  upd=13464  L=0.0348  D=1.396
+[refil] 603,482/1,000,000  67.7/s  upd=13488  L=0.0179  D=1.396
+E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py:476: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+  axis.legend(fontsize=8)
+[refil] 604,049/1,000,000  67.7/s  upd=13504  L=0.0193  D=1.396
+[refil] 605,064/1,000,000  67.8/s  upd=13528  L=0.0336  D=1.396
+[refil] 605,951/1,000,000  67.8/s  upd=13552  L=0.0177  D=1.396
+[refil] 606,938/1,000,000  67.8/s  upd=13576  L=0.0190  D=1.396
+[refil] 607,884/1,000,000  67.8/s  upd=13600  L=0.0229  D=1.396
+[refil] 608,827/1,000,000  67.8/s  upd=13624  L=0.0328  D=1.396
+[refil] 609,793/1,000,000  67.9/s  upd=13648  L=0.0220  D=1.396
+[refil] 610,726/1,000,000  67.9/s  upd=13672  L=0.0217  D=1.396
+[refil] 611,725/1,000,000  67.9/s  upd=13696  L=0.0248  D=1.396
+[refil] 612,687/1,000,000  67.9/s  upd=13720  L=0.0186  D=1.396
+[refil] 613,644/1,000,000  67.9/s  upd=13744  L=0.0230  D=1.396
+[refil] 614,622/1,000,000  68.0/s  upd=13768  L=0.0245  D=1.396
+[refil] 615,648/1,000,000  68.0/s  upd=13792  L=0.0271  D=1.396
+[refil] 616,495/1,000,000  68.0/s  upd=13816  L=0.0256  D=1.396
+[refil] 617,389/1,000,000  68.0/s  upd=13840  L=0.0377  D=1.396
+[refil] 618,413/1,000,000  68.1/s  upd=13864  L=0.0180  D=1.396
+[refil] 619,358/1,000,000  68.1/s  upd=13888  L=0.0170  D=1.396
+[refil] 620,281/1,000,000  68.1/s  upd=13912  L=0.0240  ev=0/100  D=1.396
+[refil] 620,281/1,000,000  68.0/s  upd=13912  L=0.0240  ev=64/100  D=1.396
+[refil] 620,571/1,000,000  68.0/s  upd=13920  L=0.0366  D=1.323
+[refil] 621,521/1,000,000  68.0/s  upd=13944  L=0.0205  D=1.323
+[refil] 622,357/1,000,000  68.0/s  upd=13968  L=0.0172  D=1.323
+[refil] 623,201/1,000,000  68.0/s  upd=13992  L=0.0383  D=1.323
+[refil] 624,162/1,000,000  68.1/s  upd=14016  L=0.0253  D=1.323
+[refil] 625,417/1,000,000  68.1/s  upd=14048  L=0.0184  D=1.323
+[refil] 626,461/1,000,000  68.1/s  upd=14072  L=0.0233  D=1.323
+[refil] 627,390/1,000,000  68.2/s  upd=14096  L=0.0207  D=1.323
+[refil] 628,398/1,000,000  68.2/s  upd=14120  L=0.0152  D=1.323
+[refil] 629,418/1,000,000  68.2/s  upd=14144  L=0.0246  D=1.323
+[refil] 630,389/1,000,000  68.2/s  upd=14168  L=0.0279  D=1.323
+[refil] 631,428/1,000,000  68.3/s  upd=14192  L=0.0178  D=1.323
+[refil] 632,630/1,000,000  68.3/s  upd=14224  L=0.0217  D=1.323
+[refil] 634,003/1,000,000  68.4/s  upd=14256  L=0.0293  D=1.323
+[refil] 635,328/1,000,000  68.4/s  upd=14288  L=0.0382  D=1.323
+[refil] 636,266/1,000,000  68.5/s  upd=14312  L=0.0197  D=1.323
+[refil] 637,484/1,000,000  68.5/s  upd=14344  L=0.0166  D=1.323
+[refil] 638,458/1,000,000  68.5/s  upd=14368  L=0.0319  D=1.323
+[refil] 639,688/1,000,000  68.6/s  upd=14400  L=0.0193  D=1.323
+[refil] 640,070/1,000,000  68.5/s  upd=14408  L=0.0273  ev=44/100  D=1.323
+[refil] 640,070/1,000,000  68.5/s  upd=14408  L=0.0273  D=1.563
+[refil] 641,060/1,000,000  68.5/s  upd=14432  L=0.0230  D=1.563
+[refil] 642,022/1,000,000  68.5/s  upd=14456  L=0.0233  D=1.563
+[refil] 642,949/1,000,000  68.5/s  upd=14480  L=0.0297  D=1.563
+[refil] 643,960/1,000,000  68.6/s  upd=14504  L=0.0401  D=1.563
+[refil] 644,860/1,000,000  68.6/s  upd=14528  L=0.0269  D=1.563
+[refil] 645,803/1,000,000  68.6/s  upd=14552  L=0.0201  D=1.563
+[refil] 646,819/1,000,000  68.7/s  upd=14576  L=0.0151  D=1.563
+[refil] 648,093/1,000,000  68.7/s  upd=14608  L=0.0242  D=1.563
+[refil] 649,357/1,000,000  68.8/s  upd=14640  L=0.0213  D=1.563
+[refil] 650,578/1,000,000  68.8/s  upd=14672  L=0.0288  D=1.563
+[refil] 651,554/1,000,000  68.8/s  upd=14696  L=0.0253  D=1.563
+[refil] 652,468/1,000,000  68.9/s  upd=14720  L=0.0195  D=1.563
+[refil] 653,761/1,000,000  68.9/s  upd=14752  L=0.0196  D=1.563
+[refil] 654,722/1,000,000  68.9/s  upd=14776  L=0.0266  D=1.563
+[refil] 655,701/1,000,000  69.0/s  upd=14800  L=0.0238  D=1.563
+[refil] 656,698/1,000,000  69.0/s  upd=14824  L=0.0309  D=1.563
+[refil] 657,625/1,000,000  69.0/s  upd=14848  L=0.0204  D=1.563
+[refil] 658,503/1,000,000  69.0/s  upd=14872  L=0.0148  D=1.563
+[refil] 659,422/1,000,000  69.0/s  upd=14896  L=0.0246  D=1.563
+[refil] 660,011/1,000,000  69.0/s  upd=14912  L=0.0263  ev=23/100  D=1.563
+[refil] 660,011/1,000,000  69.0/s  upd=14912  L=0.0263  ev=100/100  D=1.563
+[refil] 661,022/1,000,000  69.0/s  upd=14936  L=0.0150  D=1.429
+[refil] 661,946/1,000,000  69.0/s  upd=14960  L=0.0296  D=1.429
+[refil] 662,849/1,000,000  69.0/s  upd=14984  L=0.0271  D=1.429
+[refil] 664,090/1,000,000  69.1/s  upd=15016  L=0.0201  D=1.429
+[refil] 665,278/1,000,000  69.1/s  upd=15048  L=0.0175  D=1.429
+[refil] 666,616/1,000,000  69.2/s  upd=15080  L=0.0220  D=1.429
+[refil] 667,552/1,000,000  69.2/s  upd=15104  L=0.0316  D=1.429
+[refil] 668,562/1,000,000  69.2/s  upd=15128  L=0.0218  D=1.429
+[refil] 669,550/1,000,000  69.3/s  upd=15152  L=0.0265  D=1.429
+[refil] 670,832/1,000,000  69.3/s  upd=15184  L=0.0246  D=1.429
+[refil] 671,759/1,000,000  69.3/s  upd=15208  L=0.0253  D=1.429
+[refil] 672,743/1,000,000  69.4/s  upd=15232  L=0.0242  D=1.429
+[refil] 673,947/1,000,000  69.4/s  upd=15264  L=0.0308  D=1.429
+[refil] 675,152/1,000,000  69.4/s  upd=15296  L=0.0351  D=1.429
+[refil] 676,325/1,000,000  69.5/s  upd=15328  L=0.0400  D=1.429
+[refil] 677,466/1,000,000  69.5/s  upd=15360  L=0.0242  D=1.429
+[refil] 678,426/1,000,000  69.5/s  upd=15384  L=0.0298  D=1.429
+[refil] 679,375/1,000,000  69.5/s  upd=15408  L=0.0321  D=1.429
+[refil] 680,008/1,000,000  69.5/s  upd=15424  L=0.0253  ev=28/100  D=1.429
+[refil] 680,008/1,000,000  69.5/s  upd=15424  L=0.0253  D=1.268
+[refil] 681,258/1,000,000  69.5/s  upd=15456  L=0.0224  D=1.268
+[refil] 682,657/1,000,000  69.6/s  upd=15488  L=0.0405  D=1.268
+[refil] 683,617/1,000,000  69.6/s  upd=15512  L=0.0233  D=1.268
+[refil] 684,506/1,000,000  69.6/s  upd=15536  L=0.0246  D=1.268
+[refil] 685,657/1,000,000  69.6/s  upd=15568  L=0.0281  D=1.268
+[refil] 686,663/1,000,000  69.7/s  upd=15592  L=0.0242  D=1.268
+[refil] 687,483/1,000,000  69.7/s  upd=15616  L=0.0232  D=1.268
+[refil] 688,500/1,000,000  69.7/s  upd=15640  L=0.0182  D=1.268
+[refil] 689,676/1,000,000  69.7/s  upd=15672  L=0.0249  D=1.268
+[refil] 690,902/1,000,000  69.8/s  upd=15704  L=0.0321  D=1.268
+[refil] 691,771/1,000,000  69.8/s  upd=15728  L=0.0216  D=1.268
+[refil] 692,942/1,000,000  69.8/s  upd=15760  L=0.0455  D=1.268
+[refil] 693,864/1,000,000  69.9/s  upd=15784  L=0.0296  D=1.268
+[refil] 695,002/1,000,000  69.9/s  upd=15816  L=0.0185  D=1.268
+[refil] 696,255/1,000,000  69.9/s  upd=15848  L=0.0208  D=1.268
+[refil] 697,490/1,000,000  70.0/s  upd=15880  L=0.0297  D=1.268
+[refil] 698,696/1,000,000  70.0/s  upd=15912  L=0.0181  D=1.268
+[refil] 699,974/1,000,000  70.1/s  upd=15944  L=0.0297  D=1.268
+[refil] 700,298/1,000,000  70.0/s  upd=15952  L=0.0316  ev=53/100  D=1.268
+[refil] 700,623/1,000,000  70.0/s  upd=15960  L=0.0224  D=1.029
+[refil] 701,597/1,000,000  70.0/s  upd=15984  L=0.0216  D=1.029
+[refil] 702,468/1,000,000  70.0/s  upd=16008  L=0.0222  D=1.029
+[refil] 703,671/1,000,000  70.1/s  upd=16040  L=0.0369  D=1.029
+[refil] 704,849/1,000,000  70.1/s  upd=16072  L=0.0248  D=1.029
+[refil] 706,050/1,000,000  70.1/s  upd=16104  L=0.0221  D=1.029
+[refil] 707,256/1,000,000  70.2/s  upd=16136  L=0.0333  D=1.029
+[refil] 708,596/1,000,000  70.2/s  upd=16168  L=0.0209  D=1.029
+[refil] 709,548/1,000,000  70.2/s  upd=16192  L=0.0215  D=1.029
+[refil] 710,657/1,000,000  70.3/s  upd=16224  L=0.0166  D=1.029
+[refil] 711,888/1,000,000  70.3/s  upd=16256  L=0.0235  D=1.029
+[refil] 712,778/1,000,000  70.3/s  upd=16280  L=0.0293  D=1.029
+[refil] 713,943/1,000,000  70.3/s  upd=16312  L=0.0283  D=1.029
+[refil] 715,082/1,000,000  70.4/s  upd=16344  L=0.0242  D=1.029
+[refil] 716,339/1,000,000  70.4/s  upd=16376  L=0.0454  D=1.029
+[refil] 717,511/1,000,000  70.5/s  upd=16408  L=0.0287  D=1.029
+[refil] 718,453/1,000,000  70.5/s  upd=16432  L=0.0189  D=1.029
+[refil] 719,638/1,000,000  70.5/s  upd=16464  L=0.0227  D=1.029
+[refil] 720,267/1,000,000  70.5/s  upd=16480  L=0.0320  ev=23/100  D=1.029
+[refil] 720,267/1,000,000  70.4/s  upd=16480  L=0.0320  D=1.004
+[refil] 721,511/1,000,000  70.5/s  upd=16512  L=0.0246  D=1.004
+[refil] 722,704/1,000,000  70.5/s  upd=16544  L=0.0302  D=1.004
+[refil] 723,565/1,000,000  70.5/s  upd=16568  L=0.0340  D=1.004
+[refil] 724,798/1,000,000  70.6/s  upd=16600  L=0.0297  D=1.004
+[refil] 725,957/1,000,000  70.6/s  upd=16632  L=0.0394  D=1.004
+[refil] 727,091/1,000,000  70.6/s  upd=16664  L=0.0227  D=1.004
+[refil] 727,998/1,000,000  70.6/s  upd=16688  L=0.0144  D=1.004
+[refil] 729,181/1,000,000  70.7/s  upd=16720  L=0.0279  D=1.004
+[refil] 730,397/1,000,000  70.7/s  upd=16752  L=0.0281  D=1.004
+[refil] 731,612/1,000,000  70.8/s  upd=16784  L=0.0182  D=1.004
+[refil] 732,899/1,000,000  70.8/s  upd=16816  L=0.0191  D=1.004
+[refil] 734,027/1,000,000  70.8/s  upd=16848  L=0.0290  D=1.004
+[refil] 735,179/1,000,000  70.9/s  upd=16880  L=0.0178  D=1.004
+[refil] 736,046/1,000,000  70.9/s  upd=16904  L=0.0207  D=1.004
+[refil] 737,306/1,000,000  70.9/s  upd=16936  L=0.0233  D=1.004
+[refil] 738,503/1,000,000  70.9/s  upd=16968  L=0.0239  D=1.004
+[refil] 739,746/1,000,000  71.0/s  upd=17000  L=0.0217  D=1.004
+[refil] 740,062/1,000,000  70.9/s  upd=17008  L=0.0263  ev=52/100  D=1.004
+[refil] 740,062/1,000,000  70.9/s  upd=17008  L=0.0263  D=0.823
+[refil] 741,215/1,000,000  70.9/s  upd=17040  L=0.0287  D=0.823
+[refil] 742,415/1,000,000  70.9/s  upd=17072  L=0.0203  D=0.823
+[refil] 743,647/1,000,000  71.0/s  upd=17104  L=0.0242  D=0.823
+[refil] 744,560/1,000,000  71.0/s  upd=17128  L=0.0192  D=0.823
+[refil] 745,789/1,000,000  71.0/s  upd=17160  L=0.0246  D=0.823
+[refil] 746,998/1,000,000  71.1/s  upd=17192  L=0.0314  D=0.823
+[refil] 748,173/1,000,000  71.1/s  upd=17224  L=0.0273  D=0.823
+[refil] 749,339/1,000,000  71.1/s  upd=17256  L=0.0391  D=0.823
+[refil] 750,524/1,000,000  71.2/s  upd=17288  L=0.0327  D=0.823
+[refil] 751,759/1,000,000  71.2/s  upd=17320  L=0.0238  D=0.823
+[refil] 752,973/1,000,000  71.2/s  upd=17352  L=0.0196  D=0.823
+[refil] 754,241/1,000,000  71.3/s  upd=17384  L=0.0289  D=0.823
+[refil] 755,393/1,000,000  71.3/s  upd=17416  L=0.0206  D=0.823
+[refil] 756,656/1,000,000  71.4/s  upd=17448  L=0.0325  D=0.823
+[refil] 757,777/1,000,000  71.4/s  upd=17480  L=0.0184  D=0.823
+[refil] 758,946/1,000,000  71.4/s  upd=17512  L=0.0277  D=0.823
+[refil] 760,043/1,000,000  71.4/s  upd=17544  L=0.0277  ev=0/100  D=0.823
+[refil] 760,043/1,000,000  71.4/s  upd=17544  L=0.0277  ev=94/100  D=0.823
+[refil] 760,979/1,000,000  71.4/s  upd=17568  L=0.0424  D=1.083
+[refil] 762,188/1,000,000  71.4/s  upd=17600  L=0.0238  D=1.083
+[refil] 763,416/1,000,000  71.4/s  upd=17632  L=0.0230  D=1.083
+[refil] 764,563/1,000,000  71.5/s  upd=17664  L=0.0251  D=1.083
+[refil] 765,398/1,000,000  71.5/s  upd=17688  L=0.0230  D=1.083
+[refil] 766,625/1,000,000  71.5/s  upd=17720  L=0.0143  D=1.083
+[refil] 767,862/1,000,000  71.6/s  upd=17752  L=0.0304  D=1.083
+[refil] 769,100/1,000,000  71.6/s  upd=17784  L=0.0202  D=1.083
+[refil] 769,949/1,000,000  71.6/s  upd=17808  L=0.0174  D=1.083
+[refil] 771,196/1,000,000  71.6/s  upd=17840  L=0.0329  D=1.083
+[refil] 772,380/1,000,000  71.7/s  upd=17872  L=0.0199  D=1.083
+[refil] 773,648/1,000,000  71.7/s  upd=17904  L=0.0277  D=1.083
+[refil] 774,940/1,000,000  71.8/s  upd=17936  L=0.0392  D=1.083
+[refil] 776,184/1,000,000  71.8/s  upd=17968  L=0.0318  D=1.083
+[refil] 777,066/1,000,000  71.8/s  upd=17992  L=0.0320  D=1.083
+[refil] 778,233/1,000,000  71.8/s  upd=18024  L=0.0311  D=1.083
+[refil] 779,443/1,000,000  71.9/s  upd=18056  L=0.0283  D=1.083
+[refil] 780,125/1,000,000  71.9/s  upd=18072  L=0.0341  ev=24/100  D=1.083
+[refil] 780,125/1,000,000  71.8/s  upd=18072  L=0.0341  D=1.282
+[refil] 781,324/1,000,000  71.8/s  upd=18104  L=0.0273  D=1.282
+[refil] 782,473/1,000,000  71.9/s  upd=18136  L=0.0270  D=1.282
+[refil] 783,563/1,000,000  71.9/s  upd=18168  L=0.0184  D=1.282
+[refil] 784,739/1,000,000  71.9/s  upd=18200  L=0.0270  D=1.282
+[refil] 786,009/1,000,000  71.9/s  upd=18232  L=0.0248  D=1.282
+[refil] 787,228/1,000,000  72.0/s  upd=18264  L=0.0384  D=1.282
+[refil] 788,470/1,000,000  72.0/s  upd=18296  L=0.0348  D=1.282
+[refil] 789,661/1,000,000  72.0/s  upd=18328  L=0.0244  D=1.282
+[refil] 790,890/1,000,000  72.1/s  upd=18360  L=0.0258  D=1.282
+[refil] 792,129/1,000,000  72.1/s  upd=18392  L=0.0254  D=1.282
+[refil] 793,442/1,000,000  72.2/s  upd=18424  L=0.0166  D=1.282
+[refil] 794,708/1,000,000  72.2/s  upd=18456  L=0.0282  D=1.282
+[refil] 795,836/1,000,000  72.2/s  upd=18488  L=0.0255  D=1.282
+[refil] 797,111/1,000,000  72.3/s  upd=18520  L=0.0337  D=1.282
+[refil] 798,318/1,000,000  72.3/s  upd=18552  L=0.0355  D=1.282
+[refil] 799,266/1,000,000  72.3/s  upd=18576  L=0.0231  D=1.282
+[refil] 800,158/1,000,000  72.3/s  upd=18600  L=0.0211  ev=0/100  D=1.282
+[refil] 800,158/1,000,000  72.3/s  upd=18600  L=0.0211  ev=96/100  D=1.282
+[refil] 801,074/1,000,000  72.3/s  upd=18624  L=0.0197  D=1.320
+[refil] 802,294/1,000,000  72.3/s  upd=18656  L=0.0230  D=1.320
+[refil] 803,433/1,000,000  72.3/s  upd=18688  L=0.0194  D=1.320
+[refil] 804,646/1,000,000  72.4/s  upd=18720  L=0.0225  D=1.320
+[refil] 805,921/1,000,000  72.4/s  upd=18752  L=0.0246  D=1.320
+[refil] 807,074/1,000,000  72.5/s  upd=18784  L=0.0218  D=1.320
+[refil] 808,297/1,000,000  72.5/s  upd=18816  L=0.0226  D=1.320
+[refil] 809,459/1,000,000  72.5/s  upd=18848  L=0.0145  D=1.320
+[refil] 810,679/1,000,000  72.6/s  upd=18880  L=0.0241  D=1.320
+[refil] 811,877/1,000,000  72.6/s  upd=18912  L=0.0223  D=1.320
+[refil] 813,007/1,000,000  72.6/s  upd=18944  L=0.0203  D=1.320
+[refil] 814,155/1,000,000  72.7/s  upd=18976  L=0.0207  D=1.320
+[refil] 815,370/1,000,000  72.7/s  upd=19008  L=0.0242  D=1.320
+[refil] 816,628/1,000,000  72.7/s  upd=19040  L=0.0204  D=1.320
+[refil] 817,852/1,000,000  72.8/s  upd=19072  L=0.0212  D=1.320
+[refil] 819,103/1,000,000  72.8/s  upd=19104  L=0.0309  D=1.320
+[refil] 820,049/1,000,000  72.8/s  upd=19128  L=0.0263  ev=0/100  D=1.320
+[refil] 820,049/1,000,000  72.8/s  upd=19128  L=0.0263  ev=80/100  D=1.320
+[refil] 820,642/1,000,000  72.7/s  upd=19144  L=0.0269  D=1.324
+[refil] 821,914/1,000,000  72.8/s  upd=19176  L=0.0277  D=1.324
+[refil] 823,202/1,000,000  72.8/s  upd=19208  L=0.0264  D=1.324
+[refil] 824,365/1,000,000  72.9/s  upd=19240  L=0.0274  D=1.324
+[refil] 825,572/1,000,000  72.9/s  upd=19272  L=0.0198  D=1.324
+[refil] 826,763/1,000,000  72.9/s  upd=19304  L=0.0238  D=1.324
+[refil] 827,928/1,000,000  73.0/s  upd=19336  L=0.0341  D=1.324
+[refil] 828,751/1,000,000  73.0/s  upd=19360  L=0.0178  D=1.324
+[refil] 830,025/1,000,000  73.0/s  upd=19392  L=0.0257  D=1.324
+[refil] 831,160/1,000,000  73.0/s  upd=19424  L=0.0354  D=1.324
+[refil] 832,268/1,000,000  73.1/s  upd=19456  L=0.0198  D=1.324
+[refil] 833,467/1,000,000  73.1/s  upd=19488  L=0.0188  D=1.324
+[refil] 834,575/1,000,000  73.1/s  upd=19520  L=0.0266  D=1.324
+[refil] 835,865/1,000,000  73.2/s  upd=19552  L=0.0256  D=1.324
+[refil] 836,938/1,000,000  73.2/s  upd=19584  L=0.0220  D=1.324
+[refil] 838,198/1,000,000  73.2/s  upd=19616  L=0.0321  D=1.324
+[refil] 839,352/1,000,000  73.3/s  upd=19648  L=0.0272  D=1.324
+[refil] 840,146/1,000,000  73.3/s  upd=19672  L=0.0195  ev=1/100  D=1.324
+[refil] 840,146/1,000,000  73.2/s  upd=19672  L=0.0195  D=0.992
+[refil] 841,278/1,000,000  73.2/s  upd=19704  L=0.0225  D=0.992
+[refil] 842,507/1,000,000  73.3/s  upd=19736  L=0.0188  D=0.992
+[refil] 843,752/1,000,000  73.3/s  upd=19768  L=0.0351  D=0.992
+[refil] 844,940/1,000,000  73.3/s  upd=19800  L=0.0197  D=0.992
+[refil] 846,195/1,000,000  73.4/s  upd=19832  L=0.0182  D=0.992
+[refil] 847,337/1,000,000  73.4/s  upd=19864  L=0.0255  D=0.992
+[refil] 848,412/1,000,000  73.4/s  upd=19896  L=0.0248  D=0.992
+[refil] 849,609/1,000,000  73.5/s  upd=19928  L=0.0278  D=0.992
+[refil] 850,842/1,000,000  73.5/s  upd=19960  L=0.0340  D=0.992
+[refil] 851,986/1,000,000  73.5/s  upd=19992  L=0.0237  D=0.992
+[refil] 853,126/1,000,000  73.6/s  upd=20024  L=0.0137  D=0.992
+[refil] 854,332/1,000,000  73.6/s  upd=20056  L=0.0329  D=0.992
+[refil] 855,590/1,000,000  73.6/s  upd=20088  L=0.0199  D=0.992
+[refil] 856,697/1,000,000  73.7/s  upd=20120  L=0.0250  D=0.992
+[refil] 857,927/1,000,000  73.7/s  upd=20152  L=0.0260  D=0.992
+[refil] 859,041/1,000,000  73.7/s  upd=20184  L=0.0273  D=0.992
+[refil] 859,950/1,000,000  73.8/s  upd=20208  L=0.0278  D=0.992
+[refil] 860,237/1,000,000  73.7/s  upd=20216  L=0.0294  ev=55/100  D=0.992
+[refil] 860,577/1,000,000  73.7/s  upd=20224  L=0.0165  D=0.900
+[refil] 861,757/1,000,000  73.7/s  upd=20256  L=0.0218  D=0.900
+[refil] 862,974/1,000,000  73.8/s  upd=20288  L=0.0214  D=0.900
+[refil] 864,083/1,000,000  73.8/s  upd=20320  L=0.0210  D=0.900
+[refil] 865,236/1,000,000  73.8/s  upd=20352  L=0.0240  D=0.900
+[refil] 866,488/1,000,000  73.9/s  upd=20384  L=0.0351  D=0.900
+[refil] 867,715/1,000,000  73.9/s  upd=20416  L=0.0216  D=0.900
+[refil] 868,937/1,000,000  73.9/s  upd=20448  L=0.0219  D=0.900
+[refil] 870,219/1,000,000  74.0/s  upd=20480  L=0.0193  D=0.900
+[refil] 871,442/1,000,000  74.0/s  upd=20512  L=0.0170  D=0.900
+[refil] 872,642/1,000,000  74.0/s  upd=20544  L=0.0268  D=0.900
+[refil] 873,799/1,000,000  74.1/s  upd=20576  L=0.0265  D=0.900
+[refil] 874,987/1,000,000  74.1/s  upd=20608  L=0.0258  D=0.900
+[refil] 876,247/1,000,000  74.1/s  upd=20640  L=0.0243  D=0.900
+[refil] 877,395/1,000,000  74.2/s  upd=20672  L=0.0385  D=0.900
+[refil] 878,704/1,000,000  74.2/s  upd=20704  L=0.0276  D=0.900
+[refil] 879,985/1,000,000  74.2/s  upd=20736  L=0.0264  D=0.900
+[refil] 880,312/1,000,000  74.2/s  upd=20744  L=0.0255  ev=56/100  D=0.900
+[refil] 880,899/1,000,000  74.2/s  upd=20760  L=0.0174  D=1.071
+[refil] 882,065/1,000,000  74.2/s  upd=20792  L=0.0312  D=1.071
+[refil] 883,220/1,000,000  74.3/s  upd=20824  L=0.0310  D=1.071
+[refil] 884,786/1,000,000  74.3/s  upd=20864  L=0.0218  D=1.071
+[refil] 886,067/1,000,000  74.4/s  upd=20896  L=0.0352  D=1.071
+[refil] 887,655/1,000,000  74.4/s  upd=20936  L=0.0271  D=1.071
+[refil] 889,027/1,000,000  74.5/s  upd=20976  L=0.0153  D=1.071
+[refil] 890,473/1,000,000  74.5/s  upd=21016  L=0.0483  D=1.071
+[refil] 891,695/1,000,000  74.5/s  upd=21048  L=0.0272  D=1.071
+[refil] 892,838/1,000,000  74.6/s  upd=21080  L=0.0412  D=1.071
+[refil] 894,269/1,000,000  74.6/s  upd=21120  L=0.0195  D=1.071
+[refil] 895,489/1,000,000  74.7/s  upd=21152  L=0.0227  D=1.071
+[refil] 896,968/1,000,000  74.7/s  upd=21192  L=0.0218  D=1.071
+[refil] 898,286/1,000,000  74.8/s  upd=21224  L=0.0154  D=1.071
+[refil] 899,793/1,000,000  74.8/s  upd=21264  L=0.0267  D=1.071
+[refil] 900,038/1,000,000  74.8/s  upd=21272  L=0.0208  ev=97/100  D=1.071
+[refil] 900,900/1,000,000  74.8/s  upd=21296  L=0.0275  D=0.786
+[refil] 902,088/1,000,000  74.8/s  upd=21328  L=0.0298  D=0.786
+[refil] 903,662/1,000,000  74.9/s  upd=21368  L=0.0244  D=0.786
+[refil] 905,218/1,000,000  74.9/s  upd=21408  L=0.0300  D=0.786
+[refil] 906,382/1,000,000  75.0/s  upd=21440  L=0.0259  D=0.786
+[refil] 907,906/1,000,000  75.0/s  upd=21480  L=0.0173  D=0.786
+[refil] 909,161/1,000,000  75.0/s  upd=21512  L=0.0182  D=0.786
+[refil] 910,682/1,000,000  75.1/s  upd=21552  L=0.0241  D=0.786
+[refil] 911,934/1,000,000  75.1/s  upd=21584  L=0.0278  D=0.786
+[refil] 913,415/1,000,000  75.2/s  upd=21624  L=0.0266  D=0.786
+[refil] 914,813/1,000,000  75.2/s  upd=21664  L=0.0331  D=0.786
+[refil] 916,297/1,000,000  75.3/s  upd=21704  L=0.0208  D=0.786
+[refil] 917,491/1,000,000  75.3/s  upd=21736  L=0.0377  D=0.786
+[refil] 919,005/1,000,000  75.4/s  upd=21776  L=0.0350  D=0.786
+[refil] 920,269/1,000,000  75.4/s  upd=21808  L=0.0214  ev=0/100  D=0.786
+[refil] 920,602/1,000,000  75.4/s  upd=21816  L=0.0253  D=0.588
+[refil] 922,091/1,000,000  75.4/s  upd=21856  L=0.0220  D=0.588
+[refil] 923,266/1,000,000  75.4/s  upd=21888  L=0.0252  D=0.588
+[refil] 924,797/1,000,000  75.5/s  upd=21928  L=0.0268  D=0.588
+[refil] 926,065/1,000,000  75.5/s  upd=21960  L=0.0282  D=0.588
+[refil] 927,294/1,000,000  75.6/s  upd=21992  L=0.0154  D=0.588
+[refil] 928,845/1,000,000  75.6/s  upd=22032  L=0.0219  D=0.588
+[refil] 930,363/1,000,000  75.7/s  upd=22072  L=0.0246  D=0.588
+[refil] 931,919/1,000,000  75.7/s  upd=22112  L=0.0174  D=0.588
+[refil] 933,497/1,000,000  75.8/s  upd=22152  L=0.0241  D=0.588
+[refil] 935,119/1,000,000  75.8/s  upd=22192  L=0.0197  D=0.588
+[refil] 936,562/1,000,000  75.9/s  upd=22232  L=0.0212  D=0.588
+[refil] 938,043/1,000,000  75.9/s  upd=22272  L=0.0223  D=0.588
+[refil] 939,510/1,000,000  76.0/s  upd=22312  L=0.0214  D=0.588
+[refil] 940,076/1,000,000  76.0/s  upd=22328  L=0.0226  ev=64/100  D=0.588
+[refil] 940,647/1,000,000  75.9/s  upd=22344  L=0.0174  D=0.833
+[refil] 942,137/1,000,000  76.0/s  upd=22384  L=0.0261  D=0.833
+[refil] 943,613/1,000,000  76.0/s  upd=22424  L=0.0187  D=0.833
+[refil] 944,854/1,000,000  76.1/s  upd=22456  L=0.0367  D=0.833
+[refil] 946,302/1,000,000  76.1/s  upd=22496  L=0.0337  D=0.833
+[refil] 947,726/1,000,000  76.2/s  upd=22536  L=0.0267  D=0.833
+[refil] 948,855/1,000,000  76.2/s  upd=22568  L=0.0310  D=0.833
+[refil] 950,471/1,000,000  76.2/s  upd=22608  L=0.0168  D=0.833
+[refil] 951,685/1,000,000  76.3/s  upd=22640  L=0.0224  D=0.833
+[refil] 953,173/1,000,000  76.3/s  upd=22680  L=0.0234  D=0.833
+[refil] 954,424/1,000,000  76.4/s  upd=22712  L=0.0181  D=0.833
+[refil] 955,981/1,000,000  76.4/s  upd=22752  L=0.0190  D=0.833
+[refil] 957,166/1,000,000  76.4/s  upd=22784  L=0.0268  D=0.833
+[refil] 958,727/1,000,000  76.5/s  upd=22824  L=0.0222  D=0.833
+[refil] 960,206/1,000,000  76.5/s  upd=22864  L=0.0221  ev=0/100  D=0.833
+[refil] 960,498/1,000,000  76.5/s  upd=22872  L=0.0213  D=0.733
+[refil] 961,699/1,000,000  76.5/s  upd=22904  L=0.0167  D=0.733
+[refil] 962,902/1,000,000  76.5/s  upd=22936  L=0.0232  D=0.733
+[refil] 964,176/1,000,000  76.6/s  upd=22968  L=0.0217  D=0.733
+[refil] 965,649/1,000,000  76.6/s  upd=23008  L=0.0149  D=0.733
+[refil] 967,103/1,000,000  76.7/s  upd=23048  L=0.0222  D=0.733
+[refil] 968,622/1,000,000  76.7/s  upd=23088  L=0.0204  D=0.733
+[refil] 970,050/1,000,000  76.8/s  upd=23128  L=0.0329  D=0.733
+[refil] 971,459/1,000,000  76.8/s  upd=23168  L=0.0184  D=0.733
+[refil] 972,994/1,000,000  76.8/s  upd=23208  L=0.0212  D=0.733
+[refil] 974,548/1,000,000  76.9/s  upd=23248  L=0.0287  D=0.733
+[refil] 976,110/1,000,000  76.9/s  upd=23288  L=0.0274  D=0.733
+[refil] 977,659/1,000,000  77.0/s  upd=23328  L=0.0156  D=0.733
+[refil] 979,156/1,000,000  77.0/s  upd=23368  L=0.0194  D=0.733
+[refil] 980,033/1,000,000  77.1/s  upd=23392  L=0.0301  ev=23/100  D=0.733
+[refil] 980,541/1,000,000  77.0/s  upd=23408  L=0.0215  D=0.613
+[refil] 982,065/1,000,000  77.1/s  upd=23448  L=0.0192  D=0.613
+[refil] 983,499/1,000,000  77.1/s  upd=23488  L=0.0301  D=0.613
+[refil] 984,715/1,000,000  77.1/s  upd=23520  L=0.0196  D=0.613
+[refil] 986,210/1,000,000  77.2/s  upd=23560  L=0.0264  D=0.613
+[refil] 987,556/1,000,000  77.2/s  upd=23600  L=0.0259  D=0.613
+[refil] 988,971/1,000,000  77.3/s  upd=23640  L=0.0252  D=0.613
+[refil] 990,427/1,000,000  77.3/s  upd=23680  L=0.0305  D=0.613
+[refil] 991,875/1,000,000  77.3/s  upd=23720  L=0.0196  D=0.613
+[refil] 993,301/1,000,000  77.4/s  upd=23760  L=0.0341  D=0.613
+[refil] 994,730/1,000,000  77.4/s  upd=23800  L=0.0233  D=0.613
+[refil] 996,086/1,000,000  77.5/s  upd=23840  L=0.0238  D=0.613
+[refil] 997,287/1,000,000  77.5/s  upd=23872  L=0.0206  D=0.613
+[refil] 998,160/1,000,000  77.5/s  upd=23896  L=0.0158  D=0.613
+[refil] 999,675/1,000,000  77.5/s  upd=23936  L=0.0144  D=0.613
+[refil] 1,000,000/1,000,000  77.5/s  upd=23944  L=0.0268  D=0.599
+[refil] 1,000,000/1,000,000  77.4/s  upd=23944  L=0.0268  ev=145/4200  D=0.599
+[refil] 1,000,000/1,000,000  77.4/s  upd=23944  L=0.0268  ev=320/4200  D=0.599
+[refil] 1,000,000/1,000,000  77.3/s  upd=23944  L=0.0268  ev=488/4200  D=0.599
+[refil] 1,000,000/1,000,000  77.3/s  upd=23944  L=0.0268  ev=640/4200  D=0.599
+[refil] 1,000,000/1,000,000  77.2/s  upd=23944  L=0.0268  ev=792/4200  D=0.599
+[refil] 1,000,000/1,000,000  77.1/s  upd=23944  L=0.0268  ev=944/4200  D=0.599
+[refil] 1,000,000/1,000,000  77.1/s  upd=23944  L=0.0268  ev=1096/4200  D=0.599
+[refil] 1,000,000/1,000,000  77.0/s  upd=23944  L=0.0268  ev=1236/4200  D=0.599
+[refil] 1,000,000/1,000,000  77.0/s  upd=23944  L=0.0268  ev=1376/4200  D=0.599
+[refil] 1,000,000/1,000,000  76.9/s  upd=23944  L=0.0268  ev=1512/4200  D=0.599
+[refil] 1,000,000/1,000,000  76.8/s  upd=23944  L=0.0268  ev=1646/4200  D=0.599
+[refil] 1,000,000/1,000,000  76.8/s  upd=23944  L=0.0268  ev=1765/4200  D=0.599
+[refil] 1,000,000/1,000,000  76.7/s  upd=23944  L=0.0268  ev=1880/4200  D=0.599
+[refil] 1,000,000/1,000,000  76.7/s  upd=23944  L=0.0268  ev=1984/4200  D=0.599
+[refil] 1,000,000/1,000,000  76.6/s  upd=23944  L=0.0268  ev=2095/4200  D=0.599
+[refil] 1,000,000/1,000,000  76.5/s  upd=23944  L=0.0268  ev=2222/4200  D=0.599
+[refil] 1,000,000/1,000,000  76.5/s  upd=23944  L=0.0268  ev=2354/4200  D=0.599
+[refil] 1,000,000/1,000,000  76.4/s  upd=23944  L=0.0268  ev=2488/4200  D=0.599
+[refil] 1,000,000/1,000,000  76.4/s  upd=23944  L=0.0268  ev=2618/4200  D=0.599
+[refil] 1,000,000/1,000,000  76.3/s  upd=23944  L=0.0268  ev=2749/4200  D=0.599
+[refil] 1,000,000/1,000,000  76.3/s  upd=23944  L=0.0268  ev=2864/4200  D=0.599
+[refil] 1,000,000/1,000,000  76.2/s  upd=23944  L=0.0268  ev=2983/4200  D=0.599
+[refil] 1,000,000/1,000,000  76.1/s  upd=23944  L=0.0268  ev=3134/4200  D=0.599
+[refil] 1,000,000/1,000,000  76.1/s  upd=23944  L=0.0268  ev=3280/4200  D=0.599
+[refil] 1,000,000/1,000,000  76.0/s  upd=23944  L=0.0268  ev=3440/4200  D=0.599
+[refil] 1,000,000/1,000,000  76.0/s  upd=23944  L=0.0268  ev=3592/4200  D=0.599
+[refil] 1,000,000/1,000,000  75.9/s  upd=23944  L=0.0268  ev=3712/4200  D=0.599
+[refil] 1,000,000/1,000,000  75.9/s  upd=23944  L=0.0268  ev=3817/4200  D=0.599
+[refil] 1,000,000/1,000,000  75.8/s  upd=23944  L=0.0268  ev=3928/4200  D=0.599
+[refil] 1,000,000/1,000,000  75.7/s  upd=23944  L=0.0268  ev=4032/4200  D=0.599
+[refil] 1,000,000/1,000,000  75.7/s  upd=23944  L=0.0268  ev=4144/4200  D=0.599

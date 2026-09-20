@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "open-score"
+version = "6.4.0"
+description = "HAD damage-defense environments, rules, and cross-scale MARL experiments"
+requires-python = ">=3.10"
+dependencies = [
+  "had-env @ file:///E:/Code/Open_Score_HAD_Workbench",
+]
+
+[project.optional-dependencies]
+training = [
+  "torch>=2.0",
+  "numpy>=1.24",
+  "scipy>=1.9",
+  "matplotlib>=3.8",
+  "PyYAML>=6.0",
+  "psutil>=5.9",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["open_score*"]
+
+[tool.setuptools.package-data]
+"open_score.algos.pymarl" = ["LICENSE", "config/*.yaml", "config/algs/*.yaml", "config/envs/*.yaml"]
+"open_score.algos.dcg_patch" = ["LICENSE", "*.yaml"]
+"open_score.algos.spectra_patch" = ["LICENSE", "*.yaml"]

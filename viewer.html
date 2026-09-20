@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Open-SCORE · 模型评估</title>
+  <style>
+    :root { --bg:#0c1320; --panel:#141e2e; --line:#2a384d; --ink:#eef3fb; --muted:#a8b7cb; --blue:#90baff; --red:#ff929a; --green:#70d5b3; --yellow:#edcb80; }
+    * { box-sizing:border-box; }
+    [hidden] { display:none !important; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.6 "Microsoft YaHei","Noto Sans SC","Segoe UI","PingFang SC",sans-serif; }
+    button,input,select { font:inherit; }
+    button,input,select,summary { outline-offset:4px; }
+    :focus-visible { outline:2px solid var(--blue); }
+    button { border:1px solid var(--line); border-radius:8px; padding:8px 14px; background:#202e44; color:var(--ink); cursor:pointer; white-space:nowrap; }
+    button:hover:not(:disabled) { background:#2c3e5b; border-color:#607fae; }
+    button:disabled { opacity:.45; cursor:default; }
+    input,select { width:100%; min-width:0; border:1px solid #394861; border-radius:7px; background:#0d1522; color:var(--ink); padding:6px 10px; }
+    input:disabled { color:var(--muted); opacity:.65; }
+    input[type=range] { accent-color:var(--blue); padding:0; cursor:pointer; }
+    label { display:block; margin-bottom:4px; color:var(--muted); font-size:13px; }
+    h1,h2,h3,p { margin:0; }
+    h1 { font-size:23px; font-weight:650; letter-spacing:.02em; }
+    h2 { font-size:16px; font-weight:600; }
+    h3 { font-size:13px; font-weight:500; color:var(--muted); }
+    .shell { max-width:1520px; margin:auto; padding:24px 28px 28px; }
+    .masthead { display:flex; align-items:center; justify-content:space-between; gap:20px; margin-bottom:16px; }
+    .eyebrow { color:var(--blue); font-size:11px; letter-spacing:.15em; font-weight:650; margin-bottom:4px; }
+    .subtitle { color:var(--muted); margin-top:5px; }
+    .badge { display:inline-flex; align-items:center; gap:7px; border:1px solid var(--line); border-radius:99px; padding:5px 11px; color:var(--muted); font-size:12px; white-space:nowrap; }
+    .badge::before { content:""; width:6px; height:6px; background:currentColor; border-radius:50%; }
+    .badge[data-state=running] { color:var(--blue); }
+    .badge[data-state=complete] { color:var(--green); }
+    .badge[data-state=error] { color:var(--red); }
+    .workspace { display:grid; grid-template-columns:264px minmax(0,1fr); gap:20px; align-items:start; }
+    .workspace > section:first-child { grid-row:1 / span 2; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; min-width:0; }
+    .card-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 20px; border-bottom:1px solid var(--line); }
+    .section-id { color:#7488a8; font-size:11px; letter-spacing:.08em; }
+    .card-body { padding:16px 20px; }
+    fieldset { margin:0; padding:0; border:0; min-width:0; }
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px 12px; }
+    .full { grid-column:1/-1; }
+    .muted,.hint { color:var(--muted); font-size:12px; }
+    .hint { line-height:1.65; margin-top:8px; overflow-wrap:anywhere; }
+    .policy-list { margin-top:14px; padding-top:10px; border-top:1px solid var(--line); display:grid; gap:8px; }
+    .strategy-card { padding:12px; border:1px solid var(--line); border-left:3px solid var(--red); border-radius:8px; background:#101a29; }
+    .strategy-card.blue-team { border-left-color:var(--blue); }
+    .strategy-card h3 { color:var(--ink); margin-bottom:8px; }
+    .strategy-layers { display:grid; gap:10px; margin-top:10px; }
+    .policy { font-size:12px; }
+    .policy code { display:block; color:var(--muted); font:11px/1.6 Consolas,monospace; padding-left:13px; }
+    .dot { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:6px; background:var(--red); }
+    .dot.blue { background:var(--blue); }
+    .dot.target { border-radius:0; transform:rotate(45deg); background:var(--yellow); }
+    .primary { width:100%; margin-top:0; padding:9px 12px; background:#3d71d3; border-color:#3d71d3; font-weight:600; }
+    .primary:hover:not(:disabled) { background:#4b83eb; }
+    .job-panel { margin:12px 0 18px; border-bottom:1px solid var(--line); padding-bottom:14px; }
+    .progress-heading { display:flex; justify-content:space-between; gap:8px; font-size:12px; margin-bottom:8px; }
+    #status { overflow-wrap:anywhere; }
+    #status.error { color:var(--red); }
+    progress { display:block; appearance:none; width:100%; height:6px; border:0; border-radius:6px; overflow:hidden; background:#273449; accent-color:var(--blue); }
+    progress::-webkit-progress-bar { background:#273449; }
+    progress::-webkit-progress-value { background:var(--blue); border-radius:6px; transition:width .3s; }
+    progress::-moz-progress-bar { background:var(--blue); }
+    .timing { margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:11px; color:var(--muted); }
+    .timing strong { display:block; color:var(--ink); font-size:13px; font-weight:500; font-variant-numeric:tabular-nums; }
+    .replay-head { flex-wrap:wrap; }
+    .legend { display:flex; flex-wrap:wrap; gap:12px; font-size:12px; color:var(--muted); }
+    .scene-grid { display:grid; grid-template-columns:minmax(300px,min(65%,max(390px,calc(100vh - 280px)))) minmax(280px,380px); justify-content:center; gap:16px; padding:16px; background:#101a29; }
+    .plot-title { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 12px; font-size:12px; color:var(--ink); border-bottom:1px solid var(--line); }
+    .plot-title span { color:var(--muted); font-size:10px; }
+    .plot { border:1px solid var(--line); border-radius:9px; overflow:hidden; background:#eaf1f8; }
+    .plot > .plot-title { background:#172335; }
+    .stage { position:relative; height:clamp(320px,calc(100vh - 355px),580px); }
+    #world { display:block; width:100%; height:100%; }
+    #altitude { display:block; width:100%; height:auto; }
+    .scene-side { display:grid; gap:14px; align-content:start; }
+    .live-state { padding:14px; border:1px solid var(--line); border-radius:9px; background:#172335; }
+    .live-metrics { display:grid; grid-template-columns:1fr 1fr; gap:14px 10px; margin-top:12px; }
+    .live-metrics span { display:block; color:var(--muted); font-size:11px; }
+    .live-metrics strong { display:block; font-size:19px; font-weight:550; font-variant-numeric:tabular-nums; }
+    .red-ink { color:var(--red); } .blue-ink { color:var(--blue); }
+    .target-rows { margin-top:14px; border-top:1px solid var(--line); padding-top:10px; display:grid; gap:5px; color:var(--muted); font-size:11px; }
+    .target-rows div { display:flex; justify-content:space-between; gap:8px; }
+    .target-rows strong { font-weight:500; color:var(--yellow); }
+    .empty-state { position:absolute; left:50%; top:44%; transform:translate(-50%,-50%); text-align:center; width:80%; color:#304b72; }
+    .empty-state strong { display:block; font-weight:600; font-size:18px; margin-bottom:6px; }
+    .empty-state span { font-size:13px; }
+    .view-note { display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; padding:8px 18px; border-bottom:1px solid var(--line); color:var(--muted); font-size:11px; }
+    .playback { padding:15px 18px; }
+    .playback-row { display:flex; align-items:center; gap:8px; }
+    .playback-row select { width:auto; flex:1; }
+    .playback-row #speed { flex:0 0 76px; }
+    .scrubber { display:flex; align-items:center; gap:12px; margin-top:13px; }
+    #frameCount { flex:0 0 auto; min-width:66px; color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums; text-align:right; }
+    #frameInfo { font-size:12px; margin-top:9px; color:var(--muted); min-height:20px; }
+    .results-area { grid-column:2; display:grid; gap:18px; }
+    .metrics { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px; }
+    .metric-primary { display:flex; gap:8px; justify-content:space-between; align-items:baseline; margin:4px 0 0; }
+    #winRate { font-size:36px; font-weight:600; line-height:1.3; letter-spacing:-.03em; color:var(--green); font-variant-numeric:tabular-nums; }
+    #sampleCount { font-size:12px; color:var(--muted); }
+    #confidence { margin-top:6px; color:var(--muted); font-size:11px; }
+    .outcomes { display:grid; gap:10px; margin-top:16px; }
+    .bar-row { display:grid; grid-template-columns:70px 1fr 50px; align-items:center; gap:10px; font-size:12px; }
+    .bar-track { background:#243148; height:8px; border-radius:8px; overflow:hidden; }
+    .bar-fill { width:0; height:100%; background:var(--green); border-radius:8px; transition:width .3s; }
+    .bar-fill.loss { background:var(--red); }
+    .bar-fill.draw { background:var(--yellow); }
+    .bar-value { text-align:right; font-variant-numeric:tabular-nums; }
+    .details { margin:20px 0 0; padding:14px 0 0; border-top:1px solid var(--line); display:grid; gap:9px; }
+    .details div { display:flex; justify-content:space-between; gap:12px; font-size:12px; }
+    dt { color:var(--muted); }
+    dd { margin:0; font-variant-numeric:tabular-nums; }
+    .histogram { height:140px; display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; align-items:stretch; margin-top:16px; }
+    .hist-col { display:grid; grid-template-rows:1fr 23px; min-width:0; text-align:center; }
+    .hist-track { display:flex; flex-direction:column; justify-content:flex-end; border-bottom:1px solid #465673; }
+    .hist-value { font-size:11px; color:var(--muted); }
+    .hist-bar { background:#73a3ee; min-height:0; margin:3px 5px 0; border-radius:3px 3px 0 0; }
+    .hist-label { color:var(--muted); font-size:10px; white-space:nowrap; padding-top:5px; }
+    details { font-size:12px; color:var(--muted); }
+    summary { cursor:pointer; color:var(--ink); }
+    details p { margin-top:10px; }
+    footer { margin-top:18px; color:#8799b4; font-size:11px; }
+    .notice { margin-bottom:12px; padding:8px 14px; border:1px solid #726044; border-radius:8px; background:#2c261d; color:#e9cf9b; font-size:12px; overflow-wrap:anywhere; }
+    .form-section { grid-column:1/-1; display:flex; align-items:center; gap:7px; margin:7px 0 0; color:#d6e0ef; font-size:11px; letter-spacing:.04em; }
+    .form-section::after { content:""; height:1px; flex:1; background:var(--line); }
+    .switches { display:flex; gap:15px; align-items:center; flex-wrap:wrap; }
+    .switches label { display:flex; align-items:center; gap:5px; margin:0; font-size:11px; cursor:pointer; }
+    .switches input { width:auto; accent-color:var(--blue); }
+    .return-pair { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
+    .return-pair div { border:1px solid var(--line); padding:9px 12px; border-radius:7px; }
+    .return-pair span { display:block; color:var(--muted); font-size:11px; }
+    .return-pair strong { font-size:22px; font-weight:550; font-variant-numeric:tabular-nums; }
+    .comparison-scroll { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:12px; white-space:nowrap; }
+    th,td { text-align:left; padding:12px 16px; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums; }
+    th { color:var(--muted); font-weight:500; background:#111b2b; }
+    td small { display:block; color:var(--muted); font-size:10px; }
+    tr.current td { background:#1a2a40; }
+    .comparable { color:var(--green); } .different { color:var(--yellow); }
+    .comparison-note { padding:12px 16px; color:var(--muted); font-size:11px; }
+    .method-note { margin:14px 0 0; padding-top:12px; border-top:1px solid var(--line); }
+    .run-context { color:var(--muted); font-size:11px; overflow-wrap:anywhere; margin-top:10px; }
+    .button-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .button-row button { flex:1; padding:6px 9px; font-size:12px; }
+    .checkpoint-filters { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .checkpoint-info { white-space:pre-line; color:var(--muted); font-size:11px; overflow-wrap:anywhere; }
+    .checkpoint-info.invalid { color:var(--yellow); }
+    .queue-panel { margin-top:16px; padding-top:13px; border-top:1px solid var(--line); }
+    .queue-items { display:grid; gap:8px; margin-top:10px; padding:0; list-style:none; }
+    .queue-items li { padding:8px; border:1px solid var(--line); border-radius:6px; font-size:11px; overflow-wrap:anywhere; }
+    .queue-items li strong { display:block; font-weight:500; }
+    .queue-items button { padding:2px 8px; margin-top:5px; font-size:11px; }
+    .comparison-chart { padding:16px; display:grid; gap:14px; }
+    .comparison-chart-row { display:grid; gap:5px; font-size:12px; }
+    .comparison-chart-row small { display:block; color:var(--muted); }
+    .comparison-chart-value { display:grid; grid-template-columns:1fr 70px; align-items:center; gap:12px; }
+    .comparison-chart-value .bar-track { height:12px; }
+    .comparison-chart-value strong { text-align:right; font-variant-numeric:tabular-nums; }
+    .comparison-tools { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 16px 0; }
+    .comparison-tools label { margin:0; }
+    .comparison-tools select { width:auto; max-width:100%; }
+    td .button-row { margin:0; }
+    @media (max-width:1160px) { .workspace { grid-template-columns:240px minmax(0,1fr); gap:16px; } .scene-grid { grid-template-columns:minmax(0,1fr); } .scene-side { grid-template-columns:1fr 1fr; } .stage { height:clamp(340px,calc(100vh - 360px),500px); } .live-metrics { gap:8px; } .target-rows { margin-top:8px; } }
+    @media (max-width:800px) { .shell { padding:18px 14px; } .masthead { align-items:flex-start; gap:10px; } h1 { font-size:20px; } .workspace { grid-template-columns:1fr; } .workspace > section:first-child { grid-row:auto; } .results-area { grid-column:auto; } .form-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } .form-grid .full { grid-column:span 2; } .form-section { grid-column:1/-1; } .subtitle { font-size:12px; } .card-body { padding:16px; } }
+    @media (max-width:560px) { .metrics,.scene-side { grid-template-columns:1fr; } .form-grid { grid-template-columns:1fr 1fr; } .form-grid .full { grid-column:1/-1; } .playback-row { flex-wrap:wrap; } .playback-row #episode { flex-basis:100%; } .stage { height:330px; } .scene-grid { padding:10px; } .section-id { display:none; } .switches { gap:10px; } }
+    @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
+    .workspace { grid-template-columns:300px minmax(0,1fr); gap:18px; }
+    .shell { max-width:1440px; padding:18px 24px; }
+    .card-body { padding:16px; }
+    .scene-grid { grid-template-columns:minmax(0,1fr) 215px; gap:12px; }
+    .stage { height:clamp(320px,calc(100vh - 350px),490px); }
+    .metrics { grid-template-columns:1fr; }
+    .primary { margin-top:16px; }
+    .job-panel { margin:14px 0 0; padding-bottom:0; border-bottom:0; }
+    .settings-details { border-top:1px solid var(--line); padding-top:12px; margin-top:4px; }
+    .settings-details > .form-grid { margin-top:12px; }
+    .model-register { border-top:1px solid var(--line); padding-top:12px; }
+    .model-register h3 { margin-bottom:8px; }
+    .compact-details { margin-top:12px; }
+    .checkpoint-details { margin-top:8px; }
+    .checkpoint-details > .checkpoint-filters { margin:10px 0; }
+    .checkpoint-error { color:var(--yellow); margin:0; }
+    .distribution-details { border-top:1px solid var(--line); padding-top:16px; margin-top:16px; }
+    .comparison-history { padding:0 16px 14px; }
+    .comparison-history > .comparison-scroll { margin-top:10px; }
+    .comparison-note { padding:10px 0 0; }
+    #red_model_fields label { font-size:12px; }
+    #red_checkpoint { font-size:12px; }
+    .model-count { color:var(--muted); font-size:11px; margin-top:5px; }
+    @media (max-width:1100px) { .scene-grid { grid-template-columns:minmax(0,1fr); } .scene-side { grid-template-columns:1fr; } .scene-side .live-metrics { margin-top:6px; } }
+    @media (max-width:800px) { .shell { padding:14px; } .workspace { grid-template-columns:1fr; } .form-grid { grid-template-columns:1fr 1fr; } .form-grid .full { grid-column:1/-1; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <div><h1>Open-SCORE 模型评估</h1></div>
+      <span class="badge" id="jobBadge">待开始</span>
+    </header>
+    <div id="notice" class="notice" role="status" hidden></div>
+    <div class="workspace">
+      <section class="card" aria-labelledby="configTitle">
+        <div class="card-head"><h2 id="configTitle">评估配置</h2></div>
+        <div class="card-body">
+          <form id="runForm">
+            <fieldset id="settings"><div class="form-grid">
+              <div class="full"><label for="red_algorithm">红方算法 / 模型</label><select id="red_algorithm"><option value="checkpoint:">训练模型（正在读取目录…）</option></select><select id="red_architecture" hidden><option value="checkpoint" selected>训练模型</option><option value="end_to_end">动作策略</option><option value="hierarchical">分层规则</option></select></div>
+              <div class="full" id="red_model_fields"><label for="red_checkpoint">模型权重</label><select id="red_checkpoint" disabled><option>正在连接服务，读取模型…</option></select></div>
+              <p class="hint full checkpoint-error" id="checkpointError" role="alert" hidden></p>
+              <div class="full" id="cycleDepthField" hidden>
+                <label for="cycle_depth">循环轮数 R</label>
+                <select id="cycle_depth">
+                  <option value="0">默认（评估 R）</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                </select>
+                <p class="hint">仅循环 Transformer 臂（REFIL-B / F / K4）有效。终评默认 R=4；可改成 1–6 看策略是否随轮数变化。</p>
+              </div>
+              <div class="full"><label for="blue_algorithm">蓝方对手</label><select id="blue_algorithm"><option value="hierarchical">分层规则</option></select><select id="blue_architecture" hidden><option value="end_to_end">动作策略</option><option value="hierarchical" selected>分层规则</option></select></div>
+              <div><label for="red">红方数量</label><input id="red" type="number" min="1" max="40" step="1" value="8" required></div>
+              <div><label for="blue">蓝方数量</label><input id="blue" type="number" min="1" max="40" step="1" value="8" required></div>
+              <div><label for="targets">目标数 K</label><select id="targets"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>
+              <div><label for="stats">评估局数</label><input id="stats" type="number" min="1" max="400" step="1" value="100" required></div>
+              <details class="full settings-details" id="advancedSettings"><summary>更多设置</summary><div class="form-grid">
+                <div class="full"><label for="task_mode">任务</label><select id="task_mode"><option value="damage">累计伤害</option><option value="survival">目标生存</option></select></div>
+                <div><label for="spatial_dim">空间维度</label><select id="spatial_dim"><option value="2">二维</option><option value="3">三维</option></select></div>
+                <div><label for="target_initialization">目标初始化</label><select id="target_initialization"><option value="random">随机</option><option value="fixed">固定</option></select></div>
+                <div class="full"><label for="scalePreset">规模预设</label><select id="scalePreset"><option value="">自定义规模</option></select></div>
+                <div><label for="max_steps">步数上限</label><input id="max_steps" type="number" min="1" max="500" step="1" value="100" required></div>
+                <div><label for="target_health">目标血量</label><input id="target_health" type="number" min="0.000001" step="any" value="2" required></div>
+                <div><label for="seed0">起始种子</label><input id="seed0" type="number" min="0" max="9007199254740591" step="1" value="0" required></div>
+                <div><label for="display">保存回放局数</label><input id="display" type="number" min="0" max="20" step="1" value="5" required></div>
+                <div class="full" id="red_rule_settings"><h3>红方策略细选</h3><div class="strategy-layers" id="red_strategy_layers"></div></div>
+                <div class="full"><h3>蓝方策略细选</h3><div class="strategy-layers" id="blue_strategy_layers"></div></div>
+                <div class="full model-register"><h3>添加本地模型</h3><label for="checkpointPath">权重路径</label><input id="checkpointPath" type="text" placeholder="experiments/…/best.pt"><label for="checkpointMethod">算法类型</label><select id="checkpointMethod"><option value="">自动识别</option></select><div class="button-row"><button id="registerCheckpoint" type="button">添加模型</button><button id="refreshCheckpoints" type="button">刷新目录</button></div><p class="hint" id="checkpointCatalogHint" role="status"></p></div>
+              </div></details>
+            </div></fieldset>
+            <button class="primary" id="run" type="submit" disabled>开始评估</button>
+          </form>
+          <div class="job-panel">
+            <div class="progress-heading"><span id="status" role="status" aria-live="polite">正在连接本地服务…</span><span id="progressCount">0 / 0</span></div>
+            <progress id="progress" max="1" value="0" aria-label="已完成评估局数"></progress>
+            <div class="timing"><div>已用<strong id="elapsed">—</strong></div><div>预计剩余<strong id="eta">—</strong></div></div>
+            <p class="hint" id="progressHint" hidden></p><button id="retry" type="button" hidden>重新连接</button>
+          </div>
+          <details class="queue-panel"><summary>批量对比队列</summary><div class="button-row"><button id="addQueue" type="button" disabled>加入当前配置</button><button id="runQueue" type="button" disabled>运行队列</button></div><div class="button-row"><button id="stopQueue" type="button" hidden>停止后续排队</button><button id="clearQueue" type="button" disabled>清空队列</button></div><p class="hint" id="queueProgress" role="status" aria-live="polite">队列为空。</p><ol id="queueItems" class="queue-items"></ol></details>
+        </div>
+      </section>
+      <section class="card" aria-labelledby="replayTitle">
+        <div class="card-head replay-head"><h2 id="replayTitle">对局回放</h2><div class="legend"><span><i class="dot"></i>红方</span><span><i class="dot blue"></i>蓝方</span><span><i class="dot target"></i>目标</span></div></div>
+        <div class="scene-grid">
+          <div class="plot"><div class="plot-title">XY 平面位置<span>等比例坐标 · m</span></div><div class="stage">
+            <canvas id="world" width="600" height="500" role="img" aria-label="XY 平面轨迹，横纵轴采用相同物理比例，单位米"></canvas>
+            <div class="empty-state" id="emptyReplay"><strong>等待第一局回放</strong><span id="emptyReplayHint">开始评估后，在这里查看对局过程。</span></div>
+          </div></div>
+          <div class="scene-side">
+            <div class="plot" id="altitudePlot" hidden><div class="plot-title">XZ 高度投影<span>等比例坐标 · m</span></div><canvas id="altitude" width="320" height="190" role="img" aria-label="XZ 高度投影，Z 轴向上，单位米"></canvas></div>
+            <div class="live-state"><h3 id="liveTitle">当前帧状态</h3><div class="live-metrics"><div><span id="liveDamageLabel">目标累计伤害</span><strong id="liveDamage">—</strong></div><div><span>存活 · 红 / 蓝</span><strong id="liveAlive">— / —</strong></div></div><details class="compact-details"><summary>目标 / 回报详情</summary><div class="live-metrics"><div><span>红方累计回报</span><strong id="liveRedReturn" class="red-ink">—</strong></div><div><span>蓝方累计回报</span><strong id="liveBlueReturn" class="blue-ink">—</strong></div></div><div class="target-rows" id="targetStates">目标状态随回放更新。</div></details></div>
+          </div>
+        </div>
+        <div class="view-note"><div class="switches"><label><input type="checkbox" id="showAssignments" checked>红方拦截连线</label><label><input type="checkbox" id="showBlueTargets" checked>蓝方目标</label><label><input type="checkbox" id="showTrails">近期轨迹</label><label><input type="checkbox" id="showLabels" checked>实体编号</label></div><span id="replayStatus">尚无回放</span></div>
+        <div class="playback">
+          <label for="episode">已保存的对局</label>
+          <div class="playback-row">
+            <select id="episode" disabled><option>暂无已完成对局</option></select>
+            <button id="play" type="button" disabled>播放</button><button id="stepBtn" type="button" disabled>单步</button>
+            <select id="speed" aria-label="回放速度"><option value="0.5">0.5 倍</option><option value="1" selected>1 倍</option><option value="2">2 倍</option><option value="4">4 倍</option></select>
+          </div>
+          <div class="scrubber"><input id="slider" type="range" min="0" max="0" value="0" aria-label="回放帧" disabled><span id="frameCount">— / —</span></div>
+          <div id="frameInfo">拖动进度条定位；播放速度只影响回放。</div>
+          <details class="compact-details"><summary>当前任务配置</summary><div class="run-context" id="runContext">选择模型后开始评估。</div></details>
+        </div>
+      </section>
+      <div class="results-area"><div class="metrics">
+        <section class="card" aria-labelledby="summaryTitle">
+          <div class="card-head"><h2 id="summaryTitle">评估统计</h2><span class="section-id" id="summaryState">等待结果</span></div>
+          <div class="card-body" id="summary">
+            <h3 id="metricLabel">平均目标累计伤害 ↓</h3><div class="metric-primary"><strong id="winRate">—</strong><span id="sampleCount">0 局完成</span></div>
+            <div id="confidence">所有目标伤害之和 · 等待结果</div>
+            <details class="compact-details"><summary>统计详情</summary><div id="damageReturns" class="return-pair"><div><span>红方平均回报</span><strong id="redReturn" class="red-ink">—</strong></div><div><span>蓝方平均回报</span><strong id="blueReturn" class="blue-ink">—</strong></div></div>
+            <div class="outcomes" id="survivalOutcomes" aria-label="终局结果分布" hidden>
+              <div class="bar-row"><span>红胜</span><div class="bar-track"><div id="winsBar" class="bar-fill"></div></div><span id="winsValue" class="bar-value">—</span></div>
+              <div class="bar-row"><span>失守</span><div class="bar-track"><div id="lossBar" class="bar-fill loss"></div></div><span id="lossValue" class="bar-value">—</span></div>
+              <div class="bar-row"><span>未分胜负</span><div class="bar-track"><div id="drawBar" class="bar-fill draw"></div></div><span id="drawValue" class="bar-value">—</span></div>
+            </div>
+            <dl class="details">
+              <div><dt>交战率</dt><dd id="engageRate">—</dd></div><div><dt>每次开火击杀</dt><dd id="killsPerFire">—</dd></div>
+              <div><dt>边界裁剪率</dt><dd id="clipRate">—</dd></div><div><dt>平均对局步数</dt><dd id="meanSteps">—</dd></div>
+              <div><dt id="terminalLabel">到达时限 / 蓝方耗尽</dt><dd id="terminalCounts">—</dd></div><div id="zeroDamageRow"><dt>零伤害对局</dt><dd id="zeroDamage">—</dd></div>
+            </dl>
+          <div class="distribution-details"><h3 id="histTitle">对局伤害分布</h3><span class="muted" id="histUnit">横轴：累计伤害</span><div id="histogram" class="histogram" hidden></div><p id="histHint" class="muted">完成评估后显示。</p><div id="targetDamagePanel" class="details"><h3>逐目标平均伤害</h3><div id="targetDamageBars" class="outcomes"></div><p id="targetDamageHint" class="muted">等待统计。</p></div></div></details>
+          </div>
+        </section>
+      </div><section class="card" aria-labelledby="comparisonTitle"><div class="card-head"><h2 id="comparisonTitle">策略对比</h2><span class="section-id">完整任务 · 当前会话</span></div><div class="comparison-tools"><label for="comparisonScope">图表范围</label><select id="comparisonScope"><option value="opponent">同条件、同蓝方策略</option><option value="scenario">同场景（允许不同蓝方策略）</option></select></div><div id="comparisonChart" class="comparison-chart" role="img" aria-label="完整任务算法指标比较"></div><details class="comparison-history"><summary>历史结果与回放</summary><div class="comparison-scroll"><table><thead><tr><th>红方 / 蓝方策略</th><th>任务 / 条件</th><th>样本</th><th>平均伤害</th><th>红 / 蓝回报</th><th>任务指标</th><th>可比性</th><th>历史任务</th></tr></thead><tbody id="comparisonRows"></tbody></table></div><p class="comparison-note" id="comparisonHint">完整评估后自动加入。</p></details></section></div>
+    </div>
+  </main>
+<script>
+'use strict';
+let job = null, episode = null, playing = false, timer = null, meta = null;
+let pollTimer = null, jobConfig = null, running = false, startedAt = null, elapsedBase = 0, elapsedAnchor = 0;
+let episodeRequest = 0, records = [], loadedIndex = null, pollFailures = 0, submissionUnconfirmed = false;
+let evaluationQueue = [], queueActive = false, queueCurrent = null, queueSerial = 0, queueMessage = '';
+const episodeCache = new Map();
+const $ = id => document.getElementById(id);
+const methodNames = {b0_qmix:'QMIX-Base',b2_qmix_atten:'QMIX-Atten',alma:'ALMA'};
+const blueGroupingNames = {reactive:'自适应集火单目标（训练）',concentrated:'集火最近目标',balanced:'均分攻击多目标'};
+function displayMetadata(data) {
+  // Display-only names also apply when refreshing an already-running API 5 server.
+  Object.assign(data.methods || (data.methods={}),methodNames);
+  const blue=data.strategy_catalog?.blue;
+  if (blue?.end_to_end?.policies?.nearest_target) blue.end_to_end.policies.nearest_target='各自冲最近目标';
+  const grouping=blue?.hierarchical?.layers?.find(layer=>layer.id==='grouping');
+  if (grouping) for (const key of Object.keys(grouping.policies)) {
+    if (blueGroupingNames[key]) grouping.policies[key]=blueGroupingNames[key];
+  }
+  for (const item of data.checkpoints || []) if (methodNames[item.method]) item.method_label=methodNames[item.method];
+  return data;
+}
+const numericFields = ['targets','red','blue','seed0','display','stats','max_steps','target_health','spatial_dim','cycle_depth'];
+const fields = [...numericFields,'task_mode','target_initialization'];
+const storageKey = 'open-score-viewer-job';
+const comparisonKey = 'open-score-viewer-comparisons-v3';
+let completedJobs = [];
+try { completedJobs = JSON.parse(sessionStorage.getItem(comparisonKey) || '[]'); if (!Array.isArray(completedJobs)) completedJobs = []; } catch (_) {}
+const finite = v => v !== null && v !== undefined && Number.isFinite(Number(v));
+const number = (v, digits = 2) => finite(v) ? Number(v).toFixed(digits) : '—';
+const percent = (v, digits = 1) => finite(v) ? `${(Number(v) * 100).toFixed(digits)}%` : '—';
+const modeOf = source => source?.task_mode || jobConfig?.task_mode || 'survival';
+const dimensionOf = source => Number(source?.spatial_dim ?? jobConfig?.spatial_dim ?? (source || jobConfig ? 3 : $('spatial_dim').value || 2));
+const compatibleAPI = () => Number(meta?.viewer_api) >= 5;
+const duration = seconds => {
+  if (seconds === null || seconds === undefined || !Number.isFinite(Number(seconds))) return '—';
+  const total = Math.max(0, Math.round(Number(seconds)));
+  return total < 60 ? `${total} 秒` : `${Math.floor(total / 60)} 分 ${total % 60} 秒`;
+};
+function notice(message) { $('notice').textContent = message; $('notice').hidden = !message; }
+function status(message, state = '') {
+  $('status').textContent = message;
+  $('status').classList.toggle('error', state === 'error');
+  $('jobBadge').dataset.state = state;
+  $('jobBadge').textContent = ({running:'运行中',complete:'已完成',error:'需处理'})[state] || '待运行';
+}
+function lockSettings(value) {
+  running = value; $('settings').disabled = value || queueActive;
+  $('run').disabled = value || queueActive || submissionUnconfirmed || !compatibleAPI();
+  $('run').textContent = value ? '评估运行中…' : '开始评估'; renderQueue();
+  document.querySelectorAll('[data-history-action]').forEach(button=>button.disabled=value || queueActive || submissionUnconfirmed);
+}
+function saveJob() {
+  try { sessionStorage.setItem(storageKey, JSON.stringify({job,config:jobConfig,startedAt})); } catch (_) {}
+  const url = new URL(location.href); url.searchParams.set('job', job); history.replaceState(null, '', url);
+}
+function readSavedJob() { try { return JSON.parse(sessionStorage.getItem(storageKey) || 'null'); } catch (_) { return null; } }
+function clearSavedJob() {
+  try { sessionStorage.removeItem(storageKey); } catch (_) {}
+  const url = new URL(location.href); url.searchParams.delete('job'); history.replaceState(null, '', url);
+}
+async function request(url, options = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(url, {...options,signal:controller.signal,cache:'no-store'});
+    const data = await response.json();
+    if (!response.ok || (response.status === 202 && data.error)) {
+      const error = new Error(data.error || `请求失败（HTTP ${response.status}）`); error.status = response.status; throw error;
+    }
+    return data;
+  } catch (error) {
+    if (error.name === 'AbortError') throw new Error('请求超时，请检查本地服务是否仍在运行。');
+    if (error instanceof TypeError) throw new Error('无法连接本地服务，请确认 viewer.py 正在运行。');
+    if (error instanceof SyntaxError) throw new Error('服务返回的数据无法解析，请重新连接。');
+    throw error;
+  } finally { clearTimeout(timeout); }
+}
+function strategyFromForm(side) {
+  const architecture = $(`${side}_architecture`).value;
+  if (architecture === 'checkpoint') return {architecture,checkpoint:$(`${side}_checkpoint`)?.value || ''};
+  if (architecture === 'end_to_end') return {architecture,policy:$(`${side}_action_policy`)?.value || ''};
+  const layers = Object.fromEntries(Array.from($(`${side}_strategy_layers`).querySelectorAll('select[data-layer]')).map(select => [select.dataset.layer,select.value]));
+  return {architecture,layers};
+}
+function cycleCheckpoint(checkpoint) {
+  return Boolean(checkpoint && ['cycle','slot','feedback'].includes(checkpoint.global_branch));
+}
+function syncCycleDepthField(config = null) {
+  const field=$('cycleDepthField'), select=$('cycle_depth');
+  if (!field || !select) return;
+  const spec=config?.red_strategy || strategyFromForm('red');
+  const checkpoint=(meta?.checkpoints || []).find(item=>item.id===spec?.checkpoint);
+  const show=spec?.architecture==='checkpoint' && cycleCheckpoint(checkpoint);
+  field.hidden=!show;
+  const fallback=Number(checkpoint?.global_eval_depth || 4);
+  select.options[0].textContent=`默认（评估 R=${fallback}）`;
+  if (!show) select.value='0';
+}
+function checkpointText(checkpoint) {
+  if (!checkpoint) return '权重未登记';
+  const label=methodNames[checkpoint.method]
+    ? `${methodNames[checkpoint.method]} · ${checkpoint.version} / ${checkpoint.run} · seed ${checkpoint.seed ?? '未知'} · ${checkpoint.kind}`
+    : checkpoint.label || checkpoint.path || checkpoint.id;
+  return label + (finite(checkpoint.training_steps) && !String(label).includes('步') ? ` · ${Number(checkpoint.training_steps).toLocaleString()} 训练步` : '');
+}
+function checkpointOptionText(item) {
+  const kind=({best:'best',final:'final',latest:'latest'})[item.kind] || item.kind || '';
+  return `${methodNames[item.method] || item.method_label || item.method} · ${item.version || '自定义'} · ${item.run || ''} · s${item.seed ?? '?'} · ${kind}`;
+}
+function renderCheckpoint(spec = null) {
+  const container=$('red_model_fields'); container.replaceChildren(); container.hidden=false;
+  $('red_strategy_layers').replaceChildren(); $('red_rule_settings').hidden=true;
+  const label=document.createElement('label'), select=document.createElement('select');
+  label.htmlFor='red_checkpoint'; label.textContent='模型权重'; select.id='red_checkpoint'; select.required=true;
+  select.addEventListener('change',()=>{ syncAlgorithmChoice('red'); updateHint(); });
+  const details=document.createElement('details'), summary=document.createElement('summary'), filters=document.createElement('div');
+  details.className='checkpoint-details'; summary.textContent='筛选 / 模型详情'; filters.className='checkpoint-filters';
+  const checkpoints=meta?.checkpoints || [];
+  for (const [key,title] of [['version','版本'],['method','算法'],['seed','种子'],['kind','权重类型']]) {
+    const field=document.createElement('div'), filterLabel=document.createElement('label'), filter=document.createElement('select');
+    filter.id=`checkpointFilter_${key}`; filterLabel.htmlFor=filter.id; filterLabel.textContent=title;
+    filter.append(new Option('全部',''));
+    const values=[...new Set(checkpoints.filter(item=>item.available).map(item=>item[key]).filter(value=>value!==null && value!==undefined).map(String))];
+    values.sort((a,b)=>a.localeCompare(b,'zh-CN',{numeric:true})).forEach(value=>filter.append(new Option(key==='method' ? meta?.methods?.[value] || value : value,value)));
+    filter.addEventListener('change',()=>{ populateCheckpointOptions(); syncAlgorithmChoice('red'); }); field.append(filterLabel,filter); filters.append(field);
+  }
+  const info=document.createElement('div'); info.id='checkpointInfo'; info.className='checkpoint-info';
+  const count=document.createElement('div'); count.id='checkpointCount'; count.className='model-count';
+  details.append(summary,filters,info); container.append(label,select,count,details);
+  const selected=checkpoints.find(item=>item.id===spec?.checkpoint);
+  $('checkpointFilter_method').value=spec?.filterMethod ?? selected?.method ?? '';
+  populateCheckpointOptions(spec?.checkpoint);
+}
+function populateCheckpointOptions(preferred = null) {
+  const select=$('red_checkpoint'); if (!select || !$('checkpointFilter_method')) return;
+  const previous=preferred ?? select.value;
+  const checkpoints=meta?.checkpoints || [];
+  const visible=checkpoints.filter(item=>item.available && ['version','method','seed','kind'].every(key=>{
+    const value=$(`checkpointFilter_${key}`).value; return !value || String(item[key])===value;
+  }));
+  select.replaceChildren(...visible.map(item=>new Option(checkpointOptionText(item),item.id)));
+  if (visible.some(item=>item.id===previous)) select.value=previous;
+  else if (preferred) {
+    const missing=checkpoints.find(item=>item.id===preferred);
+    select.append(new Option(missing ? `[不可用] ${checkpointOptionText(missing)}` : `[目录中不存在] ${preferred}`,preferred)); select.value=preferred;
+  }
+  else if (visible.length) select.value=visible[0].id;
+  else select.append(new Option(compatibleAPI() ? '没有匹配的可用模型' : '旧版服务未提供模型目录',''));
+  $('checkpointCount').textContent=`${visible.length} 个可用权重`;
+  updateHint();
+}
+function syncAlgorithmChoice(side) {
+  const spec=strategyFromForm(side), select=$(`${side}_algorithm`);
+  const checkpoint=side==='red' && (meta?.checkpoints || []).find(item=>item.id===spec.checkpoint);
+  const value=spec.architecture==='checkpoint' ? `checkpoint:${checkpoint?.method || $('checkpointFilter_method')?.value || ''}` : spec.architecture==='end_to_end' ? `policy:${spec.policy}` : side==='blue' ? `grouping:${spec.layers?.grouping}` : 'hierarchical';
+  if (Array.from(select.options).some(option=>option.value===value)) select.value=value;
+  else if (spec.architecture==='checkpoint') select.value='checkpoint:';
+}
+function populateAlgorithmChoices(side) {
+  const select=$(`${side}_algorithm`), catalog=meta?.strategy_catalog?.[side] || {}, options=[];
+  if (side==='red') {
+    options.push(new Option(compatibleAPI() ? '全部训练模型' : '训练模型（旧服务不支持）','checkpoint:'));
+    const methods=[...new Set((meta?.checkpoints || []).filter(item=>item.available).map(item=>item.method))];
+    methods.forEach(method=>options.push(new Option(meta?.methods?.[method] || method,`checkpoint:${method}`)));
+  }
+  for (const [key,label] of Object.entries(catalog.end_to_end?.policies || {})) options.push(new Option(label,`policy:${key}`));
+  if (catalog.hierarchical) {
+    if (side==='blue') {
+      const grouping=catalog.hierarchical.layers.find(layer=>layer.id==='grouping');
+      for (const [key,label] of Object.entries(grouping?.policies || {})) options.push(new Option(label,`grouping:${key}`));
+    } else options.push(new Option('分层规则','hierarchical'));
+  }
+  select.replaceChildren(...options);
+}
+function chooseAlgorithm(side) {
+  const value=$(`${side}_algorithm`).value;
+  if (value.startsWith('checkpoint:')) {
+    $(`${side}_architecture`).value='checkpoint'; renderCheckpoint({filterMethod:value.slice('checkpoint:'.length)});
+  } else if (value.startsWith('policy:')) {
+    $(`${side}_architecture`).value='end_to_end'; renderStrategy(side,{policy:value.slice('policy:'.length)});
+  } else if (side==='blue' && value.startsWith('grouping:')) {
+    $(`${side}_architecture`).value='hierarchical';
+    renderStrategy(side,{layers:{grouping:value.slice('grouping:'.length),control:'rush'}});
+  } else {
+    $(`${side}_architecture`).value='hierarchical'; renderStrategy(side,meta?.defaults?.[`${side}_strategy`]);
+  }
+  updateHint();
+}
+function validateCheckpoint(config) {
+  const select=$('red_checkpoint'), info=$('checkpointInfo');
+  $('checkpointError').hidden=true;
+  if (config.red_strategy.architecture!=='checkpoint' || !select) {
+    syncCycleDepthField(config);
+    return;
+  }
+  const checkpoint=(meta?.checkpoints || []).find(item=>item.id===config.red_strategy.checkpoint);
+  const errors=[];
+  if (!checkpoint) errors.push('请从目录中选择模型，或添加本地模型路径。');
+  else {
+    if (!checkpoint.available) errors.push(checkpoint.reason || '此权重暂不可用。');
+    if (checkpoint.task_mode && config.task_mode!==checkpoint.task_mode) errors.push(`此模型仅支持${checkpoint.task_mode==='damage' ? '累计伤害' : checkpoint.task_mode}任务。`);
+    if (checkpoint.spatial_dim && config.spatial_dim!==Number(checkpoint.spatial_dim)) errors.push(`此模型仅支持 ${checkpoint.spatial_dim}D。`);
+    for (const [key,label] of [['red','红方规模'],['blue','蓝方规模'],['targets','目标数'],['max_steps','对局步数']]) {
+      const limit=checkpoint.limits?.[key];
+      if (finite(limit) && config[key]>Number(limit)) errors.push(`${label} ${config[key]} 超过该模型上限 ${limit}。`);
+    }
+  }
+  select.setCustomValidity(errors.join(' '));
+  $('checkpointError').textContent=errors.join(' '); $('checkpointError').hidden=!errors.length;
+  if (info) {
+    const limits=checkpoint?.limits;
+    const details=checkpoint ? [checkpoint.path,`版本 ${checkpoint.version ?? '自定义'} · 运行 ${checkpoint.run ?? '—'} · 训练种子 ${checkpoint.seed ?? '—'} · ${checkpoint.kind ?? '权重'}`,limits ? `容量 R≤${limits.red ?? '—'} / B≤${limits.blue ?? '—'} / K≤${limits.targets ?? '—'} · 最多 ${limits.max_steps ?? '—'} 步` : '',cycleCheckpoint(checkpoint) ? `循环 Transformer · 评估默认 R=${checkpoint.global_eval_depth ?? 4}` : ''].filter(Boolean) : [];
+    info.textContent=[...details,...errors].join('\n'); info.classList.toggle('invalid',errors.length>0);
+  }
+  syncCycleDepthField(config);
+}
+function renderStrategy(side, spec = null) {
+  const architecture = $(`${side}_architecture`).value;
+  if (side==='red') { $('red_model_fields').hidden=architecture!=='checkpoint'; $('red_rule_settings').hidden=architecture==='checkpoint'; if (architecture!=='checkpoint') $('red_model_fields').replaceChildren(); }
+  if (architecture==='checkpoint' && side==='red') { renderCheckpoint(spec); return; }
+  if (side==='red') syncCycleDepthField({red_strategy:{architecture}});
+  const catalog = meta?.strategy_catalog?.[side]?.[architecture];
+  const rows = architecture === 'end_to_end' ? [{id:'policy',label:'动作策略',policies:catalog?.policies || {}}] : catalog?.layers || [];
+  const container = $(`${side}_strategy_layers`); container.replaceChildren();
+  for (const row of rows) {
+    const field = document.createElement('div'), label = document.createElement('label'), select = document.createElement('select');
+    select.id = architecture === 'end_to_end' ? `${side}_action_policy` : `${side}_layer_${row.id}`;
+    select.required = true; label.htmlFor = select.id; label.textContent = row.label;
+    if (architecture === 'hierarchical') select.dataset.layer = row.id;
+    select.replaceChildren(...Object.entries(row.policies).map(([value,text]) => new Option(text,value)));
+    const selected = architecture === 'end_to_end' ? spec?.policy : spec?.layers?.[row.id];
+    if (selected && Object.hasOwn(row.policies,selected)) select.value = selected;
+    select.addEventListener('change',()=>{ syncAlgorithmChoice(side); updateHint(); }); field.append(label,select); container.append(field);
+  }
+  syncAlgorithmChoice(side);
+}
+function setStrategy(side, spec) {
+  if (!spec || !(meta?.strategy_catalog?.[side]?.[spec.architecture] || (side==='red' && spec.architecture==='checkpoint' && compatibleAPI()))) return;
+  $(`${side}_architecture`).value = spec.architecture; renderStrategy(side,spec); syncAlgorithmChoice(side);
+}
+function strategyText(config, side) {
+  const spec = config?.[`${side}_strategy`];
+  if (!spec) return '历史记录（未记录架构）';
+  if (spec.architecture==='checkpoint') {
+    const checkpoint=config.model_snapshots?.[side] || (meta?.checkpoints || []).find(item=>item.id===spec.checkpoint);
+    const depth=Number(config.cycle_depth)>0 ? Number(config.cycle_depth) : Number(checkpoint?.global_eval_depth || 0);
+    const extra=cycleCheckpoint(checkpoint) && depth ? ` · 循环 R=${depth}` : '';
+    return `训练模型 · ${checkpoint ? checkpointText(checkpoint) : spec.checkpoint}${extra}`;
+  }
+  const catalog = meta?.strategy_catalog?.[side]?.[spec.architecture];
+  if (spec.architecture === 'end_to_end') return `端到端 · ${catalog?.policies?.[spec.policy] || spec.policy}`;
+  const labels = Object.entries(spec.layers || {}).map(([id,value]) => catalog?.layers?.find(row=>row.id===id)?.policies?.[value] || value);
+  return `分层 · ${labels.join(' → ')}`;
+}
+function configFromForm() {
+  return {...Object.fromEntries(fields.map(id => [id,numericFields.includes(id) ? Number($(id).value) : $(id).value])),
+    red_strategy:strategyFromForm('red'),blue_strategy:strategyFromForm('blue')};
+}
+function applyConfig(config, updateContext = true) {
+  if (config) {
+    const currentSchema = config.red_strategy && config.blue_strategy && (!config.physics_protocol || config.physics_protocol === meta?.physics_protocol);
+    if (currentSchema) fields.forEach(id => {
+      if (config[id] === undefined) return;
+      $(id).value = config[id];
+    });
+    if (currentSchema) { setStrategy('red',config.red_strategy); setStrategy('blue',config.blue_strategy); }
+    if (updateContext) {
+    setSummaryMode(config.task_mode || 'survival');
+    $('runContext').textContent = `当前回放：${config.spatial_dim || 3}D · ${config.task_mode === 'damage' ? '累计伤害' : '目标生存'} · 红 ${strategyText(config,'red')} / 蓝 ${strategyText(config,'blue')} · R${config.red} : B${config.blue} · K${config.targets} · 种子 ${config.seed0}–${config.seed0 + config.stats - 1} · 时限 ${config.max_steps ?? '未记录'} 步`;
+    $('runContext').textContent += ` · ${config.target_initialization === 'random' ? '随机目标' : config.target_initialization === 'fixed' ? '固定目标' : '历史目标布局（未记录模式）'}`;
+    if (config.physics_protocol && meta?.physics_protocol && config.physics_protocol !== meta.physics_protocol) {
+      $('runContext').textContent += ' · 旧物理协议回放；新评估使用修正后的环境，旧回放不会自动重算。';
+    }
+    }
+  }
+  updateHint();
+}
+function populatePolicies(config = null) {
+  for (const [id, key] of [['task_mode','task_modes'],['spatial_dim','spatial_dims'],['target_initialization','target_initializations']]) {
+    const values = meta?.[key];
+    if (values && typeof values === 'object') $(id).replaceChildren(...Object.entries(values).map(([value,label]) => new Option(typeof label === 'string' ? label : label.label || value,value)));
+  }
+  for (const side of ['red','blue']) {
+    const architectures=Object.keys(meta?.strategy_catalog?.[side] || {});
+    if (side==='red' && !architectures.includes('checkpoint')) architectures.unshift('checkpoint');
+    if (architectures.length) $(`${side}_architecture`).replaceChildren(...architectures.map(value=>new Option(({checkpoint:'训练模型',end_to_end:'端到端 / 动作策略',hierarchical:'分层规则'})[value] || value,value)));
+    populateAlgorithmChoices(side); renderStrategy(side);
+  }
+  for (const side of ['red','blue']) $(side).max=Number(meta?.limits?.[side] || 40);
+  $('targets').replaceChildren(...Array.from({length:Number(meta?.limits?.targets || 6)},(_,index)=>new Option(`${index+1} 个目标`,index+1)));
+  $('scalePreset').replaceChildren(new Option('自定义规模',''),...(meta?.scale_presets || []).map((preset,index)=>new Option(preset.label,index)));
+  $('checkpointMethod').replaceChildren(new Option('自动识别',''),...Object.entries(meta?.methods || {}).map(([value,label])=>new Option(label,value)));
+  const checkpoints=meta?.checkpoints || [];
+  $('checkpointCatalogHint').textContent=`已发现 ${checkpoints.length} 个权重，${checkpoints.filter(item=>item.available).length} 个可用。`;
+  if (compatibleAPI()) {
+    applyConfig(config || meta.defaults || {},false);
+    if (!config) {
+      const first=checkpoints.find(item=>item.available);
+      if (first) setStrategy('red',{architecture:'checkpoint',checkpoint:first.id});
+      updateHint();
+    }
+  }
+  for (const side of ['red','blue']) syncAlgorithmChoice(side);
+}
+function updateHint() {
+  const config = configFromForm();
+  $('display').setCustomValidity(config.display > config.stats ? '回放局数 D 不能大于统计局数 S。' : '');
+  $('seed0').setCustomValidity(Number.isSafeInteger(config.seed0 + config.stats - 1) ? '' : '最后一局的种子超出安全整数范围。');
+  const presetIndex=(meta?.scale_presets || []).findIndex(preset=>['red','blue','targets'].every(key=>Number(preset[key])===config[key]));
+  $('scalePreset').value=presetIndex>=0 ? String(presetIndex) : '';
+  validateCheckpoint(config);
+}
+fields.forEach(id => $(id).addEventListener('input', updateHint));
+for (const side of ['red','blue']) $(`${side}_algorithm`).addEventListener('change',()=>chooseAlgorithm(side));
+$('runForm').addEventListener('invalid',event=>{ const details=event.target.closest('details'); if (details) details.open=true; },true);
+for (const side of ['red','blue']) $(`${side}_architecture`).addEventListener('change',()=>{ renderStrategy(side); updateHint(); });
+$('scalePreset').addEventListener('change',()=>{
+  const preset=meta?.scale_presets?.[$('scalePreset').value];
+  if (preset) for (const key of ['red','blue','targets']) $(key).value=preset[key];
+  updateHint();
+});
+async function updateCheckpointCatalog(register = false) {
+  if (running || queueActive || !compatibleAPI()) return;
+  const config=configFromForm(), path=$('checkpointPath').value.trim();
+  if (register && !path) { $('checkpointCatalogHint').textContent='请输入本地 .pt 文件路径。'; $('checkpointPath').focus(); return; }
+  $('registerCheckpoint').disabled=true; $('refreshCheckpoints').disabled=true;
+  $('checkpointCatalogHint').textContent=register ? '正在读取本地权重…' : '正在刷新权重目录…';
+  try {
+    const data=register ? await request('/api/checkpoints',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path,method:$('checkpointMethod').value || undefined})}) : await request('/api/meta?refresh=1');
+    meta=displayMetadata(register ? data.meta : data);
+    if (register && data.checkpoint?.id) config.red_strategy={architecture:'checkpoint',checkpoint:data.checkpoint.id};
+    populatePolicies(config); updateHint(); renderComparisons();
+  } catch (error) { $('checkpointCatalogHint').textContent=error.message; }
+  finally { $('registerCheckpoint').disabled=false; $('refreshCheckpoints').disabled=false; }
+}
+$('registerCheckpoint').onclick=()=>updateCheckpointCatalog(true);
+$('refreshCheckpoints').onclick=()=>updateCheckpointCatalog(false);
+function stopPlayback() { playing = false; clearTimeout(timer); timer = null; $('play').textContent = '播放'; }
+function replayEnabled(enabled) { ['play','stepBtn','slider'].forEach(id => $(id).disabled = !enabled); }
+function resetResults() {
+  stopPlayback(); ++episodeRequest; episode = null; loadedIndex = null; records = []; episodeCache.clear();
+  $('episode').replaceChildren(new Option('暂无可用回放', '')); $('episode').disabled = true;
+  replayEnabled(false); $('slider').max = 0; $('slider').value = 0;
+  $('emptyReplay').hidden = false; $('replayStatus').textContent = '等待回放'; $('frameCount').textContent = '— / —';
+  const replayHint = jobConfig?.display === 0 ? '本次仅统计结果，不记录回放。' : meta?.viewer_api ? '首局完成后，回放将自动载入。' : '当前服务将在整批评估完成后开放回放。';
+  $('emptyReplay').querySelector('strong').textContent = jobConfig?.display === 0 ? '本次不记录回放' : '等待回放生成';
+  $('frameInfo').textContent = replayHint;
+  $('emptyReplayHint').textContent = replayHint;
+  ['winRate','winsValue','lossValue','drawValue','engageRate','killsPerFire','clipRate','meanSteps','terminalCounts','redReturn','blueReturn','zeroDamage'].forEach(id => $(id).textContent = '—');
+  ['winsBar','lossBar','drawBar'].forEach(id => $(id).style.width = '0%');
+  $('sampleCount').textContent = '0 局完成'; $('summaryState').textContent = '等待结果';
+  setSummaryMode(modeOf(jobConfig));
+  $('confidence').textContent = modeOf(jobConfig) === 'damage' ? '所有目标伤害之和 · 等待结果' : '95% Wilson 置信区间 · 等待结果';
+  $('histogram').hidden = true; $('histogram').replaceChildren(); $('histHint').textContent = '等待评估统计。';
+  $('targetDamageBars').replaceChildren(); $('targetDamageHint').hidden = false;
+  renderComparisons();
+  drawFrame(0);
+}
+$('runForm').addEventListener('submit', async event => {
+  event.preventDefault(); updateHint();
+  if (running || queueActive || submissionUnconfirmed || !compatibleAPI() || !$('runForm').reportValidity()) return;
+  await submitEvaluation(configFromForm());
+});
+async function submitEvaluation(config) {
+  applyConfig(config);
+  clearTimeout(pollTimer); clearSavedJob(); job = null; jobConfig = config; startedAt = Date.now() / 1000;
+  submissionUnconfirmed = true;
+  try { sessionStorage.setItem(storageKey, JSON.stringify({pending:true,config,startedAt})); } catch (_) {}
+  elapsedBase = 0; elapsedAnchor = performance.now();
+  resetResults(); $('progressCount').textContent = `0 / ${config.stats}`; $('progress').max = config.stats; $('progress').value = 0;
+  $('elapsed').textContent = duration(0); $('eta').textContent = '—';
+  lockSettings(true); $('retry').hidden = true; status('正在提交任务…', 'running');
+  try {
+    const data = await request('/api/run', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)});
+    if (!data.job) throw new Error('服务未返回有效任务编号。');
+    clearTimeout(pollTimer); job = data.job; jobConfig = config; startedAt = Date.now() / 1000;
+    submissionUnconfirmed = false;
+    elapsedBase = 0; elapsedAnchor = performance.now(); pollFailures = 0;
+    resetResults(); saveJob(); poll(job);
+  } catch (error) {
+    if (error.status >= 400 && error.status < 500) {
+      submissionUnconfirmed = false; clearSavedJob(); status('任务提交失败', 'error'); notice(error.message);
+      finishQueuedTask('failed',error.message);
+    } else {
+      status('任务提交未确认', 'error'); notice(`${error.message} 请先点击重试查询活动任务，避免重复提交。`); $('run').disabled = true; $('retry').hidden = false;
+      finishQueuedTask('unconfirmed','提交结果尚未确认，队列已停止；请先重新连接。');
+    }
+    lockSettings(false);
+  }
+}
+function renderQueue() {
+  const pending=evaluationQueue.filter(item=>item.state==='pending');
+  const total=evaluationQueue.reduce((sum,item)=>sum+item.config.stats,0);
+  const completed=evaluationQueue.reduce((sum,item)=>sum+(item.state==='complete' ? item.config.stats : item.current || 0),0);
+  $('addQueue').disabled=running || queueActive || submissionUnconfirmed || !compatibleAPI();
+  $('runQueue').disabled=running || queueActive || submissionUnconfirmed || !compatibleAPI() || !pending.length;
+  $('clearQueue').disabled=running || queueActive || !evaluationQueue.length;
+  $('stopQueue').hidden=!queueActive;
+  $('queueProgress').textContent=evaluationQueue.length
+    ? `${evaluationQueue.length} 项 · 总计 ${total} 局 · 已完成 ${completed} 局 · 待运行 ${pending.length} 项。${queueActive ? ' 正在按顺序运行。' : queueMessage}`
+    : '队列为空。';
+  $('queueItems').replaceChildren(...evaluationQueue.map((item,index)=>{
+    const li=document.createElement('li'), title=document.createElement('strong'), detail=document.createElement('span'), remove=document.createElement('button');
+    const state=({pending:'待运行',running:'运行中',complete:'已完成',failed:'失败',unconfirmed:'提交未确认'})[item.state];
+    title.textContent=`${index+1}. ${state} · 红：${strategyText(item.config,'red')}`;
+    detail.textContent=`蓝：${strategyText(item.config,'blue')} · R${item.config.red}:B${item.config.blue}/K${item.config.targets} · ${item.config.stats} 局 · seed ${item.config.seed0}–${item.config.seed0+item.config.stats-1} · ${item.config.max_steps} 步`;
+    remove.type='button'; remove.textContent='移除'; remove.disabled=running || queueActive;
+    remove.onclick=()=>{ evaluationQueue=evaluationQueue.filter(row=>row.id!==item.id); renderQueue(); };
+    li.append(title,detail,remove); return li;
+  }));
+}
+$('addQueue').onclick=()=>{
+  updateHint();
+  if (running || queueActive || submissionUnconfirmed || !compatibleAPI() || !$('runForm').reportValidity()) return;
+  evaluationQueue.push({id:++queueSerial,config:configFromForm(),state:'pending',current:0});
+  queueMessage=' 点击“运行队列”后开始。'; renderQueue();
+};
+async function runNextQueued() {
+  if (!queueActive || running) return;
+  const next=evaluationQueue.find(item=>item.state==='pending');
+  if (!next) { queueActive=false; queueMessage=evaluationQueue.every(item=>item.state==='complete') ? ' 所有排队任务已完成。' : ' 本轮排队已结束，请查看各项状态。'; lockSettings(false); return; }
+  queueCurrent=next; next.state='running'; next.current=0; renderQueue();
+  await submitEvaluation(next.config);
+}
+function finishQueuedTask(state, message = '') {
+  if (!queueCurrent) return;
+  queueCurrent.state=state;
+  if (state==='complete') { queueCurrent.current=queueCurrent.config.stats; queueCurrent.config={...jobConfig}; }
+  queueCurrent=null;
+  if (state!=='complete') { queueActive=false; queueMessage=` 队列已停止：${message || '当前任务失败。'}`; }
+  else if (!queueActive) queueMessage=evaluationQueue.some(item=>item.state==='pending') ? ' 当前任务已完成，剩余项等待点击“运行队列”。' : ' 当前任务已完成。';
+  renderQueue();
+}
+$('runQueue').onclick=()=>{
+  if (running || queueActive || submissionUnconfirmed || !compatibleAPI() || !evaluationQueue.some(item=>item.state==='pending')) return;
+  queueActive=true; queueMessage=''; lockSettings(false); runNextQueued();
+};
+$('stopQueue').onclick=()=>{
+  queueActive=false; queueMessage=' 已停止排队；当前任务继续，未开始的项保留。'; lockSettings(running);
+};
+$('clearQueue').onclick=()=>{ if (!running && !queueActive) { evaluationQueue=[]; queueMessage=''; renderQueue(); } };
+function showRecords(data) {
+  const available = Array.isArray(data.recorded) ? data.recorded : (data.done && !data.error && jobConfig ? Array.from({length:Math.min(jobConfig.display, data.total)},(_,index) => ({index,seed:jobConfig.seed0 + index})) : []);
+  if (available.length === records.length) {
+    if (records.length && loadedIndex === null) loadEpisode(Number($('episode').value));
+    return;
+  }
+  records = available; const previous = $('episode').value;
+  $('episode').replaceChildren(...records.map((item,index) => {
+    const result = modeOf(item) === 'damage' ? (finite(item.target_damage) ? ` · 伤害 ${number(item.target_damage)}` : '') : item.outcome === undefined ? '' : item.outcome > 0 ? ' · 红胜' : item.outcome < 0 ? ' · 失守' : ' · 未分胜负';
+    return new Option(`第 ${index + 1} 局 · 种子 ${item.seed}${result}`,item.index ?? index);
+  }));
+  $('episode').disabled = records.length === 0;
+  $('replayStatus').textContent = `可回放 ${records.length} / ${jobConfig?.display ?? records.length} 局`;
+  if (records.some((item,index) => String(item.index ?? index) === previous)) $('episode').value = previous;
+  if (records.length && loadedIndex === null) loadEpisode(Number($('episode').value));
+}
+async function poll(expectedJob) {
+  if (!expectedJob || expectedJob !== job) return;
+  clearTimeout(pollTimer);
+  try {
+    const data = await request('/api/progress?job=' + encodeURIComponent(expectedJob));
+    if (expectedJob !== job) return;
+    pollFailures = 0; $('retry').hidden = true;
+    if (compatibleAPI()) notice('');
+    if (data.config) { jobConfig = data.config; applyConfig(jobConfig); }
+    if (data.started_at) startedAt = data.started_at;
+    saveJob();
+    const current = data.current || 0, total = data.total || jobConfig?.stats || 0;
+    if (queueCurrent) { queueCurrent.current=current; renderQueue(); }
+    $('progressCount').textContent = `${current} / ${total}`; $('progress').max = Math.max(1,total);
+    if (!data.done && !meta?.viewer_api) $('progress').removeAttribute('value'); else $('progress').value = current;
+    elapsedBase = data.elapsed_seconds ?? (startedAt ? Date.now()/1000 - startedAt : 0); elapsedAnchor = performance.now();
+    $('elapsed').textContent = duration(elapsedBase);
+    $('eta').textContent = data.done ? '—' : duration(data.eta_seconds);
+    showRecords(data);
+    if (data.summary) renderSummary(data.summary, data.done && !data.error);
+    if (data.error) {
+      finishQueuedTask('failed',data.error);
+      lockSettings(false); status(`运行失败：${data.error}`, 'error');
+      $('summaryState').textContent = '未完成统计'; $('sampleCount').textContent = `${current} 局完成`;
+      $('histHint').textContent = '本次评估未全部完成；已有结果仅代表已完成的对局。';
+      $('progressHint').textContent = `已完成 ${current} 局，已生成的回放仍可查看；本次未完成全部评估。`; return;
+    }
+    if (data.done) {
+      lockSettings(false); status('评估完成', 'complete'); $('progressHint').textContent = `已完成全部 ${total} 局。${records.length ? '可切换各局回放查看。' : '本次未记录回放。'}`;
+      if (!data.summary) $('summaryState').textContent = '暂无汇总';
+      if (data.summary) rememberCompleted(data.summary);
+      finishQueuedTask('complete');
+      if (queueActive) await runNextQueued();
+      return;
+    }
+    lockSettings(true); status(data.phase==='queued' ? '服务端排队中…' : data.phase==='loading' ? '正在载入模型权重…' : current ? '正在评估' : '正在计算首局…', 'running');
+    $('summaryState').textContent = '统计中'; $('sampleCount').textContent = `${current} 局完成`;
+    $('progressHint').textContent = meta?.viewer_api ? (current ? `平均 ${Number(data.seconds_per_episode || elapsedBase/current).toFixed(1)} 秒/局；耗时预估随进度更新。` : '首局完成后显示耗时预估，已完成的回放会陆续开放。') : '当前服务将在全部局数完成后一次性返回结果。';
+    pollTimer = setTimeout(() => poll(expectedJob), 1000);
+  } catch (error) {
+    if (expectedJob !== job) return;
+    if (error.status === 404) { finishQueuedTask('failed','服务中未找到当前任务。'); lockSettings(false); clearSavedJob(); status('未找到此任务', 'error'); $('eta').textContent = '—'; $('progressHint').textContent = '服务可能已重启，可以重新提交评估。'; job = null; return; }
+    ++pollFailures; status('连接中断，正在重连…', 'error');
+    $('progressHint').textContent = '连接恢复后将继续读取进度，不会重复提交任务。'; $('eta').textContent = '—';
+    $('retry').hidden = false;
+    pollTimer = setTimeout(() => poll(expectedJob), Math.min(10000, 1500 * pollFailures));
+  }
+}
+async function loadEpisode(index) {
+  stopPlayback(); replayEnabled(false);
+  const token = ++episodeRequest, expectedJob = job;
+  episode = null; drawFrame(0); $('frameCount').textContent = '— / —';
+  $('emptyReplay').hidden = false; $('emptyReplay').querySelector('strong').textContent = '正在载入回放';
+  $('emptyReplayHint').textContent = '正在读取所选局的记录…';
+  loadedIndex = index; $('frameInfo').textContent = '正在载入回放…';
+  try {
+    const data = episodeCache.get(index) || await request(`/api/episode?job=${encodeURIComponent(job)}&index=${index}`);
+    if (token !== episodeRequest || expectedJob !== job) return;
+    if (!Array.isArray(data.frames) || !data.frames.length) throw new Error('此局没有可用的回放帧。');
+    episodeCache.set(index, data); episode = data;
+    $('slider').max = data.frames.length - 1; $('slider').value = 0;
+    $('emptyReplay').hidden = true; replayEnabled(true); drawFrame(0);
+    if (!pollFailures) $('retry').hidden = true;
+  } catch (error) {
+    if (token === episodeRequest) {
+      loadedIndex = null; $('emptyReplay').querySelector('strong').textContent = '回放暂不可用';
+      $('emptyReplayHint').textContent = error.message;
+      $('frameInfo').textContent = `回放载入失败：${error.message} 可点击重试重新载入。`; $('retry').hidden = false;
+    }
+  }
+}
+$('episode').onchange = () => loadEpisode(Number($('episode').value));
+$('slider').oninput = () => { stopPlayback(); drawFrame(Number($('slider').value)); };
+$('stepBtn').onclick = () => { stopPlayback(); $('slider').value = Math.min(Number($('slider').max),Number($('slider').value)+1); drawFrame(Number($('slider').value)); };
+$('play').onclick = () => {
+  if (!episode) return;
+  if (playing) { stopPlayback(); return; }
+  if (Number($('slider').value) >= Number($('slider').max)) { $('slider').value = 0; drawFrame(0); }
+  playing = true; $('play').textContent = '暂停'; timer = setTimeout(tick, 80/Number($('speed').value));
+};
+function tick() {
+  if (!playing || !episode) return;
+  const next = Math.min(Number($('slider').max),Number($('slider').value)+1);
+  $('slider').value = next; drawFrame(next);
+  if (next >= Number($('slider').max)) { stopPlayback(); return; }
+  timer = setTimeout(tick, 80/Number($('speed').value));
+}
+$('retry').onclick = () => job && loadedIndex === null && records.length ? loadEpisode(Number($('episode').value)) : job ? poll(job) : initialize();
+setInterval(() => { if (running) $('elapsed').textContent = duration(elapsedBase + (performance.now() - elapsedAnchor)/1000); },1000);
+async function initialize() {
+  if (location.protocol === 'file:') { status('请通过本地服务打开', 'error'); notice('请运行 python viewer.py，然后访问 http://127.0.0.1:8765/。'); return; }
+  try {
+    meta = displayMetadata(await request('/api/meta')); populatePolicies(); drawFrame(Number($('slider').value)); renderComparisons();
+    notice(compatibleAPI() ? '' : `你打开的是旧版 viewer 服务（端口 ${location.port || '80'}），它没有模型选择接口。请重新运行更新后的 viewer.py，并打开终端本次打印的完整地址。`);
+    $('progressHint').textContent = meta.viewer_api ? '每局完成后更新进度，已保存的局可立即回放。' : '当前服务会在整批完成后返回进度和回放。';
+    $('retry').hidden = true;
+    const saved = readSavedJob();
+    submissionUnconfirmed = submissionUnconfirmed || Boolean(saved?.pending);
+    job = submissionUnconfirmed ? null : new URL(location.href).searchParams.get('job') || saved?.job || null;
+    if (submissionUnconfirmed && saved?.config) { jobConfig = saved.config; startedAt = saved.startedAt; applyConfig(jobConfig); }
+    if (job && saved?.job === job) { jobConfig = saved.config; startedAt = saved.startedAt; applyConfig(jobConfig); }
+    if (!job && meta.viewer_api) {
+      const active = await request('/api/jobs?active=1');
+      if (active.jobs?.length) { const latest = active.jobs[0]; job = latest.job; jobConfig = latest.config; startedAt = latest.started_at; submissionUnconfirmed = false; applyConfig(jobConfig); }
+    }
+    if (job) { elapsedAnchor = performance.now(); lockSettings(true); status('正在恢复任务进度…', 'running'); poll(job); }
+    else if (submissionUnconfirmed) {
+      lockSettings(false);
+      if (meta.viewer_api) {
+        submissionUnconfirmed = false; clearSavedJob(); lockSettings(false); status('未发现活动任务');
+        notice('当前没有可恢复的活动任务，上次提交的结果无法确认。如再次运行，将创建新的评估。');
+      } else {
+        $('run').disabled = true; $('retry').hidden = false; status('提交结果未确认', 'error');
+        notice('旧版服务无法查询活动任务。请保留服务运行，待任务结束后再重启 viewer.py；当前不要重复提交。');
+      }
+    } else { lockSettings(false); status(compatibleAPI() ? '准备就绪' : '旧版服务：请打开新的启动地址',compatibleAPI() ? '' : 'error'); }
+  } catch (error) { status('无法连接本地服务', 'error'); notice(error.message); $('retry').hidden = false; }
+}
+// Original HAD DisplayPlayer drawing, from f8009fe:Open-SCORE/src/HAD_Env/render/render.py.
+// Replay only: use the recorded state and current bounds without stepping the environment.
+const nativeTarget = new Image(), nativeDeadTarget = new Image();
+nativeTarget.onload = nativeDeadTarget.onload = () => drawFrame(+$("slider").value);
+nativeTarget.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAAbCAMAAAC6CgRnAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAzUExURQAAAL8AAL8AAL8AAL8AAL8AAL8AAL8AAL8AAMEAAMAAAMAAAMAAAMAAAMAAAMAAAMAAAJtZvnkAAAAQdFJOUwAQIDBAUGBwgI+fr7/P3+8jGoKKAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAAuUlEQVQoU8WQyxaDIAxEgzxE0CT//7WdENpjrV32dBYTxgskQn9R3t+V53doEZO+XCVOQmFXbMwyAheipDzW0KYbvJohNFtrH4FW7QGFvYkf74rjRFHYUBRzSBIsHGqFVdikw5llRtubVNaUUhEYlD2pXwpoI9uAULYRF3b0hMXn3usZTRjYuie0OaMJx5+1ekEOgy54vXhFDluj2j/RgEUCrzdoQD3kFhk03SKHX5DBrwjPP+uvRPQANfMJ04vxKFcAAAAASUVORK5CYII=";
+nativeDeadTarget.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAMAAABF0y+mAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAHRUExURQAAAAAAAFVVVUBAQFVVVWZmZl1dXVVVVWpqamZmZmBgYFpaWl5eXllZWWFhYV1dXWRkZGJiYl5eXltbW2RkZGFhYV5eXmNjY2BgYF1dXWJiYlxcXGBgYF5eXlxcXGJiYl9fX11dXWBgYF5eXlxcXF5eXl5eXl5eXmFhYV9fX2BgYGFhYV5eXl9fX2JiYmBgYGBgYGBgYF9fX2BgYGBgYF9fX2FhYWBgYGFhYWFhYV9fX19fX2FhYV9fX19fX2BgYF9fX19fX2FhYWBgYGBgYGBgYF9fX19fX19fX2FhYWBgYF9fX2FhYWBgYGBgYF9fX2BgYGBgYF9fX2BgYGBgYGFhYWBgYF9fX2FhYWBgYGBgYF9fX2FhYWBgYGBgYGFhYWBgYGBgYGBgYF9fX2FhYWBgYGBgYGFhYWBgYF9fX2BgYGBgYF9fX2BgYGBgYF9fX2BgYF9fX2BgYGBgYGBgYGBgYGBgYGFhYWBgYGBgYGFhYWBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGFhYWBgYGBgYGBgYGBgYGFhYWBgYGBgYGBgYGBgYF9fX2BgYGBgYF9fX2BgYGFhYWJiYmNjY2RkZNlejS0AAACWdFJOUwABAwQGCgsMDA8QERMUFRYXGhscHB0eHyAhIiQlJicnKywtLi8xNjk6Oz0/QUNGSEpNU1haW2FiZGlrbnFzdn1+hISFh4iJi4yMjY6Oj5CTlJWWl5iZmpubnJ2enp+goaKkpaamp6ipqqusra6vsLO0tre4uby9vr/Aw8TFyMnK1drc3+Hl5ujr7O7w8vP19vj6+/z9/kxX8UsAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGQSURBVDhPYxgwoByYnpKaAkfpAcpQCSBgLu6dOKl/wkQwmNA3cer0Ei6oFAODy4wgdVnDRicpJSUp+wZjGTWPWQlQKQbT7jpFBgbdJB0QRyvbhIFBpnKiDViKQbup2YCJgcEvUBLEk4yJA5IaLW2qIB5nZa8+iC61BJEMDOY1QJUMeu21gkAqfXJXfHh0VGJHVVh0dHRMSHF7fkR0ZFzTjBJWBgbHmf0p7p6egW15zt5eXl7uha2J7l7u0ZNmxrEAjXWfXq3Gxc1V5ibMxcPDJexazsfNqVAwK04UZAmH78xcoFusizRBPKV0BwYG/qjpCSIgHgMDu/+sPFkG3nI7EMemQppBKHpGKlgfCLAFzsqVY3CJkmdgkI91YxCJmpEGlwPKBs/KkVDKt2BgMMtV4Y+ckSEGlQADtpCZ2QLBcfycgVHiodNR5RgYWENmJlrlG+lk2vpgyIFlc+sDPatzp2HKgWQnzujp7OvNxCIHctWUGTOmpWGVA8oGTJ+ejEMOGBphWTjlGBgYoTQtAQMDACzoZWnJBKERAAAAAElFTkSuQmCC";
+
+function plotLayout(canvas, axis) {
+  const bounds = episode?.bounds || episode?.constants?.bounds || meta?.constants?.bounds || [[-2500,2500],[-2500,2500],[0,2500]];
+  if (axis === 2) {
+    const projectedHeight = Math.max(120,Math.round((canvas.clientWidth-72)*(bounds[2][1]-bounds[2][0])/(bounds[0][1]-bounds[0][0])+54));
+    if (canvas.style.height !== `${projectedHeight}px`) canvas.style.height = `${projectedHeight}px`;
+  }
+  const width = Math.max(180, canvas.clientWidth), height = Math.max(120, canvas.clientHeight);
+  const ratio = Math.min(2, window.devicePixelRatio || 1);
+  if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
+    canvas.width = Math.round(width * ratio); canvas.height = Math.round(height * ratio);
+  }
+  const ctx = canvas.getContext('2d'); ctx.setTransform(ratio,0,0,ratio,0,0);
+  const dx = bounds[0][1] - bounds[0][0], dy = bounds[axis][1] - bounds[axis][0];
+  const scale = Math.min((width - 72)/dx,(height - 54)/dy);
+  const w = dx*scale, h = dy*scale, x = 46 + (width-64-w)/2, y = 14 + (height-48-h)/2;
+  return {ctx,width,height,bounds,axis,x,y,w,h,scale};
+}
+function plotPoint(position, layout) {
+  return [layout.x+(position[0]-layout.bounds[0][0])*layout.scale,
+    layout.y+layout.h-(position[layout.axis]-layout.bounds[layout.axis][0])*layout.scale];
+}
+function drawGrid(layout) {
+  const {ctx,width,height,bounds,axis,x,y,w,h} = layout;
+  ctx.fillStyle = '#eaf1f8'; ctx.fillRect(0,0,width,height);
+  ctx.fillStyle = '#f6f9fc'; ctx.fillRect(x,y,w,h);
+  ctx.font = '10px "Segoe UI", "Microsoft YaHei", sans-serif'; ctx.textBaseline = 'middle';
+  const ticks = width < 360 ? 2 : 4;
+  for (let i=0;i<=ticks;i++) {
+    const px=x+w*i/ticks, py=y+h*i/ticks;
+    ctx.strokeStyle = '#d7e1ec'; ctx.lineWidth = 1; ctx.beginPath();
+    ctx.moveTo(px,y); ctx.lineTo(px,y+h); ctx.moveTo(x,py); ctx.lineTo(x+w,py); ctx.stroke();
+    ctx.fillStyle = '#526a84'; ctx.textAlign = 'center';
+    ctx.fillText(Math.round(bounds[0][0]+(bounds[0][1]-bounds[0][0])*i/ticks),px,y+h+14);
+    ctx.textAlign = 'right'; ctx.fillText(Math.round(bounds[axis][1]-(bounds[axis][1]-bounds[axis][0])*i/ticks),x-7,py);
+  }
+  ctx.strokeStyle = '#91a9c2'; ctx.strokeRect(x,y,w,h);
+  ctx.fillStyle = '#38526d'; ctx.textAlign = 'right'; ctx.fillText('X (m)',width-8,height-9);
+  ctx.save(); ctx.translate(12,y+h/2); ctx.rotate(-Math.PI/2); ctx.textAlign = 'center'; ctx.fillText(`${axis === 1 ? 'Y' : 'Z'} (m)`,0,0); ctx.restore();
+}
+function nativeCircle(ctx, center, radius, color) {
+  ctx.fillStyle = color; ctx.beginPath(); ctx.arc(center[0],center[1],radius,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.2; ctx.stroke();
+}
+function nativeTriangle(ctx, center, size, angle, color, topAngle) {
+  size *= 2;
+  const halfBase = size * Math.tan(topAngle * Math.PI / 360);
+  const vertices = [[size / 2,0],[-size / 2,-halfBase],[-size / 2,halfBase]];
+  ctx.fillStyle = color; ctx.beginPath();
+  vertices.forEach(([x,y],index) => {
+    const px=x*Math.cos(angle)-y*Math.sin(angle)+center[0], py=x*Math.sin(angle)+y*Math.cos(angle)+center[1];
+    if (!index) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  });
+  ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.stroke();
+}
+function nativeAgents(rows, color, layout, prefix) {
+  const {ctx,axis} = layout;
+  for (const [id,row] of Object.entries(rows || {})) {
+    if (!Array.isArray(row.p)) continue;
+    const at=plotPoint(row.p,layout), v=row.v || [0,0,0], ink=row.alive ? color : '#a3aebb';
+    const role = String(row.type || row.role || 'Attack').toLowerCase();
+    ctx.globalAlpha = row.alive ? 1 : .45;
+    if (role === 'attack') nativeCircle(ctx,at,axis===1 ? 6 : 4.5,ink);
+    else nativeTriangle(ctx,at,axis===1 ? 7 : 5,-Math.atan2(v[axis],v[0]),ink,role==='disturb' ? 45 : 36);
+    if ($('showLabels').checked && row.alive && axis === 1) {
+      ctx.font = '10px "Segoe UI", sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#34485e'; ctx.fillText(`${prefix}${id}`,at[0]+8,at[1]-7);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+function drawTraces(frameIndex, layout) {
+  if (!$('showTrails').checked) return;
+  const {ctx} = layout;
+  for (const [team,color] of [['red','#d06b78'],['blue','#4387cc']]) {
+    for (const id of Object.keys(episode.frames[frameIndex][team] || {})) {
+      ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 1.3; ctx.globalAlpha = .35;
+      let started = false;
+      for (let k=Math.max(0,frameIndex-25);k<=frameIndex;k++) {
+        const p = episode.frames[k][team]?.[id]?.p; if (!p) continue;
+        const at = plotPoint(p,layout); if (!started) ctx.moveTo(...at); else ctx.lineTo(...at); started = true;
+      }
+      ctx.stroke(); ctx.globalAlpha = 1;
+    }
+  }
+}
+function drawEntities(frame,index,layout) {
+  const {ctx,axis,x,y,w,h} = layout;
+  ctx.save(); ctx.beginPath(); ctx.rect(x-10,y-10,w+20,h+20); ctx.clip();
+  drawTraces(index,layout);
+  if ($('showAssignments').checked) {
+    ctx.strokeStyle = 'rgba(131,107,150,.5)'; ctx.setLineDash([4,4]); ctx.lineWidth = 1;
+    for (const [redId,blueId] of Object.entries(frame.interception || {})) {
+      const red=frame.red?.[redId], blue=frame.blue?.[blueId];
+      if (!red?.alive || !blue?.alive) continue;
+      ctx.beginPath(); ctx.moveTo(...plotPoint(red.p,layout)); ctx.lineTo(...plotPoint(blue.p,layout)); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+  if ($('showBlueTargets').checked) {
+    ctx.strokeStyle = 'rgba(88,155,223,.7)'; ctx.setLineDash([5,4]); ctx.lineWidth = 1.4;
+    for (const [blueId,targetId] of Object.entries(frame.blue_assignment || {})) {
+      if (targetId === null || targetId === undefined || targetId === '') continue;
+      const blue=frame.blue?.[blueId], target=frame.targets?.[targetId];
+      if (!blue?.alive || !target?.p) continue;
+      ctx.beginPath(); ctx.moveTo(...plotPoint(blue.p,layout)); ctx.lineTo(...plotPoint(target.p,layout)); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+  for (const [id,row] of Object.entries(frame.targets || {})) {
+    if (!row.p) continue;
+    const at=plotPoint(row.p,layout), icon=row.alive ? nativeTarget : nativeDeadTarget;
+    if (axis===1 && icon.complete && icon.naturalWidth) ctx.drawImage(icon,at[0]-12,at[1]-12,24,24);
+    else nativeCircle(ctx,at,6,'#bc8c36');
+    if ($('showLabels').checked && axis===1) {
+      ctx.fillStyle='#8e671e'; ctx.font='11px "Segoe UI", sans-serif'; ctx.textAlign='left'; ctx.fillText(`T${id}`,at[0]+14,at[1]+3);
+    }
+  }
+  nativeAgents(frame.red,'#ed7883',layout,'R'); nativeAgents(frame.blue,'#589bdf',layout,'B');
+  ctx.restore();
+}
+function frameDamage(frame) {
+  if (finite(frame.target_damage)) return Number(frame.target_damage);
+  const values = Object.values(frame.targets || {}).map(row => row.cumulative_damage);
+  return values.length && values.every(finite) ? values.reduce((sum,value)=>sum+Number(value),0) : null;
+}
+function frameReturns(frame,damage) {
+  const reported = frame.episode_returns || frame.cumulative_reward;
+  if (reported) return reported;
+  return modeOf(episode)==='damage' && finite(damage) ? {Red:-damage,Blue:damage} : {};
+}
+function drawFrame(index) {
+  const dimension=dimensionOf(episode);
+  $('altitudePlot').hidden=dimension===2;
+  const xy=plotLayout($('world'),1), xz=dimension===3 ? plotLayout($('altitude'),2) : null;
+  drawGrid(xy); if (xz) drawGrid(xz);
+  const frame = episode?.frames?.[index];
+  if (!frame) {
+    ['liveDamage','liveRedReturn','liveBlueReturn'].forEach(id=>$(id).textContent='—');
+    $('liveAlive').textContent='— / —'; $('targetStates').textContent='目标状态随回放更新。'; return;
+  }
+  drawEntities(frame,index,xy); if (xz) drawEntities(frame,index,xz);
+  const damage=frameDamage(frame), reward=frameReturns(frame,damage), isDamage=modeOf(episode)==='damage';
+  const last=index===episode.frames.length-1;
+  const end = isDamage ? `累计伤害 ${number(episode.target_damage)} · 红 ${number(episode.episode_returns?.Red)} / 蓝 ${number(episode.episode_returns?.Blue)}` : episode.outcome > 0 ? '红方获胜' : episode.outcome < 0 ? '蓝方获胜 / 目标失守' : '未分胜负';
+  if (last) {
+    const {ctx,width}=xy;
+    const label=isDamage ? `对局结束 · 伤害 ${number(episode.target_damage)}` : episode.outcome>0 ? '对局结束 · 红方获胜' : episode.outcome<0 ? '对局结束 · 蓝方获胜' : '对局结束';
+    ctx.font='600 12px "Microsoft YaHei", sans-serif';
+    const boxWidth=Math.min(width-30,ctx.measureText(label).width+28);
+    ctx.fillStyle='rgba(20,35,53,.91)'; ctx.fillRect((width-boxWidth)/2,22,boxWidth,31);
+    ctx.fillStyle='#f4f7fc'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(label,width/2,38);
+  }
+  $('liveTitle').textContent=`当前帧 · 第 ${frame.t} 步`;
+  $('liveDamage').textContent=number(damage);
+  $('liveAlive').textContent=`${Object.values(frame.red || {}).filter(row=>row.alive).length} / ${Object.values(frame.blue || {}).filter(row=>row.alive).length}`;
+  $('liveRedReturn').textContent=number(reward.Red); $('liveBlueReturn').textContent=number(reward.Blue);
+  $('targetStates').replaceChildren(...Object.entries(frame.targets || {}).map(([id,row])=>{
+    const div=document.createElement('div'), name=document.createElement('span'), value=document.createElement('strong');
+    name.textContent=`目标 T${id}`;
+    value.textContent=isDamage ? `累计伤害 ${number(row.cumulative_damage)}` : `血量 ${number(row.h)}${row.alive ? '' : ' · 已摧毁'}`;
+    div.append(name,value); return div;
+  }));
+  $('frameCount').textContent=`${index+1} / ${episode.frames.length}`;
+  const allocation=Array.isArray(frame.selected_blue) ? ` · 覆盖 ${frame.selected_blue.length} / 忽略 ${(frame.ignored_blue || []).length}` : '';
+  const aimed={};
+  for (const [blueId,targetId] of Object.entries(frame.blue_assignment || {})) {
+    if (targetId === null || targetId === undefined || targetId === '' || !frame.blue?.[blueId]?.alive) continue;
+    aimed[targetId]=(aimed[targetId] || 0)+1;
+  }
+  const blueAim=Object.keys(aimed).length ? ` · 蓝攻 ${Object.entries(aimed).map(([id,count])=>`T${id}×${count}`).join('、')}` : '';
+  const reselect=frame.command==='casualty' ? ' · 蓝方因伤亡重选' : frame.command==='periodic' ? ' · 蓝方周期重选' : frame.command==='reset' ? ' · 开局选定目标' : '';
+  $('frameInfo').textContent=`第 ${frame.t} / ${episode.steps} 步 · 本步开火 ${(frame.fired || []).length} 架${allocation}${blueAim}${reselect} · 本局最终：${end}`;
+}
+function setSummaryMode(mode) {
+  const damage=mode==='damage';
+  $('metricLabel').textContent=damage ? '平均目标累计伤害 ↓' : '红方胜率 ↑';
+  $('damageReturns').hidden=!damage; $('survivalOutcomes').hidden=damage; $('zeroDamageRow').hidden=!damage;
+  $('targetDamagePanel').hidden=!damage;
+  $('terminalLabel').textContent=damage ? '到达时限 / 蓝方耗尽' : '到达时限 / 歼灭获胜';
+  $('histTitle').textContent=damage ? '对局伤害分布' : '失守发生时刻';
+  $('histUnit').textContent=damage ? '横轴：累计伤害' : '横轴：仿真步';
+}
+function renderSummary(s,complete=true) {
+  const damage=modeOf(s)==='damage'; setSummaryMode(modeOf(s));
+  $('summaryState').textContent=complete ? '完整统计' : '已完成样本';
+  $('winRate').textContent=damage ? number(s.mean_target_damage) : percent(s.win_rate);
+  $('sampleCount').textContent=`${s.n} 局完成`;
+  $('confidence').textContent=damage ? '每局所有目标承受的累计伤害之和；红方越低越好。' : Array.isArray(s.wilson) ? `95% Wilson 置信区间 ${percent(s.wilson[0])}–${percent(s.wilson[1])}` : '当前记录未提供置信区间。';
+  $('redReturn').textContent=number(s.mean_red_return); $('blueReturn').textContent=number(s.mean_blue_return);
+  $('zeroDamage').textContent=finite(s.zero_damage_count) ? `${s.zero_damage_count} / ${s.n} 局` : '—';
+  const neutral=Math.max(0,s.n-s.wins-s.breached);
+  [['wins',s.wins],['loss',s.breached],['draw',neutral]].forEach(([key,value])=>{
+    $(key+'Value').textContent=finite(value) ? value : '—'; $(key+'Bar').style.width=`${s.n && finite(value) ? value/s.n*100 : 0}%`;
+  });
+  $('engageRate').textContent=percent(s.engage_rate); $('killsPerFire').textContent=number(s.kills_per_fire);
+  $('clipRate').textContent=percent(s.clip_rate,2); $('meanSteps').textContent=`${number(s.mean_steps,1)} 步`;
+  $('terminalCounts').textContent=`${s.horizon ?? '—'} / ${s.wiped ?? '—'}`;
+  const values=(damage ? s.target_damage_by_episode || [] : s.breach_steps || []).filter(finite).map(Number);
+  const histogram=$('histogram'); histogram.replaceChildren(); histogram.hidden=!values.length;
+  if (!values.length) $('histHint').textContent=damage ? '当前记录未提供逐局伤害数据。' : '已完成的对局没有目标失守。';
+  else {
+    const low=damage ? 0 : 1, upper=Math.max(damage ? 1 : 6,...values);
+    const width=damage ? upper/6 : Math.ceil(upper/6), bins=Array(6).fill(0);
+    values.forEach(value=>++bins[Math.min(5,Math.max(0,Math.floor((value-low)/width)))]);
+    const max=Math.max(1,...bins);
+    bins.forEach((count,i)=>{
+      const col=document.createElement('div'); col.className='hist-col';
+      const track=document.createElement('div'); track.className='hist-track';
+      const value=document.createElement('span'); value.className='hist-value'; value.textContent=count;
+      const bar=document.createElement('div'); bar.className='hist-bar'; bar.style.height=`${count/max*82}px`;
+      const label=document.createElement('span'); label.className='hist-label';
+      label.textContent=damage ? `${number(i*width,1)}–${number((i+1)*width,1)}` : `${i*width+1}–${(i+1)*width}`;
+      col.title=`${label.textContent}${damage ? ' 伤害' : ' 步'}：${count} 局`; col.setAttribute('aria-label',col.title);
+      track.append(value,bar); col.append(track,label); histogram.append(col);
+    });
+    $('histHint').textContent=damage ? `${values.length} 局实际结果；柱高为局数，右端点只计入最后一组。` : `共 ${values.length} 局失守；柱高为局数。`;
+  }
+  const targets=Array.isArray(s.mean_damage_by_target) ? s.mean_damage_by_target : [];
+  $('targetDamageHint').hidden=targets.length>0;
+  const peak=Math.max(1,...targets.map(value=>finite(value) ? Number(value) : 0));
+  $('targetDamageBars').replaceChildren(...targets.map((value,index)=>{
+    const row=document.createElement('div'); row.className='bar-row';
+    const name=document.createElement('span'); name.textContent=`目标 T${index}`;
+    const track=document.createElement('div'); track.className='bar-track';
+    const bar=document.createElement('div'); bar.className='bar-fill draw'; bar.style.width=`${finite(value) ? value/peak*100 : 0}%`;
+    const amount=document.createElement('span'); amount.className='bar-value'; amount.textContent=number(value);
+    track.append(bar); row.append(name,track,amount); return row;
+  }));
+}
+function canonicalValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalValue);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonicalValue(value[key])]));
+  return value;
+}
+function conditionKey(config) {
+  if (!config || typeof config.physics_protocol !== 'string' || !config.physics_protocol.trim()
+      || !config.environment_parameters || typeof config.environment_parameters !== 'object'
+      || Array.isArray(config.environment_parameters) || !Object.keys(config.environment_parameters).length) return null;
+  const values=['task_mode','spatial_dim','target_initialization','targets','red','blue','seed0','stats','max_steps','target_health'].map(key=>config[key] ?? null);
+  if (values.some(value=>value===null)) return null;
+  return JSON.stringify([...values,config.physics_protocol,canonicalValue(config.environment_parameters)]);
+}
+function rememberCompleted(summary) {
+  if (!job || !jobConfig || Number(summary.n)!==Number(jobConfig.stats)) return;
+  const compact={};
+  ['n','task_mode','mean_target_damage','mean_red_return','mean_blue_return','win_rate','zero_damage_count'].forEach(key=>compact[key]=summary[key]);
+  const entry={job,config:{...jobConfig},summary:compact};
+  completedJobs=completedJobs.filter(row=>row.job!==job); completedJobs.push(entry);
+  try { sessionStorage.setItem(comparisonKey,JSON.stringify(completedJobs)); } catch (_) {}
+  renderComparisons();
+}
+function sameOpponent(config, baseline) {
+  return Boolean(config?.blue_strategy && baseline?.blue_strategy)
+    && JSON.stringify(canonicalValue(config.blue_strategy))===JSON.stringify(canonicalValue(baseline.blue_strategy));
+}
+function restoreHistoryConfig(row) {
+  if (running || queueActive || submissionUnconfirmed) return;
+  if (row.config.physics_protocol && row.config.physics_protocol!==meta?.physics_protocol) {
+    notice('该记录来自旧物理协议，已保留结果。请按当前环境重新配置新评估。'); return;
+  }
+  applyConfig(row.config,false);
+  notice('已恢复该任务的配置；点击开始评估或加入队列。结果与回放仍显示当前选中的任务。');
+  $('configTitle').scrollIntoView({block:'start',behavior:'smooth'});
+}
+async function openHistory(row) {
+  if (running || queueActive || submissionUnconfirmed) return;
+  clearTimeout(pollTimer); job=row.job; jobConfig={...row.config}; startedAt=null;
+  applyConfig(jobConfig); resetResults(); renderSummary(row.summary,true); saveJob();
+  lockSettings(true); status('正在读取历史任务…','running'); await poll(job);
+}
+function renderComparisonChart(rows, baseline) {
+  const reference=conditionKey(baseline), allowDifferent=$('comparisonScope').value==='scenario';
+  const comparable=reference===null ? [] : rows.filter(row=>conditionKey(row.config)===reference && (allowDifferent || sameOpponent(row.config,baseline)));
+  const damage=baseline?.task_mode==='damage', metric=damage ? 'mean_target_damage' : 'win_rate';
+  const chartRows=comparable.filter(row=>finite(row.summary[metric]));
+  const chart=$('comparisonChart'); chart.replaceChildren();
+  const note=document.createElement('p'); note.className='muted';
+  const differentOpponents=chartRows.some(row=>!sameOpponent(row.config,baseline));
+  note.textContent=!chartRows.length
+    ? '暂无符合当前图表条件的完整结果；运行评估后自动加入，历史任务可切换为比较参照。'
+    : `${differentOpponents ? '同场景 · 含不同蓝方对手' : '同条件 · 同蓝方策略'}：${damage ? '平均目标累计伤害，红方越低越好' : '红方胜率，越高越好'}。${chartRows.length} 个完整任务；每行标明红蓝双方。${differentOpponents ? ' 不同对手的结果不能单独归因于红方算法。' : ''}`;
+  chart.append(note);
+  const maximum=damage ? Math.max(0.000001,...chartRows.map(row=>Number(row.summary[metric]))) : 1;
+  for (const row of chartRows) {
+    const barRow=document.createElement('div'), labels=document.createElement('div'), opponent=document.createElement('small'), values=document.createElement('div');
+    barRow.className='comparison-chart-row'; labels.textContent=`红：${strategyText(row.config,'red')}`;
+    opponent.textContent=`蓝：${strategyText(row.config,'blue')} · ${row.summary.n} 局${sameOpponent(row.config,baseline) ? '' : ' · 与参照任务的对手不同'}`; labels.append(opponent);
+    const track=document.createElement('div'), bar=document.createElement('div'), value=document.createElement('strong');
+    values.className='comparison-chart-value'; track.className='bar-track'; bar.className='bar-fill';
+    const amount=Number(row.summary[metric]); bar.style.width=`${Math.max(0,Math.min(100,amount/maximum*100))}%`;
+    value.textContent=damage ? number(amount) : percent(amount); track.append(bar); values.append(track,value);
+    barRow.append(labels,values); chart.append(barRow);
+  }
+}
+function renderComparisons() {
+  const baseline=jobConfig || completedJobs.at(-1)?.config;
+  const rows=completedJobs.filter(row=>row && row.config && row.summary && Number(row.summary.n)===Number(row.config.stats));
+  renderComparisonChart(rows,baseline);
+  $('comparisonRows').replaceChildren(...rows.slice().reverse().map(row=>{
+    const tr=document.createElement('tr'); if (row.job===job) tr.className='current';
+    const config=row.config, s=row.summary, damage=(s.task_mode || config.task_mode || 'survival')==='damage';
+    const identity=conditionKey(config), reference=conditionKey(baseline);
+    const known=identity!==null && reference!==null, same=known && identity===reference;
+    const cells=[
+      [`红：${strategyText(config,'red')}`,`蓝：${strategyText(config,'blue')}`],
+      [`${config.spatial_dim || 3}D · ${damage ? '累计伤害' : '目标生存'}`,`R${config.red} : B${config.blue} · K${config.targets} · ${config.max_steps ?? '旧版'} 步 · H${config.target_health ?? '旧版'} · ${config.target_initialization === 'random' ? '随机目标' : config.target_initialization === 'fixed' ? '固定目标' : '历史布局'}`],
+      [`${s.n} 局`,`seed ${config.seed0}–${config.seed0+config.stats-1}`],
+      [number(s.mean_target_damage),''],
+      [damage ? `${number(s.mean_red_return)} / ${number(s.mean_blue_return)}` : '—',''],
+      [damage ? `零伤害 ${s.zero_damage_count ?? '—'} 局` : `红方胜率 ${percent(s.win_rate)}`,''],
+      [row.job===job ? '当前参照任务' : same ? sameOpponent(config,baseline) ? '同条件 · 同对手' : '同场景 · 不同对手' : known ? '条件不同' : '元数据不足',row.job===job && !known ? '环境身份未完整记录' : '']
+    ];
+    cells.forEach(([value,sub],index)=>{
+      const td=document.createElement('td'); td.textContent=value;
+      if (sub) { const small=document.createElement('small'); small.textContent=sub; td.append(small); }
+      if (index===6) td.className=same && sameOpponent(config,baseline) ? 'comparable' : 'different'; tr.append(td);
+    });
+    const actions=document.createElement('td'), controls=document.createElement('div'); controls.className='button-row';
+    for (const [label,action] of [['恢复配置',()=>restoreHistoryConfig(row)],['结果 / 回放',()=>openHistory(row)]]) {
+      const button=document.createElement('button'); button.type='button'; button.textContent=label; button.dataset.historyAction='true';
+      button.disabled=running || queueActive || submissionUnconfirmed; button.onclick=action; controls.append(button);
+    }
+    actions.append(controls); tr.append(actions);
+    return tr;
+  }));
+  $('comparisonHint').textContent=rows.length ? `已记录 ${rows.length} 个完整任务。参照${jobConfig ? '当前任务' : '最近完成任务'}：任务、维度、目标初始化、种子范围、规模、时限、目标血量、物理协议及实际环境参数一致才属于同场景；蓝方策略也一致才属于同条件对比。点击“结果 / 回放”可切换参照，回放需要服务仍保留该任务。缺失环境身份的旧记录不进入图表。` : '完整评估后自动加入；相同环境、任务、种子和蓝方策略的记录可比较红方算法。回放任务保存在当前服务内存中。';
+}
+$('comparisonScope').addEventListener('change',renderComparisons);
+['showAssignments','showBlueTargets','showTrails','showLabels'].forEach(id=>$(id).addEventListener('change',()=>drawFrame(Number($('slider').value))));
+let resizeFrame = null;
+const replayResizeObserver=new ResizeObserver(()=>{
+  cancelAnimationFrame(resizeFrame); resizeFrame=requestAnimationFrame(()=>drawFrame(Number($('slider').value)));
+});
+replayResizeObserver.observe($('world').parentElement); replayResizeObserver.observe($('altitude'));
+$('spatial_dim').addEventListener('change',()=>{ if (!job && !episode) drawFrame(0); });
+updateHint();
+initialize();
+</script>
+</body>
+</html>

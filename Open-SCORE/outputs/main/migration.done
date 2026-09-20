@@ -1,0 +1,10 @@
+{
+  "csv": {
+    "episodes": 298100,
+    "learning": 63558,
+    "progress": 197301,
+    "trajectories": 1006,
+    "verification": 83,
+    "benchmarks": 0
+  }
+}

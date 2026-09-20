@@ -1,0 +1,31 @@
+# Experiment data (keep reports and figures)
+*.csv
+*.tsv
+*.parquet
+
+# Model weights and arrays
+*.pt
+*.pth
+*.ckpt
+*.pkl
+*.npy
+*.npz
+*.h5
+
+# Python / packaging
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+
+# Runtime junk
+*.lock
+.DS_Store
+*.swp
+.idea/
+.vscode/
