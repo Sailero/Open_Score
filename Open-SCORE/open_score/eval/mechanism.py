@@ -4,7 +4,8 @@ from __future__ import annotations
 from pathlib import Path
 import time
 
-from open_score.eval.protocol import MECH_CONFIG, MECH_EPISODE_SEEDS, config_dict, config_label
+from open_score.eval.protocol import (MECH_CONFIG, MECH_EPISODE_SEEDS, OFFICIAL_CHECKPOINT,
+                                      checkpoint_tag, config_dict, config_label)
 from open_score.utils.logging import DEFAULT_OUTPUT, FORMAL_RUN, ExperimentLogger, read_records
 
 
@@ -26,14 +27,15 @@ def evaluate_mechanism(method="regir", *, output=None, run=None, seed=0, device=
 
     run = FORMAL_RUN if run is None else run
     output = Path(DEFAULT_OUTPUT if output is None else output)
-    checkpoint = output / method / run / f"seed_{int(seed)}" / "best.pt"
+    checkpoint = output / method / run / f"seed_{int(seed)}" / f"{OFFICIAL_CHECKPOINT}.pt"
     if not checkpoint.exists():
-        return dict(status="blocked", reason="no best.pt")
+        return dict(status="blocked", reason=f"no {OFFICIAL_CHECKPOINT}.pt")
     existing = read_records(output, "trajectories", run=run, method=method, seed=seed)
-    if any(row.get("phase") == "mechanism" for row in existing):
-        return dict(status="complete", reused=True)
     saved = torch.load(checkpoint, map_location="cpu", weights_only=False)
     t_env = int(saved["progress"]["t_env"])
+    tag = checkpoint_tag(OFFICIAL_CHECKPOINT, t_env)
+    if any(row.get("phase") == "mechanism" and row.get("checkpoint") == tag for row in existing):
+        return dict(status="complete", reused=True)
     del saved
     policy = load_policy(method, checkpoint)
     if hasattr(policy, "set_device"):
@@ -74,7 +76,7 @@ def evaluate_mechanism(method="regir", *, output=None, run=None, seed=0, device=
             }
             engaged = any(frame.get("blue_left", 1) < blue for frame in frames) or result["episode_summary"]["D"] > 0
             logger.trajectories([dict(phase="mechanism", config=config_dict(MECH_CONFIG),
-                                      episode_seed=episode_seed, checkpoint=f"best@{t_env}",
+                                      episode_seed=episode_seed, checkpoint=tag,
                                       trajectory={"frames": frames, "attention": attention})])
             used = episode_seed
             if engaged or episode_seed == MECH_EPISODE_SEEDS[-1]:

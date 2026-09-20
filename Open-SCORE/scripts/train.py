@@ -508,10 +508,10 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
         if ident in eval_ids:
             return
         directory = Path(output) / method / options["run"] / f"seed_{options['seed']}"
-        if not (directory / "best.pt").exists():
+        from open_score.eval.protocol import OFFICIAL_CHECKPOINT, official_eval_t_env
+        if not (directory / f"{OFFICIAL_CHECKPOINT}.pt").exists():
             return
-        from open_score.eval.protocol import official_best_t_env
-        t_env = official_best_t_env(directory) or infer_best_t_env(
+        t_env = official_eval_t_env(directory) or infer_best_t_env(
             output, method, options["run"], options["seed"], options.get("t_max"))
         if t_env is None:
             return

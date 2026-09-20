@@ -560,7 +560,7 @@
       "method": "regir",
       "seed": 1,
       "status": "pending",
-      "detail": "remaining=6966"
+      "detail": "remaining=6835"
     },
     {
       "id": "eval.final.regir.s2",
@@ -568,7 +568,7 @@
       "method": "regir",
       "seed": 2,
       "status": "pending",
-      "detail": "remaining=6921"
+      "detail": "remaining=6761"
     },
     {
       "id": "eval.final.alma.s0",

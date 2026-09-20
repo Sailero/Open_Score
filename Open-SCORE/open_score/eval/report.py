@@ -662,7 +662,8 @@ def _depth_sweep_groups(episodes, methods=CYCLE_SERIES_METHODS, progress=None, o
             official[key] = _official_seed_t_env(output, progress, key[0], key[1])
         if row.get("phase") != "depth_eval" or official[key] is None:
             continue
-        if parse_checkpoint_t_env(row.get("checkpoint")) == official[key]:
+        if (parse_checkpoint_stem(row.get("checkpoint")) == OFFICIAL_CHECKPOINT
+                and parse_checkpoint_t_env(row.get("checkpoint")) == official[key]):
             has_sweep.add(key)
     grouped = defaultdict(list)
     for row in episodes:
@@ -676,7 +677,9 @@ def _depth_sweep_groups(episodes, methods=CYCLE_SERIES_METHODS, progress=None, o
         key = (row["method"], int(row["seed"]))
         depth = parse_sweep_depth(row.get("checkpoint"))
         t_env = parse_checkpoint_t_env(row.get("checkpoint"))
-        if depth is None or t_env is None or t_env != official.get(key):
+        if (depth is None or t_env is None
+                or parse_checkpoint_stem(row.get("checkpoint")) != OFFICIAL_CHECKPOINT
+                or t_env != official.get(key)):
             continue
         grouped[(row["method"], int(row["seed"]), int(depth), cfg)].append(float(row["D"]))
     finals = defaultdict(list)
@@ -690,6 +693,8 @@ def _depth_sweep_groups(episodes, methods=CYCLE_SERIES_METHODS, progress=None, o
             continue
         key = (row["method"], int(row["seed"]))
         if key not in has_sweep:
+            continue
+        if parse_checkpoint_stem(row.get("checkpoint")) != OFFICIAL_CHECKPOINT:
             continue
         if parse_checkpoint_t_env(row.get("checkpoint")) != official.get(key):
             continue
@@ -2173,11 +2178,9 @@ def _axis_sets():
 
 
 def _usable_final_eval(rows, progress=None, output=None):
-    """Keep final_eval rows that match the weights now on disk.
+    """Keep final_eval rows that match last-iterate ``final.pt``.
 
-    Official identity is ``best.pt``'s ``t_env``, not the newest CSV tag. Mid-
-    training leftovers such as ``best@280193`` stay on disk but never enter
-    means, R=4 reuse, or figures.
+    ``best@...`` leftovers stay on disk but never enter means or figures.
     """
     progress = progress or {}
     output = Path(DEFAULT_OUTPUT if output is None else output)
@@ -2191,7 +2194,7 @@ def _usable_final_eval(rows, progress=None, output=None):
             continue
         directory = run_directory(output, key[0], key[1])
         finished[key] = training_finished(directory, progress.get(key))
-        official[key] = official_best_t_env(directory)
+        official[key] = official_eval_t_env(directory)
     kept = []
     for row in rows:
         if row.get("phase") != "final_eval":
@@ -2199,9 +2202,12 @@ def _usable_final_eval(rows, progress=None, output=None):
         key = (row["method"], int(row["seed"]))
         if not finished.get(key):
             continue
-        t_env = parse_checkpoint_t_env(row.get("checkpoint"))
         wanted = official.get(key)
-        if wanted is None or t_env != wanted:
+        if wanted is None:
+            continue
+        if parse_checkpoint_stem(row.get("checkpoint")) != OFFICIAL_CHECKPOINT:
+            continue
+        if parse_checkpoint_t_env(row.get("checkpoint")) != wanted:
             continue
         kept.append(row)
     return kept
@@ -2218,15 +2224,20 @@ def _stale_final_eval_note(episodes, progress, methods, output=None):
         if t_env is None:
             continue
         key = (row["method"], int(row["seed"]))
-        latest[key] = max(latest.get(key, -1), t_env)
-    for key, t_env in sorted(latest.items()):
+        prev = latest.get(key)
+        if prev is None or t_env > prev[0] or (
+                t_env == prev[0] and parse_checkpoint_stem(row.get("checkpoint")) == OFFICIAL_CHECKPOINT):
+            latest[key] = (t_env, parse_checkpoint_stem(row.get("checkpoint")))
+    for key, (t_env, stem) in sorted(latest.items()):
         method, seed = key
         official = _official_seed_t_env(output, progress, method, seed)
-        if official is not None and t_env != official:
-            stale.append(f"{LABELS.get(method, method)} seed {seed}（终评 `best@{t_env}`，磁盘 `best.pt` 是 {official}）")
+        if official is None:
+            continue
+        if stem != OFFICIAL_CHECKPOINT or t_env != official:
+            stale.append(f"{LABELS.get(method, method)} seed {seed}（已有 `{stem}@{t_env}`，磁盘 `final.pt` 是 {official}）")
     if not stale:
         return None
-    return "下列种子的终评对不上磁盘上的最终权重，主表和深度图都不计入，正在按 `best.pt` 重评：" + "、".join(stale) + "。"
+    return "下列种子还没有对齐 ``final.pt`` 的终评，主表不计入，正在按最后一步权重重评：" + "、".join(stale) + "。"
 
 
 def _d_by_config(rows, methods):
@@ -2859,7 +2870,7 @@ def _refresh_main_report(output=DEFAULT_OUTPUT, *, run=FORMAL_RUN, report_stream
     text += [line for line in compare_lines] + [""]
     text += ["### 训练曲线", "",
              "池内 4 配置、每 2 万步贪心 100 局，纵轴是红方回报 $R=-D$（越高越好）。"
-             "阴影是已有训练种子的标准差。点划线是规则，虚线是随机。曲线看的是训练过程，终评用的是 `best.pt`，不是曲线最右端。", ""]
+             "阴影是已有训练种子的标准差。点划线是规则，虚线是随机。曲线看的是训练过程，终评用的是最后一步 `final.pt`。", ""]
     text += _figure(learning, "对照：池内训练曲线")
     text += ["### 等规模外推", "",
              "横轴是未见或插值的 1:1 编队（5 到 50 人，$K=2$），纵轴 $D$。"

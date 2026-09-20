@@ -4,7 +4,8 @@ from __future__ import annotations
 from pathlib import Path
 import time
 
-from open_score.eval.protocol import DEPTH_SWEEP_DEPTHS, TIMING_METHODS, TIMING_SCALES, config_dict, config_label
+from open_score.eval.protocol import (DEPTH_SWEEP_DEPTHS, OFFICIAL_CHECKPOINT, TIMING_METHODS,
+                                      TIMING_SCALES, config_dict, config_label)
 from open_score.utils.logging import DEFAULT_OUTPUT, FORMAL_RUN, ExperimentLogger, read_records
 
 
@@ -64,7 +65,7 @@ def evaluate_timing(*, output=None, run=None, device="cuda", stop_requested=None
     written = 0
     try:
         for method in TIMING_METHODS:
-            checkpoint = run_dir(output, method, 0) / "best.pt"
+            checkpoint = run_dir(output, method, 0) / f"{OFFICIAL_CHECKPOINT}.pt"
             if not checkpoint.exists():
                 continue
             policy = load_policy(method, checkpoint)
