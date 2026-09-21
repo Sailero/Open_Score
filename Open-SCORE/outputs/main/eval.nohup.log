@@ -1,0 +1,184 @@
+scanning /data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main
+  progress.csv ...
+  48 runs in progress.csv
+  episodes.csv ...
+/home/dell/anaconda3/envs/saileron/lib/python3.10/multiprocessing/resource_tracker.py:224: UserWarning: resource_tracker: There appear to be 8 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+scanning /data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main
+  progress.csv ...
+  48 runs in progress.csv
+  episodes.csv ...
+  699433 unique episodes
+inventory 118 tasks  running=4  pending=33  blocked=25  completed=56
+当前任务 (4)
+  train.regir.s3
+  train.regir.s4
+  train.alma.s3
+  train.alma.s4
+未完成 (33)
+  train.regir_r1.s3
+  train.regir_r1.s4
+  train.regir_nocount.s3
+  train.regir_nocount.s4
+  train.regir_last.s3
+  train.regir_last.s4
+  train.regir_norefil.s3
+  train.regir_norefil.s4
+  train.refil_matched.s3
+  train.refil_matched.s4
+  train.refil.s3
+  train.refil.s4
+  train.b2_qmix_atten.s3
+  train.b2_qmix_atten.s4
+  train.dcg.s3
+  train.dcg.s4
+  train.spectra.s3
+  train.spectra.s4
+  eval.final.regir_norefil.s0                remaining=7200
+  eval.final.regir_norefil.s1                remaining=7200
+  eval.final.regir_norefil.s2                remaining=7200
+  eval.final.regir_nocount.s0                remaining=3806
+  eval.final.regir_nocount.s1                remaining=5380
+  eval.final.regir_nocount.s2                remaining=7200
+  eval.final.regir_last.s0                   remaining=7200
+  eval.final.regir_last.s1                   remaining=7200
+  eval.final.regir_last.s2                   remaining=7200
+  eval.final.refil_matched.s0                remaining=7200
+  eval.final.refil_matched.s1                remaining=7200
+  eval.final.refil_matched.s2                remaining=7200
+  eval.depth.regir.s0                        remaining=12000
+  eval.depth.regir.s1                        remaining=12000
+  eval.depth.regir.s2                        remaining=12000
+阻塞 (25)
+  eval.final.b2_qmix_atten.s3                no final.pt
+  eval.final.b2_qmix_atten.s4                no final.pt
+  eval.final.refil.s3                        no final.pt
+  eval.final.refil.s4                        no final.pt
+  eval.final.dcg.s3                          no final.pt
+  eval.final.dcg.s4                          no final.pt
+  eval.final.spectra.s3                      no final.pt
+  eval.final.spectra.s4                      no final.pt
+  eval.final.regir.s3                        no final.pt
+  eval.final.regir.s4                        no final.pt
+  eval.final.alma.s3                         no final.pt
+  eval.final.alma.s4                         no final.pt
+  eval.final.regir_norefil.s3                no final.pt
+  eval.final.regir_norefil.s4                no final.pt
+  eval.final.regir_nocount.s3                no final.pt
+  eval.final.regir_nocount.s4                no final.pt
+  eval.final.regir_r1.s3                     no final.pt
+  eval.final.regir_r1.s4                     no final.pt
+  eval.final.regir_last.s3                   no final.pt
+  eval.final.regir_last.s4                   no final.pt
+  eval.final.refil_matched.s3                no final.pt
+  eval.final.refil_matched.s4                no final.pt
+  eval.depth.regir.s3                        no final.pt
+  eval.depth.regir.s4                        no final.pt
+  eval.timing                                gpu training busy
+已完成 (56)
+  train.regir.s1
+  train.alma.s0
+  train.alma.s1
+  train.alma.s2
+  train.regir.s2
+  train.regir_r1.s0
+  train.regir_r1.s1
+  train.regir_r1.s2
+  train.regir_nocount.s0
+  train.regir_nocount.s1
+  train.regir_nocount.s2
+  train.regir_last.s0
+  train.regir_last.s1
+  train.regir_last.s2
+  train.regir_norefil.s0
+  train.regir_norefil.s1
+  train.regir_norefil.s2
+  train.refil_matched.s0
+  train.refil_matched.s1
+  train.refil_matched.s2
+  train.b2_qmix_atten.s0
+  train.b2_qmix_atten.s1
+  train.b2_qmix_atten.s2
+  train.refil.s0
+  train.refil.s1
+  train.refil.s2
+  train.dcg.s0
+  train.dcg.s1
+  train.dcg.s2
+  train.spectra.s0
+  train.spectra.s1
+  train.spectra.s2
+  train.regir.s0
+  eval.anchors                               missing=0
+  eval.final.b2_qmix_atten.s0                remaining=0
+  eval.final.b2_qmix_atten.s1                remaining=0
+  eval.final.b2_qmix_atten.s2                remaining=0
+  eval.final.refil.s0                        remaining=0
+  eval.final.refil.s1                        remaining=0
+  eval.final.refil.s2                        remaining=0
+  eval.final.dcg.s0                          remaining=0
+  eval.final.dcg.s1                          remaining=0
+  eval.final.dcg.s2                          remaining=0
+  eval.final.spectra.s0                      remaining=0
+  eval.final.spectra.s1                      remaining=0
+  eval.final.spectra.s2                      remaining=0
+  eval.final.regir.s0                        remaining=0
+  eval.final.regir.s1                        remaining=0
+  eval.final.regir.s2                        remaining=0
+  eval.final.alma.s0                         remaining=0
+  eval.final.alma.s1                         remaining=0
+  eval.final.alma.s2                         remaining=0
+  eval.final.regir_r1.s0                     remaining=0
+  eval.final.regir_r1.s1                     remaining=0
+  eval.final.regir_r1.s2                     remaining=0
+  eval.mech.regir.s0
+queue eval.final.regir_nocount.s0                remaining=3806
+queue eval.final.regir_nocount.s1                remaining=5380
+queue eval.final.regir_nocount.s2                remaining=7200
+queue eval.final.regir_norefil.s0                remaining=7200
+queue eval.final.regir_norefil.s1                remaining=7200
+queue eval.final.regir_norefil.s2                remaining=7200
+queue eval.final.regir_last.s0                   remaining=7200
+queue eval.final.regir_last.s1                   remaining=7200
+queue eval.final.regir_last.s2                   remaining=7200
+queue eval.final.refil_matched.s0                remaining=7200
+queue eval.final.refil_matched.s1                remaining=7200
+queue eval.final.refil_matched.s2                remaining=7200
+eval queued +12  live=0 waiting=12
+eval.final.regir_nocount.s0 started
+eval.final.regir_nocount.s1 started
+eval live=2 queue=10
+eval.final.regir_nocount.s0           final_eval   3,375/7,200
+eval.final.regir_nocount.s1           final_eval   1,800/7,200
+queued: eval.final.regir_nocount.s2  eval.final.regir_norefil.s0  eval.final.regir_norefil.s1  eval.final.regir_norefil.s2  eval.final.regir_last.s0  eval.final.regir_last.s1 +4
+[4F[Jeval live=2 queue=10
+eval.final.regir_nocount.s0           final_eval   3,412/7,200  eta 3:15:19
+eval.final.regir_nocount.s1           final_eval   1,866/7,200  eta 1:53:15
+queued: eval.final.regir_nocount.s2  eval.final.regir_norefil.s0  eval.final.regir_norefil.s1  eval.final.regir_norefil.s2  eval.final.regir_last.s0  eval.final.regir_last.s1 +4
+[4F[Jeval live=2 queue=10
+eval.final.regir_nocount.s0           final_eval   3,445/7,200  eta 3:13:55
+eval.final.regir_nocount.s1           final_eval   1,949/7,200  eta 1:48:14
+queued: eval.final.regir_nocount.s2  eval.final.regir_norefil.s0  eval.final.regir_norefil.s1  eval.final.regir_norefil.s2  eval.final.regir_last.s0  eval.final.regir_last.s1 +4
+[4F[Jeval live=2 queue=10
+eval.final.regir_nocount.s0           final_eval   3,478/7,200  eta 3:10:49
+eval.final.regir_nocount.s1           final_eval   2,030/7,200  eta 1:46:51
+queued: eval.final.regir_nocount.s2  eval.final.regir_norefil.s0  eval.final.regir_norefil.s1  eval.final.regir_norefil.s2  eval.final.regir_last.s0  eval.final.regir_last.s1 +4
+[4F[Jeval live=2 queue=10
+eval.final.regir_nocount.s0           final_eval   3,491/7,200  eta 3:11:22
+eval.final.regir_nocount.s1           final_eval   2,062/7,200  eta 1:46:16
+queued: eval.final.regir_nocount.s2  eval.final.regir_norefil.s0  eval.final.regir_norefil.s1  eval.final.regir_norefil.s2  eval.final.regir_last.s0  eval.final.regir_last.s1 +4
+[4F[Jeval live=2 queue=10
+eval.final.regir_nocount.s0           final_eval   3,491/7,200  eta 3:11:22
+eval.final.regir_nocount.s1           final_eval   2,062/7,200  eta 1:46:16
+queued: eval.final.regir_nocount.s2  eval.final.regir_norefil.s0  eval.final.regir_norefil.s1  eval.final.regir_norefil.s2  eval.final.regir_last.s0  eval.final.regir_last.s1 +4
+[4F[Jeval live=2 queue=10
+eval.final.regir_nocount.s0           final_eval   3,512/7,200  eta 4:48:01
+eval.final.regir_nocount.s1           final_eval   2,132/7,200  eta 2:30:06
+queued: eval.final.regir_nocount.s2  eval.final.regir_norefil.s0  eval.final.regir_norefil.s1  eval.final.regir_norefil.s2  eval.final.regir_last.s0  eval.final.regir_last.s1 +4
+[4F[Jeval live=2 queue=10
+eval.final.regir_nocount.s0           final_eval   3,556/7,200  eta 4:06:39
+eval.final.regir_nocount.s1           final_eval   2,226/7,200  eta 2:14:37
+queued: eval.final.regir_nocount.s2  eval.final.regir_norefil.s0  eval.final.regir_norefil.s1  eval.final.regir_norefil.s2  eval.final.regir_last.s0  eval.final.regir_last.s1 +4
+stop requested: finish current episode
+/home/dell/anaconda3/envs/saileron/lib/python3.10/multiprocessing/resource_tracker.py:224: UserWarning: resource_tracker: There appear to be 8 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

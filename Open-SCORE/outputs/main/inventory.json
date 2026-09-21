@@ -183,7 +183,7 @@
       "kind": "train",
       "method": "alma",
       "seed": 3,
-      "status": "running",
+      "status": "completed",
       "detail": ""
     },
     {
@@ -679,8 +679,8 @@
       "kind": "eval",
       "method": "alma",
       "seed": 3,
-      "status": "blocked",
-      "detail": "no final.pt"
+      "status": "pending",
+      "detail": "remaining=7200"
     },
     {
       "id": "eval.final.alma.s4",
@@ -823,16 +823,16 @@
       "kind": "eval",
       "method": "regir_last",
       "seed": 1,
-      "status": "pending",
-      "detail": "remaining=1271"
+      "status": "completed",
+      "detail": "remaining=0"
     },
     {
       "id": "eval.final.regir_last.s2",
       "kind": "eval",
       "method": "regir_last",
       "seed": 2,
-      "status": "pending",
-      "detail": "remaining=1484"
+      "status": "completed",
+      "detail": "remaining=0"
     },
     {
       "id": "eval.final.regir_last.s3",
@@ -871,8 +871,8 @@
       "kind": "eval",
       "method": "refil_matched",
       "seed": 2,
-      "status": "pending",
-      "detail": "remaining=72"
+      "status": "completed",
+      "detail": "remaining=0"
     },
     {
       "id": "eval.final.refil_matched.s3",

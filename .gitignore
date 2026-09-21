@@ -29,3 +29,9 @@ venv/
 *.swp
 .idea/
 .vscode/
+
+# Atomic checkpoint and experiment control files
+*.pt.pending
+*.pt.tmp
+stop.request
+eval.stop.request
