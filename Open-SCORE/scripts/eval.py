@@ -249,6 +249,13 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
             emit(f"queue {tid} {task.get('completed', 0)}/{task.get('total', 0)}")
 
     def launch():
+        if profile:
+            # New final checkpoints take precedence over queued mechanism
+            # work. Stable order preserves seeds; running episodes continue.
+            priority = {"final": 0, "depth": 1, "readout": 2, "probe": 3, "timing": 4}
+            ordered = sorted(waiting, key=lambda task: priority.get(task["kind"], 5))
+            waiting.clear()
+            waiting.extend(ordered)
         while waiting and len(live) < max_concurrent and not stop_event.is_set():
             selected_index = next((i for i, task in enumerate(waiting)
                                    if not profile or cpu_admit(env, task["kind"], live, max_concurrent)), None)
@@ -399,6 +406,8 @@ def run_profile_timing(output, stop_requested):
     from open_score.utils.resources import gpu_memory, is_cuda_oom
     manifest = initialize(output)
     task = next(t for t in scan(output, env="had")["tasks"] if t["kind"] == "timing")
+    if task["status"] == "complete":
+        return dict(status="complete", completed=task["total"], total=task["total"], reused=True)
     if task["status"] == "waiting":
         return dict(status="blocked", reason="M4 needs all cost finals and the complete common state bank")
     selected = manifest["resources"].get("measurement_gpu")

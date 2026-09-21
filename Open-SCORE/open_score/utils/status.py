@@ -734,9 +734,22 @@ def render_status(output, *, gpu_status=None, now=None, details=False, width=100
         lines.append("  无活动任务；已有进度保留" if state == "已暂停" else "  无活动任务")
     estimates = _estimate_ranges(metadata.get("runtime_estimate"), tasks, metadata)
     prefix = "恢复后预计" if state == "已暂停" else "预计剩余"
-    lines.append(f"{prefix} {_short_range(estimates.get('overall_seconds'))}  （共享资源等待另计）")
-    lines.append(f"HAD {_short_range(estimates.get(('had', 'stage_seconds')))}  |  SMAC {_short_range(estimates.get(('smacv2', 'stage_seconds')))}")
     review = metadata.get("runtime_estimate", {}).get("deadline_review", {})
+    if review.get("decision") == "authorized_restart_full_two_gpu":
+        training = {}
+        for env in ("had", "smacv2"):
+            parts = [estimates.get((env, key)) for key in ("training_seconds", "validation_seconds")]
+            if all(parts):
+                training[env] = [sum(part[i] for part in parts) for i in (0, 1)]
+        transition = review.get("had_transition_tail_seconds", [0, 0])
+        had_pending = any(task.get("env") == "had" and task.get("status") not in _DONE for task in tasks)
+        total = ([sum(training[env][i] for env in training) + (transition[i] if had_pending else 0)
+                  for i in (0, 1)] if len(training) == 2 else None)
+        lines.append(f"{prefix}训练 {_short_range(total)} | 目标{review.get('deadline_days', 7)}天（两卡全速假设）")
+        lines.append(f"含验证：HAD {_short_range(training.get('had'))} | SMAC {_short_range(training.get('smacv2'))}")
+    else:
+        lines.append(f"{prefix} {_short_range(estimates.get('overall_seconds'))}  （共享资源等待另计）")
+        lines.append(f"HAD {_short_range(estimates.get(('had', 'stage_seconds')))}  |  SMAC {_short_range(estimates.get(('smacv2', 'stage_seconds')))}")
     if state == "已暂停" and review.get("decision") == "paused_deadline_not_supported":
         lines.append(f"{review.get('deadline_days', 5)}天目标：当前估计不满足，保持暂停")
     if len(live) > 8:

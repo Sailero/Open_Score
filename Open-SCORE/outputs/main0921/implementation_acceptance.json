@@ -1743,5 +1743,25 @@
       60109
     ],
     "restart": "not performed; current5-day total deadline not supported"
+  },
+  "seven_day_restart": {
+    "checked_at": "2026-09-21T20:02:55.117860+00:00",
+    "status": "passed",
+    "priority": "stable final-depth-readout-probe order with new final insertion; no running task preemption",
+    "gpu_bootstrap": "actual accepted natural-episode peak, native-sequence scaled; empty physical card only, seven scoped checks passed",
+    "resume_wrapper": [
+      "invalid command rejected",
+      "duplicate wrapper lease rejected",
+      "HAD controlled stop",
+      "detached resume and safe replacement",
+      "M4 stop prevents SMAC transition",
+      "concurrent resume rejected while control operation active",
+      "orphan job lock must release before restart",
+      "HAD-M4-SMAC-report full mock order and device visibility"
+    ],
+    "m4_complete_reuse": "passes without any GPU memory query",
+    "syntax": "actual HAD Python interpreter and bash -n passed",
+    "temporary_artifacts": "all wrapper mock files and fake processes removed",
+    "scope": "control flow only; original24 CPU model/seed and8 GPU architecture acceptance retained; no budget, seed or model changes"
   }
 }

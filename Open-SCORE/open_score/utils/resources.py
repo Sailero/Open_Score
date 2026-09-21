@@ -129,6 +129,33 @@ def _resource(path):
     return None
 
 
+def _bootstrap_peak(output, env, method):
+    """Use accepted full-episode measurements only to try an idle card.
+
+    Sequence scaling is a provisional estimate, not a worst-case memory
+    guarantee. Real process measurements and transactional OOM recovery remain
+    authoritative; no synthetic per-run resource record is written.
+    """
+    try:
+        import math
+        accepted = json.loads((Path(output) / "implementation_acceptance.json").read_text())["matrix_smoke_runtime"]
+        if accepted.get("status") != "passed":
+            return 0.
+        workers, limit = (8, 100) if env == "had" else (4, 200)
+        rows = accepted["had_full_gpu_throughput" if env == "had" else "smac_full_gpu_throughput"]
+        estimates = []
+        for row in rows:
+            if (row.get("method") == method and row.get("workers") == workers
+                    and row.get("batch_size") == 32 and row.get("episode_limit") == limit
+                    and row.get("finite_td") is True and 1 < row.get("sequence_length", 0) <= limit + 1):
+                peak = float(row["peak_reserved_gib"])
+                if math.isfinite(peak) and peak > 0:
+                    estimates.append(peak * (limit + 1) / row["sequence_length"])
+        return max(estimates, default=0.)
+    except (OSError, ValueError, KeyError, TypeError):
+        return 0.
+
+
 def gpu_admit(output, env, method, live, *, gpu=0, memory=None, minimum_peak=0., recovering=False,
               per_gpu=GPU_PER_CARD_MAX):
     from open_score.eval.experiment import run_directory, SEEDS
@@ -153,6 +180,11 @@ def gpu_admit(output, env, method, live, *, gpu=0, memory=None, minimum_peak=0.,
     except (OSError, ValueError, subprocess.SubprocessError):
         return False  # Unknown free memory is not permission to launch.
     if not peak:
+        bootstrap = _bootstrap_peak(output, env, method)
+        if bootstrap:
+            # An accepted architecture can fill the other idle card without
+            # waiting for all seeds of the current method to finish.
+            return not same_gpu and free >= 8.0 + 1.25 * bootstrap
         return not live and free >= 9.0  # First real run is measured alone, with >=8 GiB reserve.
     growth = 0.0
     for item in live:

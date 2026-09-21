@@ -479,7 +479,8 @@
     "runtime_tmp": "tmp",
     "smac_gpu_train_max": 4,
     "smac_gpu_per_card_max": 2,
-    "smac_next_gpu_utilization_max": 90
+    "smac_next_gpu_utilization_max": 90,
+    "bootstrap_admission": "accepted full natural episode GPU peak scaled by native sequence limit; idle physical card only; provisional until live PID resources, not worst-case memory proof"
   },
   "sources": {
     "transfqmix_commit": "2ef0a0726f1f186097b4b560509ceb5a801fdafe",
@@ -843,22 +844,23 @@
   },
   "runtime_estimate": {
     "measured_at": "2026-09-21T18:53:18.153849+00:00",
-    "status": "conditional_planning_estimate",
+    "status": "conditional_full_two_gpu_training_estimate",
     "basis": [
       "Measured full natural training episodes, formal batch32, and 8 HAD / 4 SMAC updates per collection; diagnostic batches repeat actual episodes to batch32 and are not independent replay samples.",
       "One initial model seed per GPU architecture for throughput; CPU architecture/seed matrix explicitly covers 0/1/2. Policies are untrained; long-run trajectory lengths, replay distribution, CPU contention and shared GPU load can change throughput.",
-      "Ranges assume at least one GPU remains available; lower end uses two useful GPUs, upper end uses one useful GPU plus approximately 1.5x throughput allowance. They do not bound indefinite resource waits.",
-      "HAD and SMAC each allow at most2 trainers per physical GPU (4 across two selected cards), subject to measured memory and SMAC utilization admission. Four processes are not four GPUs; no unmeasured throughput gain is assumed.",
-      "CPU final and mechanism evaluation share a total cap of4; stage sums are conservative and do not assume two independent four-worker pools. CPU overlap with training may shorten elapsed time."
+      "User-authorized planning assumption: both physical GPUs are continuously available at full measured throughput. Actual admission still checks available memory and SMAC utilization. Delays from external contention or failures are outside this conditional7-day training target.",
+      "At most2 trainers per card,4 across two cards. Aggregate serial GPU work is divided by2 physical GPUs, never by4 processes; no unmeasured concurrency speedup is assumed.",
+      "CPU final and mechanism evaluation share a total cap of4; stage sums are conservative and do not assume two independent four-worker pools. CPU overlap with training may shorten elapsed time.",
+      "HAD-first execution waits for its evaluation/mechanism tail and M4 before SMAC; reserve0-8h for this transition. Final SMAC evaluation can continue after the training deadline."
     ],
     "cpu_evaluation_concurrency": 4,
     "had": {
       "training_seconds": [
-        136800,
-        406800
+        125364.55394488966,
+        144360.04791301975
       ],
       "validation_seconds": [
-        1080.0,
+        3600,
         7200
       ],
       "evaluation_seconds": [
@@ -870,13 +872,13 @@
         50400
       ],
       "stage_seconds": [
-        159480.0,
-        550800
+        150564.55394488966,
+        288360.0479130198
       ],
       "concurrency": 4,
       "reference_remaining": {
-        "training_steps": 11963643,
-        "validation_episodes": 59900,
+        "training_steps": 11711370,
+        "validation_episodes": 58704,
         "final_episodes": 101010,
         "mechanism_episodes": 24444,
         "depth_episodes": 12250,
@@ -889,12 +891,12 @@
     },
     "smacv2": {
       "training_seconds": [
-        320400,
-        961200
+        293813.2737460466,
+        358190.13533934695
       ],
       "validation_seconds": [
         43200,
-        129600
+        43920
       ],
       "evaluation_seconds": [
         39600,
@@ -905,8 +907,8 @@
         0
       ],
       "stage_seconds": [
-        403200,
-        1180800
+        376613.2737460466,
+        492110.13533934695
       ],
       "concurrency": 4,
       "reference_remaining": {
@@ -919,15 +921,15 @@
       "per_gpu_max": 2
     },
     "overall_seconds": [
-      562680.0,
-      1731600
+      527177.8276909363,
+      780470.1832523667
     ],
-    "updated_at": "2026-09-21T19:46:54.712291+00:00",
+    "updated_at": "2026-09-21T19:53:50.568239+00:00",
     "deadline_review": {
-      "checked_at": "2026-09-21T19:46:54.712291+00:00",
-      "deadline_days": 5,
-      "deadline_seconds": 432000,
-      "decision": "paused_deadline_not_supported",
+      "checked_at": "2026-09-21T19:53:50.568239+00:00",
+      "deadline_days": 7,
+      "deadline_seconds": 604800,
+      "decision": "authorized_restart_full_two_gpu",
       "matrix": "currently registered HAD15/SMAC4, seeds0/1/2; proposed additional SMAC baselines excluded",
       "ideal_two_card_training_hours": {
         "had": [
@@ -943,10 +945,6 @@
         5.4,
         6.4
       ],
-      "conditional_planning_days": [
-        7,
-        20
-      ],
       "transfqmix_saved_steps": [
         70763,
         157758,
@@ -959,7 +957,45 @@
           34.55521937238737
         ]
       },
-      "interpretation": "Ideal scheduling estimate, not a rigorous lower bound. It excludes evaluation tail, shared GPU interference, adaptation and retries; no automatic restart under the current5-day requirement."
+      "interpretation": "User explicitly authorizes restart assuming two GPUs fully available; conditional estimate, not a guarantee under shared-load changes. Preserve seeds/budgets and only the registered verified SMAC4-method matrix.",
+      "deadline_scope": "all currently registered training including validation and HAD-first transition; terminal SMAC final evaluation may continue",
+      "had_transition_tail_seconds": [
+        0,
+        28800
+      ],
+      "training_target_days": [
+        5.4,
+        6.8
+      ],
+      "shared_resource_reference_days": [
+        7,
+        20
+      ]
     }
+  },
+  "scheduling": {
+    "environment_order": [
+      "had",
+      "had_timing",
+      "smacv2"
+    ],
+    "had_training_priority": [
+      "transfqmix",
+      "regir_fixed4",
+      "regir_untied4",
+      "regir_kv0"
+    ],
+    "cpu_task_priority": [
+      "final",
+      "depth",
+      "readout",
+      "probe"
+    ],
+    "report_refresh_seconds": 300,
+    "status_refresh_seconds": 5,
+    "preempt_running_tasks": false,
+    "matrix_expansion": "proposed SMAC additions are not registered or included in this execution estimate",
+    "resume_command": "bash Open-SCORE/outputs/main0921/run_all.sh resume",
+    "stop_command": "bash Open-SCORE/outputs/main0921/run_all.sh stop"
   }
 }
