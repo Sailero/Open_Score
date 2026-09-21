@@ -2093,3 +2093,8 @@ torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 546.00 MiB. GPU 0 
 [regir] 12:32:51  444,055/1,000,000  9.3/s  upd=10349  L=0.0238  D=1.391
 [regir] 12:33:01  444,055/1,000,000  9.3/s  upd=10354  L=0.0634  D=1.391
 [regir] 12:33:13  444,343/1,000,000  9.3/s  upd=10358  L=0.0193  D=1.391
+[regir] saved resume t_env=444,343
+[regir] 12:33:23  444,343/1,000,000  9.3/s  upd=10362  L=0.0277  D=1.391
+[regir] 12:33:34  444,677/1,000,000  9.3/s  upd=10365  L=0.0222  D=1.391
+[regir] 12:33:44  444,677/1,000,000  9.3/s  upd=10370  L=0.0232  D=1.391
+[regir] saved resume t_env=444,990
