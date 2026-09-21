@@ -407,3 +407,7 @@ eval.final.b2_qmix_atten.s0 [train seed=0] is already evaluating
 [had/b2_qmix_atten/0] final_eval 1150/7200
 [had/b2_qmix_atten/0] final_eval 1175/7200
 [had/b2_qmix_atten/0] final_eval 1200/7200
+[had/b2_qmix_atten/0] final_eval 1225/7200
+[had/b2_qmix_atten/0] final_eval 1250/7200
+[had/b2_qmix_atten/0] final_eval 1275/7200
+[had/b2_qmix_atten/0] final_eval 1300/7200

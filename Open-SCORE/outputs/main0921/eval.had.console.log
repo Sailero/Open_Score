@@ -1084,3 +1084,19 @@ eval.depth.had.regir.s2 stopped
 eval.final.had.refil.s0 stopped
 eval.depth.had.regir.s1 stopped
 eval.depth.had.regir.s0 stopped
+queue eval.depth.had.regir.s0 2616/5400
+queue eval.depth.had.regir.s1 2813/5400
+queue eval.depth.had.regir.s2 3007/5400
+queue eval.final.had.refil.s0 6792/7200
+queue eval.final.had.b2_qmix_atten.s0 1200/7200
+queue eval.final.had.regir_nocount.s0 3874/7200
+queue eval.probe.had.regir.s0 0/1
+eval.final.had.refil.s0 started pid=2232187
+eval.final.had.b2_qmix_atten.s0 started pid=2232188
+eval.final.had.regir_nocount.s0 started pid=2232189
+eval.depth.had.regir.s0 started pid=2232190
+eval had live=4 queued=3 waiting_dependencies=17
+eval.final.had.refil.s0               final        6,792/7,200
+eval.final.had.b2_qmix_atten.s0       final        1,200/7,200
+eval.final.had.regir_nocount.s0       final        3,874/7,200
+eval.depth.had.regir.s0               depth        2,616/5,400

@@ -131,7 +131,7 @@
   "skip_final_eval": true,
   "reward_mode": "damage",
   "friendly_penalty": 1.0,
-  "concurrency": 3,
+  "concurrency": 4,
   "device": "cuda",
   "imagine_group": "original",
   "count_cond": null,

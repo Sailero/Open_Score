@@ -441,3 +441,5 @@ eval.final.regir_nocount.s0 [train seed=0] is already evaluating
 [had/regir_nocount/0] final_eval 3800/7200
 [had/regir_nocount/0] final_eval 3825/7200
 [had/regir_nocount/0] final_eval 3850/7200
+[had/regir_nocount/0] final_eval 3875/7200
+[had/regir_nocount/0] final_eval 3900/7200

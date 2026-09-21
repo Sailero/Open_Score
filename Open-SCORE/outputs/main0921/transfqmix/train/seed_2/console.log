@@ -195,3 +195,8 @@
 [transfqmix] 0:31:55  60,109/1,000,000  31.4/s  upd=1240  L=1.9356  ev=70/100  D=7.624
 [transfqmix] 0:32:05  60,109/1,000,000  31.2/s  upd=1240  L=1.9356  ev=80/100  D=7.624
 [transfqmix] saved resume t_env=60,109
+[transfqmix] resume t_env=60,109 from resume.pt
+[transfqmix] saved resume t_env=60,109
+[transfqmix] 0:00:10  60,109/1,000,000  0.0/s  upd=1240  L=-  D=7.517
+[transfqmix] saved resume t_env=60,635
+[transfqmix] 0:00:20  60,635/1,000,000  26.2/s  upd=1248  L=1.6427  D=7.517
