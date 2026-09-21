@@ -208,3 +208,19 @@ eval.final.had.b2_qmix_atten.s0 stopped
 eval.final.had.refil.s0 stopped
 waiting for 1 workers to finish current episodes and save
 Evaluation incomplete: {'id': 'eval.probe.had.regir.s0', 'status': 'failed', 'error': 'Traceback (most recent call last):\n  File "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/scripts/eval.py", line 135, in _worker\n    result = evaluate_probe(output=output, seed=seed,\n  File "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/open_score/eval/relationship_probe.py", line 418, in evaluate_probe\n    collect_state_bank(output, stop_requested, on_progress)\n  File "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/open_score/eval/relationship_probe.py", line 185, in collect_state_bank\n    register_end_to_end_policy("red", name, "shared public relationship-probe trajectory",\n  File "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/open_score/rules/coverage_rule.py", line 442, in register_end_to_end_policy\n    raise ValueError("Policy must have a unique name, label and callable factory")\nValueError: Policy must have a unique name, label and callable factory\n'}
+queue eval.depth.had.regir.s0 1310/5400
+queue eval.depth.had.regir.s1 1326/5400
+queue eval.depth.had.regir.s2 1314/5400
+queue eval.final.had.refil.s0 1916/7200
+queue eval.final.had.b2_qmix_atten.s0 1200/7200
+queue eval.final.had.regir_nocount.s0 3874/7200
+queue eval.probe.had.regir.s0 0/1
+eval.depth.had.regir.s0 started pid=2101646
+eval.depth.had.regir.s1 started pid=2101647
+eval.depth.had.regir.s2 started pid=2101648
+eval.final.had.refil.s0 started pid=2101649
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth        1,310/5,400
+eval.depth.had.regir.s1               depth        1,326/5,400
+eval.depth.had.regir.s2               depth        1,314/5,400
+eval.final.had.refil.s0               final        1,916/7,200

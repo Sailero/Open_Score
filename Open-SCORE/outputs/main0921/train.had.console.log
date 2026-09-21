@@ -485,3 +485,74 @@ transfqmix s1  train    0:05:26     23,008/1,000,000   70.4/s  L=137.1652  D=5.2
 queued: transfqmix s2, regir_fixed4 s0, regir_fixed4 s1, regir_fixed4 s2, regir_untied4 s0, regir_untied4 s1, regir_untied4 s2, regir_kv0 s0 +2
 [3F[Jrun=train  live=0  idle  queue=10  GPU0 free=38.1G  GPU1 free=57.3G
 queued: transfqmix s2, regir_fixed4 s0, regir_fixed4 s1, regir_fixed4 s2, regir_untied4 s0, regir_untied4 s1, regir_untied4 s2, regir_kv0 s0 +2
+main0921 had: seeds=(0, 1, 2), physical GPUs=(0, 1), max=3; unknown resource profiles run alone until measured
+scheduler 45 listed jobs
+regir [train seed=0] already done
+regir [train seed=1] already done
+regir [train seed=2] already done
+refil [train seed=0] already done
+refil [train seed=1] already done
+refil [train seed=2] already done
+b2_qmix_atten [train seed=0] already done
+b2_qmix_atten [train seed=1] already done
+b2_qmix_atten [train seed=2] already done
+dcg [train seed=0] already done
+dcg [train seed=1] already done
+dcg [train seed=2] already done
+spectra [train seed=0] already done
+spectra [train seed=1] already done
+spectra [train seed=2] already done
+alma [train seed=0] already done
+alma [train seed=1] already done
+alma [train seed=2] already done
+regir_norefil [train seed=0] already done
+regir_norefil [train seed=1] already done
+regir_norefil [train seed=2] already done
+regir_nocount [train seed=0] already done
+regir_nocount [train seed=1] already done
+regir_nocount [train seed=2] already done
+regir_r1 [train seed=0] already done
+regir_r1 [train seed=1] already done
+regir_r1 [train seed=2] already done
+regir_last [train seed=0] already done
+regir_last [train seed=1] already done
+regir_last [train seed=2] already done
+refil_matched [train seed=0] already done
+refil_matched [train seed=1] already done
+refil_matched [train seed=2] already done
+launch had/transfqmix/s0 on physical GPU1
+run=train  live=1  GPU1×1  queue=11  GPU0 free=38.1G  GPU1 free=57.3G
+transfqmix s0  train    0:05:50     12,978/1,000,000   37.0/s  L=6.5074  D=-
+queued: transfqmix s1, transfqmix s2, regir_fixed4 s0, regir_fixed4 s1, regir_fixed4 s2, regir_untied4 s0, regir_untied4 s1, regir_untied4 s2 +3
+run=train  live=1  GPU1×1  queue=11  GPU0 free=38.1G  GPU1 free=56.6G
+transfqmix s0  train    0:05:50     12,978/1,000,000   37.0/s  L=6.5074  D=-
+queued: transfqmix s1, transfqmix s2, regir_fixed4 s0, regir_fixed4 s1, regir_fixed4 s2, regir_untied4 s0, regir_untied4 s1, regir_untied4 s2 +3
+run=train  live=1  GPU1×1  queue=11  GPU0 free=38.1G  GPU1 free=52.2G
+transfqmix s0  train    0:05:50     12,978/1,000,000   37.0/s  L=6.5074  D=-
+queued: transfqmix s1, transfqmix s2, regir_fixed4 s0, regir_fixed4 s1, regir_fixed4 s2, regir_untied4 s0, regir_untied4 s1, regir_untied4 s2 +3
+launch had/transfqmix/s1 on physical GPU0
+run=train  live=2  GPU1×1  GPU0×1  queue=10  GPU0 free=38.1G  GPU1 free=50.9G
+transfqmix s0  train    0:05:50     12,978/1,000,000   37.0/s  L=6.5074  D=-
+transfqmix s1  train    0:05:26     23,008/1,000,000   70.4/s  L=137.1652  D=5.276
+queued: transfqmix s2, regir_fixed4 s0, regir_fixed4 s1, regir_fixed4 s2, regir_untied4 s0, regir_untied4 s1, regir_untied4 s2, regir_kv0 s0 +2
+launch had/transfqmix/s2 on physical GPU1
+run=train  live=3  GPU1×2  GPU0×1  queue=9  GPU0 free=31.0G  GPU1 free=50.6G
+transfqmix s0  train    0:00:10     13,319/1,000,000   34.1/s  L=29.9087  D=-
+transfqmix s1  train    0:05:26     23,008/1,000,000   70.4/s  L=137.1652  D=5.276
+transfqmix s2  init     0:00:00          0/0            0.0/s  L=-  D=-
+queued: regir_fixed4 s0, regir_fixed4 s1, regir_fixed4 s2, regir_untied4 s0, regir_untied4 s1, regir_untied4 s2, regir_kv0 s0, regir_kv0 s1 +1
+run=train  live=3  GPU1×2  GPU0×1  queue=9  GPU0 free=31.0G  GPU1 free=49.9G
+transfqmix s0  train    0:00:10     13,319/1,000,000   34.1/s  L=29.9087  D=-
+transfqmix s1  train    0:05:26     23,008/1,000,000   70.4/s  L=137.1652  D=5.276
+transfqmix s2  init     0:00:00          0/0            0.0/s  L=-  D=-
+queued: regir_fixed4 s0, regir_fixed4 s1, regir_fixed4 s2, regir_untied4 s0, regir_untied4 s1, regir_untied4 s2, regir_kv0 s0, regir_kv0 s1 +1
+run=train  live=3  GPU1×2  GPU0×1  queue=9  GPU0 free=31.0G  GPU1 free=49.9G
+transfqmix s0  train    0:00:10     13,319/1,000,000   34.1/s  L=29.9087  D=-
+transfqmix s1  train    0:00:10     24,093/1,000,000   68.7/s  L=73.9290  D=5.276
+transfqmix s2  init     0:00:00          0/0            0.0/s  L=-  D=-
+queued: regir_fixed4 s0, regir_fixed4 s1, regir_fixed4 s2, regir_untied4 s0, regir_untied4 s1, regir_untied4 s2, regir_kv0 s0, regir_kv0 s1 +1
+run=train  live=3  GPU1×2  GPU0×1  queue=9  GPU0 free=31.0G  GPU1 free=49.9G
+transfqmix s0  train    0:00:20     13,713/1,000,000   36.5/s  L=37.4135  D=-
+transfqmix s1  train    0:00:10     24,093/1,000,000   68.7/s  L=73.9290  D=5.276
+transfqmix s2  init     0:00:00          0/0            0.0/s  L=-  D=-
+queued: regir_fixed4 s0, regir_fixed4 s1, regir_fixed4 s2, regir_untied4 s0, regir_untied4 s1, regir_untied4 s2, regir_kv0 s0, regir_kv0 s1 +1

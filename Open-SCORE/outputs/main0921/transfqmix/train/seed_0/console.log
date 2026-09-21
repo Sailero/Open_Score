@@ -38,3 +38,7 @@
 [transfqmix] 0:05:40  12,636/1,000,000  37.1/s  upd=242  L=6.4787  D=-
 [transfqmix] 0:05:50  12,978/1,000,000  37.0/s  upd=251  L=6.5074  D=-
 [transfqmix] saved resume t_env=12,978
+[transfqmix] resume t_env=12,978 from resume.pt
+[transfqmix] 0:00:10  13,319/1,000,000  34.1/s  upd=262  L=29.9087  D=-
+[transfqmix] saved resume t_env=13,319
+[transfqmix] 0:00:20  13,713/1,000,000  36.5/s  upd=269  L=37.4135  D=-
