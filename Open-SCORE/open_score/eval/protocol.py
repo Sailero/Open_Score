@@ -10,13 +10,13 @@ from ..envs.scales import SCALE_POOLS, TEST_POOL
 
 
 def _safe_refresh(output, run=None):
-    import importlib
-    from . import report as report_mod
-    importlib.reload(report_mod)
     try:
+        import importlib
+        from . import report as report_mod
+        importlib.reload(report_mod)
         report_mod.refresh_report(output, run=run)
-    except (OSError, MemoryError, TimeoutError) as error:
-        print(f"report refresh skipped: {type(error).__name__}", flush=True)
+    except Exception as error:
+        print(f"report refresh skipped: {type(error).__name__}: {error}", flush=True)
 
 # Checkpoint selection may only ever see these; they are inside the training pool.
 VALIDATION_CONFIGS = ((4, 4, 2), (6, 6, 2), (8, 8, 2), (10, 10, 3))
@@ -192,10 +192,21 @@ def run_directory(output, method, seed, run=None):
     return Path(output) / method / str(run) / f"seed_{int(seed)}"
 
 
-def official_eval_t_env(directory):
+def official_eval_path(directory, progress_row=None):
+    """Last-iterate file: ``final.pt``, or ``best.pt`` if a finished run never wrote final."""
+    directory = Path(directory)
+    final = directory / f"{OFFICIAL_CHECKPOINT}.pt"
+    if final.exists():
+        return final
+    if training_finished(directory, progress_row) and (directory / "best.pt").exists():
+        return directory / "best.pt"
+    return None
+
+
+def official_eval_t_env(directory, progress_row=None):
     """t_env of the last-iterate weights. Official eval scores ``final.pt``."""
-    path = Path(directory) / f"{OFFICIAL_CHECKPOINT}.pt"
-    if not path.exists():
+    path = official_eval_path(directory, progress_row)
+    if path is None:
         return None
     try:
         import torch
@@ -244,7 +255,7 @@ def _formal_eval_allowed(directory, progress_row, t_env, run):
         return True
     if not training_finished(directory, progress_row):
         return False
-    official = official_eval_t_env(directory)
+    official = official_eval_t_env(directory, progress_row)
     return official is None or int(official) == int(t_env)
 
 
@@ -328,15 +339,18 @@ def evaluate_checkpoint(method, checkpoint, *, output=None, run=None, seed=None,
     if seed is not None and int(seed) != actual_seed:
         raise ValueError("Evaluation seed must identify the checkpoint training seed")
     t_env = int(saved["progress"]["t_env"])
-    if run == FORMAL_RUN and checkpoint.stem != OFFICIAL_CHECKPOINT:
-        raise ValueError(f"The formal {FORMAL_RUN} evaluation uses {OFFICIAL_CHECKPOINT}.pt; use a distinct --run for another checkpoint")
     from open_score.utils.logging import read_latest
     progress_row = read_latest(output, "progress", run=run).get((method, run, actual_seed), {})
+    allowed = official_eval_path(checkpoint.parent, progress_row)
+    if run == FORMAL_RUN and (allowed is None or checkpoint.resolve() != Path(allowed).resolve()):
+        print(f"[{method}/{actual_seed}] refuse unofficial checkpoint {checkpoint.name} (want {OFFICIAL_CHECKPOINT}.pt)", flush=True)
+        return dict(status="blocked", completed=0, total=final_episodes(method),
+                    reason="not official last-iterate weights")
     if not _formal_eval_allowed(checkpoint.parent, progress_row, t_env, run):
         print(f"[{method}/{actual_seed}] refuse mid-training final_eval (file t_env={t_env})", flush=True)
         return dict(status="blocked", completed=0, total=final_episodes(method),
                     reason="training not finished")
-    checkpoint_label = checkpoint_tag(checkpoint.stem, t_env)
+    checkpoint_label = checkpoint_tag(OFFICIAL_CHECKPOINT if run == FORMAL_RUN else checkpoint.stem, t_env)
     del saved
     policy = load_policy(method, checkpoint)
     if hasattr(policy, "set_device"):
@@ -347,7 +361,7 @@ def evaluate_checkpoint(method, checkpoint, *, output=None, run=None, seed=None,
     register_end_to_end_policy("red", policy_name, f"{method} retained checkpoint", lambda _: policy)
     logger = ExperimentLogger(output, method, actual_seed, run)
     existing = unique_episodes(read_records(output, "episodes", run=run, method=method, seed=actual_seed))
-    jobs = remaining_jobs(final_jobs(t_env, checkpoint.stem, method=method), existing)
+    jobs = remaining_jobs(final_jobs(t_env, OFFICIAL_CHECKPOINT, method=method), existing)
     total = final_episodes(method)
     completed = total - len(jobs)
     started, last_report, initial = time.monotonic(), time.monotonic(), completed
@@ -422,10 +436,13 @@ def evaluate_depth_sweep(method, checkpoint, *, output=None, run=None, seed=None
     if seed is not None and int(seed) != actual_seed:
         raise ValueError("Evaluation seed must identify the checkpoint training seed")
     t_env = int(saved["progress"]["t_env"])
-    if run == FORMAL_RUN and checkpoint.stem != OFFICIAL_CHECKPOINT:
-        raise ValueError(f"The formal {FORMAL_RUN} evaluation uses {OFFICIAL_CHECKPOINT}.pt; use a distinct --run for another checkpoint")
     from open_score.utils.logging import read_latest
     progress_row = read_latest(output, "progress", run=run).get((method, run, actual_seed), {})
+    allowed = official_eval_path(checkpoint.parent, progress_row)
+    if run == FORMAL_RUN and (allowed is None or checkpoint.resolve() != Path(allowed).resolve()):
+        print(f"[{method}/{actual_seed}] refuse unofficial depth checkpoint {checkpoint.name}", flush=True)
+        return dict(status="blocked", completed=0, total=depth_eval_total(),
+                    reason="not official last-iterate weights")
     if not _formal_eval_allowed(checkpoint.parent, progress_row, t_env, run):
         print(f"[{method}/{actual_seed}] refuse mid-training depth_eval (file t_env={t_env})", flush=True)
         return dict(status="blocked", completed=0, total=depth_eval_total(),
@@ -440,7 +457,7 @@ def evaluate_depth_sweep(method, checkpoint, *, output=None, run=None, seed=None
     register_end_to_end_policy("red", policy_name, f"{method} cycle-depth sweep", lambda _: policy)
     logger = ExperimentLogger(output, method, actual_seed, run)
     existing = unique_episodes(read_records(output, "episodes", run=run, method=method, seed=actual_seed))
-    jobs = remaining_depth_jobs(t_env, existing, checkpoint.stem)
+    jobs = remaining_depth_jobs(t_env, existing, OFFICIAL_CHECKPOINT)
     total = depth_eval_total()
     completed = total - len(jobs)
     started, last_report, initial = time.monotonic(), time.monotonic(), completed
@@ -450,7 +467,7 @@ def evaluate_depth_sweep(method, checkpoint, *, output=None, run=None, seed=None
     def report(status, depth=None, extra=None, persist=True):
         progress = dict(phase="depth_eval", status=status, completed=completed, total=total,
                         eval_completed=completed, eval_total=total, t_env=t_env, budget_steps=t_env,
-                        checkpoint=depth_checkpoint_tag(checkpoint.stem, t_env, depth or last_depth or 4),
+                        checkpoint=depth_checkpoint_tag(OFFICIAL_CHECKPOINT, t_env, depth or last_depth or 4),
                         cycle_depth=None if depth is None and last_depth is None else int(depth or last_depth))
         if extra:
             progress.update(extra)
@@ -509,7 +526,7 @@ def evaluate_depth_sweep(method, checkpoint, *, output=None, run=None, seed=None
         logger.progress(phase="depth_eval", status="interrupted" if isinstance(error, KeyboardInterrupt) else "failed",
                         completed=completed, total=total, t_env=t_env, error=str(error),
                         eval_completed=completed, eval_total=total,
-                        checkpoint=depth_checkpoint_tag(checkpoint.stem, t_env, last_depth or 4),
+                        checkpoint=depth_checkpoint_tag(OFFICIAL_CHECKPOINT, t_env, last_depth or 4),
                         cycle_depth=last_depth)
         raise
     finally:

@@ -901,6 +901,43 @@ def _gpu_count():
         return 0
 
 
+def _parse_devices(text):
+    if text is None:
+        return None
+    text = str(text).strip()
+    if not text:
+        return None
+    ids = []
+    for part in text.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            ids.append(int(part))
+        except ValueError:
+            raise SystemExit(f"invalid --devices {text!r}")
+    if not ids:
+        return None
+    if len(set(ids)) != len(ids):
+        raise SystemExit("duplicate --devices ids")
+    if any(index < 0 for index in ids):
+        raise SystemExit("--devices ids must be >= 0")
+    return tuple(ids)
+
+
+def _farm_gpu_ids(devices=None):
+    available = _gpu_count()
+    if available < 1:
+        raise SystemExit("farm needs at least one NVIDIA GPU")
+    gpu_ids = list(range(available)) if devices is None else list(devices)
+    missing = [index for index in gpu_ids if index >= available]
+    if missing:
+        raise SystemExit(f"GPU {missing[0]} not present (have {available})")
+    if not gpu_ids:
+        raise SystemExit("farm needs at least one GPU in --devices")
+    return gpu_ids
+
+
 def _gpu_rows():
     try:
         import subprocess
@@ -922,15 +959,15 @@ def _stamp():
     return time.strftime("%Y-%m-%d %H:%M:%S")
 
 
-def run_farm(output, *, steps, batch_size_run, per_gpu=4, status_seconds=300, resume=True):
-    """Fill every GPU with per_gpu trainers; refill a slot as soon as one job ends."""
+def run_farm(output, *, steps, batch_size_run, per_gpu=4, status_seconds=300, resume=True,
+             devices=None):
+    """Fill the allowed GPUs with per_gpu trainers; refill a slot as soon as one job ends."""
     from open_score.eval.inventory import scan, list_pending_trains, core_main_train_complete
     from open_score.eval.report import refresh_report, refresh_report_async
     from open_score.utils.logging import read_latest
 
-    gpus = _gpu_count()
-    if gpus < 1:
-        raise SystemExit("farm needs at least one NVIDIA GPU")
+    gpu_ids = _farm_gpu_ids(devices)
+    gpus = len(gpu_ids)
     slots = gpus * per_gpu
     output = Path(output).resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -975,7 +1012,8 @@ def run_farm(output, *, steps, batch_size_run, per_gpu=4, status_seconds=300, re
         waiting.append((method, options))
 
     extra_open = core_main_train_complete(output)
-    print(f"{_stamp()} farm   gpus={gpus}  slots={slots} ({per_gpu}/gpu)  "
+    print(f"{_stamp()} farm   devices={','.join(str(index) for index in gpu_ids)}  "
+          f"gpus={gpus}  slots={slots} ({per_gpu}/gpu)  "
           f"queue={len(waiting)}  extra_seeds={'open' if extra_open else 'after core 0-2'}", flush=True)
     if not waiting:
         print(f"{_stamp()} farm   no pending train jobs", flush=True)
@@ -996,7 +1034,7 @@ def run_farm(output, *, steps, batch_size_run, per_gpu=4, status_seconds=300, re
         print(f"{_stamp()} stop   finish current batch and save resume", flush=True)
 
     def gpu_load():
-        counts = {index: 0 for index in range(gpus)}
+        counts = {index: 0 for index in gpu_ids}
         for item in live:
             counts[item["gpu"]] = counts.get(item["gpu"], 0) + 1
         return counts
@@ -1042,11 +1080,12 @@ def run_farm(output, *, steps, batch_size_run, per_gpu=4, status_seconds=300, re
         mem = {index: (used, total) for index, used, total in _gpu_rows()}
         extra = "open" if core_main_train_complete(output) else "locked"
         print(f"======== {_stamp()}  farm  live={len(live)}/{slots}  "
-              f"queue={len(waiting)}  extra={extra} ========", flush=True)
-        by_gpu = {index: [] for index in range(gpus)}
+              f"queue={len(waiting)}  extra={extra}  "
+              f"devices={','.join(str(index) for index in gpu_ids)} ========", flush=True)
+        by_gpu = {index: [] for index in gpu_ids}
         for item in live:
             by_gpu.setdefault(item["gpu"], []).append(item)
-        for index in range(gpus):
+        for index in gpu_ids:
             used, total = mem.get(index, (None, None))
             mem_bit = f"  {used:.1f}/{total:.1f}G" if used is not None else ""
             print(f"gpu{index}  {load.get(index, 0)}/{per_gpu}{mem_bit}", flush=True)
@@ -1155,6 +1194,9 @@ def parser():
                         help="live trainers in this train.py; one 1:1 cycle-depth eval may run beside them")
     result.add_argument("--per-gpu", type=int, default=4,
                         help="trainers pinned to each GPU for --stage farm")
+    result.add_argument("--devices", default=None,
+                        help="comma-separated physical GPU ids for --stage farm "
+                             "(default: all). Example: 0")
     result.add_argument("--status-seconds", type=int, default=300,
                         help="farm status board interval in seconds")
     result.add_argument("--steps", type=int)
@@ -1265,10 +1307,12 @@ def main():
         if steps < 50:
             raise SystemExit("formal budget must support 50 validation points")
         workers = 8 if options.batch_size_run == 4 else options.batch_size_run
-        gpu_n = _gpu_count()
-        print(f"farm train: {gpu_n} GPU × {options.per_gpu} steps={steps} workers={workers}", flush=True)
+        devices = _parse_devices(options.devices)
+        gpu_ids = _farm_gpu_ids(devices)
+        print(f"farm train: devices={','.join(str(index) for index in gpu_ids)}  "
+              f"{len(gpu_ids)} GPU × {options.per_gpu} steps={steps} workers={workers}", flush=True)
         run_farm(output, steps=steps, batch_size_run=workers, per_gpu=options.per_gpu,
-                 status_seconds=options.status_seconds, resume=True)
+                 status_seconds=options.status_seconds, resume=True, devices=devices)
         return
     elif options.stage == "train":
         if options.steps is None:

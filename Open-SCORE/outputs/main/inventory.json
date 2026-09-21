@@ -95,7 +95,7 @@
       "kind": "train",
       "method": "regir_last",
       "seed": 0,
-      "status": "running",
+      "status": "completed",
       "detail": ""
     },
     {
@@ -111,7 +111,7 @@
       "kind": "train",
       "method": "regir_last",
       "seed": 2,
-      "status": "running",
+      "status": "completed",
       "detail": ""
     },
     {
@@ -119,7 +119,7 @@
       "kind": "train",
       "method": "regir_norefil",
       "seed": 0,
-      "status": "running",
+      "status": "completed",
       "detail": ""
     },
     {
@@ -159,7 +159,7 @@
       "kind": "train",
       "method": "refil_matched",
       "seed": 2,
-      "status": "running",
+      "status": "completed",
       "detail": ""
     },
     {
@@ -167,176 +167,176 @@
       "kind": "train",
       "method": "regir",
       "seed": 3,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "running",
+      "detail": ""
     },
     {
       "id": "train.regir.s4",
       "kind": "train",
       "method": "regir",
       "seed": 4,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "running",
+      "detail": ""
     },
     {
       "id": "train.alma.s3",
       "kind": "train",
       "method": "alma",
       "seed": 3,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "running",
+      "detail": ""
     },
     {
       "id": "train.alma.s4",
       "kind": "train",
       "method": "alma",
       "seed": 4,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "running",
+      "detail": ""
     },
     {
       "id": "train.regir_r1.s3",
       "kind": "train",
       "method": "regir_r1",
       "seed": 3,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "pending",
+      "detail": ""
     },
     {
       "id": "train.regir_r1.s4",
       "kind": "train",
       "method": "regir_r1",
       "seed": 4,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "pending",
+      "detail": ""
     },
     {
       "id": "train.regir_nocount.s3",
       "kind": "train",
       "method": "regir_nocount",
       "seed": 3,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "pending",
+      "detail": ""
     },
     {
       "id": "train.regir_nocount.s4",
       "kind": "train",
       "method": "regir_nocount",
       "seed": 4,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "pending",
+      "detail": ""
     },
     {
       "id": "train.regir_last.s3",
       "kind": "train",
       "method": "regir_last",
       "seed": 3,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "pending",
+      "detail": ""
     },
     {
       "id": "train.regir_last.s4",
       "kind": "train",
       "method": "regir_last",
       "seed": 4,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "pending",
+      "detail": ""
     },
     {
       "id": "train.regir_norefil.s3",
       "kind": "train",
       "method": "regir_norefil",
       "seed": 3,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "pending",
+      "detail": ""
     },
     {
       "id": "train.regir_norefil.s4",
       "kind": "train",
       "method": "regir_norefil",
       "seed": 4,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "pending",
+      "detail": ""
     },
     {
       "id": "train.refil_matched.s3",
       "kind": "train",
       "method": "refil_matched",
       "seed": 3,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "pending",
+      "detail": ""
     },
     {
       "id": "train.refil_matched.s4",
       "kind": "train",
       "method": "refil_matched",
       "seed": 4,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "pending",
+      "detail": ""
     },
     {
       "id": "train.refil.s3",
       "kind": "train",
       "method": "refil",
       "seed": 3,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "pending",
+      "detail": ""
     },
     {
       "id": "train.refil.s4",
       "kind": "train",
       "method": "refil",
       "seed": 4,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "pending",
+      "detail": ""
     },
     {
       "id": "train.b2_qmix_atten.s3",
       "kind": "train",
       "method": "b2_qmix_atten",
       "seed": 3,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "pending",
+      "detail": ""
     },
     {
       "id": "train.b2_qmix_atten.s4",
       "kind": "train",
       "method": "b2_qmix_atten",
       "seed": 4,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "pending",
+      "detail": ""
     },
     {
       "id": "train.dcg.s3",
       "kind": "train",
       "method": "dcg",
       "seed": 3,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "pending",
+      "detail": ""
     },
     {
       "id": "train.dcg.s4",
       "kind": "train",
       "method": "dcg",
       "seed": 4,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "pending",
+      "detail": ""
     },
     {
       "id": "train.spectra.s3",
       "kind": "train",
       "method": "spectra",
       "seed": 3,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "pending",
+      "detail": ""
     },
     {
       "id": "train.spectra.s4",
       "kind": "train",
       "method": "spectra",
       "seed": 4,
-      "status": "blocked",
-      "detail": "after core main seeds 0-2"
+      "status": "pending",
+      "detail": ""
     },
     {
       "id": "train.b2_qmix_atten.s0",
@@ -475,6 +475,22 @@
       "detail": "remaining=0"
     },
     {
+      "id": "eval.final.b2_qmix_atten.s3",
+      "kind": "eval",
+      "method": "b2_qmix_atten",
+      "seed": 3,
+      "status": "blocked",
+      "detail": "no final.pt"
+    },
+    {
+      "id": "eval.final.b2_qmix_atten.s4",
+      "kind": "eval",
+      "method": "b2_qmix_atten",
+      "seed": 4,
+      "status": "blocked",
+      "detail": "no final.pt"
+    },
+    {
       "id": "eval.final.refil.s0",
       "kind": "eval",
       "method": "refil",
@@ -497,6 +513,22 @@
       "seed": 2,
       "status": "completed",
       "detail": "remaining=0"
+    },
+    {
+      "id": "eval.final.refil.s3",
+      "kind": "eval",
+      "method": "refil",
+      "seed": 3,
+      "status": "blocked",
+      "detail": "no final.pt"
+    },
+    {
+      "id": "eval.final.refil.s4",
+      "kind": "eval",
+      "method": "refil",
+      "seed": 4,
+      "status": "blocked",
+      "detail": "no final.pt"
     },
     {
       "id": "eval.final.dcg.s0",
@@ -523,6 +555,22 @@
       "detail": "remaining=0"
     },
     {
+      "id": "eval.final.dcg.s3",
+      "kind": "eval",
+      "method": "dcg",
+      "seed": 3,
+      "status": "blocked",
+      "detail": "no final.pt"
+    },
+    {
+      "id": "eval.final.dcg.s4",
+      "kind": "eval",
+      "method": "dcg",
+      "seed": 4,
+      "status": "blocked",
+      "detail": "no final.pt"
+    },
+    {
       "id": "eval.final.spectra.s0",
       "kind": "eval",
       "method": "spectra",
@@ -547,6 +595,22 @@
       "detail": "remaining=0"
     },
     {
+      "id": "eval.final.spectra.s3",
+      "kind": "eval",
+      "method": "spectra",
+      "seed": 3,
+      "status": "blocked",
+      "detail": "no final.pt"
+    },
+    {
+      "id": "eval.final.spectra.s4",
+      "kind": "eval",
+      "method": "spectra",
+      "seed": 4,
+      "status": "blocked",
+      "detail": "no final.pt"
+    },
+    {
       "id": "eval.final.regir.s0",
       "kind": "eval",
       "method": "regir",
@@ -559,16 +623,32 @@
       "kind": "eval",
       "method": "regir",
       "seed": 1,
-      "status": "pending",
-      "detail": "remaining=6835"
+      "status": "completed",
+      "detail": "remaining=0"
     },
     {
       "id": "eval.final.regir.s2",
       "kind": "eval",
       "method": "regir",
       "seed": 2,
-      "status": "pending",
-      "detail": "remaining=6761"
+      "status": "completed",
+      "detail": "remaining=0"
+    },
+    {
+      "id": "eval.final.regir.s3",
+      "kind": "eval",
+      "method": "regir",
+      "seed": 3,
+      "status": "blocked",
+      "detail": "no final.pt"
+    },
+    {
+      "id": "eval.final.regir.s4",
+      "kind": "eval",
+      "method": "regir",
+      "seed": 4,
+      "status": "blocked",
+      "detail": "no final.pt"
     },
     {
       "id": "eval.final.alma.s0",
@@ -591,32 +671,64 @@
       "kind": "eval",
       "method": "alma",
       "seed": 2,
-      "status": "pending",
-      "detail": "remaining=7200"
+      "status": "completed",
+      "detail": "remaining=0"
+    },
+    {
+      "id": "eval.final.alma.s3",
+      "kind": "eval",
+      "method": "alma",
+      "seed": 3,
+      "status": "blocked",
+      "detail": "no final.pt"
+    },
+    {
+      "id": "eval.final.alma.s4",
+      "kind": "eval",
+      "method": "alma",
+      "seed": 4,
+      "status": "blocked",
+      "detail": "no final.pt"
     },
     {
       "id": "eval.final.regir_norefil.s0",
       "kind": "eval",
       "method": "regir_norefil",
       "seed": 0,
-      "status": "blocked",
-      "detail": "training not finished"
+      "status": "completed",
+      "detail": "remaining=0"
     },
     {
       "id": "eval.final.regir_norefil.s1",
       "kind": "eval",
       "method": "regir_norefil",
       "seed": 1,
-      "status": "pending",
-      "detail": "remaining=7200"
+      "status": "completed",
+      "detail": "remaining=0"
     },
     {
       "id": "eval.final.regir_norefil.s2",
       "kind": "eval",
       "method": "regir_norefil",
       "seed": 2,
-      "status": "pending",
-      "detail": "remaining=7200"
+      "status": "completed",
+      "detail": "remaining=0"
+    },
+    {
+      "id": "eval.final.regir_norefil.s3",
+      "kind": "eval",
+      "method": "regir_norefil",
+      "seed": 3,
+      "status": "blocked",
+      "detail": "no final.pt"
+    },
+    {
+      "id": "eval.final.regir_norefil.s4",
+      "kind": "eval",
+      "method": "regir_norefil",
+      "seed": 4,
+      "status": "blocked",
+      "detail": "no final.pt"
     },
     {
       "id": "eval.final.regir_nocount.s0",
@@ -624,55 +736,87 @@
       "method": "regir_nocount",
       "seed": 0,
       "status": "pending",
-      "detail": "remaining=7200"
+      "detail": "remaining=3637"
     },
     {
       "id": "eval.final.regir_nocount.s1",
       "kind": "eval",
       "method": "regir_nocount",
       "seed": 1,
-      "status": "pending",
-      "detail": "remaining=7200"
+      "status": "completed",
+      "detail": "remaining=0"
     },
     {
       "id": "eval.final.regir_nocount.s2",
       "kind": "eval",
       "method": "regir_nocount",
       "seed": 2,
-      "status": "pending",
-      "detail": "remaining=7200"
+      "status": "completed",
+      "detail": "remaining=0"
+    },
+    {
+      "id": "eval.final.regir_nocount.s3",
+      "kind": "eval",
+      "method": "regir_nocount",
+      "seed": 3,
+      "status": "blocked",
+      "detail": "no final.pt"
+    },
+    {
+      "id": "eval.final.regir_nocount.s4",
+      "kind": "eval",
+      "method": "regir_nocount",
+      "seed": 4,
+      "status": "blocked",
+      "detail": "no final.pt"
     },
     {
       "id": "eval.final.regir_r1.s0",
       "kind": "eval",
       "method": "regir_r1",
       "seed": 0,
-      "status": "pending",
-      "detail": "remaining=7200"
+      "status": "completed",
+      "detail": "remaining=0"
     },
     {
       "id": "eval.final.regir_r1.s1",
       "kind": "eval",
       "method": "regir_r1",
       "seed": 1,
-      "status": "pending",
-      "detail": "remaining=7200"
+      "status": "completed",
+      "detail": "remaining=0"
     },
     {
       "id": "eval.final.regir_r1.s2",
       "kind": "eval",
       "method": "regir_r1",
       "seed": 2,
-      "status": "pending",
-      "detail": "remaining=7200"
+      "status": "completed",
+      "detail": "remaining=0"
+    },
+    {
+      "id": "eval.final.regir_r1.s3",
+      "kind": "eval",
+      "method": "regir_r1",
+      "seed": 3,
+      "status": "blocked",
+      "detail": "no final.pt"
+    },
+    {
+      "id": "eval.final.regir_r1.s4",
+      "kind": "eval",
+      "method": "regir_r1",
+      "seed": 4,
+      "status": "blocked",
+      "detail": "no final.pt"
     },
     {
       "id": "eval.final.regir_last.s0",
       "kind": "eval",
       "method": "regir_last",
       "seed": 0,
-      "status": "blocked",
-      "detail": "training not finished"
+      "status": "completed",
+      "detail": "remaining=0"
     },
     {
       "id": "eval.final.regir_last.s1",
@@ -680,47 +824,79 @@
       "method": "regir_last",
       "seed": 1,
       "status": "pending",
-      "detail": "remaining=7200"
+      "detail": "remaining=1271"
     },
     {
       "id": "eval.final.regir_last.s2",
       "kind": "eval",
       "method": "regir_last",
       "seed": 2,
+      "status": "pending",
+      "detail": "remaining=1484"
+    },
+    {
+      "id": "eval.final.regir_last.s3",
+      "kind": "eval",
+      "method": "regir_last",
+      "seed": 3,
       "status": "blocked",
-      "detail": "training not finished"
+      "detail": "no final.pt"
+    },
+    {
+      "id": "eval.final.regir_last.s4",
+      "kind": "eval",
+      "method": "regir_last",
+      "seed": 4,
+      "status": "blocked",
+      "detail": "no final.pt"
     },
     {
       "id": "eval.final.refil_matched.s0",
       "kind": "eval",
       "method": "refil_matched",
       "seed": 0,
-      "status": "pending",
-      "detail": "remaining=7200"
+      "status": "completed",
+      "detail": "remaining=0"
     },
     {
       "id": "eval.final.refil_matched.s1",
       "kind": "eval",
       "method": "refil_matched",
       "seed": 1,
-      "status": "pending",
-      "detail": "remaining=7200"
+      "status": "completed",
+      "detail": "remaining=0"
     },
     {
       "id": "eval.final.refil_matched.s2",
       "kind": "eval",
       "method": "refil_matched",
       "seed": 2,
+      "status": "pending",
+      "detail": "remaining=72"
+    },
+    {
+      "id": "eval.final.refil_matched.s3",
+      "kind": "eval",
+      "method": "refil_matched",
+      "seed": 3,
       "status": "blocked",
-      "detail": "training not finished"
+      "detail": "no final.pt"
+    },
+    {
+      "id": "eval.final.refil_matched.s4",
+      "kind": "eval",
+      "method": "refil_matched",
+      "seed": 4,
+      "status": "blocked",
+      "detail": "no final.pt"
     },
     {
       "id": "eval.depth.regir.s0",
       "kind": "eval",
       "method": "regir",
       "seed": 0,
-      "status": "completed",
-      "detail": "remaining=0"
+      "status": "pending",
+      "detail": "remaining=12000"
     },
     {
       "id": "eval.depth.regir.s1",
@@ -728,7 +904,7 @@
       "method": "regir",
       "seed": 1,
       "status": "pending",
-      "detail": "remaining=14400"
+      "detail": "remaining=12000"
     },
     {
       "id": "eval.depth.regir.s2",
@@ -736,7 +912,23 @@
       "method": "regir",
       "seed": 2,
       "status": "pending",
-      "detail": "remaining=14400"
+      "detail": "remaining=12000"
+    },
+    {
+      "id": "eval.depth.regir.s3",
+      "kind": "eval",
+      "method": "regir",
+      "seed": 3,
+      "status": "blocked",
+      "detail": "no final.pt"
+    },
+    {
+      "id": "eval.depth.regir.s4",
+      "kind": "eval",
+      "method": "regir",
+      "seed": 4,
+      "status": "blocked",
+      "detail": "no final.pt"
     },
     {
       "id": "eval.mech.regir.s0",

@@ -121,14 +121,24 @@ def _worker(task, output, run, device, stop_event, results):
                                              on_progress=on_progress)
                     elif kind == "final":
                         from open_score.eval.protocol import evaluate_checkpoint
-                        from open_score.eval.protocol import OFFICIAL_CHECKPOINT
-                        checkpoint = Path(output) / method / run / f"seed_{seed}" / f"{OFFICIAL_CHECKPOINT}.pt"
+                        from open_score.eval.protocol import official_eval_path
+                        from open_score.utils.logging import read_latest
+                        directory = Path(output) / method / run / f"seed_{seed}"
+                        progress_row = read_latest(output, "progress", run=run).get((method, run, seed), {})
+                        checkpoint = official_eval_path(directory, progress_row)
+                        if checkpoint is None:
+                            raise FileNotFoundError(f"no official last-iterate weights under {directory}")
                         result = evaluate_checkpoint(method, checkpoint, output=output, run=run,
                                                      seed=seed, device=device, on_progress=on_progress,
                                                      stop_requested=stop_event.is_set)
                     elif kind == "depth":
-                        from open_score.eval.protocol import OFFICIAL_CHECKPOINT, evaluate_depth_sweep
-                        checkpoint = Path(output) / method / run / f"seed_{seed}" / f"{OFFICIAL_CHECKPOINT}.pt"
+                        from open_score.eval.protocol import official_eval_path, evaluate_depth_sweep
+                        from open_score.utils.logging import read_latest
+                        directory = Path(output) / method / run / f"seed_{seed}"
+                        progress_row = read_latest(output, "progress", run=run).get((method, run, seed), {})
+                        checkpoint = official_eval_path(directory, progress_row)
+                        if checkpoint is None:
+                            raise FileNotFoundError(f"no official last-iterate weights under {directory}")
                         result = evaluate_depth_sweep(method, checkpoint, output=output, run=run,
                                                       seed=seed, device=device, on_progress=on_progress,
                                                       stop_requested=stop_event.is_set)
@@ -300,7 +310,7 @@ def parser():
     result.add_argument("--seed", type=int, default=None)
     result.add_argument("--device", default="cpu")
     result.add_argument("--resume", action="store_true")
-    result.add_argument("--max-concurrent", type=int, choices=(1, 2, 3, 4), default=2)
+    result.add_argument("--max-concurrent", type=int, choices=(1, 2, 3, 4, 5), default=2)
     result.add_argument("--only", default=None, help="comma list: anchors,final,depth,mech,timing")
     result.add_argument("--depth-sweep", action="store_true")
     return result

@@ -18,8 +18,9 @@ from open_score.algos import (
 from open_score.eval.protocol import (
     CYCLE_SERIES_METHODS, DEPTH_SWEEP_DEPTHS, FINAL_CONFIGS, FINAL_EPISODES_PER_CONFIG,
     MECH_CONFIG, MECH_EPISODE_SEEDS, OFFICIAL_CHECKPOINT, TIMING_METHODS, TIMING_SCALES,
-    config_key, depth_eval_finished, official_eval_t_env, remaining_depth_jobs,
-    remaining_jobs, final_jobs, training_finished,
+    config_key, depth_eval_finished, official_checkpoint_tag, official_eval_path,
+    official_eval_t_env, remaining_depth_jobs, remaining_jobs, final_jobs,
+    training_finished,
 )
 from open_score.utils.logging import DEFAULT_OUTPUT, FORMAL_RUN, VERSION, V3_OUTPUT, V4_OUTPUT, V5_OUTPUT, SCHEMAS, read_latest, read_records, unique_episodes
 
@@ -63,8 +64,8 @@ def run_dir(output, method, seed, run=FORMAL_RUN):
     return output_dir(output) / method / run / f"seed_{int(seed)}"
 
 
-def _resolved_best_t_env(output, method, seed, rows, directory):
-    return official_eval_t_env(directory)
+def _resolved_best_t_env(output, method, seed, rows, directory, progress_row=None):
+    return official_eval_t_env(directory, progress_row)
 
 
 def _training_finished(directory, row):
@@ -398,8 +399,8 @@ def scan(output=None, *, quiet=False):
     for method, seeds in eval_methods:
         for seed in seeds:
             directory = run_dir(output, method, seed)
-            official = directory / f"{OFFICIAL_CHECKPOINT}.pt"
-            if not official.exists():
+            progress_row = latest.get((method, FORMAL_RUN, seed), {})
+            if official_eval_path(directory, progress_row) is None:
                 add(f"eval.final.{method}.s{seed}", "eval", method, seed, "blocked",
                     f"no {OFFICIAL_CHECKPOINT}.pt")
                 continue
@@ -407,7 +408,8 @@ def scan(output=None, *, quiet=False):
                 add(f"eval.final.{method}.s{seed}", "eval", method, seed, "blocked",
                     "training not finished")
                 continue
-            t_env = _resolved_best_t_env(output, method, seed, by_method[(method, seed)], directory)
+            t_env = _resolved_best_t_env(output, method, seed, by_method[(method, seed)],
+                                         directory, progress_row)
             if t_env is None:
                 add(f"eval.final.{method}.s{seed}", "eval", method, seed, "blocked",
                     f"unreadable {OFFICIAL_CHECKPOINT}.pt")
@@ -420,15 +422,17 @@ def scan(output=None, *, quiet=False):
 
     for seed in eval_seeds:
         directory = run_dir(output, "regir", seed)
-        if not (directory / f"{OFFICIAL_CHECKPOINT}.pt").exists():
+        progress_row = latest.get(("regir", FORMAL_RUN, seed), {})
+        if official_eval_path(directory, progress_row) is None:
             add(f"eval.depth.regir.s{seed}", "eval", "regir", seed, "blocked",
                 f"no {OFFICIAL_CHECKPOINT}.pt")
             continue
-        if not _training_finished(directory, latest.get(("regir", FORMAL_RUN, seed), {})):
+        if not _training_finished(directory, progress_row):
             add(f"eval.depth.regir.s{seed}", "eval", "regir", seed, "blocked",
                 "training not finished")
             continue
-        t_env = _resolved_best_t_env(output, "regir", seed, by_method[("regir", seed)], directory)
+        t_env = _resolved_best_t_env(output, "regir", seed, by_method[("regir", seed)],
+                                     directory, progress_row)
         if t_env is None:
             add(f"eval.depth.regir.s{seed}", "eval", "regir", seed, "blocked", "no t_env")
             continue
@@ -438,9 +442,15 @@ def scan(output=None, *, quiet=False):
             f"remaining={len(leftover)}")
 
     traj = read_records(output, "trajectories", run=FORMAL_RUN, method="regir", seed=0)
-    mech_done = any(row.get("phase") == "mechanism" for row in traj)
+    mech_dir = run_dir(output, "regir", 0)
+    mech_row = latest.get(("regir", FORMAL_RUN, 0), {})
+    mech_t_env = official_eval_t_env(mech_dir, mech_row)
+    mech_tag = official_checkpoint_tag(mech_t_env) if mech_t_env is not None else None
+    mech_done = mech_tag is not None and any(
+        row.get("phase") == "mechanism" and row.get("checkpoint") == mech_tag for row in traj)
     add("eval.mech.regir.s0", "eval", "regir", 0,
-        "completed" if mech_done else ("pending" if (run_dir(output, "regir", 0) / f"{OFFICIAL_CHECKPOINT}.pt").exists() else "blocked"))
+        "completed" if mech_done else (
+            "pending" if official_eval_path(mech_dir, mech_row) is not None else "blocked"))
 
     timing_rows = read_records(output, "timing", run=FORMAL_RUN) if (output / "timing.csv").exists() else []
     timing_keys = {(row.get("method"), row.get("config") if not isinstance(row.get("config"), dict)

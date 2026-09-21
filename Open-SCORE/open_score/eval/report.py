@@ -144,12 +144,12 @@ def _report_lock(output):
                 api.CloseHandle(handle)
         else:
             import fcntl
-            path = output / "实验报告.md"
-            path.touch(exist_ok=True)
-            with path.open("r+b") as stream:
+            lock_path = output / ".report.lock"
+            lock_path.touch(exist_ok=True)
+            with lock_path.open("r+b") as stream:
                 fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
                 try:
-                    yield stream
+                    yield None
                 finally:
                     fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
@@ -191,11 +191,17 @@ def _atomic_text(path, content):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     data = content.encode("utf-8")
-    with path.open("wb") as stream:
-        stream.write(data)
-        stream.truncate()
-        stream.flush()
-        os.fsync(stream.fileno())
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        with temporary.open("wb") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+        if path.name == "实验报告.md":
+            os.chmod(path, 0o444)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
 
 
 def _save_figure(fig, path):
@@ -640,14 +646,14 @@ def _official_seed_t_env(output, progress, method, seed):
     directory = run_directory(output, method, seed)
     if not training_finished(directory, (progress or {}).get((method, seed))):
         return None
-    return official_eval_t_env(directory)
+    return official_eval_t_env(directory, (progress or {}).get((method, seed)))
 
 
 def _depth_sweep_groups(episodes, methods=CYCLE_SERIES_METHODS, progress=None, output=None):
     """(method, seed, depth, config) -> D list.
 
     Only the weights now on disk count. R=4 may reuse 1:1 final_eval from that
-    same ``best@t_env``, and only if the seed already has a depth sweep.
+    same ``final@t_env``, and only if the seed already has a depth sweep.
     """
     equal = set(EQUAL_SCALE_CONFIGS)
     output = Path(DEFAULT_OUTPUT if output is None else output)
@@ -2194,7 +2200,7 @@ def _usable_final_eval(rows, progress=None, output=None):
             continue
         directory = run_directory(output, key[0], key[1])
         finished[key] = training_finished(directory, progress.get(key))
-        official[key] = official_eval_t_env(directory)
+        official[key] = official_eval_t_env(directory, progress.get(key))
     kept = []
     for row in rows:
         if row.get("phase") != "final_eval":
@@ -2653,10 +2659,10 @@ def _ablation_reading(grouped, anchors, seeds_by_method, progress):
         lines.append("当前可用终评：" + "；".join(bits) + "。关掉某一部件后 $D$ 明显升高，说明那一部件有贡献。")
     if missing:
         lines.append("还不能进消融均值的臂：" + "、".join(missing) + "。")
-        lines.append("这不是「没做评估」。四个变体大多已经跑过 24×300 终评，但 `best.pt` 一出现就开跑，"
-                     "checkpoint 停在十几万到四十万步；和 ReGIR seed 1/2 同类。那些局的 $D$ 会到 5–16，"
-                     "一旦进均值，消融会看起来全面崩盘。等规模/目标图因此只画已对齐的 ReGIR / REFIL。"
-                     "下面「终评对齐」表列出每条种子的终评标签；池内验证 $D$ 来自训练曲线最右端，可以看，不能当外推。")
+        lines.append("这不是「没做评估」。四个变体大多已经跑过 24×300 终评，但以前 `best.pt` 一出现就开跑，"
+                     "checkpoint 停在十几万到四十万步。官方终评现在只认最后一步 `final.pt`（标签 `final@t_env`）。"
+                     "旧的 `best@` 局不进均值。下面「终评对齐」表列出每条种子的终评标签；"
+                     "池内验证 $D$ 来自训练曲线最右端，可以看，不能当外推。")
     if ref is not None:
         last = _axis_d(grouped, "regir_last", EQUAL_SCALE_CONFIGS, anchors)
         r1 = _axis_d(grouped, "regir_r1", EQUAL_SCALE_CONFIGS, anchors)
@@ -2712,14 +2718,14 @@ def _depth_reading(cells):
             lines.append("40–50 人上加深相对 $R\\le 2$ 没有稳定降伤，H5 的「大规模需要更深」目前不成立。")
         else:
             lines.append("大编队上 $R\\ge 4$ 相对浅轮有降伤，和 H5 同向。")
-    lines.append("只计入已经做过深度扫描、且终评 `best@t_env` 与该扫描相同的种子；"
+    lines.append("只计入已经做过深度扫描、且终评 `final@t_env` 与该扫描相同的种子；"
                  "别的种子的中途终评不再画进 $R=4$。")
     return lines
 
 
 def _mechanism_reading(payload):
     if not payload:
-        return ["机制探测（实验 D）还没有可画的注意力局。冻结 ReGIR seed 0 的 `best.pt` 后，"
+        return ["机制探测（实验 D）还没有可画的注意力局。冻结 ReGIR seed 0 的 `final.pt` 后，"
                 "应在 30v30 K2 上记下一局逐轮自注意力和跨轮 $\\alpha$。"]
     means = _mechanism_alpha_means(payload)
     step = (payload.get("attention") or {}).get("step")
