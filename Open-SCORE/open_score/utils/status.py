@@ -183,6 +183,18 @@ def _train_tail(text):
     if not rows:
         return {}
     result = rows[-1]
+    # Recent wall-clock throughput, not the cumulative average printed by the
+    # trainer. Stay within the current uninterrupted training/validation phase.
+    first = result
+    for previous in reversed(rows[:-1]):
+        if previous["current_phase"] != result["current_phase"] or previous["t_env"] > result["t_env"]:
+            break
+        first = previous
+        if result["session_elapsed_seconds"] - first["session_elapsed_seconds"] >= 60:
+            break
+    seconds = result["session_elapsed_seconds"] - first["session_elapsed_seconds"]
+    if seconds > 0 and result["current_phase"] == "training":
+        result["recent_steps_per_second"] = (result["t_env"] - first["t_env"]) / seconds
     rates = [r["steps_per_second"] for r in rows[-8:] if r["steps_per_second"] > 0]
     if rates:
         result["rate_range"] = (min(rates), max(rates))
@@ -665,18 +677,32 @@ def _short_task_eta(task):
     return _short_duration(task.get("remaining_seconds"))
 
 
+def _cpu_snapshot():
+    """Host CPU use between refreshes; one short sample on first display."""
+    try:
+        import psutil
+        warmed = getattr(_cpu_snapshot, "warmed", False)
+        percent = psutil.cpu_percent(interval=None if warmed else .1)
+        _cpu_snapshot.warmed = True
+        threads = psutil.cpu_count() or os.cpu_count() or 1
+        return f"CPU 整机利用率 {percent:.1f}%（约{percent * threads / 100:.1f}/{threads}逻辑核）"
+    except (ImportError, OSError):
+        return "CPU 整机利用率暂不可读"
+
+
 def _gpu_lines(gpu_status, live, width):
     rows = []
     for device in (0, 1):
         count = sum(task["kind"] == "train" and str(task.get("physical_gpu")) == str(device) for task in live)
         match = re.search(rf"GPU{device} [^:]+: 利用率([^%]+)% / 空闲([\d.]+)/([\d.]+)GiB", gpu_status or "")
-        memory = f"{float(match[3]) - float(match[2]):.0f}/{float(match[3]):.0f}G {match[1]}%" if match else "显存待查询"
-        rows.append(f"GPU{device} 显存{memory} 训练{count}/2")
+        usage = (f"利用率{match[1]}%  显存{float(match[3]) - float(match[2]):.1f}/{float(match[3]):.1f}GiB"
+                 if match else "利用率/显存待查询")
+        rows.append(f"GPU{device} {usage}  训练{count}/2")
     combined = "  |  ".join(rows)
     return [combined] if _width(combined) <= width else rows
 
 
-def render_status(output, *, gpu_status=None, now=None, details=False, width=100):
+def render_status(output, *, gpu_status=None, cpu_status=None, now=None, details=False, width=100):
     """Default to a concise view for live terminals, pipes, and --once alike."""
     root = Path(output)
     now = time.time() if now is None else float(now)
@@ -710,14 +736,16 @@ def render_status(output, *, gpu_status=None, now=None, details=False, width=100
                 groups.append(f"{label} {done}/{len(selected)}")
         lines.append(f"{name:<4}  " + "  ".join(groups))
     lines += _gpu_lines(gpu_status, live, width)
+    cpu_tasks = sum(task["kind"] != "train" and task.get("physical_gpu") is None for task in live)
+    lines.append(f"{cpu_status or _cpu_snapshot()}  评估{cpu_tasks}/4")
     lines.append("─" * min(width, 76))
     narrow = width < 60
-    device_width, progress_width, eta_width = (3, 6, 8) if narrow else (5, 7, 11)
-    task_width = max(8, min(33, width - device_width - progress_width - eta_width - 3))
-    def row(device, task, progress, eta):
+    device_width, progress_width, speed_width, eta_width = (3, 5, 7, 6) if narrow else (5, 7, 8, 11)
+    task_width = max(5, min(33, width - device_width - progress_width - speed_width - eta_width - 4))
+    def row(device, task, progress, speed, eta):
         return " ".join((_cell(device, device_width), _cell(task, task_width),
-                         _cell(progress, progress_width), _cell(eta, eta_width))).rstrip()
-    lines.append(row("卡" if narrow else "设备", "当前任务", "进度", "剩余ETA"))
+                         _cell(progress, progress_width), _cell(speed, speed_width), _cell(eta, eta_width))).rstrip()
+    lines.append(row("卡" if narrow else "设备", "当前任务", "进度", "步/秒", "剩余ETA"))
     names = {"regir": "Full", "regir_r1": "Single", "refil": "REFIL", "b2_qmix_atten": "QMIX-Atten",
              "transfqmix": "TransfQMix", "regir_fixed4": "Fixed4", "regir_untied4": "Untied4", "regir_kv0": "KV0",
              "regir_norefil": "norefil", "regir_nocount": "nocount", "regir_last": "last", "refil_matched": "matched"}
@@ -729,7 +757,11 @@ def render_status(output, *, gpu_status=None, now=None, details=False, width=100
         phase = "验" if task.get("current_phase") in ("validation", "validating") else kind_names.get(task["kind"], task["kind"])
         label = f"{env}/{phase} {method}" + (f" s{task['seed']}" if task.get("seed") is not None else "")
         fraction = min(100., 100. * task.get("completed", 0) / max(1, task.get("total", 0)))
-        lines.append(row(device, label, f"{fraction:.1f}%", _short_task_eta(task)))
+        rate = _number(task.get("recent_steps_per_second"))
+        speed = ("验证" if phase == "验" else
+                 f"{rate:.1f}" if task["kind"] == "train" and rate is not None
+                 and task.get("log_age", math.inf) <= 60 else "—")
+        lines.append(row(device, label, f"{fraction:.1f}%", speed, _short_task_eta(task)))
     if not live:
         lines.append("  无活动任务；已有进度保留" if state == "已暂停" else "  无活动任务")
     estimates = _estimate_ranges(metadata.get("runtime_estimate"), tasks, metadata)
@@ -756,7 +788,7 @@ def render_status(output, *, gpu_status=None, now=None, details=False, width=100
         lines.append(f"异常：活动任务共{len(live)}项，另{len(live) - 8}项见 --details")
     elif data["issues"]:
         lines.append(f"提示：{len(data['issues'])}项状态异常，使用 --details 查看")
-    lines.append("--details 查看详情；Ctrl+C 仅关闭面板")
+    lines.append("步/秒：近约60秒；--details 详情；Ctrl+C 仅关闭面板")
     return "\n".join(_fit(line, width) for line in lines)
 
 
@@ -764,20 +796,36 @@ def watch_status(output, interval=5, once=False, details=False):
     """TTY refreshes in place; redirected output prints one compact snapshot."""
     interval = max(1., float(interval))
     tty = bool(getattr(sys.stdout, "isatty", lambda: False)())
+    overwrite = tty and not once
     gpu_status, last_gpu = None, -math.inf
     try:
+        if overwrite:
+            # Use the alternate screen so refreshes never accumulate in the
+            # user's scrollback; restore their original screen on exit.
+            sys.stdout.write("\x1b[?1049h\x1b[?25l")
+            sys.stdout.flush()
         while True:
             tick = time.monotonic()
-            if tick - last_gpu >= 30:
+            if tick - last_gpu >= interval:
                 gpu_status, last_gpu = _gpu_snapshot(), tick
             size = shutil.get_terminal_size((100, 24))
-            panel = render_status(output, gpu_status=gpu_status, details=details, width=max(32, size.columns - 1))
-            if tty and not once:
-                sys.stdout.write("\x1b[2J\x1b[H")
-            sys.stdout.write(panel + "\n")
+            panel = render_status(output, gpu_status=gpu_status, cpu_status=_cpu_snapshot(),
+                                  details=details, width=max(32, size.columns - 1))
+            if overwrite:
+                lines = panel.splitlines()
+                available = max(1, size.lines - 1)
+                if len(lines) > available:
+                    lines = lines[:max(0, available - 1)] + ["… 请增大终端高度以显示完整面板"]
+                sys.stdout.write("\x1b[H" + "\x1b[K\n".join(lines) + "\x1b[K\x1b[J")
+            else:
+                sys.stdout.write(panel + "\n")
             sys.stdout.flush()
             if once or not tty:
                 return
             time.sleep(max(.1, interval - (time.monotonic() - tick)))
     except KeyboardInterrupt:
-        print("\n面板已关闭；不会改变实验状态。", flush=True)
+        pass
+    finally:
+        if overwrite:
+            sys.stdout.write("\x1b[?25h\x1b[?1049l")
+            sys.stdout.flush()
