@@ -100,10 +100,11 @@ def initialize(output):
                                 ridge_alphas=[.0001, .001, .01, .1, 1, 10, 100],
                                 read1_equivalence_verified=False,
                                 timing_methods=COST_METHODS, timing_warmup=50, timing_repeats=200),
-                resources=dict(gpu_ids=[0, 1], gpu_train_max=2, gpu_per_card_max=1, gpu_reserve_gib=8,
+                resources=dict(gpu_ids=[0, 1], gpu_train_max=3, gpu_per_card_max=2, smac_gpu_train_max=2,
+                               smac_gpu_per_card_max=1, smac_next_gpu_utilization_max=90, gpu_reserve_gib=8,
                                cuda_oom_auto_retries=3, cuda_oom_backoff_seconds=[60, 120, 240],
-                               gpu_peak_multiplier=1.25, cpu_total_max=16,
-                               cpu_final_max=12, cpu_mechanism_max=4, smac_cpu_max=4,
+                               gpu_peak_multiplier=1.25, cpu_total_max=4,
+                               cpu_final_max=4, cpu_mechanism_max=4, smac_cpu_max=4,
                                had_workers=8, smac_workers=4),
                 sources=dict(transfqmix_commit="2ef0a0726f1f186097b4b560509ceb5a801fdafe"),
                 imports=[])
@@ -368,16 +369,29 @@ def scan(output, env=None, only=None, probe_collector_seed=0):
                 depth_pending = False
                 final_pending = False
                 for kind in kinds:
+                    independent_total = ((len(configs(domain)) * 300) if kind == "final" else
+                                         4500 if kind == "depth" or not manifest["mechanisms"]["read1_equivalence_verified"] else 3900)
                     if not info:
                         tasks.append(dict(id=f"eval.{kind}.{domain}.{method}.s{seed}", kind=kind,
                                           env=domain, method=method, seed=seed, status="waiting",
                                           completed=0, total=(len(configs(domain)) if kind == "final" else 18) * 300,
+                                          independent_total=independent_total, independent_completed=0,
+                                          reused_completed=0,
                                           detail=reason))
                         continue
                     previous = rows_by_run.get((domain, method, seed), [])
                     jobs = evaluation_jobs(info, kind)
                     pending = remaining_evaluations(info, kind, previous,
                         read1_equivalent=manifest["mechanisms"]["read1_equivalence_verified"])
+                    def independent(job):
+                        if kind == "depth":
+                            return job["cycle_depth"] != 4
+                        if kind == "readout":
+                            return (job["readout"] != "learned" and not (
+                                manifest["mechanisms"]["read1_equivalence_verified"] and job["readout"] == "read1"
+                                and tuple(config_dict(job["config"]).values()) in DEPTH_CONFIGS))
+                        return True
+                    independent_done = independent_total - sum(independent(job) for job in pending)
                     if kind == "depth":
                         depth_pending = bool(pending)
                     if kind == "final":
@@ -390,6 +404,8 @@ def scan(output, env=None, only=None, probe_collector_seed=0):
                                       env=domain, method=method, seed=seed,
                                       status=("waiting" if waiting_for_depth or waiting_for_final else "pending") if pending else "complete",
                                       completed=len(jobs)-len(pending), total=len(jobs),
+                                      independent_total=independent_total, independent_completed=independent_done,
+                                      reused_completed=len(jobs)-len(pending)-independent_done,
                                       detail=("reuse completed final arms first" if waiting_for_final else
                                               "reuse completed depth arms first" if waiting_for_depth else "frozen final"),
                                       checkpoint=info["path"], checkpoint_id=info["checkpoint_id"]))

@@ -497,8 +497,8 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
     devices = tuple(jobs[0][1].get("_devices", (0, 1))) if jobs else (0, 1)
     if profile:
         with_depth_eval = with_anchors = False
-        if not 1 <= max_concurrent <= 2:
-            raise ValueError("main0921 admits at most two trainers across the two shared GPUs")
+        if not 1 <= max_concurrent <= (3 if domain == "had" else 2):
+            raise ValueError("main0921 admits at most three HAD or two SMAC trainers")
     if max_concurrent < 1 or max_concurrent > 4:
         raise ValueError("Concurrent experiment tasks must be between 1 and 4")
     pending_train, pending_eval = [], []
@@ -507,6 +507,7 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
     occupied = _occupied_train_jobs()
     original = [(method, dict(options)) for method, options in jobs]
     options_by_key = {(method, options["run"], options["seed"]): options for method, options in original if options}
+    completed_ids = set()
     lookup = {(method, options["run"], options["seed"]) for method, options in original
               if options and method not in ("anchors", "depth_eval")}
     print(f"scheduler {len(original)} listed jobs", flush=True)
@@ -559,6 +560,7 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
                 row.get("status") in ("completed", "complete")
                 and any((directory / name).exists() for name in ("final.pt", "best.pt"))))):
             print(f"{method} [{options['run']} seed={options['seed']}] already done", flush=True)
+            completed_ids.add((method, options["seed"]))
             queue_depth(method, options, pending_eval)
             continue
         key = (method, options["run"], options["seed"])
@@ -586,11 +588,38 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
     context = get_context("spawn")
     stop_event, queue = context.Event(), context.Queue()
     waiting_train, waiting_eval = deque(pending_train), deque(pending_eval)
-    use_ansi = _enable_ansi()
+    use_ansi = _enable_ansi() and sys.stdout.isatty()
     status_height = 0
     previous = {sig: signal.getsignal(sig) for sig in (signal.SIGINT, signal.SIGTERM)}
     eval_live_status = {}
     pool = [len(pending_train) + len(pending_eval)]
+    results, failures, abnormal_exits = [], [], set()
+
+    def publish_status(status="running"):
+        if not profile:
+            return
+        from open_score.eval.experiment import atomic_json
+        active = []
+        for item in live:
+            opts = item["options"]
+            row = {}
+            try:
+                resource = json.loads((run_directory(output, item["method"], opts["seed"], domain) / "resource.json").read_text())
+                if resource.get("pid") == item["child"].pid:
+                    row.update(resource)
+            except (OSError, ValueError):
+                pass
+            active.append({**row, "id": f"train.{domain}.{item['method']}.s{opts['seed']}",
+                           "kind": "train", "method": item["method"], "seed": opts["seed"],
+                           "pid": item["child"].pid, "physical_gpu": int(opts["cuda_visible_devices"]),
+                           "total": opts["t_max"], "elapsed_seconds": time.time()-item["started_at"]})
+        pending = [dict(id=f"train.{domain}.{m}.s{o['seed']}", method=m, seed=o["seed"], kind="train",
+                        status="resource_wait" if o.get("_retry_count") else "queued") for m, o in waiting_train]
+        atomic_json(Path(output) / f"scheduler.train.{domain}.json", dict(
+            kind="train", env=domain, pid=os.getpid(), status=status, updated_at=time.time(),
+            max_concurrent=max_concurrent, total=len(original), completed=len(completed_ids),
+            completed_ids=[f"train.{domain}.{m}.s{s}" for m, s in sorted(completed_ids)],
+            waiting=pending, live=active, failures=[dict(error=f.get("error", "failed")) for f in failures]))
 
     def request_stop(signum, frame):
         nonlocal status_height
@@ -689,7 +718,6 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
         launch()
         runs = {options["run"] for _, options in original if options}
         last_status, last_report = time.monotonic() - 10, time.monotonic()
-        results, failures, abnormal_exits = [], [], set()
 
         def progress_key(key):
             if key[0] == "depth_eval":
@@ -758,6 +786,10 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
                 last_report = 0.0
                 return
             if result.get("status") == "completed":
+                if profile:
+                    checkpoint_info(result["checkpoint"], method=result["method"],
+                                    seed=result["seed"], env=domain)
+                completed_ids.add((result.get("method"), result.get("seed")))
                 opts = options_by_key.get((result.get("method"), result.get("run"), result.get("seed")))
                 if opts:
                     if profile and opts.get("_retry_count"):
@@ -850,6 +882,7 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
                     extra = f" +{len(waiting_train) - 8}" if len(waiting_train) > 8 else ""
                     lines.append("queued: " + ", ".join(names) + extra)
                 status_height = _rewrite_block(lines, status_height, use_ansi)
+                publish_status("stopping" if stop_event.is_set() else "running")
                 last_status = now
             if now - last_report >= (60 if eval_live() else 300):
                 refresh_report_async(output, run=report_run)
@@ -881,6 +914,10 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
         if len(results) != expected:
             raise RuntimeError("An experiment process exited without reporting completion")
         return not stop_event.is_set()
+    except BaseException as error:
+        if not failures:
+            failures.append(dict(status="failed", error=f"Parent scheduler: {type(error).__name__}: {error}"))
+        raise
     finally:
         stop_event.set()
         # Finish each current collection/update batch and retain full recovery.
@@ -894,8 +931,13 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
                     except Empty:
                         break
                 item["child"].join(timeout=1)
+        live.clear()
         for sig, handler in previous.items():
             signal.signal(sig, handler)
+        try:
+            publish_status("failed" if failures else "completed" if len(completed_ids) == len(original) else "stopped")
+        except (OSError, ValueError) as error:
+            print(f"Final scheduler status write failed: {error}", flush=True)
 
 
 def validate(output):
@@ -1337,6 +1379,7 @@ def parser():
                              "(default: all). Example: 0")
     result.add_argument("--status-seconds", type=int, default=300,
                         help="farm status board interval in seconds")
+    result.add_argument("--once", action="store_true", help="print one main0921 status screen and exit")
     result.add_argument("--steps", type=int)
     result.add_argument("--batch-size-run", type=int, choices=(4, 8), default=4)
     result.add_argument("--seed", type=int, default=0)
@@ -1406,9 +1449,9 @@ def profile_main(options, output):
     workspace = configure_workspace()
     cpu_threads()
     if options.stage == "status":
-        inventory = scan(output)
-        for task in inventory["tasks"]:
-            print(f"{task['id']:<50} {task['status']:<10} {task['completed']}/{task['total']}")
+        from open_score.utils.status import watch_status
+        interval = options.status_seconds if any(a.startswith("--status-seconds") for a in sys.argv) else 5
+        watch_status(output, interval=max(1, interval), once=options.once)
         return
     if options.stage == "validate":
         from open_score.eval.experiment import validate_integration
@@ -1418,6 +1461,8 @@ def profile_main(options, output):
         raise SystemExit("main0921 supports train/single/farm, validate, status and stop")
     if options.env not in ("had", "smacv2"):
         raise SystemExit("main0921 environments are had and smacv2")
+    if not any(a.startswith("--max-concurrent") for a in sys.argv):
+        options.max_concurrent = 3 if options.env == "had" else 2
     devices = tuple(_parse_devices(options.devices or "0,1") or ())
     if options.cpu or not devices or not set(devices) <= {0, 1}:
         raise SystemExit("main0921 training uses physical --devices 0,1 (or an explicit subset)")
@@ -1425,8 +1470,8 @@ def profile_main(options, output):
         raise SystemExit("main0921 fixes --run train and seeds 0,1,2")
     if options.steps not in (None, budget(options.env)):
         raise SystemExit(f"main0921 {options.env} fixes the budget at {budget(options.env)}")
-    if not 1 <= options.max_concurrent <= 2:
-        raise SystemExit("main0921 allows at most two trainers across the two shared GPUs")
+    if not 1 <= options.max_concurrent <= (3 if options.env == "had" else 2):
+        raise SystemExit("main0921 allows at most three HAD or two SMAC trainers")
     workers = options.batch_size_run if "--batch-size-run" in sys.argv else (8 if options.env == "had" else 4)
     if workers != (8 if options.env == "had" else 4):
         raise SystemExit("main0921 fixes 8 HAD workers or 4 SMAC workers per trainer")

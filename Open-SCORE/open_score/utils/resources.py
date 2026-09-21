@@ -59,10 +59,11 @@ def gpu_memory(gpu):
     if int(gpu) not in (0, 1):
         raise ValueError("main0921 permits physical GPUs 0 and 1")
     result = subprocess.check_output([
-        "nvidia-smi", f"--id={int(gpu)}", "--query-gpu=memory.free,memory.used,memory.total",
+        "nvidia-smi", f"--id={int(gpu)}", "--query-gpu=memory.free,memory.used,memory.total,utilization.gpu",
         "--format=csv,noheader,nounits"], text=True, timeout=5)
-    free, used, total = (float(x.strip()) / 1024 for x in result.strip().split(","))
-    return dict(free=free, used=used, total=total)
+    values = result.strip().split(",")
+    free, used, total = (float(x.strip()) / 1024 for x in values[:3])
+    return dict(free=free, used=used, total=total, utilization=float(values[3].strip()))
 
 
 @contextmanager
@@ -70,7 +71,7 @@ def queue_lock(output, kind, *, stop_requested=None):
     """OS-held locks survive stale files and release automatically on exit.
 
     GPU train/single/farm and cost measurement share one parent lease. A parent
-    may admit at most two trainers; another command waits outside that lease.
+    may admit at most three HAD or two SMAC trainers; another command waits outside that lease.
     CPU evaluation has one parent per experiment output.
     """
     import fcntl
@@ -117,19 +118,24 @@ def _resource(path):
 
 def gpu_admit(output, env, method, live, *, gpu=0, memory=None, minimum_peak=0., recovering=False):
     from open_score.eval.experiment import run_directory, SEEDS
-    if len(live) >= 2:
+    if len(live) >= (3 if env == "had" else 2):
         return False
     measurements = [_resource(run_directory(output, method, s, env) / "resource.json") for s in SEEDS]
     measurements = [r for r in measurements if r]
     peak = max(float(minimum_peak), max((float(r.get("cuda_peak_reserved_gib") or r.get("cuda_reserved_gib") or 0)
                 for r in measurements), default=0.0))
     same_gpu = [item for item in live if int(item["options"].get("cuda_visible_devices", "0")) == int(gpu)]
+    if len(same_gpu) >= (2 if env == "had" else 1):
+        return False
     if recovering and same_gpu:
         return False
     if any(item["options"].get("_recovering") for item in same_gpu):
         return False
     try:
-        free = (memory if memory is not None else gpu_memory(gpu))["free"]
+        observed_memory = memory if memory is not None else gpu_memory(gpu)
+        free = observed_memory["free"]
+        if env == "smacv2" and live and observed_memory.get("utilization", 100) >= 90:
+            return False
     except (OSError, ValueError, subprocess.SubprocessError):
         return False  # Unknown free memory is not permission to launch.
     if not peak:
@@ -158,9 +164,13 @@ def choose_gpu(output, env, method, live, devices=(0, 1), *, memories=None,
                 memories[int(gpu)] = gpu_memory(gpu)
             except (OSError, ValueError, subprocess.SubprocessError):
                 continue
-    for gpu in sorted(memories, key=lambda key: memories[key]["free"], reverse=True):
-        if any(int(item["options"].get("cuda_visible_devices", "0")) == gpu for item in live):
-            continue
+    loads = {gpu: sum(int(item["options"].get("cuda_visible_devices", "0")) == gpu for item in live)
+             for gpu in memories}
+    def preference(gpu):
+        if env == "smacv2":
+            return (loads[gpu] == 0, -memories[gpu].get("utilization", 100), memories[gpu]["free"])
+        return (loads[gpu] == 0, memories[gpu]["free"])
+    for gpu in sorted(memories, key=preference, reverse=True):
         if gpu_admit(output, env, method, live, gpu=gpu, memory=memories[gpu],
                      minimum_peak=minimum_peak, recovering=recovering):
             return gpu
@@ -175,12 +185,12 @@ def is_cuda_oom(error):
 
 def cpu_admit(env, kind, live, maximum):
     import psutil
-    if len(live) >= min(16, maximum):
+    if len(live) >= min(4, maximum):
         return False
     kinds = [item["task"]["kind"] for item in live]
     if env == "smacv2":
         return len(live) < min(4, maximum) and psutil.virtual_memory().available >= 12 * 1024**3
-    if kind == "final" and kinds.count("final") >= 12:
+    if kind == "final" and kinds.count("final") >= 4:
         return False
     if kind != "final" and sum(k != "final" for k in kinds) >= 4:
         return False

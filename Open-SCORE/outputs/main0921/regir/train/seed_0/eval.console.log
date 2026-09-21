@@ -679,3 +679,30 @@ PermissionError: [Errno 13] Permission denied
 [regir/0] final_eval 7150/7200
 [regir/0] final_eval 7175/7200
 [regir/0] final_eval 7200/7200
+[had/regir/0] depth_eval 925/5400
+[had/regir/0] depth_eval 950/5400
+[had/regir/0] depth_eval 975/5400
+[had/regir/0] depth_eval 1000/5400
+[had/regir/0] depth_eval 1025/5400
+Traceback (most recent call last):
+  File "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/scripts/eval.py", line 135, in _worker
+    result = evaluate_probe(output=output, seed=seed,
+  File "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/open_score/eval/relationship_probe.py", line 418, in evaluate_probe
+    collect_state_bank(output, stop_requested, on_progress)
+  File "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/open_score/eval/relationship_probe.py", line 185, in collect_state_bank
+    register_end_to_end_policy("red", name, "shared public relationship-probe trajectory",
+  File "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/open_score/rules/coverage_rule.py", line 442, in register_end_to_end_policy
+    raise ValueError("Policy must have a unique name, label and callable factory")
+ValueError: Policy must have a unique name, label and callable factory
+
+[had/regir/0] depth_eval 1050/5400
+[had/regir/0] depth_eval 1075/5400
+[had/regir/0] depth_eval 1100/5400
+[had/regir/0] depth_eval 1125/5400
+[had/regir/0] depth_eval 1150/5400
+[had/regir/0] depth_eval 1175/5400
+[had/regir/0] depth_eval 1200/5400
+[had/regir/0] depth_eval 1225/5400
+[had/regir/0] depth_eval 1250/5400
+[had/regir/0] depth_eval 1275/5400
+[had/regir/0] depth_eval 1300/5400

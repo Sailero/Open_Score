@@ -280,6 +280,21 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
                 retry_at[result["id"]] = time.monotonic() + 60
             last_scan = 0  # Resolve readout/probe dependencies after atomic result writes.
 
+    def publish_status(status="running"):
+        if not profile:
+            return
+        from open_score.eval.experiment import atomic_json
+        active = [{**item["task"], **live_status.get(item["task"]["id"], {}), "pid": item["child"].pid,
+                   "kind": item["task"]["kind"]} for item in live]
+        active_ids = {row["id"] for row in active}
+        atomic_json(Path(output) / f"scheduler.eval.{env}.json", dict(
+            kind="eval", env=env, pid=os.getpid(), status=status, updated_at=time.time(),
+            max_concurrent=max_concurrent, total=len(selected),
+            completed=sum(t["status"] == "complete" for t in selected), live=active,
+            completed_ids=[t["id"] for t in selected if t["status"] == "complete"],
+            waiting=[t for t in selected if t["status"] != "complete" and t["id"] not in active_ids],
+            failures=failures))
+
     for sig in previous:
         signal.signal(sig, request_stop)
     try:
@@ -319,11 +334,16 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
                          f"waiting_dependencies={sum(t['status'] == 'waiting' for t in selected)}"]
                 lines.extend(_eval_job_line(i, output, run, live_status.get(i["task"]["id"], {})) for i in live)
                 height = _rewrite_block(lines, height, use_ansi)
+                publish_status()
                 last_status = now
             if now - last_report >= 300:
                 refresh_report(output, run=run)
                 last_report = now
             time.sleep(1)
+    except BaseException as error:
+        failures.append(dict(id=f"scheduler.eval.{env}", status="failed",
+                             error=f"Parent scheduler: {type(error).__name__}: {error}"))
+        raise
     finally:
         stop_event.set()
         last_notice = 0
@@ -339,7 +359,15 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
         receive()
         for sig, handler in previous.items():
             signal.signal(sig, handler)
-        refresh_report(output, run=run)
+        try:
+            refresh_report(output, run=run)
+        except Exception as error:
+            failures.append(dict(id=f"report.{env}", status="failed", error=str(error)))
+            print(f"Final report refresh failed: {error}", flush=True)
+        try:
+            publish_status("failed" if failures else "stopped" if interrupted else "completed")
+        except (OSError, ValueError) as error:
+            print(f"Final scheduler status write failed: {error}", flush=True)
     if failures:
         print("Evaluation incomplete: " + "\n".join(str(x) for x in failures), flush=True)
     return not failures and not interrupted
@@ -439,6 +467,10 @@ def profile_main(options, output):
         os.environ["SC2PATH"] = str(workspace / "envs/StarCraftII")
     cpu_threads()
     requested_at = time.time()
+    if not any(a.startswith("--max-concurrent") for a in sys.argv):
+        options.max_concurrent = 4
+    if not 1 <= options.max_concurrent <= 4:
+        raise SystemExit("main0921 evaluation and mechanism tasks share a maximum of four workers")
     stop_path = output / "eval.stop.request"
     def new_stop():
         return stop_path.exists() and stop_path.stat().st_mtime > requested_at

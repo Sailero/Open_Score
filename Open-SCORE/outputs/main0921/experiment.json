@@ -457,17 +457,17 @@
       0,
       1
     ],
-    "gpu_train_max": 2,
+    "gpu_train_max": 3,
     "gpu_reserve_gib": 8,
     "gpu_peak_multiplier": 1.25,
-    "cpu_total_max": 16,
-    "cpu_final_max": 12,
+    "cpu_total_max": 4,
+    "cpu_final_max": 4,
     "cpu_mechanism_max": 4,
     "smac_cpu_max": 4,
     "had_workers": 8,
     "smac_workers": 4,
-    "gpu_per_card_max": 1,
-    "gpu_selection": "eligible_card_with_most_free_memory_no_fixed_priority",
+    "gpu_per_card_max": 2,
+    "gpu_selection": "spread_across_eligible_cards_then_available_memory; SMAC_considers_utilization",
     "oom_retries": 3,
     "oom_backoff_seconds": [
       60,
@@ -476,7 +476,10 @@
     ],
     "workspace": "/data3/dell/Saileron",
     "runtime_cache": ".cache",
-    "runtime_tmp": "tmp"
+    "runtime_tmp": "tmp",
+    "smac_gpu_train_max": 2,
+    "smac_gpu_per_card_max": 1,
+    "smac_next_gpu_utilization_max": 90
   },
   "sources": {
     "transfqmix_commit": "2ef0a0726f1f186097b4b560509ceb5a801fdafe",
@@ -837,5 +840,85 @@
       "t_critical": 4.302652729911275
     },
     "missing_cells": "progress only; excluded from complete aggregates"
+  },
+  "runtime_estimate": {
+    "measured_at": "2026-09-21T18:53:18.153849+00:00",
+    "status": "conditional_planning_estimate",
+    "basis": [
+      "Measured full natural training episodes, formal batch32, and 8 HAD / 4 SMAC updates per collection; diagnostic batches repeat actual episodes to batch32 and are not independent replay samples.",
+      "One initial model seed per GPU architecture for throughput; CPU architecture/seed matrix explicitly covers 0/1/2. Policies are untrained; long-run trajectory lengths, replay distribution, CPU contention and shared GPU load can change throughput.",
+      "Ranges assume at least one GPU remains available; lower end uses two useful GPUs, upper end uses one useful GPU plus approximately 1.5x throughput allowance. They do not bound indefinite resource waits.",
+      "HAD max3 trainer processes still share only two physical GPUs, so serial GPU work is not divided by3. SMAC starts alone and allows at most2/one per card after memory and utilization admission.",
+      "CPU final and mechanism evaluation share a total cap of4; stage sums are conservative and do not assume two independent four-worker pools. CPU overlap with training may shorten elapsed time."
+    ],
+    "cpu_evaluation_concurrency": 4,
+    "had": {
+      "training_seconds": [
+        136800,
+        406800
+      ],
+      "validation_seconds": [
+        1080.0,
+        7200
+      ],
+      "evaluation_seconds": [
+        10800,
+        86400
+      ],
+      "mechanism_seconds": [
+        10800,
+        50400
+      ],
+      "stage_seconds": [
+        159480.0,
+        550800
+      ],
+      "concurrency": 3,
+      "reference_remaining": {
+        "training_steps": 11963643,
+        "validation_episodes": 59900,
+        "final_episodes": 101010,
+        "mechanism_episodes": 24444,
+        "depth_episodes": 12250,
+        "readout_episodes": 11700,
+        "probe_scenes_remaining": 494
+      },
+      "evaluation_basis": "Existing formal CPU logs: small-N REFIL about0.21s/episode and QMIX-Atten about0.275; actual regir_nocount seed0 50v50 K2 yielded37 consecutive episodes over112s/36 intervals=3.111s/episode. Remaining101010 final episodes across4 total CPU workers; all model/scale combinations not individually timed.",
+      "mechanism_basis": "Remaining12250 independent depth and11700 readout episodes plus public probe scenes; observed R1 CPU approximately0.76-0.79s/episode, higher-depth and larger-N costs bounded by assumptions. Probe feature/fitting and M4 cost measurement add an unmeasured1-4h allowance within the3-14h mechanism range."
+    },
+    "smacv2": {
+      "training_seconds": [
+        320400,
+        961200
+      ],
+      "validation_seconds": [
+        43200,
+        129600
+      ],
+      "evaluation_seconds": [
+        39600,
+        90000
+      ],
+      "mechanism_seconds": [
+        0,
+        0
+      ],
+      "stage_seconds": [
+        403200,
+        1180800
+      ],
+      "concurrency": 2,
+      "reference_remaining": {
+        "training_steps": 48000000,
+        "validation_episodes": 61440,
+        "final_episodes": 28800,
+        "mechanism_episodes": 0
+      },
+      "evaluation_basis": "Four actual CPU20v20 native-capacity complete episodes, one per formal architecture, each5.53-5.78s including fresh SC2 launch;28800 registered final episodes /4 CPU workers. Other scales and learned long-lived policies may differ."
+    },
+    "overall_seconds": [
+      562680.0,
+      1731600
+    ]
   }
 }

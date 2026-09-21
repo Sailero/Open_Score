@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import time
+import uuid
 
 import numpy as np
 
@@ -162,6 +163,7 @@ def collect_state_bank(output, stop_requested=None, on_progress=None):
         if not manifest.exists():
             atomic_json(manifest, contract)
         policies = {}
+        collection_id = uuid.uuid4().hex
         completed = 0
         for job in scene_jobs():
             _check_stop(stop_requested)
@@ -176,14 +178,19 @@ def collect_state_bank(output, stop_requested=None, on_progress=None):
                 continue
             method = job["behavior"]
             if method not in policies:
-                policies[method] = load_policy(method, identities[method]["path"])
-                policies[method].set_device("cpu")
+                policy = load_policy(method, identities[method]["path"])
+                policy.set_device("cpu")
                 if method == "regir":
-                    policies[method].set_eval_depth(4)
-            recording = _RecordingPolicy(policies[method], stop_requested)
-            name = f"main0921_probe_{method}_{os.getpid()}"
-            register_end_to_end_policy("red", name, "shared public relationship-probe trajectory",
-                                       lambda _seed, wrapped=recording: wrapped)
+                    policy.set_eval_depth(4)
+                recording = _RecordingPolicy(policy, stop_requested)
+                name = f"main0921_probe_{method}_{collection_id}"
+                # The process-wide registry rejects duplicate names. Reuse one
+                # recorder per behavior; run_episode resets it before each scene.
+                # A new collection ID also permits stop/resume in this process.
+                register_end_to_end_policy("red", name, "shared public relationship-probe trajectory",
+                                           lambda _seed, wrapped=recording: wrapped)
+                policies[method] = recording, name
+            recording, name = policies[method]
             red, blue, targets = job["config"]
             result = run_episode(targets=targets, red=red, blue=blue, seed=job["episode_seed"],
                                  red_strategy={"architecture": "end_to_end", "policy": name},

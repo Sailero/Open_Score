@@ -1,0 +1,16 @@
+{
+  "env": "had",
+  "method": "transfqmix",
+  "seed": 0,
+  "t_env": 12978,
+  "budget_steps": 1000000,
+  "cuda_peak_reserved_gib": 6.458984375,
+  "cuda_reserved_gib": 6.458984375,
+  "status": "stopped",
+  "pid": 2023452,
+  "updated_at": 1790015967.36072,
+  "training_updates": 256,
+  "physical_gpu": 1,
+  "safe_checkpoint_t_env": 12978,
+  "estimate_ready": true
+}

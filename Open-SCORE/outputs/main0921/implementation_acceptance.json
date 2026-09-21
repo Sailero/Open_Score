@@ -454,5 +454,1253 @@
       "evidence": "root observed stop request and exit; reviewer independently checked both PIDs absent"
     },
     "checked_at": "2026-09-21T18:32:15.098902+00:00"
+  },
+  "matrix_smoke_runtime": {
+    "status": "passed",
+    "checked_at": "2026-09-21T18:53:18.153849+00:00",
+    "scope": "24 explicit model-seed CPU smoke combinations; per-architecture GPU smoke and full-natural-episode throughput; no formal training run or formal evaluation quotas added",
+    "cpu_matrix": [
+      {
+        "env": "had",
+        "method": "transfqmix",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 1.382816825993359
+      },
+      {
+        "env": "had",
+        "method": "regir_fixed4",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 4.5582989669637755
+      },
+      {
+        "env": "had",
+        "method": "regir_untied4",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 4.264259792980738
+      },
+      {
+        "env": "had",
+        "method": "regir_kv0",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 1.635965446010232
+      },
+      {
+        "env": "had",
+        "method": "transfqmix",
+        "seed": 1,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 0.5009603669168428
+      },
+      {
+        "env": "had",
+        "method": "regir_fixed4",
+        "seed": 1,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 4.520957051077858
+      },
+      {
+        "env": "had",
+        "method": "regir_untied4",
+        "seed": 1,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 4.173092299955897
+      },
+      {
+        "env": "had",
+        "method": "regir_kv0",
+        "seed": 1,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 1.7481670130509883
+      },
+      {
+        "env": "had",
+        "method": "transfqmix",
+        "seed": 2,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 0.48637209995649755
+      },
+      {
+        "env": "had",
+        "method": "regir_fixed4",
+        "seed": 2,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 4.3914375270251185
+      },
+      {
+        "env": "had",
+        "method": "regir_untied4",
+        "seed": 2,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 4.009181141038425
+      },
+      {
+        "env": "had",
+        "method": "regir_kv0",
+        "seed": 2,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 3.395350283011794
+      },
+      {
+        "env": "smacv2",
+        "method": "regir",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 7.180267445044592
+      },
+      {
+        "env": "smacv2",
+        "method": "regir_r1",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 6.496809520991519
+      },
+      {
+        "env": "smacv2",
+        "method": "refil",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 5.769536601030268
+      },
+      {
+        "env": "smacv2",
+        "method": "transfqmix",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 5.405538614024408
+      },
+      {
+        "env": "smacv2",
+        "method": "regir",
+        "seed": 1,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 8.582276663044468
+      },
+      {
+        "env": "smacv2",
+        "method": "regir_r1",
+        "seed": 1,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 6.571717901038937
+      },
+      {
+        "env": "smacv2",
+        "method": "refil",
+        "seed": 1,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 5.757881233934313
+      },
+      {
+        "env": "smacv2",
+        "method": "transfqmix",
+        "seed": 1,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 5.440744476974942
+      },
+      {
+        "env": "smacv2",
+        "method": "regir",
+        "seed": 2,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 6.731734045082703
+      },
+      {
+        "env": "smacv2",
+        "method": "regir_r1",
+        "seed": 2,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 6.635898592998274
+      },
+      {
+        "env": "smacv2",
+        "method": "refil",
+        "seed": 2,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 5.736662216950208
+      },
+      {
+        "env": "smacv2",
+        "method": "transfqmix",
+        "seed": 2,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 5.507303239079192
+      }
+    ],
+    "had_gpu_architecture_smoke": [
+      {
+        "env": "had",
+        "method": "transfqmix",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 8,
+        "physical_steps": 32,
+        "batch_size": 32,
+        "sequence_length": 5,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "peak_reserved_gib": 0.35546875,
+        "seconds": 0.5456084599718451,
+        "scope": "short sequence architecture/GPU smoke; not throughput or worst-case memory estimate"
+      },
+      {
+        "env": "had",
+        "method": "regir_fixed4",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 8,
+        "physical_steps": 32,
+        "batch_size": 32,
+        "sequence_length": 5,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "peak_reserved_gib": 0.927734375,
+        "seconds": 0.18315550405532122,
+        "scope": "short sequence architecture/GPU smoke; not throughput or worst-case memory estimate"
+      },
+      {
+        "env": "had",
+        "method": "regir_untied4",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 8,
+        "physical_steps": 32,
+        "batch_size": 32,
+        "sequence_length": 5,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "peak_reserved_gib": 0.927734375,
+        "seconds": 0.13359889795538038,
+        "scope": "short sequence architecture/GPU smoke; not throughput or worst-case memory estimate"
+      },
+      {
+        "env": "had",
+        "method": "regir_kv0",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 8,
+        "physical_steps": 32,
+        "batch_size": 32,
+        "sequence_length": 5,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "peak_reserved_gib": 0.869140625,
+        "seconds": 0.12434518290683627,
+        "scope": "short sequence architecture/GPU smoke; not throughput or worst-case memory estimate"
+      }
+    ],
+    "had_full_gpu_throughput": [
+      {
+        "env": "had",
+        "method": "transfqmix",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 8,
+        "physical_steps": 407,
+        "collection_seconds": 0.6745677789440379,
+        "episode_lengths": [
+          42,
+          79,
+          43,
+          36,
+          74,
+          48,
+          41,
+          44
+        ],
+        "batch_size": 32,
+        "sequence_length": 80,
+        "episode_limit": 100,
+        "finite_td": true,
+        "update_seconds": [
+          0.7498797250445932,
+          0.48961987800430506
+        ],
+        "formal_updates_per_collection": 8,
+        "validation_seconds": 0.48340813105460256,
+        "validation_episodes": 8,
+        "validation_lengths": [
+          100,
+          60,
+          44,
+          46,
+          40,
+          66,
+          43,
+          44
+        ],
+        "peak_reserved_gib": 5.12109375
+      },
+      {
+        "env": "had",
+        "method": "regir_fixed4",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 8,
+        "physical_steps": 405,
+        "collection_seconds": 0.512216386036016,
+        "episode_lengths": [
+          42,
+          64,
+          49,
+          36,
+          65,
+          64,
+          41,
+          44
+        ],
+        "batch_size": 32,
+        "sequence_length": 66,
+        "episode_limit": 100,
+        "finite_td": true,
+        "update_seconds": [
+          1.2701682430924848,
+          1.268331415951252
+        ],
+        "formal_updates_per_collection": 8,
+        "validation_seconds": 0.7686955960234627,
+        "validation_episodes": 8,
+        "validation_lengths": [
+          100,
+          67,
+          44,
+          46,
+          41,
+          63,
+          47,
+          43
+        ],
+        "peak_reserved_gib": 9.181640625
+      },
+      {
+        "env": "had",
+        "method": "regir_untied4",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 8,
+        "physical_steps": 388,
+        "collection_seconds": 0.49808811000548303,
+        "episode_lengths": [
+          42,
+          64,
+          49,
+          36,
+          48,
+          64,
+          41,
+          44
+        ],
+        "batch_size": 32,
+        "sequence_length": 65,
+        "episode_limit": 100,
+        "finite_td": true,
+        "update_seconds": [
+          1.1854528830153868,
+          1.2684539750916883
+        ],
+        "formal_updates_per_collection": 8,
+        "validation_seconds": 0.7846807099413127,
+        "validation_episodes": 8,
+        "validation_lengths": [
+          100,
+          67,
+          44,
+          46,
+          41,
+          63,
+          47,
+          43
+        ],
+        "peak_reserved_gib": 9.2578125
+      },
+      {
+        "env": "had",
+        "method": "regir_kv0",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 8,
+        "physical_steps": 388,
+        "collection_seconds": 0.5066492879996076,
+        "episode_lengths": [
+          42,
+          64,
+          49,
+          36,
+          48,
+          64,
+          41,
+          44
+        ],
+        "batch_size": 32,
+        "sequence_length": 65,
+        "episode_limit": 100,
+        "finite_td": true,
+        "update_seconds": [
+          0.9714700689073652,
+          1.276657440001145
+        ],
+        "formal_updates_per_collection": 8,
+        "validation_seconds": 0.7668881081044674,
+        "validation_episodes": 8,
+        "validation_lengths": [
+          100,
+          67,
+          44,
+          46,
+          41,
+          63,
+          47,
+          43
+        ],
+        "peak_reserved_gib": 9.23828125
+      }
+    ],
+    "smac_full_gpu_throughput": [
+      {
+        "method": "regir",
+        "model_seed": 0,
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 4,
+        "episode_limit": 200,
+        "batch_size": 32,
+        "sequence_length": 74,
+        "collections": [
+          {
+            "seconds": 5.991114757955074,
+            "physical_steps": 213,
+            "episode_lengths": [
+              47,
+              49,
+              55,
+              62
+            ]
+          },
+          {
+            "seconds": 0.7663056099554524,
+            "physical_steps": 228,
+            "episode_lengths": [
+              52,
+              50,
+              73,
+              53
+            ]
+          }
+        ],
+        "update_seconds": [
+          1.4052550870692357,
+          0.8991600710432976
+        ],
+        "formal_updates_per_collection": 4,
+        "validation_seconds": 5.8922765859169886,
+        "validation_episodes": 4,
+        "validation_lengths": [
+          44,
+          59,
+          64,
+          68
+        ],
+        "peak_reserved_gib": 9.34375,
+        "finite_td": true
+      },
+      {
+        "method": "regir_r1",
+        "model_seed": 0,
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 4,
+        "episode_limit": 200,
+        "batch_size": 32,
+        "sequence_length": 70,
+        "collections": [
+          {
+            "seconds": 0.597523620002903,
+            "physical_steps": 211,
+            "episode_lengths": [
+              47,
+              47,
+              57,
+              60
+            ]
+          },
+          {
+            "seconds": 0.6415607070084661,
+            "physical_steps": 221,
+            "episode_lengths": [
+              48,
+              46,
+              69,
+              58
+            ]
+          }
+        ],
+        "update_seconds": [
+          0.6306837239535525,
+          0.6087158160516992
+        ],
+        "formal_updates_per_collection": 4,
+        "validation_seconds": 5.717190057970583,
+        "validation_episodes": 4,
+        "validation_lengths": [
+          40,
+          68,
+          64,
+          68
+        ],
+        "peak_reserved_gib": 7.927734375,
+        "finite_td": true
+      },
+      {
+        "method": "refil",
+        "model_seed": 0,
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 4,
+        "episode_limit": 200,
+        "batch_size": 32,
+        "sequence_length": 78,
+        "collections": [
+          {
+            "seconds": 0.5181884160265326,
+            "physical_steps": 224,
+            "episode_lengths": [
+              50,
+              49,
+              63,
+              62
+            ]
+          },
+          {
+            "seconds": 0.5590887439902872,
+            "physical_steps": 250,
+            "episode_lengths": [
+              54,
+              59,
+              77,
+              60
+            ]
+          }
+        ],
+        "update_seconds": [
+          0.25412119005341083,
+          0.24434821505565196
+        ],
+        "formal_updates_per_collection": 4,
+        "validation_seconds": 5.4834641319466755,
+        "validation_episodes": 4,
+        "validation_lengths": [
+          40,
+          67,
+          64,
+          76
+        ],
+        "peak_reserved_gib": 3.255859375,
+        "finite_td": true
+      },
+      {
+        "method": "transfqmix",
+        "model_seed": 0,
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 4,
+        "episode_limit": 200,
+        "batch_size": 32,
+        "sequence_length": 66,
+        "collections": [
+          {
+            "seconds": 0.4606444340897724,
+            "physical_steps": 221,
+            "episode_lengths": [
+              49,
+              52,
+              62,
+              58
+            ]
+          },
+          {
+            "seconds": 0.4912446750095114,
+            "physical_steps": 232,
+            "episode_lengths": [
+              54,
+              53,
+              65,
+              60
+            ]
+          }
+        ],
+        "update_seconds": [
+          0.5188657230464742,
+          0.44366059091407806
+        ],
+        "formal_updates_per_collection": 4,
+        "validation_seconds": 5.557062890031375,
+        "validation_episodes": 4,
+        "validation_lengths": [
+          88,
+          48,
+          71,
+          49
+        ],
+        "peak_reserved_gib": 3.814453125,
+        "finite_td": true
+      }
+    ],
+    "smac_cpu20_final_interface": [
+      {
+        "method": "regir",
+        "model_seed": 0,
+        "config": [
+          20,
+          20,
+          0
+        ],
+        "device": "cpu",
+        "workers": 1,
+        "episode_limit": 200,
+        "seconds": 5.777436522068456,
+        "episode_length": 77,
+        "battle_won": false,
+        "n_agents": 20
+      },
+      {
+        "method": "regir_r1",
+        "model_seed": 0,
+        "config": [
+          20,
+          20,
+          0
+        ],
+        "device": "cpu",
+        "workers": 1,
+        "episode_limit": 200,
+        "seconds": 5.645251195994206,
+        "episode_length": 77,
+        "battle_won": false,
+        "n_agents": 20
+      },
+      {
+        "method": "refil",
+        "model_seed": 0,
+        "config": [
+          20,
+          20,
+          0
+        ],
+        "device": "cpu",
+        "workers": 1,
+        "episode_limit": 200,
+        "seconds": 5.530926530016586,
+        "episode_length": 77,
+        "battle_won": false,
+        "n_agents": 20
+      },
+      {
+        "method": "transfqmix",
+        "model_seed": 0,
+        "config": [
+          20,
+          20,
+          0
+        ],
+        "device": "cpu",
+        "workers": 1,
+        "episode_limit": 200,
+        "seconds": 5.53410774609074,
+        "episode_length": 72,
+        "battle_won": false,
+        "n_agents": 20
+      }
+    ],
+    "throughput": {
+      "had": {
+        "transfqmix": {
+          "physical_steps_per_second": [
+            60.98652297678083,
+            88.64153852613538
+          ],
+          "validation_seconds_per_episode": 0.06042601638182532,
+          "formula": "physical_steps / (warm collection seconds + formal updates per collection * measured batch32 update seconds)"
+        },
+        "regir_fixed4": {
+          "physical_steps_per_second": [
+            37.944220256458586,
+            37.996531233941305
+          ],
+          "validation_seconds_per_episode": 0.09608694950293284,
+          "formula": "physical_steps / (warm collection seconds + formal updates per collection * measured batch32 update seconds)"
+        },
+        "regir_untied4": {
+          "physical_steps_per_second": [
+            36.446572261270994,
+            38.871090660852865
+          ],
+          "validation_seconds_per_episode": 0.09808508874266408,
+          "formula": "physical_steps / (warm collection seconds + formal updates per collection * measured batch32 update seconds)"
+        },
+        "regir_kv0": {
+          "physical_steps_per_second": [
+            36.194337745683804,
+            46.86890447969799
+          ],
+          "validation_seconds_per_episode": 0.09586101351305842,
+          "formula": "physical_steps / (warm collection seconds + formal updates per collection * measured batch32 update seconds)"
+        }
+      },
+      "smacv2": {
+        "regir": {
+          "physical_steps_per_second": [
+            35.69568885178609,
+            52.25826896153513
+          ],
+          "validation_seconds_per_episode": 1.4730691464792471,
+          "formula": "physical_steps / (warm collection seconds + formal updates per collection * measured batch32 update seconds)"
+        },
+        "regir_r1": {
+          "physical_steps_per_second": [
+            69.84176819727566,
+            71.83665257708273
+          ],
+          "validation_seconds_per_episode": 1.4292975144926459,
+          "formula": "physical_steps / (warm collection seconds + formal updates per collection * measured batch32 update seconds)"
+        },
+        "refil": {
+          "physical_steps_per_second": [
+            158.672381410929,
+            162.70940004392006
+          ],
+          "validation_seconds_per_episode": 1.3708660329866689,
+          "formula": "physical_steps / (warm collection seconds + formal updates per collection * measured batch32 update seconds)"
+        },
+        "transfqmix": {
+          "physical_steps_per_second": [
+            90.38817002963135,
+            102.38815794480375
+          ],
+          "validation_seconds_per_episode": 1.3892657225078437,
+          "formula": "physical_steps / (warm collection seconds + formal updates per collection * measured batch32 update seconds)"
+        }
+      }
+    },
+    "verification_details": [
+      "CPU matrix uses actual method rollout, finite gradients, parameter changes, validation-mode Q outputs, and serialized network/optimizer/runner round-trip. Full next-update RNG equivalence remains covered by prior implementation and OOM transaction checks.",
+      "CPU model seeds0/1/2 are explicit; environment-worker processes are reused with explicit scenario seeds and mixed4/6/8/10 configurations. Native engine seed/config acceptance remains covered by earlier33 checks.",
+      "GPU throughput uses model seed0,2 updates per architecture and full natural episodes; episode_limit remains100 HAD/200 SMAC. It is not a200-step SMAC worst-memory proof.",
+      "Earlier GPU TD evidence with unrecorded model seeds is retained unchanged; current GPU rows now explicitly record seed0.",
+      "Latest modified core imports, syntax and all24 load_config interfaces rechecked after root validation-counter change."
+    ],
+    "gpu_monitor": {
+      "physical_gpu": 0,
+      "samples": 39,
+      "mean_utilization_percent": 12.384615384615385,
+      "max_utilization_percent": 97.0,
+      "minimum_free_gib": 28.1142578125,
+      "interpretation": "Short measurement includes fresh-game startup and validation idle time; mean utilization does not justify a third trainer. Warm training updates dominate estimated cycle time."
+    },
+    "had_cpu_large_scale_existing_evidence": {
+      "method": "regir_nocount",
+      "seed": 0,
+      "config": [
+        50,
+        50,
+        2
+      ],
+      "phase": "final",
+      "episodes": 37,
+      "first_recorded_at": "2026-09-21T18:33:53+00:00",
+      "last_recorded_at": "2026-09-21T18:35:45+00:00",
+      "seconds": 112,
+      "intervals": 36,
+      "seconds_per_episode": 3.111111111111111,
+      "source": "existing episodes.csv; no additional episodes"
+    },
+    "runtime_estimate": {
+      "measured_at": "2026-09-21T18:53:18.153849+00:00",
+      "status": "conditional_planning_estimate",
+      "basis": [
+        "Measured full natural training episodes, formal batch32, and 8 HAD / 4 SMAC updates per collection; diagnostic batches repeat actual episodes to batch32 and are not independent replay samples.",
+        "One initial model seed per GPU architecture for throughput; CPU architecture/seed matrix explicitly covers 0/1/2. Policies are untrained; long-run trajectory lengths, replay distribution, CPU contention and shared GPU load can change throughput.",
+        "Ranges assume at least one GPU remains available; lower end uses two useful GPUs, upper end uses one useful GPU plus approximately 1.5x throughput allowance. They do not bound indefinite resource waits.",
+        "HAD max3 trainer processes still share only two physical GPUs, so serial GPU work is not divided by3. SMAC starts alone and allows at most2/one per card after memory and utilization admission.",
+        "CPU final and mechanism evaluation share a total cap of4; stage sums are conservative and do not assume two independent four-worker pools. CPU overlap with training may shorten elapsed time."
+      ],
+      "cpu_evaluation_concurrency": 4,
+      "had": {
+        "training_seconds": [
+          136800,
+          406800
+        ],
+        "validation_seconds": [
+          1080.0,
+          7200
+        ],
+        "evaluation_seconds": [
+          10800,
+          86400
+        ],
+        "mechanism_seconds": [
+          10800,
+          50400
+        ],
+        "stage_seconds": [
+          159480.0,
+          550800
+        ],
+        "concurrency": 3,
+        "reference_remaining": {
+          "training_steps": 11963643,
+          "validation_episodes": 59900,
+          "final_episodes": 101010,
+          "mechanism_episodes": 24444,
+          "depth_episodes": 12250,
+          "readout_episodes": 11700,
+          "probe_scenes_remaining": 494
+        },
+        "evaluation_basis": "Existing formal CPU logs: small-N REFIL about0.21s/episode and QMIX-Atten about0.275; actual regir_nocount seed0 50v50 K2 yielded37 consecutive episodes over112s/36 intervals=3.111s/episode. Remaining101010 final episodes across4 total CPU workers; all model/scale combinations not individually timed.",
+        "mechanism_basis": "Remaining12250 independent depth and11700 readout episodes plus public probe scenes; observed R1 CPU approximately0.76-0.79s/episode, higher-depth and larger-N costs bounded by assumptions. Probe feature/fitting and M4 cost measurement add an unmeasured1-4h allowance within the3-14h mechanism range."
+      },
+      "smacv2": {
+        "training_seconds": [
+          320400,
+          961200
+        ],
+        "validation_seconds": [
+          43200,
+          129600
+        ],
+        "evaluation_seconds": [
+          39600,
+          90000
+        ],
+        "mechanism_seconds": [
+          0,
+          0
+        ],
+        "stage_seconds": [
+          403200,
+          1180800
+        ],
+        "concurrency": 2,
+        "reference_remaining": {
+          "training_steps": 48000000,
+          "validation_episodes": 61440,
+          "final_episodes": 28800,
+          "mechanism_episodes": 0
+        },
+        "evaluation_basis": "Four actual CPU20v20 native-capacity complete episodes, one per formal architecture, each5.53-5.78s including fresh SC2 launch;28800 registered final episodes /4 CPU workers. Other scales and learned long-lived policies may differ."
+      },
+      "overall_seconds": [
+        562680.0,
+        1731600
+      ]
+    },
+    "temporary_files_cleaned": true
+  },
+  "probe_first_scene": {
+    "status": "passed",
+    "trajectory": "trajectories/scene_200000.json.gz",
+    "checkpoint_id": "b817b949ab93410bbf190bcea9ca4483",
+    "model_seed": 0,
+    "config": [
+      10,
+      10,
+      2
+    ],
+    "threads": 1,
+    "new_trajectories": 0,
+    "fitting_performed": false,
+    "behavior_prefix_checks": {
+      "frames": 44,
+      "live_behavior_actions": 185,
+      "stored_actions": 440,
+      "previous_action_inputs": 430
+    },
+    "selected_times": [
+      0,
+      13,
+      26,
+      39
+    ],
+    "X_shape": [
+      30,
+      5,
+      64
+    ],
+    "y_shape": [
+      30,
+      3
+    ],
+    "defined_labels": {
+      "nearest_target_distance": 30,
+      "nearest_other_defender_distance": 28,
+      "nearest_target_region_imbalance": 30
+    },
+    "exclusions": {
+      "nearest_other_defender_distance:no_other_visible_defender": 2
+    },
+    "independent_label_max_abs_error": 0.0,
+    "feature_path": "features/seed_0/trained/scene_200000.pt",
+    "reusable_by_evaluate_probe": true
+  },
+  "probe_collection_registration": {
+    "status": "passed",
+    "root_cause": "collector registered identical policy name per episode in a process-global registry",
+    "fix": "one resettable recorder/registration per behavior and collection call; unique collection ID for same-process resume",
+    "same_process_collections": 2,
+    "unique_registrations": 3,
+    "existing_trajectories_unchanged": 2,
+    "added_authorized_scenes": [
+      {
+        "seed": 200002,
+        "behavior": "regir",
+        "steps": 44
+      },
+      {
+        "seed": 200003,
+        "behavior": "regir",
+        "steps": 40
+      },
+      {
+        "seed": 200004,
+        "behavior": "regir",
+        "steps": 46
+      },
+      {
+        "seed": 200050,
+        "behavior": "refil",
+        "steps": 34
+      }
+    ],
+    "public_bank_completed": 6,
+    "public_bank_budget": 500,
+    "temporary_script_removed": true
+  },
+  "latest_resource_limits": {
+    "status": "passed",
+    "had_total": 3,
+    "had_per_card": 2,
+    "smac_total": 2,
+    "smac_per_card": 1,
+    "smac_second_card_utilization_below_percent": 90,
+    "cpu_evaluation_and_mechanism_total": 4,
+    "verified": [
+      "HAD admits third only with memory margin",
+      "HAD denies fourth",
+      "single-card HAD denies third",
+      "SMAC busy second GPU waits",
+      "SMAC eligible second GPU admitted",
+      "CPU fifth task denied even when caller asks16",
+      "profile eval CLI rejects max_concurrent5"
+    ],
+    "scientific_batch_sizes_unchanged": {
+      "had": 8,
+      "smacv2": 4
+    }
+  },
+  "launch_dashboard_acceptance": {
+    "checked_at": "2026-09-21T19:04:36.891572+00:00",
+    "status": "passed",
+    "registered_tasks": 124,
+    "registered_training_tasks": 57,
+    "prelaunch_completed_tasks": 63,
+    "prelaunch_completed_training_tasks": 33,
+    "actual_status_once": {
+      "exit_code": 0,
+      "seconds": 0.2,
+      "loads_models": false,
+      "scans_episode_csv": false
+    },
+    "dashboard_cases": [
+      "TTY compact 80x24 and wider dimensions; full --once output",
+      "PID exit and stale snapshot are not running",
+      "completed_ids require registered env/kind, newer snapshot and live parent or completed/stopped final status",
+      "independent episode coverage excludes alias reuse",
+      "paused queues do not decrement ETA by elapsed calendar time"
+    ],
+    "scheduler_exception_cases": [
+      "injected parent admission failure preserves original exception and publishes failed",
+      "injected eval scan failure preserves original exception and publishes failed",
+      "SIGINT/SIGTERM handlers restored and child queues drained"
+    ],
+    "paired_validation_telemetry": {
+      "cases": [
+        "normal",
+        "stop after committed group",
+        "runner failure",
+        "CSV write failure",
+        "all validation episodes reused"
+      ],
+      "status": "passed",
+      "rng_restored": true,
+      "legacy_resume_without_paired_fields": [
+        0,
+        0
+      ],
+      "eta_uses_only_committed_measured_episode_time_pair": true
+    },
+    "completion_qualification": "train scheduler validates actual final.pt budget/config/artifact identity before publishing completed_ids; eval uses quota-qualified scan",
+    "verification_scope": "Root CLI/status/source verification plus scoped agent mocks recorded in this session; no additional formal training or evaluation quota for these checks",
+    "cleanup": "This round matrix smoke directory, temporary test scripts, temporary fixtures and duplicate first-scene acceptance removed after merging evidence here; pre-existing unique main history and required runtime caches retained"
   }
 }

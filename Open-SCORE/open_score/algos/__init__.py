@@ -588,7 +588,9 @@ def train(name, cfg):
         signal.signal(sig, request_stop)
     state = dict(episode_num=0, updates=0, next_eval=1,
                  best_score=-float("inf") if profile and args.env == "smacv2" else float("inf"),
-                 elapsed_seconds=0.0, training_seconds=0.0, status="running")
+                 elapsed_seconds=0.0, training_seconds=0.0, validation_seconds=0.0,
+                 validation_completed_episodes=0, validation_measured_episodes=0,
+                 validation_measured_seconds=0.0, status="running")
     # psutil is already installed in the experiment environment; no new
     # monitoring process or service is started.
     import psutil
@@ -602,6 +604,7 @@ def train(name, cfg):
     safe_checkpoint_path = None
     safe_checkpoint_t_env = 0
     session_complete_batches = 0
+    validation_clock = None
 
     def sample_resources():
         nonlocal resource_previous, resource_latest
@@ -641,6 +644,18 @@ def train(name, cfg):
                 cuda_reserved_gib=resource_latest.get("cuda_reserved_gib", 0.),
                 status=state["status"], pid=os.getpid(), updated_at=time.time(), training_updates=int(state["updates"]),
                 physical_gpu=_physical_gpu(), safe_checkpoint_t_env=int(safe_checkpoint_t_env),
+                current_phase=transaction_phase, training_seconds=state["training_seconds"],
+                training_steps_per_second=(runner.t_env / state["training_seconds"]
+                    if runner is not None and state["training_seconds"] > 0 else None),
+                # Total elapsed validation includes the current unfinished
+                # group; throughput uses only the paired committed counters.
+                validation_seconds=state["validation_seconds"] + (
+                    now - validation_clock if validation_clock is not None else 0.0),
+                validation_completed_episodes=int(state["validation_completed_episodes"]),
+                validation_measured_episodes=int(state["validation_measured_episodes"]),
+                validation_measured_seconds=state["validation_measured_seconds"],
+                validation_total_episodes=5000 if args.env == "had" else 5120,
+                eval_completed=eval_progress["completed"], eval_total=eval_progress["total"],
                 estimate_ready=bool(observed_update)))
         return resource_latest
     started = time.monotonic()
@@ -718,6 +733,12 @@ def train(name, cfg):
                 replay.to("cpu")
                 runner.load_state_dict(saved["runner"])
                 state.update(saved["progress"])
+                if "validation_completed_episodes" not in saved["progress"]:
+                    state["validation_completed_episodes"] = (int(state["next_eval"]) - 1) * (100 if args.env == "had" else 128)
+                if not {"validation_measured_episodes", "validation_measured_seconds"} <= saved["progress"].keys():
+                    # Older snapshots know coverage, but not its matching time.
+                    # Never combine reused CSV episodes with new timing data.
+                    state.update(validation_measured_episodes=0, validation_measured_seconds=0.0)
                 random.setstate(saved["rng"]["python"])
                 np.random.set_state(saved["rng"]["numpy"])
                 th.set_rng_state(saved["rng"]["torch"].cpu())
@@ -817,6 +838,7 @@ def train(name, cfg):
         runner.value_callback = values
 
         def evaluate_jobs(jobs):
+            nonlocal validation_clock
             # Validation must not consume the future training random streams.
             rng = (random.getstate(), np.random.get_state(), th.get_rng_state(),
                    th.cuda.get_rng_state_all() if args.device == "cuda" else [])
@@ -825,11 +847,16 @@ def train(name, cfg):
                                     env=args.env if profile else None)
             pending = remaining_jobs(jobs, previous)
             eval_progress.update(completed=len(jobs) - len(pending), total=len(jobs))
+            validation_clock = time.monotonic()
+            validation_base = (int(jobs[0].get("eval_point", 1)) - 1) * len(jobs) if jobs else 0
+            if profile:
+                state["validation_completed_episodes"] = validation_base + len(jobs) - len(pending)
             fresh = []
             try:
                 for offset in range(0, len(pending), args.batch_size_run):
                     eval_progress["completed"] = len(jobs) - len(pending) + offset
                     group = pending[offset:offset + args.batch_size_run]
+                    measurement_started = time.monotonic()
                     _, summaries = runner.run(test_mode=True, jobs=group)
                     rows = [{**summary, **job, "train_dist": "mixed_le10"}
                             for summary, job in zip(summaries, group)]
@@ -837,11 +864,20 @@ def train(name, cfg):
                         if job.get("retain_trajectory") and trajectory is not None:
                             record.trajectories([{**job, "trajectory": trajectory}])
                     record.episodes(rows)
+                    if profile:
+                        eval_progress["completed"] += len(rows)
+                        state["validation_completed_episodes"] = validation_base + eval_progress["completed"]
+                        # Commit the pair only after the corresponding rows are
+                        # stored. Reused rows and interrupted groups add neither.
+                        state["validation_measured_episodes"] += len(rows)
+                        state["validation_measured_seconds"] += time.monotonic() - measurement_started
                     fresh.extend(rows)
                     if stop_requested:
                         break
                 return previous + fresh
             finally:
+                state["validation_seconds"] += time.monotonic() - validation_clock
+                validation_clock = None
                 random.setstate(rng[0]); np.random.set_state(rng[1]); th.set_rng_state(rng[2])
                 if args.device == "cuda":
                     th.cuda.set_rng_state_all(rng[3])

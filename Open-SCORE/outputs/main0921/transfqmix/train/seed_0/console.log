@@ -1,0 +1,40 @@
+[transfqmix] saved resume t_env=0
+[transfqmix] saved resume t_env=338
+[transfqmix] 0:00:10  338/1,000,000  33.8/s  upd=0  L=-  D=-
+[transfqmix] saved resume t_env=743
+[transfqmix] saved resume t_env=1,100
+[transfqmix] 0:00:20  1,470/1,000,000  71.0/s  upd=1  L=2952.4890  D=-
+[transfqmix] saved resume t_env=1,470
+[transfqmix] 0:00:30  1,470/1,000,000  47.7/s  upd=8  L=61.5252  D=-
+[transfqmix] 0:00:40  1,801/1,000,000  44.1/s  upd=16  L=23.9516  D=-
+[transfqmix] 0:00:50  2,183/1,000,000  42.8/s  upd=24  L=94.5727  D=-
+[transfqmix] 0:01:01  2,567/1,000,000  41.8/s  upd=30  L=179.9682  D=-
+[transfqmix] 0:01:12  3,014/1,000,000  41.7/s  upd=36  L=3998.7715  D=-
+[transfqmix] 0:01:22  3,381/1,000,000  41.0/s  upd=43  L=1984.5970  D=-
+[transfqmix] 0:01:32  3,724/1,000,000  40.2/s  upd=51  L=465.7122  D=-
+[transfqmix] 0:01:42  4,038/1,000,000  39.3/s  upd=60  L=2938.9661  D=-
+[transfqmix] 0:01:53  4,392/1,000,000  38.8/s  upd=68  L=588.9235  D=-
+[transfqmix] 0:02:03  4,813/1,000,000  38.9/s  upd=75  L=4625.3369  D=-
+[transfqmix] 0:02:14  5,181/1,000,000  38.6/s  upd=83  L=1803.0364  D=-
+[transfqmix] 0:02:24  5,530/1,000,000  38.3/s  upd=91  L=124.3590  D=-
+[transfqmix] 0:02:34  5,895/1,000,000  38.1/s  upd=100  L=16.4217  D=-
+[transfqmix] 0:02:45  6,231/1,000,000  37.7/s  upd=110  L=29.0174  D=-
+[transfqmix] 0:02:55  6,583/1,000,000  37.5/s  upd=120  L=2722.5344  D=-
+[transfqmix] 0:03:05  7,046/1,000,000  37.9/s  upd=127  L=4276.1777  D=-
+[transfqmix] 0:03:16  7,411/1,000,000  37.7/s  upd=136  L=2157.7483  D=-
+[transfqmix] 0:03:26  7,757/1,000,000  37.6/s  upd=144  L=526.5951  D=-
+[transfqmix] 0:03:36  8,109/1,000,000  37.4/s  upd=152  L=312.2858  D=-
+[transfqmix] 0:03:47  8,562/1,000,000  37.7/s  upd=159  L=199.8251  D=-
+[transfqmix] 0:03:57  8,914/1,000,000  37.5/s  upd=167  L=723.1507  D=-
+[transfqmix] 0:04:08  9,254/1,000,000  37.3/s  upd=176  L=25.3471  D=-
+[transfqmix] 0:04:18  9,612/1,000,000  37.2/s  upd=183  L=44.1582  D=-
+[transfqmix] 0:04:28  9,991/1,000,000  37.2/s  upd=191  L=8.7780  D=-
+[transfqmix] 0:04:38  10,346/1,000,000  37.1/s  upd=199  L=3.4268  D=-
+[transfqmix] 0:04:48  10,811/1,000,000  37.4/s  upd=205  L=143.3215  D=-
+[transfqmix] 0:04:59  11,178/1,000,000  37.3/s  upd=212  L=17.4163  D=-
+[transfqmix] 0:05:09  11,537/1,000,000  37.3/s  upd=219  L=5.4613  D=-
+[transfqmix] 0:05:19  11,872/1,000,000  37.1/s  upd=228  L=8.9666  D=-
+[transfqmix] 0:05:30  12,270/1,000,000  37.2/s  upd=234  L=2.5566  D=-
+[transfqmix] 0:05:40  12,636/1,000,000  37.1/s  upd=242  L=6.4787  D=-
+[transfqmix] 0:05:50  12,978/1,000,000  37.0/s  upd=251  L=6.5074  D=-
+[transfqmix] saved resume t_env=12,978
