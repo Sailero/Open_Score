@@ -248,7 +248,8 @@ def _live_row_from_console(output, item):
         path = Path(output) / method / run / f"seed_{seed}" / "console.log"
         return parse_eval_console(read_tail(path))
     method, run, seed = key[0], key[1], key[2]
-    path = Path(output) / method / run / f"seed_{seed}" / "console.log"
+    from open_score.eval.experiment import run_directory
+    path = run_directory(output, method, seed, item.get("options", {}).get("env", "had"), run) / "console.log"
     return parse_train_console(read_tail(path))
 
 
@@ -390,7 +391,9 @@ def _job_entry(method, options, stop_event, results):
     if gpu is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
     from open_score.algos import train
-    directory = Path(options["output"]) / method / options["run"] / f"seed_{options['seed']}"
+    from open_score.eval.experiment import run_directory
+    directory = run_directory(options["output"], method, options["seed"],
+                              options.get("env", "had"), options["run"])
     directory.mkdir(parents=True, exist_ok=True)
     payload = {key: value for key, value in options.items() if key != "cuda_visible_devices"}
     with (directory / "console.log").open("a", encoding="utf-8", buffering=1) as log:
@@ -399,15 +402,28 @@ def _job_entry(method, options, stop_event, results):
                 with _exclusive_job(method, options["run"], options["seed"], lock_dir=directory):
                     result = train(method, {**payload, "_stop_event": stop_event})
                 results.put(dict(method=method, run=options["run"], seed=options["seed"],
-                                 status="stopped" if stop_event.is_set() else "completed", checkpoint=result))
+                                 status="completed" if Path(result).name == "final.pt" else "stopped", checkpoint=result))
             except _JobAlreadyRunning as error:
                 print(error, flush=True)
                 results.put(dict(method=method, run=options["run"], seed=options["seed"],
                                  status="skipped", error=str(error)))
-            except BaseException:
+            except BaseException as error:
                 detail = traceback.format_exc()
                 print(detail, flush=True)
-                results.put(dict(method=method, run=options["run"], seed=options["seed"], status="failed", error=detail))
+                from open_score.utils.resources import is_cuda_oom
+                failure = {}
+                path = directory / "failure.json"
+                if path.exists():
+                    try:
+                        failure = json.loads(path.read_text(encoding="utf-8"))
+                    except (OSError, ValueError):
+                        pass
+                recoverable = (options.get("profile") == "main0921" and is_cuda_oom(error)
+                               and failure.get("automatic_recovery")
+                               and Path(failure.get("safe_checkpoint_path", "")).is_file())
+                results.put(dict(method=method, run=options["run"], seed=options["seed"],
+                                 status="resource_wait" if recoverable else "failed",
+                                 error=detail, failure=failure))
 
 
 def _training_finished(directory, row):
@@ -474,6 +490,15 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
     from open_score.utils.logging import read_latest
     from open_score.eval.report import refresh_report, refresh_report_async
     from open_score.eval.protocol import CYCLE_SERIES_METHODS, depth_eval_finished, infer_best_t_env
+    from open_score.eval.experiment import is_profile, run_directory, checkpoint_info
+    from open_score.utils.resources import choose_gpu, gpu_memory
+    profile = is_profile(output)
+    domain = jobs[0][1].get("env", "had") if jobs else "had"
+    devices = tuple(jobs[0][1].get("_devices", (0, 1))) if jobs else (0, 1)
+    if profile:
+        with_depth_eval = with_anchors = False
+        if not 1 <= max_concurrent <= 2:
+            raise ValueError("main0921 admits at most two trainers across the two shared GPUs")
     if max_concurrent < 1 or max_concurrent > 4:
         raise ValueError("Concurrent experiment tasks must be between 1 and 4")
     pending_train, pending_eval = [], []
@@ -485,7 +510,7 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
     lookup = {(method, options["run"], options["seed"]) for method, options in original
               if options and method not in ("anchors", "depth_eval")}
     print(f"scheduler {len(original)} listed jobs", flush=True)
-    latest = read_latest(output, "progress", keys=lookup) if lookup else {}
+    latest = read_latest(output, "progress", keys=lookup, env=domain if profile else None) if lookup else {}
 
     def roster_key(method, options):
         if method == "anchors" or not options:
@@ -524,16 +549,20 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
         add_roster("depth_eval", payload)
 
     for method, options in original:
-        directory = Path(output) / method / options["run"] / f"seed_{options['seed']}"
+        directory = run_directory(output, method, options["seed"], domain, options["run"])
         row = latest.get((method, options["run"], options["seed"]), {})
-        if _training_finished(directory, row) or (
+        qualified = False
+        if profile and (directory / "final.pt").exists():
+            checkpoint_info(directory / "final.pt", method=method, seed=options["seed"], env=domain)
+            qualified = True
+        if qualified or (not profile and (_training_finished(directory, row) or (
                 row.get("status") in ("completed", "complete")
-                and any((directory / name).exists() for name in ("final.pt", "best.pt"))):
+                and any((directory / name).exists() for name in ("final.pt", "best.pt"))))):
             print(f"{method} [{options['run']} seed={options['seed']}] already done", flush=True)
             queue_depth(method, options, pending_eval)
             continue
         key = (method, options["run"], options["seed"])
-        if key in occupied:
+        if not profile and key in occupied:
             print(f"{method} [{options['run']} seed={options['seed']}] already running; skip duplicate", flush=True)
             continue
         if options.get("resume"):
@@ -559,7 +588,7 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
     waiting_train, waiting_eval = deque(pending_train), deque(pending_eval)
     use_ansi = _enable_ansi()
     status_height = 0
-    previous = signal.getsignal(signal.SIGINT)
+    previous = {sig: signal.getsignal(sig) for sig in (signal.SIGINT, signal.SIGTERM)}
     eval_live_status = {}
     pool = [len(pending_train) + len(pending_eval)]
 
@@ -583,20 +612,60 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
             child = context.Process(target=_job_entry, args=(method, options, stop_event, queue))
             identity = (method, options["run"], options["seed"], None)
         child.start()
-        live.append({"child": child, "method": method, "options": options, "key": identity})
+        live.append({"child": child, "method": method, "options": options, "key": identity,
+                     "started_at": time.time()})
 
     def launch():
+        memories = None
+        if profile:
+            memories = {}
+            for gpu in devices:
+                try:
+                    memories[gpu] = gpu_memory(gpu)
+                except Exception:
+                    pass
+            # A recovered job regains normal concurrency only after a newer
+            # complete replay/model/RNG transaction is committed by this PID.
+            for item in live:
+                opts = item["options"]
+                if not opts.get("_recovering"):
+                    continue
+                path = run_directory(output, item["method"], opts["seed"], domain) / "resource.json"
+                try:
+                    row = json.loads(path.read_text(encoding="utf-8"))
+                    if (row.get("pid") == item["child"].pid and row.get("estimate_ready")
+                            and row.get("safe_checkpoint_t_env", 0) > opts.get("_recovery_safe_t_env", 0)):
+                        opts["_recovering"] = False
+                        from open_score.eval.experiment import atomic_json
+                        atomic_json(path.with_name("resource_retry.json"), dict(status="recovered",
+                            automatic_retry=opts.get("_retry_count", 0), physical_gpu=int(opts["cuda_visible_devices"]),
+                            safe_checkpoint_t_env=row["safe_checkpoint_t_env"], updated_at=time.time()))
+                except (OSError, ValueError):
+                    pass
         while waiting_train and train_live() < max_concurrent and not stop_event.is_set():
             picked = None
+            picked_gpu = None
             for index, (method, options) in enumerate(waiting_train):
-                if method == "anchors" or _fits_gpu(method, live):
+                if profile and time.monotonic() < options.get("_not_before", 0):
+                    continue
+                gpu = choose_gpu(output, domain, method, live, devices, memories=memories,
+                                 minimum_peak=options.get("_minimum_peak", 0),
+                                 recovering=options.get("_recovering", False)) if profile else None
+                fits = gpu is not None if profile else _fits_gpu(method, live)
+                if method == "anchors" or fits:
                     picked = index
+                    picked_gpu = gpu
                     break
             if picked is None:
                 break
             method, options = waiting_train[picked]
             del waiting_train[picked]
+            if profile:
+                options["cuda_visible_devices"] = str(picked_gpu)
+                print(f"launch {domain}/{method}/s{options['seed']} on physical GPU{picked_gpu}", flush=True)
             start_train_job(method, options)
+            if profile:
+                continue
             group = _job_group(method)
             if GROUP_MAX_LIVE.get(group, 1) < 2 or train_live() >= max_concurrent:
                 continue
@@ -614,7 +683,8 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
             print(f"{options['target_method']} [{options['run']} seed={options['seed']}] "
                   f"depth_eval started (1:1 R=1..6, beside training)", flush=True)
 
-    signal.signal(signal.SIGINT, request_stop)
+    for sig in previous:
+        signal.signal(sig, request_stop)
     try:
         launch()
         runs = {options["run"] for _, options in original if options}
@@ -638,6 +708,41 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
                 eval_live_status[ident] = result
                 return
             results.append(result)
+            if profile and result.get("status") == "resource_wait":
+                from open_score.eval.experiment import atomic_json
+                key = (result["method"], result["run"], result["seed"])
+                opts = options_by_key[key]
+                attempt = int(opts.get("_retry_count", 0)) + 1
+                failure = result.get("failure") or {}
+                if attempt <= 3 and not stop_event.is_set():
+                    delay = 60 * 2 ** (attempt - 1)
+                    peak = float(failure.get("cuda_peak_reserved_gib") or 0)
+                    requested = float(failure.get("requested_allocation_gib") or 0)
+                    retry = {**opts, "resume": True, "_retry_count": attempt,
+                             "_not_before": time.monotonic() + delay, "_recovering": True,
+                             "_recovery_safe_t_env": int(failure.get("safe_checkpoint_t_env") or 0),
+                             "_minimum_peak": max(float(opts.get("_minimum_peak", 0)), peak + requested)}
+                    options_by_key[key] = retry
+                    waiting_train.appendleft((result["method"], retry))
+                    pool[0] += 1
+                    directory = run_directory(output, result["method"], result["seed"], domain)
+                    atomic_json(directory / "resource_retry.json", dict(status="waiting_for_memory",
+                        automatic_retry=attempt, maximum_retries=3, backoff_seconds=delay,
+                        permitted_gpus=list(devices), safe_checkpoint_path=failure["safe_checkpoint_path"],
+                        safe_checkpoint_t_env=retry["_recovery_safe_t_env"],
+                        minimum_peak_gib=retry["_minimum_peak"], updated_at=time.time()))
+                    print(f"CUDA OOM: {result['method']} s{result['seed']} released its GPU; "
+                          f"retry {attempt}/3 after >= {delay}s and fresh memory admission, "
+                          f"rollback t={retry['_recovery_safe_t_env']}", flush=True)
+                    return
+                if stop_event.is_set():
+                    return
+                atomic_json(run_directory(output, result["method"], result["seed"], domain) / "resource_retry.json",
+                            dict(status="failed", reason="automatic CUDA OOM retries exhausted",
+                                 automatic_retry=3, maximum_retries=3, updated_at=time.time()))
+                result = {**result, "status": "failed", "error": "CUDA OOM automatic retries exhausted; " + result["error"]}
+            if result.get("status") == "stopped":
+                stop_event.set()
             if result.get("kind") == "depth_eval":
                 if result.get("status") == "failed":
                     status_height = 0
@@ -655,6 +760,10 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
             if result.get("status") == "completed":
                 opts = options_by_key.get((result.get("method"), result.get("run"), result.get("seed")))
                 if opts:
+                    if profile and opts.get("_retry_count"):
+                        from open_score.eval.experiment import atomic_json
+                        atomic_json(run_directory(output, result["method"], result["seed"], domain) / "resource_retry.json",
+                                    dict(status="completed", automatic_retry=opts["_retry_count"], updated_at=time.time()))
                     before = len(eval_ids)
                     queue_depth(result["method"], opts, waiting_eval)
                     if len(eval_ids) > before:
@@ -670,6 +779,7 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
                     still.append(item)
                     continue
                 progressed = True
+                child.join()
                 finished.append(item)
                 if child.exitcode not in (None, 0) and child.pid not in abnormal_exits:
                     abnormal_exits.add(child.pid)
@@ -694,17 +804,31 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
                     accept_result(queue.get_nowait())
                 except Empty:
                     break
-            if reap():
-                launch()
+            reap()
+            launch()
             now = time.monotonic()
             if now - last_status >= 3:
                 live_items = [item for item in live if item["method"] != "anchors"]
-                used, total = _gpu_used_gib()
-                gpu_bit = f"  gpu={used:.1f}/{total:.1f}G" if used is not None else ""
+                if profile:
+                    bits = []
+                    for gpu in devices:
+                        try:
+                            memory = gpu_memory(gpu)
+                            bits.append(f"GPU{gpu} free={memory['free']:.1f}G")
+                        except Exception:
+                            bits.append(f"GPU{gpu} unavailable")
+                    gpu_bit = "  " + "  ".join(bits)
+                else:
+                    used, total = _gpu_used_gib()
+                    gpu_bit = f"  gpu={used:.1f}/{total:.1f}G" if used is not None else ""
                 run_bit = f"run={next(iter(runs))}  " if len(runs) == 1 else ""
-                pack = Counter(_job_group(item["method"]) for item in live_items)
-                pack_bit = "  ".join(f"{group}×{count}/{GROUP_MAX_LIVE.get(group, 2)}"
-                                     for group, count in pack.items()) if pack else "idle"
+                if profile:
+                    pack = Counter(item["options"].get("cuda_visible_devices") for item in live_items)
+                    pack_bit = "  ".join(f"GPU{gpu}×{count}" for gpu, count in pack.items()) or "idle"
+                else:
+                    pack = Counter(_job_group(item["method"]) for item in live_items)
+                    pack_bit = "  ".join(f"{group}×{count}/{GROUP_MAX_LIVE.get(group, 2)}"
+                                         for group, count in pack.items()) if pack else "idle"
                 lines = [f"{run_bit}live={train_live()}  {pack_bit}  queue={len(waiting_train)}{gpu_bit}"]
                 if live_items:
                     width = max(len(display_name(item["key"])) for item in live_items)
@@ -758,7 +882,20 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
             raise RuntimeError("An experiment process exited without reporting completion")
         return not stop_event.is_set()
     finally:
-        signal.signal(signal.SIGINT, previous)
+        stop_event.set()
+        # Finish each current collection/update batch and retain full recovery.
+        for item in live:
+            while item["child"].is_alive():
+                # A worker's Queue feeder must be drained before join can
+                # finish, including when the parent itself raises an error.
+                while True:
+                    try:
+                        queue.get_nowait()
+                    except Empty:
+                        break
+                item["child"].join(timeout=1)
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
 
 
 def validate(output):
@@ -1185,6 +1322,7 @@ def run_farm(output, *, steps, batch_size_run, per_gpu=4, status_seconds=300, re
 
 def parser():
     result = argparse.ArgumentParser(description=__doc__)
+    result.add_argument("--profile", choices=("main0921",))
     result.add_argument("--stage", choices=("validate", "e0", "benchmark", "train", "single", "stop", "status", "farm"), required=True)
     result.add_argument("--method", choices=POLICY_METHODS)
     result.add_argument("--group", choices=tuple(METHOD_GROUPS), default="main",
@@ -1205,7 +1343,7 @@ def parser():
     result.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     result.add_argument("--resume", action="store_true")
     result.add_argument("--cpu", action="store_true")
-    result.add_argument("--env", choices=("had", "ff", "rel_overgen"), default="had")
+    result.add_argument("--env", choices=("had", "smacv2", "ff", "rel_overgen"), default="had")
     result.add_argument("--reward-mode", choices=("damage", "friendly"), default="damage",
                         help="damage: learn -ΔD only. friendly: also subtract --friendly-penalty "
                              "per Red-Red collision pair and per extra Red self-destruct beyond "
@@ -1261,18 +1399,92 @@ def require_preparation(output):
         raise SystemExit("run --stage validate first: " + "; ".join(problems))
 
 
+def profile_main(options, output):
+    from open_score.eval.experiment import initialize, methods, budget, SEEDS, scan
+    from open_score.utils.resources import queue_lock, cpu_threads, clear_previous_stop, configure_workspace
+    initialize(output)
+    workspace = configure_workspace()
+    cpu_threads()
+    if options.stage == "status":
+        inventory = scan(output)
+        for task in inventory["tasks"]:
+            print(f"{task['id']:<50} {task['status']:<10} {task['completed']}/{task['total']}")
+        return
+    if options.stage == "validate":
+        from open_score.eval.experiment import validate_integration
+        validate_integration(output, options.env)
+        return
+    if options.stage not in ("train", "single", "farm"):
+        raise SystemExit("main0921 supports train/single/farm, validate, status and stop")
+    if options.env not in ("had", "smacv2"):
+        raise SystemExit("main0921 environments are had and smacv2")
+    devices = tuple(_parse_devices(options.devices or "0,1") or ())
+    if options.cpu or not devices or not set(devices) <= {0, 1}:
+        raise SystemExit("main0921 training uses physical --devices 0,1 (or an explicit subset)")
+    if options.run not in (None, "train") or options.seed not in SEEDS:
+        raise SystemExit("main0921 fixes --run train and seeds 0,1,2")
+    if options.steps not in (None, budget(options.env)):
+        raise SystemExit(f"main0921 {options.env} fixes the budget at {budget(options.env)}")
+    if not 1 <= options.max_concurrent <= 2:
+        raise SystemExit("main0921 allows at most two trainers across the two shared GPUs")
+    workers = options.batch_size_run if "--batch-size-run" in sys.argv else (8 if options.env == "had" else 4)
+    if workers != (8 if options.env == "had" else 4):
+        raise SystemExit("main0921 fixes 8 HAD workers or 4 SMAC workers per trainer")
+    if options.env == "smacv2":
+        pending_had = [task for task in scan(output, env="had")["tasks"] if task["status"] != "complete"]
+        if pending_had:
+            raise SystemExit(f"HAD-first protocol: {len(pending_had)} HAD training/evaluation/cost tasks remain; "
+                             "finish the HAD queue and M4 before formal SMAC training")
+    chosen = methods(options.env)
+    if options.stage == "single":
+        if options.method not in chosen:
+            raise SystemExit("single requires a method in the frozen main0921 environment matrix")
+        chosen = (options.method,)
+    elif options.group != "main":
+        raise SystemExit("main0921 uses its explicit --group main matrix")
+    os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, devices))
+    base = dict(profile="main0921", output=str(output), env=options.env, run="train",
+                t_max=budget(options.env), batch_size_run=workers, use_cuda=True,
+                resume=options.resume, skip_final_eval=True, _devices=devices,
+                reward_mode="damage", friendly_penalty=1.0,
+                concurrency=options.max_concurrent)
+    if options.env == "smacv2":
+        base["env_args"] = {"sc2path": str(workspace / "envs/StarCraftII")}
+    selected_seeds = (options.seed,) if options.stage == "single" else SEEDS
+    jobs = [(method, {**base, "seed": seed}) for method in chosen for seed in selected_seeds]
+    requested_at = time.time()
+    stop_file = output / "stop.request"
+    def new_stop():
+        return stop_file.exists() and stop_file.stat().st_mtime > requested_at
+    with queue_lock(output, "gpu", stop_requested=new_stop):
+        clear_previous_stop(stop_file, requested_at)
+        print(f"main0921 {options.env}: seeds={selected_seeds}, physical GPUs={devices}, max={options.max_concurrent}; "
+              "unknown resource profiles run alone until measured", flush=True)
+        success = run_group(jobs, output, max_concurrent=options.max_concurrent, with_depth_eval=False)
+    if not success:
+        raise SystemExit(130)
+
+
 def main():
     options = parser().parse_args()
     setup_runtime()
     output = options.output.resolve()
+    if options.profile and output == DEFAULT_OUTPUT.resolve():
+        if any(arg == "--output" or arg.startswith("--output=") for arg in sys.argv):
+            raise SystemExit("main0921 must use an independent output, not outputs/main")
+        output = DEFAULT_OUTPUT.parent / "main0921"
     probe_job = options.group == "alma_probe" or options.method in PROBE_METHODS
     if probe_job and output == DEFAULT_OUTPUT.resolve():
         output = PROBE_OUTPUT.resolve()
     if options.stage == "stop":
         output.mkdir(parents=True, exist_ok=True)
-        (output / "stop.request").write_text("Stop after the current complete sampling/learning batch.\n", encoding="utf-8")
+        from open_score.utils.resources import write_stop
+        write_stop(output / "stop.request", "Stop after the current complete sampling/learning batch.")
         print("stop.request written; wait for stopped + resume, do not kill", flush=True)
         return
+    from open_score.eval.experiment import is_profile
+    if options.profile or is_profile(output):
+        return profile_main(options, output)
     if options.stage == "status":
         run_status_board(output)
         return

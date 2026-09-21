@@ -1,1 +1,2 @@
-had-env @ file:///E:/Code/Open_Score_HAD_Workbench
+# Run from projects/ReGIR; use the existing sibling source checkout.
+-e ../HADE

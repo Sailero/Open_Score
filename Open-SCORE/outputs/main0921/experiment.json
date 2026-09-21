@@ -1,0 +1,841 @@
+{
+  "profile": "main0921",
+  "schema_version": 2,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "run": "train",
+  "official_checkpoint": "final",
+  "episodes_per_config": 300,
+  "environments": {
+    "had": {
+      "methods": [
+        "regir",
+        "refil",
+        "b2_qmix_atten",
+        "dcg",
+        "spectra",
+        "alma",
+        "regir_norefil",
+        "regir_nocount",
+        "regir_r1",
+        "regir_last",
+        "refil_matched",
+        "transfqmix",
+        "regir_fixed4",
+        "regir_untied4",
+        "regir_kv0"
+      ],
+      "new_methods": [
+        "transfqmix",
+        "regir_fixed4",
+        "regir_untied4",
+        "regir_kv0"
+      ],
+      "budget": 1000000,
+      "train_N": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "train_K": [
+        1,
+        2,
+        3
+      ],
+      "validation_configs": [
+        [
+          4,
+          4,
+          2
+        ],
+        [
+          6,
+          6,
+          2
+        ],
+        [
+          8,
+          8,
+          2
+        ],
+        [
+          10,
+          10,
+          3
+        ]
+      ],
+      "validation_points": 50,
+      "validation_episodes_per_config": 25,
+      "final_configs": [
+        [
+          4,
+          4,
+          2
+        ],
+        [
+          6,
+          6,
+          2
+        ],
+        [
+          8,
+          8,
+          2
+        ],
+        [
+          10,
+          10,
+          3
+        ],
+        [
+          5,
+          5,
+          2
+        ],
+        [
+          10,
+          10,
+          2
+        ],
+        [
+          15,
+          15,
+          2
+        ],
+        [
+          20,
+          20,
+          2
+        ],
+        [
+          25,
+          25,
+          2
+        ],
+        [
+          30,
+          30,
+          2
+        ],
+        [
+          40,
+          40,
+          2
+        ],
+        [
+          50,
+          50,
+          2
+        ],
+        [
+          10,
+          10,
+          4
+        ],
+        [
+          10,
+          10,
+          6
+        ],
+        [
+          15,
+          15,
+          4
+        ],
+        [
+          15,
+          15,
+          6
+        ],
+        [
+          20,
+          20,
+          4
+        ],
+        [
+          20,
+          20,
+          6
+        ],
+        [
+          30,
+          30,
+          4
+        ],
+        [
+          30,
+          30,
+          6
+        ],
+        [
+          10,
+          10,
+          9
+        ],
+        [
+          10,
+          10,
+          12
+        ],
+        [
+          30,
+          30,
+          9
+        ],
+        [
+          30,
+          30,
+          12
+        ]
+      ],
+      "metric": "D",
+      "direction": "min"
+    },
+    "smacv2": {
+      "methods": [
+        "regir",
+        "regir_r1",
+        "refil",
+        "transfqmix"
+      ],
+      "budget": 4000000,
+      "validation_configs": [
+        [
+          4,
+          4,
+          0
+        ],
+        [
+          6,
+          6,
+          0
+        ],
+        [
+          8,
+          8,
+          0
+        ],
+        [
+          10,
+          10,
+          0
+        ]
+      ],
+      "validation_points": 40,
+      "validation_episodes_per_config": 32,
+      "final_configs": [
+        [
+          5,
+          5,
+          0
+        ],
+        [
+          10,
+          10,
+          0
+        ],
+        [
+          12,
+          12,
+          0
+        ],
+        [
+          15,
+          15,
+          0
+        ],
+        [
+          20,
+          20,
+          0
+        ],
+        [
+          10,
+          11,
+          0
+        ],
+        [
+          10,
+          12,
+          0
+        ],
+        [
+          10,
+          15,
+          0
+        ]
+      ],
+      "metric": "battle_won",
+      "direction": "max",
+      "upstream_commit": "577ab5a2cff2391f8df582da5731ea9cd6adf3c6",
+      "game_version": "4.10.0",
+      "state_last_action": false,
+      "train_N": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "train_scale_sampling": "independent_uniform_per_episode",
+      "team_distribution": {
+        "stalker": 0.45,
+        "zealot": 0.45,
+        "colossus": 0.1
+      },
+      "episode_limit": 200,
+      "timeout_bootstrap": false,
+      "entity_last_action": false,
+      "obs_last_action": false,
+      "obs_agent_id": false,
+      "actor_entity_shape": 32,
+      "state_entity_shape": 18,
+      "actor_roles": [
+        "self",
+        "ally",
+        "enemy"
+      ],
+      "count_types": [
+        "friend=self+ally",
+        "enemy",
+        "target=0"
+      ],
+      "updates_per_collected_episode": 1,
+      "baseline_updates_per_batch": 4,
+      "scene_manifest": "smacv2/scenes/manifest.json",
+      "dependency_lock": "smacv2/scenes/requirements.lock.txt",
+      "python_prefix": "/data3/dell/Saileron/envs/saileron-smac",
+      "source_directory": "/data3/dell/Saileron/projects/SMACv2",
+      "sc2path": "/data3/dell/Saileron/envs/StarCraftII"
+    }
+  },
+  "mechanisms": {
+    "depth_configs": [
+      [
+        10,
+        10,
+        2
+      ],
+      [
+        30,
+        30,
+        2
+      ],
+      [
+        50,
+        50,
+        2
+      ]
+    ],
+    "depths": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "readout_configs": [
+      [
+        10,
+        10,
+        2
+      ],
+      [
+        50,
+        50,
+        2
+      ],
+      [
+        30,
+        30,
+        12
+      ]
+    ],
+    "readouts": [
+      "learned",
+      "read1",
+      "read2",
+      "read3",
+      "read4",
+      "uniform"
+    ],
+    "probe_configs": [
+      [
+        10,
+        10,
+        2
+      ],
+      [
+        10,
+        10,
+        3
+      ],
+      [
+        30,
+        30,
+        2
+      ],
+      [
+        50,
+        50,
+        2
+      ],
+      [
+        30,
+        30,
+        12
+      ]
+    ],
+    "probe_episodes_per_config": 100,
+    "probe_behavior_methods": [
+      "regir",
+      "refil"
+    ],
+    "probe_behavior_seed": 0,
+    "ridge_alphas": [
+      0.0001,
+      0.001,
+      0.01,
+      0.1,
+      1,
+      10,
+      100
+    ],
+    "read1_equivalence_verified": true,
+    "timing_methods": [
+      "refil",
+      "refil_matched",
+      "regir_r1",
+      "regir",
+      "regir_fixed4",
+      "regir_untied4",
+      "regir_kv0",
+      "transfqmix"
+    ],
+    "timing_warmup": 50,
+    "timing_repeats": 200,
+    "read1_equivalence": {
+      "checkpoint_ids": [
+        "b817b949ab93410bbf190bcea9ca4483",
+        "e7aef562b6434239996cd7ecaf56f548",
+        "92c7fda6d9af429bbdb7760ee0142e49"
+      ],
+      "model_seeds": [
+        0,
+        1,
+        2
+      ],
+      "configs": [
+        [
+          4,
+          4,
+          2
+        ],
+        [
+          10,
+          10,
+          3
+        ],
+        [
+          30,
+          30,
+          12
+        ]
+      ],
+      "same_nonzero_h_prev": true,
+      "max_abs_q_error": 0.0,
+      "max_abs_hidden_error": 0.0,
+      "result": "bitwise equal; reuse depth:R1 only at matching registered scenes"
+    }
+  },
+  "resources": {
+    "gpu_ids": [
+      0,
+      1
+    ],
+    "gpu_train_max": 2,
+    "gpu_reserve_gib": 8,
+    "gpu_peak_multiplier": 1.25,
+    "cpu_total_max": 16,
+    "cpu_final_max": 12,
+    "cpu_mechanism_max": 4,
+    "smac_cpu_max": 4,
+    "had_workers": 8,
+    "smac_workers": 4,
+    "gpu_per_card_max": 1,
+    "gpu_selection": "eligible_card_with_most_free_memory_no_fixed_priority",
+    "oom_retries": 3,
+    "oom_backoff_seconds": [
+      60,
+      120,
+      240
+    ],
+    "workspace": "/data3/dell/Saileron",
+    "runtime_cache": ".cache",
+    "runtime_tmp": "tmp"
+  },
+  "sources": {
+    "transfqmix_commit": "2ef0a0726f1f186097b4b560509ceb5a801fdafe",
+    "dependency_lock_had": "requirements.had.lock.txt"
+  },
+  "imports": [
+    {
+      "method": "regir",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "b817b949ab93410bbf190bcea9ca4483",
+      "version": "main",
+      "checkpoint": "regir/train/seed_0/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "regir",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "e7aef562b6434239996cd7ecaf56f548",
+      "version": "main",
+      "checkpoint": "regir/train/seed_1/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "regir",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "92c7fda6d9af429bbdb7760ee0142e49",
+      "version": "main",
+      "checkpoint": "regir/train/seed_2/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "refil",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "8437bce5209e4a92add0b18b10171e7b",
+      "version": "main",
+      "checkpoint": "refil/train/seed_0/latest.pt",
+      "normalization": "completed latest to final"
+    },
+    {
+      "method": "refil",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "92d90971bb874c75bd1c4f77f9bfe268",
+      "version": "main",
+      "checkpoint": "refil/train/seed_1/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "refil",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "7ea826c2179f463885c7893dba9687af",
+      "version": "main",
+      "checkpoint": "refil/train/seed_2/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "b2_qmix_atten",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "7c6a03bb5b234b4d9cf78e82b49f14e0",
+      "version": "main",
+      "checkpoint": "b2_qmix_atten/train/seed_0/latest.pt",
+      "normalization": "completed latest to final"
+    },
+    {
+      "method": "b2_qmix_atten",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "b845741854d24b5fa23e86d2c1d9113d",
+      "version": "main",
+      "checkpoint": "b2_qmix_atten/train/seed_1/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "b2_qmix_atten",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "0bee87e082924244a6ddf96016eac02f",
+      "version": "main",
+      "checkpoint": "b2_qmix_atten/train/seed_2/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "dcg",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "f77b760225934887b4539f2a98e69d28",
+      "version": "main",
+      "checkpoint": "dcg/train/seed_0/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "dcg",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "0a94180eb9624fa4be99e1aa60a36b9f",
+      "version": "main",
+      "checkpoint": "dcg/train/seed_1/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "dcg",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "db7315cc100e406e815e7667e91bb694",
+      "version": "main",
+      "checkpoint": "dcg/train/seed_2/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "spectra",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "53e7f877dd9548a784e6d7376b42b7e2",
+      "version": "main",
+      "checkpoint": "spectra/train/seed_0/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "spectra",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "c3769d11d2bd4250838f8bdaa29cf3a2",
+      "version": "main",
+      "checkpoint": "spectra/train/seed_1/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "spectra",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "84ab91a1215f4d83afa8921d9054905d",
+      "version": "main",
+      "checkpoint": "spectra/train/seed_2/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "alma",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "b649c32be10f45dd9f58b56c9ee7541b",
+      "version": "main",
+      "checkpoint": "alma/train/seed_0/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "alma",
+      "seed": 1,
+      "t_env": 1000007,
+      "checkpoint_id": "bef1d569c3d1481eb943218335bc1a2d",
+      "version": "main",
+      "checkpoint": "alma/train/seed_1/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "alma",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "ec7ba92b0aff4edc84da0193569d67b7",
+      "version": "main",
+      "checkpoint": "alma/train/seed_2/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "regir_norefil",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "052590256058427fa26d4d6261edee25",
+      "version": "main",
+      "checkpoint": "regir_norefil/train/seed_0/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "regir_norefil",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "27722a2879f74c2693a92b693643aa22",
+      "version": "main",
+      "checkpoint": "regir_norefil/train/seed_1/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "regir_norefil",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "71455d3e1b704e38a85a01e5b76e98ef",
+      "version": "main",
+      "checkpoint": "regir_norefil/train/seed_2/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "regir_nocount",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "e3863ff9866d4bd4b9a4227e31df424d",
+      "version": "main",
+      "checkpoint": "regir_nocount/train/seed_0/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "regir_nocount",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "4343f851504a4f7f94fabf5ee84e5e03",
+      "version": "main",
+      "checkpoint": "regir_nocount/train/seed_1/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "regir_nocount",
+      "seed": 2,
+      "t_env": 1000040,
+      "checkpoint_id": "ca257488e04b41cbb0dea7edb8f773a0",
+      "version": "main",
+      "checkpoint": "regir_nocount/train/seed_2/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "regir_r1",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "555c636f09e0495b83e2b07aafec5201",
+      "version": "main",
+      "checkpoint": "regir_r1/train/seed_0/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "regir_r1",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "c2919c87489c4c329e3aa71171d25d85",
+      "version": "main",
+      "checkpoint": "regir_r1/train/seed_1/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "regir_r1",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "950f7af3c197442d8c5e68f204f8adae",
+      "version": "main",
+      "checkpoint": "regir_r1/train/seed_2/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "regir_last",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "b034f55b35434ef5970b3fe380a2e6a6",
+      "version": "main",
+      "checkpoint": "regir_last/train/seed_0/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "regir_last",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "efa9dff6d1484916ace22e0f2eaf2216",
+      "version": "main",
+      "checkpoint": "regir_last/train/seed_1/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "regir_last",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "eb844bcfdda34e7fa8491fe826fc02ed",
+      "version": "main",
+      "checkpoint": "regir_last/train/seed_2/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "refil_matched",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "986e65ea27a84ab0aab149048c9e097b",
+      "version": "main",
+      "checkpoint": "refil_matched/train/seed_0/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "refil_matched",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "704a7ee2f9a1417693c1f81797e39c22",
+      "version": "main",
+      "checkpoint": "refil_matched/train/seed_1/final.pt",
+      "normalization": "copied final"
+    },
+    {
+      "method": "refil_matched",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "e33d205e725c4bfd88fbdb3159ca8828",
+      "version": "main",
+      "checkpoint": "refil_matched/train/seed_2/final.pt",
+      "normalization": "copied final"
+    }
+  ],
+  "import_record_counts": {
+    "episodes": 398963,
+    "learning": 100885,
+    "progress": 563617,
+    "trajectories": 1464
+  },
+  "backup": {
+    "local_archive": null,
+    "local_archive_status": "removed after full comparison confirmed no unique required content",
+    "retained_local_data": [
+      "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main",
+      "/data3/dell/Saileron/projects/HADE"
+    ],
+    "commits": [
+      "58a18db",
+      "cc2e5ce"
+    ],
+    "remote_push": "pending GitHub write authentication",
+    "git_scope": "code, protocol, report and tracked logs; ignored raw data/models remain in the original project directories"
+  },
+  "presentation": {
+    "report": "实验报告.md",
+    "plan": "实验计划.md",
+    "main_figures": [
+      "fig1_architecture",
+      "fig2_comparison",
+      "fig3_mechanism"
+    ],
+    "figure_formats": [
+      "png",
+      "pdf"
+    ],
+    "main_tables": [
+      "complete algorithm comparison",
+      "actor/online training parameters and timing on one registered physical GPU"
+    ],
+    "appendix": [
+      "A: HAD 24 configurations x 15 methods x 3 seeds",
+      "B: SMACv2 8 configurations x 4 methods x 3 seeds",
+      "C: complete M1/M2",
+      "D: all probe splits, rounds, labels, controls and exclusions",
+      "E: sources, protocol and environment locks",
+      "F: missing, failed and excluded records"
+    ],
+    "uncertainty": {
+      "unit": "training seed",
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "confidence": 0.95,
+      "df": 2,
+      "t_critical": 4.302652729911275
+    },
+    "missing_cells": "progress only; excluded from complete aggregates"
+  }
+}

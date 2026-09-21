@@ -40,6 +40,19 @@ SCHEMAS = {
     "trajectories": IDENTITY + ("phase", "config", "episode_seed", "checkpoint", "trajectory"),
     "timing": IDENTITY + ("config", "device", "cycle_depth", "repeat_id", "ms_per_step", "n_steps", "params"),
 }
+
+
+def schema_for(output, stream_name):
+    from open_score.eval.experiment import is_profile
+    columns = SCHEMAS[stream_name]
+    if not is_profile(output):
+        return columns
+    extra = ("env", "checkpoint_id", "arm", "cycle_depth", "readout")
+    if stream_name == "episodes":
+        extra += ("battle_won", "return", "source_version")
+    if stream_name == "timing":
+        extra += ("actor_params", "training_params", "p25_ms", "p75_ms", "p95_ms", "physical_gpu")
+    return columns + tuple(key for key in extra if key not in columns)
 _LOCKS: dict[str, threading.RLock] = {}
 _LOCKS_GUARD = threading.Lock()
 csv.field_size_limit(2**30)
@@ -104,7 +117,7 @@ def append_records(output, stream_name, rows):
     rows = list(rows)
     if not rows:
         return 0
-    columns = SCHEMAS[stream_name]
+    columns = schema_for(output, stream_name)
     payload = io.StringIO(newline="")
     writer = csv.writer(payload, lineterminator="\n")
     for row in rows:
@@ -158,26 +171,49 @@ def _read_csv_bytes(path):
     return raw[:newline + 1] if newline >= 0 else b""
 
 
-def read_records(output, stream_name, *, run=None, method=None, seed=None):
+def iter_records(output, stream_name, *, run=None, method=None, seed=None, env=None):
+    """Stream complete JSON-in-CSV rows, filtering before retaining history."""
     path = Path(output) / f"{stream_name}.csv"
     if not path.exists():
-        return []
-    raw = _read_csv_bytes(path)
-    rows = []
-    for cells in csv.DictReader(io.StringIO(raw.decode("utf-8"), newline="")):
-        row = _decode_row(cells, path)
-        if run is not None and row.get("run") != run:
-            continue
-        if method is not None and row.get("method") != method:
-            continue
-        if seed is not None and row.get("seed") != int(seed):
-            continue
-        rows.append(row)
-    return rows
+        return
+    with path.open(encoding="utf-8", newline="") as stream:
+        first = stream.readline()
+        if not first.endswith("\n"):
+            return
+        header = next(csv.reader([first]))
+        for line in stream:
+            # Writers append one complete encoded row under a file lock. A
+            # concurrent final partial write is retried on the next scan.
+            if not line.endswith("\n"):
+                break
+            cells = next(csv.reader([line]))
+            if len(cells) != len(header):
+                raise ValueError(f"Malformed complete CSV record in {path}")
+            raw = dict(zip(header, cells))
+            filters = (("run", run), ("method", method), ("seed", seed), ("env", env))
+            if any(value is not None and json.loads(raw.get(key, '"had"' if key == "env" else "null")) != value
+                   for key, value in filters):
+                continue
+            yield _decode_row(raw, path)
 
 
-def read_latest(output, stream_name, *, run=None, method=None, seed=None, keys=None):
+def read_records(output, stream_name, *, run=None, method=None, seed=None, env=None):
+    return list(iter_records(output, stream_name, run=run, method=method, seed=seed, env=env))
+
+
+def read_latest(output, stream_name, *, run=None, method=None, seed=None, keys=None, env=None):
     """Last row per (method, run, seed). Does not retain history."""
+    from open_score.eval.experiment import is_profile
+    if is_profile(output):
+        latest = {}
+        for row in iter_records(output, stream_name, run=run, method=method, seed=seed, env=env):
+            identity = (row.get("method"), row.get("run"), row.get("seed"))
+            if keys is not None and identity not in keys:
+                continue
+            if env is None:
+                identity = (row.get("env"),) + identity
+            latest[identity] = row
+        return latest
     path = Path(output) / f"{stream_name}.csv"
     if not path.exists():
         return {}
@@ -231,6 +267,7 @@ def read_latest(output, stream_name, *, run=None, method=None, seed=None, keys=N
 def episode_key(row):
     return tuple(row.get(key) for key in ("version", "run", "method", "seed", "phase", "eval_point")) + (
         _encode(row["config"]), int(row["episode_seed"]), row.get("checkpoint"),
+        row.get("env"), row.get("checkpoint_id"), row.get("arm"),
     )
 
 
@@ -334,13 +371,18 @@ def live_console_jobs(output, max_age=180):
 
 
 class ExperimentLogger:
-    def __init__(self, output=DEFAULT_OUTPUT, method="shared", seed=0, run=FORMAL_RUN):
+    def __init__(self, output=DEFAULT_OUTPUT, method="shared", seed=0, run=FORMAL_RUN, env="had"):
         self.output, self.method, self.seed, self.run = Path(output), str(method), int(seed), str(run)
+        from open_score.eval.experiment import is_profile
+        self.profile = is_profile(output)
+        self.env = env
         self._trajectory_keys = None
 
     def _row(self, data):
-        row = dict(version=VERSION, run=self.run, method=self.method, seed=self.seed,
+        row = dict(version="main0921" if self.profile else VERSION, run=self.run, method=self.method, seed=self.seed,
                    recorded_at=datetime.now(timezone.utc).isoformat(timespec="seconds"))
+        if self.profile:
+            row["env"] = self.env
         row.update(data)
         return row
 
@@ -353,12 +395,15 @@ class ExperimentLogger:
             row.setdefault("blue_lower", "rush")
             for field in ("q_tot_mean", "q_tot_std", "q_i_mean"):
                 row.setdefault(field, None)
+            if self.profile and self.env == "smacv2":
+                for field in EPISODE_FIELDS:
+                    row.setdefault(field, None)
             missing = set(EPISODE_FIELDS) - row.keys()
             if missing:
                 raise ValueError(f"Missing episode fields: {sorted(missing)}")
-            if row["phase"] not in ("train_eval", "final_eval", "depth_eval", "anchor"):
+            if row["phase"] not in ("train_eval", "final_eval", "depth_eval", "readout_eval", "anchor"):
                 raise ValueError(f"Not a frozen evaluation phase: {row['phase']}")
-            for field in ("D", "rho", "ep_len"):
+            for field in (("battle_won", "ep_len") if self.env == "smacv2" else ("D", "rho", "ep_len")):
                 if row[field] is None or not math.isfinite(float(row[field])):
                     raise ValueError(f"Invalid applicable episode field {field}: {row[field]}")
             metadata = {key: row.pop(key) for key in IDENTITY if key in row}
@@ -383,7 +428,7 @@ class ExperimentLogger:
 
     def trajectories(self, rows):
         def key(row):
-            return tuple(row.get(field) for field in ("run", "method", "seed", "phase", "episode_seed", "checkpoint")) + (_encode(row["config"]),)
+            return tuple(row.get(field) for field in ("run", "method", "seed", "phase", "episode_seed", "checkpoint", "env", "checkpoint_id", "arm")) + (_encode(row["config"]),)
         if self._trajectory_keys is None:
             self._trajectory_keys = {key(row) for row in read_records(self.output, "trajectories", run=self.run,
                                                                      method=self.method, seed=self.seed)}

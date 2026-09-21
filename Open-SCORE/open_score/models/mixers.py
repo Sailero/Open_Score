@@ -100,6 +100,9 @@ class ChunkedFlexQMixer(FlexQMixer):
 
 
 def build_mixer(args):
+    if args.mixer == "transfqmix":
+        from open_score.algos.transfqmix import TransfQMixMixer
+        return TransfQMixMixer(args)
     if args.mixer in (None, "none"):
         return None
     if args.mixer == "qmix":

@@ -14,6 +14,8 @@ def _read_env(env):
     masks = env.get_masks()
     data = dict(masks)
     data['entities'] = np.asarray(env.get_entities(), dtype=np.float32)
+    if hasattr(env, 'get_observer_entities'):
+        data['observer_entities'] = np.asarray(env.get_observer_entities(), dtype=np.float32)
     data['avail_actions'] = np.asarray(env.get_avail_actions(), dtype=np.int32)
     na = len(data['avail_actions'])
     data['agent_mask'] = (1 - np.asarray(data['entity_mask'][:na])).astype(np.uint8)
@@ -117,7 +119,7 @@ class ParallelRunner:
         return self.env_info
 
     def _pre(self, values, t=None, terminal=None):
-        observation_keys = ('entities', 'obs_mask', 'entity_mask', 'agent_mask',
+        observation_keys = ('entities', 'observer_entities', 'obs_mask', 'entity_mask', 'agent_mask',
                             'initial_agent_mask', 'state', 'avail_actions',
                             'entity2task_mask', 'task_mask')
         data = {key: np.stack([row[key] for row in values]) for key in observation_keys
@@ -163,6 +165,10 @@ class ParallelRunner:
             payload = dict(seed=int(job['episode_seed']), evaluate=bool(test_mode))
             if job.get('config') is not None:
                 payload['config'] = job['config']
+            if job.get('reset_config') is not None:
+                payload['reset_config'] = job['reset_config']
+            if job.get('engine_seed') is not None:
+                payload['engine_seed'] = int(job['engine_seed'])
             payload['retain_trajectory'] = bool(job.get('retain_trajectory', False))
             self.parent_conns[rank].send(('reset', payload))
         initial = [self._recv(rank) for rank in range(count)]
@@ -218,7 +224,8 @@ class ParallelRunner:
             for rank, result in zip(active, returned):
                 info = result['info']
                 done = result['terminated']
-                is_natural = bool(info.get('terminated_naturally', done and not info.get('episode_limit', False)))
+                is_natural = bool(info.get('terminal_for_learning',
+                    info.get('terminated_naturally', done and not info.get('episode_limit', False))))
                 returns[rank] += result['reward']
                 # A folded Red-wipeout tail runs real physics inside one
                 # environment step, so the budget must count those steps too.

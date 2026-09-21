@@ -6,7 +6,7 @@ SPECTra ffababf6187216c9d16b2109ee8ef6fe5fdf1172, SMACv2 gnn_rnn_agent.py:
 one graph-convolution layer, separate self/neighbour maps and mean pooling.
 Only the graph encoder is borrowed; GNN-QMIX uses the shared ALMA learner.
 """
-from copy import copy
+from copy import copy, deepcopy
 
 import torch as th
 from torch import nn
@@ -27,11 +27,20 @@ def relative_entity_views(inputs, args, extras=()):
     Extra per-entity tensors use the same observer order and visibility mask.
     """
     entities = inputs["entities"]
-    bs, ts, ne, ed = entities.shape
+    bs, ts, ne, _ = entities.shape
     na = args.n_agents
-    own = entities[:, :, :na]
-    views = entities.unsqueeze(2).expand(bs, ts, na, ne, ed).clone()
-    if getattr(args, "feature_layout", "had") == "had":
+    observer_entities = inputs.get("observer_entities")
+    if observer_entities is None:
+        own = entities[:, :, :na]
+        views = entities.unsqueeze(2).expand(bs, ts, na, ne, entities.shape[-1]).clone()
+    else:
+        if observer_entities.shape[:4] != (bs, ts, na, ne):
+            raise ValueError("observer_entities must have shape [batch,time,agents,entities,features]")
+        views = observer_entities.clone()
+        inds = th.arange(na, device=entities.device)
+        own = views[:, :, inds, inds].clone()
+    ed = views.shape[-1]
+    if observer_entities is None and getattr(args, "feature_layout", "had") == "had":
         views[..., :4] -= own.unsqueeze(3)[..., :4]
         inds = th.arange(na, device=entities.device)
         views[:, :, inds, inds] = own
@@ -56,7 +65,8 @@ def relative_entity_views(inputs, args, extras=()):
     extra_out = []
     for extra in extras:
         width = extra.shape[-1]
-        gathered = extra.unsqueeze(2).expand(bs, ts, na, ne, width)
+        gathered = (extra if extra.ndim == 5 else
+                    extra.unsqueeze(2).expand(bs, ts, na, ne, width))
         gathered = gathered.gather(3, order.unsqueeze(-1).expand(bs, ts, na, ne, width))
         gathered = gathered.masked_fill(hidden.unsqueeze(-1), 0)
         extra_out.append(gathered.reshape(-1, ne, width))
@@ -197,7 +207,14 @@ class AttentionEncoder(_EntityEncoder):
         """Local REFIL encoding plus observer-centred tokens for a global branch."""
         entities = inputs["entities"]
         bs, ts, ne, _ = entities.shape
-        types = entities[..., 7:10]
+        if "observer_entities" in inputs:
+            roles = inputs["observer_entities"][..., :3]
+            # Native actor roles remain self/ally/enemy. Shared cardinality
+            # and type gating retain HAD's friend/enemy/target semantics.
+            types = th.stack((roles[..., 0] + roles[..., 1], roles[..., 2],
+                              th.zeros_like(roles[..., 0])), dim=-1)
+        else:
+            types = entities[..., 7:10]
         origin = th.arange(ne, device=entities.device, dtype=entities.dtype)
         origin = origin.view(1, 1, ne, 1).expand(bs, ts, ne, 1)
         unpacked = relative_entity_views(inputs, self.args, extras=(types, origin))
@@ -315,9 +332,24 @@ class TemporalHead(nn.Module):
         super().__init__()
         self.args = args
         self.rnn = nn.GRUCell(args.rnn_hidden_dim, args.rnn_hidden_dim)
-        self.fc_out = nn.Linear(args.rnn_hidden_dim, output_features or args.n_actions)
+        self.enemy_head = getattr(args, "action_head", None) == "common6_enemy"
+        if self.enemy_head:
+            self.fc_base = nn.Linear(args.rnn_hidden_dim, 6)
+            self.fc_attack = nn.Sequential(
+                nn.Linear(args.rnn_hidden_dim + args.attn_embed_dim, 64), nn.ReLU(), nn.Linear(64, 1))
+        else:
+            self.fc_out = nn.Linear(args.rnn_hidden_dim, output_features or args.n_actions)
 
-    def forward(self, x, inputs):
+    def action_values(self, hidden, enemy_tokens=None):
+        if not self.enemy_head:
+            return self.fc_out(hidden)
+        if enemy_tokens is None:
+            raise ValueError("common6_enemy requires masked initial enemy encodings")
+        expanded = hidden.unsqueeze(-2).expand(*enemy_tokens.shape[:-1], hidden.shape[-1])
+        attack = self.fc_attack(th.cat((expanded, enemy_tokens), dim=-1)).squeeze(-1)
+        return th.cat((self.fc_base(hidden), attack), dim=-1)
+
+    def forward(self, x, inputs, enemy_tokens=None):
         bs, ts, na, hd = x.shape
         h = inputs.get("hidden_state")
         if h is None:
@@ -335,16 +367,16 @@ class TemporalHead(nn.Module):
             # retain this history for time-limit bootstrapping. Only
             # init_hidden (new episode) and actual death clear memory.
         hs = th.stack(outputs, dim=1)
-        return self.fc_out(hs), h.reshape(bs, na, hd)
+        return self.action_values(hs, enemy_tokens), h.reshape(bs, na, hd)
 
-    def step(self, x, hidden, alive):
+    def step(self, x, hidden, alive, enemy_tokens=None):
         bs, na, hd = x.shape
         if hidden.shape[0] != bs:
             hidden = hidden.repeat(bs // hidden.shape[0], 1, 1)
         flat = self.rnn(x.reshape(bs * na, hd), hidden.reshape(bs * na, hd))
         flat = flat.masked_fill(~alive.reshape(-1, 1), 0)
         hidden = flat.reshape(bs, na, hd)
-        return self.fc_out(hidden), hidden
+        return self.action_values(hidden, enemy_tokens), hidden
 
 
 def _phi2_from_counts(*counts):
@@ -487,6 +519,19 @@ class GlobalBranch(nn.Module):
             if kind == "feedback":
                 self.pref_proj = nn.Linear(int(args.n_actions), dim)
                 self.pref_logits = nn.Linear(dim, int(args.n_actions))
+        self.rer_update = getattr(args, "rer_update", "tied")
+        if self.rer_update not in ("tied", "untied4", "kv0"):
+            raise ValueError("rer_update must be tied, untied4 or kv0")
+        if self.rer_update != "tied" and kind != "cycle":
+            raise ValueError("RER update interventions require global_branch=cycle")
+        if self.rer_update == "untied4":
+            # The existing block is round one. Deepcopy adds three independent
+            # blocks without drawing randomness or changing any shared module.
+            names = ("self_attn", "norm_attn", "norm_ffn", "ffn", "count_to_token")
+            self.untied_blocks = nn.ModuleList([
+                nn.ModuleDict({name: deepcopy(getattr(self, name)) for name in names})
+                for _ in range(3)])
+        self.readout_override = None
 
     def project(self, tokens):
         return self.token_proj(tokens)
@@ -522,7 +567,13 @@ class GlobalBranch(nn.Module):
         return self.query_proj(th.cat((own, hidden), dim=-1)).unsqueeze(1)
 
     def _jk(self, states, query, mem_mask, depth):
-        if getattr(self.args, "read_last_round", False):
+        mode = self.readout_override or getattr(self.args, "rer_readout", "learned")
+        if mode not in ("learned", "read1", "read2", "read3", "read4", "uniform"):
+            raise ValueError(f"Unknown RER readout {mode!r}")
+        if mode != "learned" and self.training:
+            raise ValueError("RER readout overrides are evaluation-only")
+        capture_indices = getattr(self, "_capture_read_indices", None)
+        if getattr(self.args, "read_last_round", False) and mode == "learned" and capture_indices is None:
             stacked = th.stack(states, dim=0)
             index = (depth.clamp(min=1) - 1).long().clamp(max=stacked.shape[0] - 1)
             chosen = stacked[index, th.arange(index.shape[0], device=index.device)]
@@ -545,9 +596,22 @@ class GlobalBranch(nn.Module):
         scores = scores.masked_fill(empty, 0)
         alpha = th.softmax(scores, dim=-1)
         alpha = alpha.masked_fill(~valid, 0)
+        if mode != "learned":
+            if len(states) != 4 or not bool((depth == 4).all()):
+                raise ValueError("RER readout interventions require all four rounds")
+            alpha = th.zeros_like(alpha)
+            if mode == "uniform":
+                alpha.fill_(0.25)
+            else:
+                alpha[:, int(mode[-1]) - 1] = 1
+        elif getattr(self.args, "read_last_round", False):
+            alpha = th.zeros_like(alpha).scatter_(1, (depth.clamp_min(1) - 1)[:, None], 1)
         if getattr(self, "capture_attention", False):
             self.last_alpha = alpha.detach()
         stacked = th.stack(values, dim=-1)
+        if capture_indices is not None:
+            self.captured_reads = stacked.transpose(1, 2).index_select(0, capture_indices).detach().cpu()
+            self.captured_alpha = alpha.index_select(0, capture_indices).detach().cpu()
         return (stacked * alpha.unsqueeze(1)).sum(-1)
 
     def _maybe_checkpoint(self, fn, *tensors):
@@ -568,14 +632,19 @@ class GlobalBranch(nn.Module):
             parts.append(self._maybe_checkpoint(fn, *(tensor[sl] for tensor in aligned), *extra))
         return th.cat(parts, 0)
 
-    def _cycle_round(self, tokens, mask, count):
-        injected = self.norm_attn(tokens)
+    def _cycle_round(self, tokens, mask, count, initial=None, round_id=0):
+        block = self.untied_blocks[round_id - 1] if self.rer_update == "untied4" and round_id else None
+        def layer(name):
+            return getattr(self, name) if block is None else block[name]
+        injected = layer("norm_attn")(tokens)
         if not getattr(self.args, "skip_count_inject", False):
-            injected = injected + self.count_to_token(count).unsqueeze(1)
-        tokens = tokens + self.self_attn(injected, tokens, tokens, mask)
-        if getattr(self, "capture_attention", False) and hasattr(self.self_attn, "last_weights"):
-            self.last_self_attn.append(self.self_attn.last_weights.mean(1).detach())
-        tokens = tokens + self.ffn(self.norm_ffn(tokens))
+            injected = injected + layer("count_to_token")(count).unsqueeze(1)
+        memory = initial if self.rer_update == "kv0" and initial is not None else tokens
+        attn = layer("self_attn")
+        tokens = tokens + attn(injected, memory, memory, mask)
+        if getattr(self, "capture_attention", False) and hasattr(attn, "last_weights"):
+            self.last_self_attn.append(attn.last_weights.mean(1).detach())
+        tokens = tokens + layer("ffn")(layer("norm_ffn")(tokens))
         return tokens.masked_fill(mask.unsqueeze(-1), 0)
 
     def _slot_round(self, slots, tokens, mask, count):
@@ -600,6 +669,8 @@ class GlobalBranch(nn.Module):
     def build_memories(self, tokens, key_mask, types, depth_t, origin=None, pack=None):
         count = self.allowed_count(key_mask, types)
         n_rounds = max(int(depth_t.max().item()), 1)
+        if self.rer_update == "untied4" and n_rounds > 4:
+            raise ValueError("untied4 supports at most four rounds")
         states = []
         if self.kind == "slot":
             memory = self.init_slots.expand(tokens.shape[0], -1, -1)
@@ -607,7 +678,10 @@ class GlobalBranch(nn.Module):
                 memory = self._maybe_checkpoint(self._slot_round, memory, tokens, key_mask, count)
                 states.append(memory)
             return states, None
-        memory = tokens
+        # Keep query construction separate from memory masking: REFIL can
+        # retain an own query while excluding that entity from the key set.
+        memory = tokens.masked_fill(key_mask.unsqueeze(-1), 0)
+        initial = memory
         embed = None
         bt = None if pack is None else pack["idx"] // int(pack["na"])
         for round_id in range(n_rounds):
@@ -617,7 +691,9 @@ class GlobalBranch(nn.Module):
             if self.kind == "feedback":
                 memory = self._map_chunks(self._cycle_round, memory, key_mask, count)
             else:
-                memory = self._maybe_checkpoint(self._cycle_round, memory, key_mask, count)
+                def cycle(current, mask, counts, h0, iteration=round_id):
+                    return self._cycle_round(current, mask, counts, h0, iteration)
+                memory = self._maybe_checkpoint(cycle, memory, key_mask, count, initial)
             states.append(memory)
             if self.kind == "feedback" and round_id + 1 < n_rounds:
                 prefs = self._own_prefs(memory)
@@ -667,6 +743,13 @@ class EntityAgent(ALMAAgent):
     def __init__(self, input_shape, args):
         # Preserve ALMA's imagined-input construction, subtask conditioning
         # and combined forward.
+        input_shape = int(getattr(args, "actor_entity_shape", None) or
+                          getattr(args, "observer_entity_shape", None) or input_shape)
+        if getattr(args, "action_head", None) == "common6_enemy":
+            if args.entity_last_action or getattr(args, "obs_agent_id", False):
+                raise ValueError("SMAC entity actors exclude last action and agent IDs")
+            if int(args.attn_embed_dim) != 128 or int(args.rnn_hidden_dim) != 64:
+                raise ValueError("common6_enemy requires initial encoding 128 and GRU 64")
         super().__init__(input_shape, args, recurrent=False, entity_scheme=True,
                          subtask_cond=args.agent.get("subtask_cond"))
         kind = getattr(args, "encoder", "attention")
@@ -716,6 +799,27 @@ class EntityAgent(ALMAAgent):
             nn.init.zeros_(self.matched_mlp[-1].weight)
             nn.init.zeros_(self.matched_mlp[-1].bias)
         self.capture_attention = False
+        self.last_capture = []
+        self._capture_limits = None
+
+    def enable_capture(self, max_decisions=1, max_observers=4):
+        """Capture a bounded set of real evaluation decisions, detached on CPU."""
+        if max_decisions < 1 or max_observers < 1:
+            raise ValueError("capture bounds must be positive")
+        self._capture_limits = (int(max_decisions), int(max_observers))
+        self.last_capture = []
+
+    def disable_capture(self):
+        self._capture_limits = None
+        if self.global_branch is not None:
+            self.global_net._capture_read_indices = None
+
+    def _capture_rows(self, alive):
+        if (self._capture_limits is None or self.training or
+                not getattr(self, "_capture_real_decision", False) or
+                len(self.last_capture) >= self._capture_limits[0]):
+            return None
+        return alive.reshape(-1).nonzero(as_tuple=False).flatten()[:self._capture_limits[1]]
 
     def _count_embedding(self, entity_mask):
         n_red = int(self.args.n_agents)
@@ -752,7 +856,12 @@ class EntityAgent(ALMAAgent):
         inputs["obs_mask"] = inputs["obs_mask"].bool()
         if self.global_branch is not None:
             return self._compute_global(inputs)
-        encoded = self._base(inputs)
+        enemy_tokens = None
+        if getattr(self._head, "enemy_head", False):
+            encoded, initial_tokens, _, _, _, _ = self._base.encode_bundle(inputs)
+            enemy_tokens = initial_tokens[..., self.args.n_agents:, :]
+        else:
+            encoded = self._base(inputs)
         encoded = self._apply_count_cond(encoded, inputs["entity_mask"])
         if hasattr(self, "matched_mlp"):
             encoded = encoded + self.matched_mlp(encoded)
@@ -761,12 +870,16 @@ class EntityAgent(ALMAAgent):
             encoded = encoded + self.task_cond(inputs["task_embeds"][:, :, :self.args.n_agents])
         if self.use_copa:
             encoded = encoded + inputs["coach_z"]
-        q, hidden = self._head(encoded, inputs)
+        if enemy_tokens is None:
+            q, hidden = self._head(encoded, inputs)
+        else:
+            q, hidden = self._head(encoded, inputs, enemy_tokens=enemy_tokens)
         agent_mask = inputs["entity_mask"][:, :, :self.args.n_agents]
         return q.masked_fill(agent_mask.unsqueeze(3), 0), hidden
 
     def _compute_global(self, inputs):
         local, tokens, key_mask, dead, types, origin = self._base.encode_bundle(inputs)
+        enemy_tokens = tokens[..., self.args.n_agents:, :] if getattr(self._head, "enemy_head", False) else None
         if hasattr(self, "task_cond") and "task_embeds" in inputs:
             local = local + self.task_cond(inputs["task_embeds"][:, :, :self.args.n_agents])
         if self.use_copa:
@@ -775,7 +888,7 @@ class EntityAgent(ALMAAgent):
         bs, ts, na, hidden_dim = local.shape
         n_ent = tokens.shape[-2]
         gdim = tokens.shape[-1]
-        n_act = int(self.args.n_actions)
+        n_act = int(self.args.n_actions) if enemy_tokens is None else 6 + enemy_tokens.shape[-2]
         h = inputs.get("hidden_state")
         if h is None:
             h = local.new_zeros(bs, na, hidden_dim)
@@ -818,6 +931,7 @@ class EntityAgent(ALMAAgent):
             for t in range(ts):
                 alive = ~dead[:, t]
                 if states_full is None:
+                    h = h.masked_fill(~alive.unsqueeze(-1), 0)
                     outputs.append(local.new_zeros(bs, na, n_act))
                     continue
                 stacked = th.stack(
@@ -825,13 +939,41 @@ class EntityAgent(ALMAAgent):
                 tok_t = tokens[:, t].reshape(bs * na, n_ent, gdim)
                 km_t = key_mask[:, t].reshape(bs * na, n_ent)
                 mask_t = km_t if mem_mask_full is None else mem_mask_full[:, t].reshape(bs * na, n_ent)
+                capture_rows = self._capture_rows(alive)
+                self.global_net._capture_read_indices = capture_rows
+                h_prev = h
                 fused = self.global_net._maybe_checkpoint(
                     self.global_net._read_stacked, stacked, tok_t, km_t,
                     h.reshape(bs * na, hidden_dim),
                     depth_flat.reshape(bs, ts, na)[:, t].reshape(-1),
                     local[:, t].reshape(bs * na, hidden_dim), mask_t)
-                q_t, h = self._head.step(fused.reshape(bs, na, hidden_dim), h, alive)
+                q_t, h = self._head.step(fused.reshape(bs, na, hidden_dim), h, alive,
+                                         None if enemy_tokens is None else enemy_tokens[:, t])
                 outputs.append(q_t)
+                if capture_rows is not None:
+                    def picked(tensor):
+                        return tensor.index_select(0, capture_rows).detach().cpu()
+                    h0 = picked(tok_t).masked_fill(picked(km_t).unsqueeze(-1), 0)
+                    observer_ids = (capture_rows % na).detach().cpu()
+                    source_ids = th.arange(n_ent).expand(len(capture_rows), -1).clone()
+                    row_ids = th.arange(len(capture_rows))
+                    source_ids[:, 0] = observer_ids
+                    source_ids[row_ids, observer_ids] = 0
+                    self.last_capture.append({
+                        "time_id": int(getattr(self, "_capture_time", 0)) + t,
+                        "batch_ids": (capture_rows // na).detach().cpu(),
+                        "observer_ids": observer_ids,
+                        "H": th.cat((h0[:, None], picked(stacked.transpose(0, 1))), dim=1),
+                        "u": self.global_net.captured_reads,
+                        "alpha": self.global_net.captured_alpha,
+                        "h_prev": picked(h_prev.reshape(bs * na, hidden_dim)),
+                        "q": picked(q_t.reshape(bs * na, n_act)),
+                        "key_mask": picked(km_t),
+                        "types": picked(types[:, t].reshape(bs * na, n_ent, 3)),
+                        "origin": source_ids,
+                        "enemy_ids": th.arange(n_ent - na, dtype=th.long),
+                    })
+                self.global_net._capture_read_indices = None
         else:
             for t in range(ts):
                 alive = ~dead[:, t]
@@ -840,7 +982,8 @@ class EntityAgent(ALMAAgent):
                     key_mask[:, t].reshape(bs * na, n_ent),
                     types[:, t].reshape(bs * na, n_ent, 3),
                     h, local[:, t].reshape(bs * na, hidden_dim))
-                q_t, h = self._head.step(fused.reshape(bs, na, hidden_dim), h, alive)
+                q_t, h = self._head.step(fused.reshape(bs, na, hidden_dim), h, alive,
+                                         None if enemy_tokens is None else enemy_tokens[:, t])
                 outputs.append(q_t)
         q = th.stack(outputs, dim=1)
         agent_mask = inputs["entity_mask"][:, :, :na]
@@ -848,6 +991,8 @@ class EntityAgent(ALMAAgent):
 
     def make_imagined_inputs(self, inputs):
         imagined, groups = super().make_imagined_inputs(inputs)
+        if "observer_entities" in inputs:
+            imagined["observer_entities"] = inputs["observer_entities"].repeat(2, 1, 1, 1, 1)
         # Keep the random partition constant but exclude deaths at each t.
         inactive = inputs["entity_mask"].bool()
         blocked = inactive.unsqueeze(-1) | inactive.unsqueeze(-2)
@@ -912,6 +1057,8 @@ class SharedEntityMAC(PolicyValueMixin, EntityMAC):
             self.alloc_policy = ALLOC_POLICY_REGISTRY[self.args.hier_agent["alloc_policy"]](hier_shape, self.args)
 
     def forward(self, ep_batch, t=None, **kwargs):
+        self.agent._capture_real_decision = isinstance(t, int) and kwargs.get("test_mode", False)
+        self.agent._capture_time = t if isinstance(t, int) else 0
         result = super().forward(ep_batch, t, **kwargs)
         if isinstance(t, int):
             self._decision_q = result[0].detach()
@@ -926,6 +1073,9 @@ class SharedEntityMAC(PolicyValueMixin, EntityMAC):
 
 
 def build_mac(scheme, groups, args):
+    if getattr(args, "method", None) == "transfqmix":
+        from open_score.algos.transfqmix import TransfQMixMAC
+        return TransfQMixMAC(scheme, groups, args)
     if args.mac == "dcg_mac":
         from open_score.algos.dcg_patch.dcg_controller import DeepCoordinationGraphMAC
         return DeepCoordinationGraphMAC(scheme, groups, args)

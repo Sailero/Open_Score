@@ -1,0 +1,458 @@
+{
+  "status": "passed",
+  "scope": "CPU implementation acceptance; no formal training run or training CSV; 32 real HAD steps per new method, one initial update and one RNG-matched continuation on original/restored learner",
+  "results": [
+    {
+      "method": "transfqmix",
+      "status": "passed",
+      "physical_steps": 32,
+      "workers": 8,
+      "scales": [
+        4,
+        6,
+        8,
+        10,
+        4,
+        6,
+        8,
+        10
+      ],
+      "loss": 14684.517578125,
+      "checkpoint_restore_exact": true,
+      "resumed_next_update_exact": true,
+      "mixer_recurrent_tokens": 3,
+      "actor_hidden_width": 32,
+      "actor_token_detached_in_mixer": true,
+      "chosen_q_gradient_nonzero": true
+    },
+    {
+      "method": "regir_fixed4",
+      "status": "passed",
+      "physical_steps": 32,
+      "workers": 8,
+      "scales": [
+        4,
+        6,
+        8,
+        10,
+        4,
+        6,
+        8,
+        10
+      ],
+      "loss": 0.003428884781897068,
+      "checkpoint_restore_exact": true,
+      "resumed_next_update_exact": true
+    },
+    {
+      "method": "regir_untied4",
+      "status": "passed",
+      "physical_steps": 32,
+      "workers": 8,
+      "scales": [
+        4,
+        6,
+        8,
+        10,
+        4,
+        6,
+        8,
+        10
+      ],
+      "loss": 0.0035354611463844776,
+      "checkpoint_restore_exact": true,
+      "resumed_next_update_exact": true
+    },
+    {
+      "method": "regir_kv0",
+      "status": "passed",
+      "physical_steps": 32,
+      "workers": 8,
+      "scales": [
+        4,
+        6,
+        8,
+        10,
+        4,
+        6,
+        8,
+        10
+      ],
+      "loss": 0.010415703989565372,
+      "checkpoint_restore_exact": true,
+      "resumed_next_update_exact": true
+    }
+  ],
+  "previous_direct_checks": {
+    "had_regression": "regir/regir_r1/regir_last/refil keys, initial values, RNG, Q/history bitwise against backup",
+    "untied": "H1-H4 initially bitwise equal; block storage independent; outside initial values/RNG unchanged",
+    "kv0": "R1 H/Q/input and parameter gradients exact with nonzero fusion and key gradient",
+    "readout": "read1@4 equals depth1 Q/history; uniform equals mean all four reads",
+    "smac": "Full/Single/REFIL roster-variable strict load; factual/imagined masks and central-state isolation",
+    "probe": "known-state labels; visibility exclusions; teacher-forced actual actions; disjoint scene splits; ridge controls"
+  },
+  "smac_type_semantics": {
+    "status": "passed",
+    "native_actor_roles": [
+      "self",
+      "ally",
+      "enemy"
+    ],
+    "shared_count_and_gating_types": [
+      "self+ally",
+      "enemy",
+      "zero target"
+    ],
+    "visible_counts": [
+      3,
+      2,
+      0
+    ],
+    "imagined_masked_counts": [
+      2,
+      1,
+      0
+    ],
+    "actor_features_unchanged": true
+  },
+  "smac_real_cpu_td": {
+    "native_config": [
+      4,
+      4,
+      0
+    ],
+    "pad": [
+      10,
+      10
+    ],
+    "transitions": 4,
+    "torch_version": "2.11.0+cu128",
+    "torch_source": "/home/dell/.local/lib/python3.10/site-packages/torch/__init__.py",
+    "checks": {
+      "regir": {
+        "finite_td": true,
+        "parameters_updated": true,
+        "statistics": {
+          "losses/q_loss": 0.00034498661989346147,
+          "losses/im_loss": 0.0005103679141029716,
+          "train_metrics/q_grad_norm": 0.014469808898866177,
+          "train_metrics/td_error_abs": 0.011483851820230484,
+          "train_metrics/q_taken_mean": -0.0009807873517274856,
+          "train_metrics/target_mean": 0.00016759781865403057
+        }
+      },
+      "refil": {
+        "finite_td": true,
+        "parameters_updated": true,
+        "statistics": {
+          "losses/q_loss": 9.468292410019785e-05,
+          "losses/im_loss": 0.00010520044452277943,
+          "train_metrics/q_grad_norm": 0.007211549673229456,
+          "train_metrics/td_error_abs": 0.008448565378785133,
+          "train_metrics/q_taken_mean": 0.0002972498070448637,
+          "train_metrics/target_mean": 0.0011421063914895057
+        }
+      },
+      "refil_matched": {
+        "finite_td": true,
+        "parameters_updated": true,
+        "statistics": {
+          "losses/q_loss": 0.0002923867432400584,
+          "losses/im_loss": 0.0002888075541704893,
+          "train_metrics/q_grad_norm": 0.014561302028596401,
+          "train_metrics/td_error_abs": 0.01688050478696823,
+          "train_metrics/q_taken_mean": -0.00046864040195941924,
+          "train_metrics/target_mean": 0.001219410076737404
+        },
+        "scope": "extra capacity/interface check; not a formal SMAC arm"
+      },
+      "transfqmix": {
+        "finite_td": true,
+        "parameters_updated": true,
+        "statistics": {
+          "loss_td": 216.8995361328125,
+          "grad_norm": 5253.939453125,
+          "td_error_abs": 20.10477066040039,
+          "q_tot_mean": -0.553528904914856,
+          "q_tot_std": 4.965908050537109
+        }
+      },
+      "timeout_boundary": {
+        "native_and_adapter_clocks_set_to": 199,
+        "native_step_executed": true,
+        "terminal_for_learning": true,
+        "bootstrap_mask": 0.0
+      },
+      "regir_r1": {
+        "finite_td": true,
+        "parameters_updated": true,
+        "statistics": {
+          "losses/q_loss": 0.00034498661989346147,
+          "losses/im_loss": 0.0005103679141029716,
+          "train_metrics/q_grad_norm": 0.014453626237809658,
+          "train_metrics/td_error_abs": 0.011483851820230484,
+          "train_metrics/q_taken_mean": -0.0009807873517274856,
+          "train_metrics/target_mean": 0.00016759781865403057
+        },
+        "scope": "formal method interface check",
+        "depths": [
+          1
+        ]
+      }
+    }
+  },
+  "smac_isolated_environment": {
+    "python": "3.10.21 (main, Aug 27 2026, 14:42:07) [GCC 14.3.0]",
+    "prefix": "/home/dell/anaconda3/envs/saileron-smac",
+    "torch_version": "2.11.0+cu128",
+    "torch_source": "/home/dell/anaconda3/envs/saileron-smac/lib/python3.10/site-packages/torch/__init__.py",
+    "numpy": "1.26.4",
+    "protobuf": "3.20.3",
+    "pysc2": "4.0.0",
+    "smacv2": "1.0.0",
+    "cuda_visible_devices": "0",
+    "device_count": 1,
+    "device_name": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition",
+    "device_capability": [
+      12,
+      0
+    ],
+    "sm120_compiled": true,
+    "cuda_tensor_backward_finite": true
+  },
+  "smac_real_gpu_td": {
+    "native_config": [
+      4,
+      4,
+      0
+    ],
+    "pad": [
+      10,
+      10
+    ],
+    "transitions": 4,
+    "methods": {
+      "regir": {
+        "finite_td": true,
+        "parameters_updated": true,
+        "statistics": {
+          "losses/q_loss": 0.00034746917663142085,
+          "losses/im_loss": 0.0005153330857865512,
+          "train_metrics/q_grad_norm": 0.014545554295182228,
+          "train_metrics/td_error_abs": 0.011483852751553059,
+          "train_metrics/q_taken_mean": -0.0009807875379920007,
+          "train_metrics/target_mean": 0.00016759776044636965
+        }
+      },
+      "refil": {
+        "finite_td": true,
+        "parameters_updated": true,
+        "statistics": {
+          "losses/q_loss": 6.391580973286182e-05,
+          "losses/im_loss": 2.8628375730477273e-05,
+          "train_metrics/q_grad_norm": 0.005785861983895302,
+          "train_metrics/td_error_abs": 0.009680865332484245,
+          "train_metrics/q_taken_mean": 7.986781420186163e-05,
+          "train_metrics/target_mean": 0.0010479543358087539
+        }
+      },
+      "refil_matched": {
+        "finite_td": true,
+        "parameters_updated": true,
+        "statistics": {
+          "losses/q_loss": 9.480505832470953e-05,
+          "losses/im_loss": 9.937200229614973e-05,
+          "train_metrics/q_grad_norm": 0.008315946906805038,
+          "train_metrics/td_error_abs": 0.009377216920256615,
+          "train_metrics/q_taken_mean": 0.0018520193174481393,
+          "train_metrics/target_mean": 0.0027897410094738007
+        },
+        "scope": "extra capacity/interface check; not a formal SMAC arm"
+      },
+      "transfqmix": {
+        "finite_td": true,
+        "parameters_updated": true,
+        "statistics": {
+          "loss_td": 1745.359130859375,
+          "grad_norm": 28253.697265625,
+          "td_error_abs": 53.48985290527344,
+          "q_tot_mean": 16.239267349243164,
+          "q_tot_std": 24.720619201660156
+        }
+      },
+      "regir_r1": {
+        "finite_td": true,
+        "parameters_updated": true,
+        "statistics": {
+          "losses/q_loss": 9.68181702774018e-05,
+          "losses/im_loss": 0.00010664723959052935,
+          "train_metrics/q_grad_norm": 0.006824902258813381,
+          "train_metrics/td_error_abs": 0.008639203384518623,
+          "train_metrics/q_taken_mean": -0.002485382743179798,
+          "train_metrics/target_mean": -0.0016214624047279358
+        },
+        "scope": "formal method interface check",
+        "depths": [
+          1
+        ]
+      }
+    },
+    "gpu": 0
+  },
+  "oom_transaction_recovery": {
+    "status": "passed",
+    "scope": "Injected CUDA-OOM exceptions on CPU with real 8-worker HAD collection capped to 8 physical steps per batch; no actual GPU exhaustion; temporary checkpoints and memory-only log sink; no formal training or validation CSV.",
+    "total_acceptance_physical_steps": 176,
+    "forward_boundary": {
+      "status": "passed",
+      "observed_t_env": 32,
+      "safe_t_env": 24,
+      "warmup_saves": [
+        0,
+        8,
+        16,
+        24
+      ],
+      "saved_updates": 0
+    },
+    "after_partial_update": {
+      "status": "passed",
+      "observed_t_env": 32,
+      "safe_t_env": 24,
+      "optimizer_updates_executed_before_fault": 2,
+      "saved_updates": 0,
+      "saved_replay_episodes": 24
+    },
+    "resumed_complete_batch": {
+      "status": "passed",
+      "safe_t_env": 32,
+      "saved_updates": 8,
+      "all_updates_complete_before_stop": true,
+      "network_optimizer_targets_replay_rng_runner_bitwise_equal": true
+    },
+    "initialization": {
+      "status": "passed",
+      "physical_steps": 0,
+      "recovery_status": "start_failure",
+      "automatic_recovery": false,
+      "no_config_or_checkpoint_overwrite": true
+    },
+    "allocation_parser": {
+      "requested_allocation_gib": 0.0625,
+      "minimum_additional_gib": 0.046875,
+      "ordinary_error_not_classified_as_oom": true
+    },
+    "validation_invariant": "Pre-validation full checkpoint is written before any validation rows. Profile exceptions never overwrite it; resuming that point keeps the recorded policy weights.",
+    "comparison_note": "First pass numeric network/RNG/runner checks passed; replay comparator rejected OneHot object identity, so a focused second pass compared replay tensors directly."
+  },
+  "scheduler_recovery": {
+    "status": "passed",
+    "scope": "In-memory scheduler mocks with no GPU allocation or training; independent PID absence check for the root-run CPU formal evaluation stop",
+    "classification": {
+      "cublas_allocation_failure_consistent": true
+    },
+    "train_mock": [
+      {
+        "injected_oom_count": 3,
+        "launch_seconds": [
+          0,
+          60,
+          180,
+          420
+        ],
+        "retry_delays": [
+          60,
+          120,
+          240
+        ],
+        "final_status": "completed",
+        "joined": 4,
+        "handlers_restored": true,
+        "resume_on_each_retry": true
+      },
+      {
+        "injected_oom_count": 4,
+        "launch_seconds": [
+          0,
+          60,
+          180,
+          420
+        ],
+        "retry_delays": [
+          60,
+          120,
+          240
+        ],
+        "final_status": "failed",
+        "joined": 4,
+        "handlers_restored": true,
+        "resume_on_each_retry": true
+      }
+    ],
+    "timing_mock": [
+      {
+        "case": "recovered",
+        "injected_oom_count": 3,
+        "launch_seconds": [
+          0,
+          60,
+          180,
+          420
+        ],
+        "fixed_physical_gpu": 1,
+        "final_status": "complete",
+        "original_error_retained": true
+      },
+      {
+        "case": "exhausted",
+        "injected_oom_count": 4,
+        "launch_seconds": [
+          0,
+          60,
+          180,
+          420
+        ],
+        "fixed_physical_gpu": 1,
+        "final_status": "failed",
+        "original_error_retained": true
+      },
+      {
+        "case": "stop_during_backoff",
+        "injected_oom_count": 1,
+        "launch_seconds": [
+          0
+        ],
+        "fixed_physical_gpu": 1,
+        "final_status": "stopped",
+        "original_error_retained": true
+      },
+      {
+        "case": "stop_from_measurement",
+        "injected_oom_count": 1,
+        "launch_seconds": [
+          0,
+          60
+        ],
+        "fixed_physical_gpu": 1,
+        "final_status": "stopped",
+        "original_error_retained": true
+      }
+    ],
+    "admission_mock": {
+      "prefers_more_free_memory": true,
+      "occupied_card_excluded": true,
+      "single_device_also_one_worker": true,
+      "total_limit_two": true
+    },
+    "cpu_stop": {
+      "parent_pid": 2009787,
+      "worker_pid": 2010591,
+      "parent_absent": true,
+      "worker_absent": true,
+      "exit_code_reported_by_root": 1,
+      "meaning": "controlled stop; existing formal final quota retained",
+      "evidence": "root observed stop request and exit; reviewer independently checked both PIDs absent"
+    },
+    "checked_at": "2026-09-21T18:32:15.098902+00:00"
+  }
+}

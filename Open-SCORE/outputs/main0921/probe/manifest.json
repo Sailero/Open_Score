@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "configs": [
+    [
+      10,
+      10,
+      2
+    ],
+    [
+      10,
+      10,
+      3
+    ],
+    [
+      30,
+      30,
+      2
+    ],
+    [
+      50,
+      50,
+      2
+    ],
+    [
+      30,
+      30,
+      12
+    ]
+  ],
+  "episodes_per_config": 100,
+  "behavior_checkpoint_ids": {
+    "regir": "b817b949ab93410bbf190bcea9ca4483",
+    "refil": "8437bce5209e4a92add0b18b10171e7b"
+  },
+  "seed_base": 200000,
+  "steps": 100,
+  "sampling": "4 uniform live times; first 2 alive observers and first 5 alive enemies in stable roster order",
+  "splits": "ID 50/25/25; OOD 50/50; stratified by behavior; scene-disjoint"
+}

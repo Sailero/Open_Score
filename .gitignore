@@ -35,3 +35,7 @@ venv/
 *.pt.tmp
 stop.request
 eval.stop.request
+
+# Local diagnostic trajectories and process handles
+*.json.gz
+*.pid

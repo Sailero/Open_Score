@@ -8,7 +8,7 @@ version = "6.4.0"
 description = "HAD damage-defense environments, rules, and cross-scale MARL experiments"
 requires-python = ">=3.10"
 dependencies = [
-  "had-env @ file:///E:/Code/Open_Score_HAD_Workbench",
+  "had-env",
 ]
 
 [project.optional-dependencies]

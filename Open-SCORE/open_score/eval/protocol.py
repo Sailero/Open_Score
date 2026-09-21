@@ -193,13 +193,11 @@ def run_directory(output, method, seed, run=None):
 
 
 def official_eval_path(directory, progress_row=None):
-    """Last-iterate file: ``final.pt``, or ``best.pt`` if a finished run never wrote final."""
+    """Only a completed last iterate is eligible; best is never a substitute."""
     directory = Path(directory)
     final = directory / f"{OFFICIAL_CHECKPOINT}.pt"
-    if final.exists():
+    if training_finished(directory, progress_row):
         return final
-    if training_finished(directory, progress_row) and (directory / "best.pt").exists():
-        return directory / "best.pt"
     return None
 
 
@@ -221,16 +219,18 @@ def official_best_t_env(directory):
 
 
 def training_finished(directory, progress_row=None):
-    directory = Path(directory)
-    row = progress_row or {}
-    if (directory / "best.pt").exists() and (directory / "final.pt").exists():
-        return True
-    if not (directory / "best.pt").exists():
+    path = Path(directory) / "final.pt"
+    if not path.exists():
         return False
-    if row.get("status") in ("completed", "complete"):
-        return True
-    trained_t = row.get("t_env")
-    return trained_t is not None and int(trained_t) >= 980000
+    try:
+        from open_score.algos import setup_runtime
+        setup_runtime()
+        import torch
+        saved = torch.load(path, map_location="cpu", weights_only=False)
+        return (saved["progress"].get("status") in ("completed", "complete")
+                and int(saved["progress"]["t_env"]) >= int(saved["config"]["t_max"]))
+    except (OSError, ValueError, KeyError, EOFError):
+        return False
 
 
 def rows_for_official_checkpoint(rows, t_env, phase=None):
@@ -533,3 +533,158 @@ def evaluate_depth_sweep(method, checkpoint, *, output=None, run=None, seed=None
         _safe_refresh(output, run)
     return dict(status="complete", completed=completed, total=total)
 
+
+def _smac_eval_runner(saved, config):
+    """Rebuild capacity, retaining all learned parameter shapes and native inputs."""
+    import copy
+    from types import SimpleNamespace
+    from open_score.algos import setup_runtime, make_scheme, LearnerLogger
+    setup_runtime()
+    from runners.parallel_runner import ParallelRunner
+    from open_score.models import build_mac
+    cfg = copy.deepcopy(saved["config"])
+    cfg.update(device="cpu", use_cuda=False, batch_size_run=1)
+    cfg["env_args"].update(pad=(config["N_R"], config["N_B"]), config=config, max_retries=1)
+    args = SimpleNamespace(**cfg)
+    runner = ParallelRunner(args, LearnerLogger())
+    try:
+        for key, value in runner.get_env_info().items():
+            setattr(args, key, value)
+        scheme, groups, preprocess = make_scheme(runner.get_env_info(), multi_task=False)
+        model_scheme = copy.deepcopy(scheme)
+        model_scheme["entities"]["vshape"] = args.entity_shape
+        model_scheme["actions_onehot"] = {"vshape": (args.n_actions,), "group": "agents"}
+        mac = build_mac(model_scheme, groups, args)
+        mac.agent.load_state_dict(saved["networks"]["agent"])
+        if "mac" in saved["networks"]:
+            mac.load_state_dict(saved["networks"]["mac"])
+        mac.eval()
+        runner.setup(scheme, groups, preprocess, mac)
+        return runner
+    except BaseException:
+        runner.close_env()
+        raise
+
+
+def evaluate_profile_checkpoint(method, checkpoint, *, output, kind="final", env="had",
+                                seed=None, device="cpu", on_progress=None, stop_requested=None):
+    """One fixed checkpoint/arm queue, resumed by immutable result identity."""
+    import json
+    import torch
+    from .experiment import (checkpoint_info, initialize, evaluation_jobs,
+                             remaining_evaluations, atomic_json)
+    from open_score.utils.logging import ExperimentLogger, read_records
+    from open_score.utils.resources import cpu_threads
+    cpu_threads()
+    torch.set_num_threads(1)
+    if device != "cpu":
+        raise ValueError("main0921 final/depth/readout evaluation uses CPU; GPU0 is reserved for training/cost")
+    info = checkpoint_info(checkpoint, method=method, seed=seed, env=env)
+    if kind != "final" and (method != "regir" or env != "had"):
+        raise ValueError("Depth and readout interventions require the HAD Full final")
+    manifest = initialize(output)
+    existing = read_records(output, "episodes", run="train", env=env, method=method, seed=info["seed"])
+    jobs = remaining_evaluations(info, kind, existing,
+        read1_equivalent=manifest["mechanisms"]["read1_equivalence_verified"])
+    total = len(evaluation_jobs(info, kind))
+    completed = initial = total - len(jobs)
+    logger = ExperimentLogger(output, method, info["seed"], "train", env=env)
+    start = time.monotonic()
+    policy = runner = None
+    runner_config = None
+    failed = {}
+    failure_path = Path(checkpoint).parent / "evaluation_failures.json"
+    if env == "had":
+        from open_score.algos import load_policy
+        from open_score.rules import register_end_to_end_policy, run_episode
+        from .anchors import BLUE_STRATEGY
+        policy = load_policy(method, checkpoint)
+        policy_name = f"main0921_{next(_POLICY_IDS)}"
+        register_end_to_end_policy("red", policy_name, "main0921 frozen final", lambda _: policy)
+    else:
+        from open_score.envs.smacv2_env import generate_registered_scenes
+        scenes = generate_registered_scenes(output)
+        saved = torch.load(checkpoint, map_location="cpu", weights_only=False)
+        if failure_path.exists():
+            old = json.loads(failure_path.read_text())
+            if old.get("checkpoint_id") == info["checkpoint_id"]:
+                failed = old.get("scenes", {})
+
+    def progress(status, job=None):
+        row = dict(phase=f"{kind}_eval", status=status, completed=completed, total=total,
+                   t_env=info["t_env"], checkpoint=info["checkpoint"], checkpoint_id=info["checkpoint_id"],
+                   remaining_seconds=(total-completed)*(time.monotonic()-start)/max(1, completed-initial))
+        if job:
+            row.update(arm=job["arm"], cycle_depth=job.get("cycle_depth"), readout=job.get("readout"))
+        logger.progress(**row)
+        if on_progress:
+            on_progress(row)
+        return dict(status=status, completed=completed, total=total, failed_scenes=len(failed))
+
+    try:
+        for job in jobs:
+            if stop_requested and stop_requested():
+                return progress("stopped", job)
+            if env == "had":
+                if job.get("cycle_depth") is not None:
+                    policy.set_eval_depth(job["cycle_depth"])
+                if kind == "readout":
+                    policy.mac.agent.global_net.readout_override = job["readout"]
+                result = run_episode(targets=job["config"]["K"], red=job["config"]["N_R"],
+                    blue=job["config"]["N_B"], seed=job["episode_seed"],
+                    red_strategy={"architecture": "end_to_end", "policy": policy_name},
+                    blue_strategy=BLUE_STRATEGY, max_steps=100, record=False, task_mode="damage",
+                    spatial_dim=2, target_initialization="random", diagnostics=True, record_events=True,
+                    retain_trajectory=job["retain_trajectory"])
+                summary, trajectory = dict(result["episode_summary"]), result.get("trajectory")
+                if hasattr(policy, "episode_q_statistics"):
+                    summary.update(policy.episode_q_statistics())
+            else:
+                scene_id = f"{job['config']['N_R']}v{job['config']['N_B']}.s{job['episode_seed']}"
+                scene = scenes["scenes"][scene_id]
+                job["reset_config"] = scene["reset_config"]
+                job["engine_seed"] = scene["engine_seed"]
+                if failed.get(scene_id, {}).get("attempts", 0) >= 3:
+                    continue
+                summary = trajectory = None
+                for attempt in range(int(failed.get(scene_id, {}).get("attempts", 0)), 3):
+                    try:
+                        if runner is None or runner_config != job["config"]:
+                            if runner is not None:
+                                runner.close_env()
+                            runner = _smac_eval_runner(saved, job["config"])
+                            runner_config = dict(job["config"])
+                        _, summaries = runner.run(test_mode=True, jobs=[job])
+                        summary = dict(summaries[0])
+                        trajectory = runner.last_trajectories[0]
+                        failed.pop(scene_id, None)
+                        if failure_path.exists():
+                            atomic_json(failure_path, dict(checkpoint_id=info["checkpoint_id"], scenes=failed))
+                        break
+                    except Exception as error:
+                        if runner is not None:
+                            runner.close_env()
+                            runner = None
+                        if not (isinstance(error, (EOFError, BrokenPipeError, ConnectionError))
+                                or "SMACEnvironmentError" in str(error)
+                                or "Environment worker" in str(error)):
+                            raise
+                        # A protocol/connection failure is not a battle loss.
+                        failed[scene_id] = dict(attempts=attempt+1, error=f"{type(error).__name__}: {error}")
+                        atomic_json(failure_path, dict(checkpoint_id=info["checkpoint_id"], scenes=failed))
+                        if stop_requested and stop_requested():
+                            return progress("stopped", job)
+                if summary is None:
+                    continue
+            summary.update({k: v for k, v in job.items() if k != "reset_config"})
+            logger.episodes([summary])
+            if job["retain_trajectory"] and trajectory is not None:
+                logger.trajectories([{**summary, "trajectory": trajectory}])
+            completed += 1
+            progress("running", job)
+            if completed % 25 == 0:
+                print(f"[{env}/{method}/{info['seed']}] {kind}_eval {completed}/{total}", flush=True)
+        return progress("complete" if completed == total else "incomplete")
+    finally:
+        if runner is not None:
+            runner.close_env()

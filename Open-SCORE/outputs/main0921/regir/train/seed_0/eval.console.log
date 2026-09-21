@@ -1,0 +1,681 @@
+[regir/0] final_eval 5425/7200
+[regir/0] final_eval 5450/7200
+[regir/0] final_eval 5475/7200
+[regir/0] final_eval 5500/7200
+[regir/0] final_eval 5525/7200
+[regir/0] final_eval 5550/7200
+[regir/0] final_eval 5575/7200
+[regir/0] final_eval 5600/7200
+[regir/0] final_eval 5625/7200
+[regir/0] final_eval 5650/7200
+[regir/0] final_eval 5675/7200
+[regir/0] final_eval 5700/7200
+[regir/0] final_eval 5725/7200
+[regir/0] final_eval 5750/7200
+[regir/0] final_eval 5775/7200
+[regir/0] final_eval 5800/7200
+[regir/0] final_eval 5825/7200
+[regir/0] final_eval 5850/7200
+[regir/0] final_eval 5875/7200
+[regir/0] final_eval 5900/7200
+[regir/0] final_eval 5925/7200
+[regir/0] final_eval 5950/7200
+[regir/0] final_eval 5975/7200
+[regir/0] final_eval 6000/7200
+[regir/0] final_eval 6025/7200
+[regir/0] final_eval 6050/7200
+[regir/0] final_eval 6075/7200
+[regir/0] final_eval 6100/7200
+[regir/0] final_eval 6125/7200
+[regir/0] final_eval 6150/7200
+[regir/0] final_eval 6175/7200
+[regir/0] final_eval 6200/7200
+[regir/0] final_eval 6225/7200
+[regir/0] final_eval 6250/7200
+[regir/0] final_eval 6275/7200
+[regir/0] final_eval 6300/7200
+[regir/0] final_eval 6325/7200
+[regir/0] final_eval 6350/7200
+[regir/0] final_eval 6375/7200
+[regir/0] final_eval 6400/7200
+[regir/0] final_eval 6425/7200
+[regir/0] final_eval 6450/7200
+[regir/0] final_eval 6475/7200
+[regir/0] final_eval 6500/7200
+[regir/0] final_eval 6525/7200
+[regir/0] final_eval 6550/7200
+[regir/0] final_eval 6575/7200
+[regir/0] final_eval 6600/7200
+[regir/0] final_eval 6625/7200
+[regir/0] final_eval 6650/7200
+[regir/0] final_eval 6675/7200
+[regir/0] final_eval 6700/7200
+[regir/0] final_eval 6725/7200
+[regir/0] final_eval 6750/7200
+[regir/0] final_eval 6775/7200
+[regir/0] final_eval 6800/7200
+[regir/0] final_eval 6825/7200
+[regir/0] final_eval 6850/7200
+[regir/0] final_eval 6875/7200
+[regir/0] final_eval 6900/7200
+[regir/0] final_eval 6925/7200
+[regir/0] final_eval 6950/7200
+[regir/0] final_eval 6975/7200
+[regir/0] final_eval 7000/7200
+[regir/0] final_eval 7025/7200
+[regir/0] final_eval 7050/7200
+[regir/0] final_eval 7075/7200
+[regir/0] final_eval 7100/7200
+[regir/0] final_eval 7125/7200
+[regir/0] final_eval 7150/7200
+[regir/0] final_eval 7175/7200
+[regir/0] final_eval 7200/7200
+Traceback (most recent call last):
+  File "E:\Code\Open_Score\Open-SCORE\scripts\eval.py", line 101, in _worker
+    result = evaluate_checkpoint(method, checkpoint, output=output, run=run,
+  File "E:\Code\Open_Score\Open-SCORE\open_score\eval\protocol.py", line 296, in evaluate_checkpoint
+    refresh_report(output, run=run)
+  File "E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py", line 2393, in refresh_report
+    return _refresh_main_report(output, run=formal, report_stream=stream)
+  File "E:\Code\Open_Score\Open-SCORE\open_score\eval\report.py", line 2255, in _refresh_main_report
+    read_latest(output, "progress", run=run).items()}
+  File "E:\Code\Open_Score\Open-SCORE\open_score\utils\logging.py", line 171, in read_latest
+    raw = _read_csv_bytes(path)
+  File "E:\Code\Open_Score\Open-SCORE\open_score\utils\logging.py", line 144, in _read_csv_bytes
+    raw = stream.read()
+PermissionError: [Errno 13] Permission denied
+
+[regir/0] depth_eval 11400/14400
+[regir/0] depth_eval R1 11400/14400
+[regir/0] depth_eval R1 11410/14400 5v5 K2
+[regir/0] depth_eval R1 11420/14400 5v5 K2
+[regir/0] depth_eval R1 11430/14400 5v5 K2
+[regir/0] depth_eval R1 11440/14400 5v5 K2
+[regir/0] depth_eval R1 11450/14400 5v5 K2
+[regir/0] depth_eval R1 11460/14400 5v5 K2
+[regir/0] depth_eval R1 11470/14400 5v5 K2
+[regir/0] depth_eval R1 11480/14400 5v5 K2
+[regir/0] depth_eval R1 11490/14400 5v5 K2
+[regir/0] depth_eval R1 11500/14400 5v5 K2
+[regir/0] depth_eval R1 11510/14400 5v5 K2
+[regir/0] depth_eval R1 11520/14400 5v5 K2
+[regir/0] depth_eval R1 11530/14400 5v5 K2
+[regir/0] depth_eval R1 11540/14400 5v5 K2
+[regir/0] depth_eval R1 11550/14400 5v5 K2
+[regir/0] depth_eval R1 11560/14400 5v5 K2
+[regir/0] depth_eval R1 11570/14400 5v5 K2
+[regir/0] depth_eval R1 11580/14400 5v5 K2
+[regir/0] depth_eval R1 11590/14400 5v5 K2
+[regir/0] depth_eval R1 11600/14400 5v5 K2
+[regir/0] depth_eval R1 11610/14400 5v5 K2
+[regir/0] depth_eval R1 11620/14400 5v5 K2
+[regir/0] depth_eval R1 11630/14400 5v5 K2
+[regir/0] depth_eval R1 11640/14400 5v5 K2
+[regir/0] depth_eval R1 11650/14400 5v5 K2
+[regir/0] depth_eval R1 11660/14400 5v5 K2
+[regir/0] depth_eval R1 11670/14400 5v5 K2
+[regir/0] depth_eval R1 11680/14400 5v5 K2
+[regir/0] depth_eval R1 11690/14400 5v5 K2
+[regir/0] depth_eval R1 11700/14400 5v5 K2
+[regir/0] depth_eval R1 11710/14400 50v50 K2
+[regir/0] depth_eval R1 11720/14400 50v50 K2
+[regir/0] depth_eval R1 11730/14400 50v50 K2
+[regir/0] depth_eval R1 11740/14400 50v50 K2
+[regir/0] depth_eval R1 11750/14400 50v50 K2
+[regir/0] depth_eval R1 11760/14400 50v50 K2
+[regir/0] depth_eval R1 11770/14400 50v50 K2
+[regir/0] depth_eval R1 11780/14400 50v50 K2
+[regir/0] depth_eval R1 11790/14400 50v50 K2
+[regir/0] depth_eval R1 11800/14400 50v50 K2
+[regir/0] depth_eval R1 11810/14400 50v50 K2
+[regir/0] depth_eval R1 11820/14400 50v50 K2
+[regir/0] depth_eval R1 11830/14400 50v50 K2
+[regir/0] depth_eval R1 11840/14400 50v50 K2
+[regir/0] depth_eval R1 11850/14400 50v50 K2
+[regir/0] depth_eval R1 11860/14400 50v50 K2
+[regir/0] depth_eval R1 11870/14400 50v50 K2
+[regir/0] depth_eval R1 11880/14400 50v50 K2
+[regir/0] depth_eval R1 11890/14400 50v50 K2
+[regir/0] depth_eval R1 11900/14400 50v50 K2
+[regir/0] depth_eval R1 11910/14400 50v50 K2
+[regir/0] depth_eval R1 11920/14400 50v50 K2
+[regir/0] depth_eval R1 11930/14400 50v50 K2
+[regir/0] depth_eval R1 11940/14400 50v50 K2
+[regir/0] depth_eval R1 11950/14400 50v50 K2
+[regir/0] depth_eval R1 11960/14400 50v50 K2
+[regir/0] depth_eval R1 11970/14400 50v50 K2
+[regir/0] depth_eval R1 11980/14400 50v50 K2
+[regir/0] depth_eval R1 11990/14400 50v50 K2
+[regir/0] depth_eval R1 12000/14400 50v50 K2
+[regir/0] depth_eval R2 12000/14400
+[regir/0] depth_eval R2 12010/14400 5v5 K2
+[regir/0] depth_eval R2 12020/14400 5v5 K2
+[regir/0] depth_eval R2 12030/14400 5v5 K2
+[regir/0] depth_eval R2 12040/14400 5v5 K2
+[regir/0] depth_eval R2 12050/14400 5v5 K2
+[regir/0] depth_eval R2 12060/14400 5v5 K2
+[regir/0] depth_eval R2 12070/14400 5v5 K2
+[regir/0] depth_eval R2 12080/14400 5v5 K2
+[regir/0] depth_eval R2 12090/14400 5v5 K2
+[regir/0] depth_eval R2 12100/14400 5v5 K2
+[regir/0] depth_eval R2 12110/14400 5v5 K2
+[regir/0] depth_eval R2 12120/14400 5v5 K2
+[regir/0] depth_eval R2 12130/14400 5v5 K2
+[regir/0] depth_eval R2 12140/14400 5v5 K2
+[regir/0] depth_eval R2 12150/14400 5v5 K2
+[regir/0] depth_eval R2 12160/14400 5v5 K2
+[regir/0] depth_eval R2 12170/14400 5v5 K2
+[regir/0] depth_eval R2 12180/14400 5v5 K2
+[regir/0] depth_eval R2 12190/14400 5v5 K2
+[regir/0] depth_eval R2 12200/14400 5v5 K2
+[regir/0] depth_eval R2 12210/14400 5v5 K2
+[regir/0] depth_eval R2 12220/14400 5v5 K2
+[regir/0] depth_eval R2 12230/14400 5v5 K2
+[regir/0] depth_eval R2 12240/14400 5v5 K2
+[regir/0] depth_eval R2 12250/14400 5v5 K2
+[regir/0] depth_eval R2 12260/14400 5v5 K2
+[regir/0] depth_eval R2 12270/14400 5v5 K2
+[regir/0] depth_eval R2 12280/14400 5v5 K2
+[regir/0] depth_eval R2 12290/14400 5v5 K2
+[regir/0] depth_eval R2 12300/14400 5v5 K2
+[regir/0] depth_eval R2 12310/14400 50v50 K2
+[regir/0] depth_eval R2 12320/14400 50v50 K2
+[regir/0] depth_eval R2 12330/14400 50v50 K2
+[regir/0] depth_eval R2 12340/14400 50v50 K2
+[regir/0] depth_eval R2 12350/14400 50v50 K2
+[regir/0] depth_eval R2 12360/14400 50v50 K2
+[regir/0] depth_eval R2 12370/14400 50v50 K2
+[regir/0] depth_eval R2 12380/14400 50v50 K2
+[regir/0] depth_eval R2 12390/14400 50v50 K2
+[regir/0] depth_eval R2 12400/14400 50v50 K2
+[regir/0] depth_eval R2 12410/14400 50v50 K2
+[regir/0] depth_eval R2 12420/14400 50v50 K2
+[regir/0] depth_eval R2 12430/14400 50v50 K2
+[regir/0] depth_eval R2 12440/14400 50v50 K2
+[regir/0] depth_eval R2 12450/14400 50v50 K2
+[regir/0] depth_eval R2 12460/14400 50v50 K2
+[regir/0] depth_eval R2 12470/14400 50v50 K2
+[regir/0] depth_eval R2 12480/14400 50v50 K2
+[regir/0] depth_eval R2 12490/14400 50v50 K2
+[regir/0] depth_eval R2 12500/14400 50v50 K2
+[regir/0] depth_eval R2 12510/14400 50v50 K2
+[regir/0] depth_eval R2 12520/14400 50v50 K2
+[regir/0] depth_eval R2 12530/14400 50v50 K2
+[regir/0] depth_eval R2 12540/14400 50v50 K2
+[regir/0] depth_eval R2 12550/14400 50v50 K2
+[regir/0] depth_eval R2 12560/14400 50v50 K2
+[regir/0] depth_eval R2 12570/14400 50v50 K2
+[regir/0] depth_eval R2 12580/14400 50v50 K2
+[regir/0] depth_eval R2 12590/14400 50v50 K2
+[regir/0] depth_eval R2 12600/14400 50v50 K2
+[regir/0] depth_eval R3 12600/14400
+[regir/0] depth_eval R3 12610/14400 5v5 K2
+[regir/0] depth_eval R3 12620/14400 5v5 K2
+[regir/0] depth_eval R3 12630/14400 5v5 K2
+[regir/0] depth_eval R3 12640/14400 5v5 K2
+[regir/0] depth_eval R3 12650/14400 5v5 K2
+[regir/0] depth_eval R3 12660/14400 5v5 K2
+[regir/0] depth_eval R3 12670/14400 5v5 K2
+[regir/0] depth_eval R3 12680/14400 5v5 K2
+[regir/0] depth_eval R3 12690/14400 5v5 K2
+[regir/0] depth_eval R3 12700/14400 5v5 K2
+[regir/0] depth_eval R3 12710/14400 5v5 K2
+[regir/0] depth_eval R3 12720/14400 5v5 K2
+[regir/0] depth_eval R3 12730/14400 5v5 K2
+[regir/0] depth_eval R3 12740/14400 5v5 K2
+[regir/0] depth_eval R3 12750/14400 5v5 K2
+[regir/0] depth_eval R3 12760/14400 5v5 K2
+[regir/0] depth_eval R3 12770/14400 5v5 K2
+[regir/0] depth_eval R3 12780/14400 5v5 K2
+[regir/0] depth_eval R3 12790/14400 5v5 K2
+[regir/0] depth_eval R3 12800/14400 5v5 K2
+[regir/0] depth_eval R3 12810/14400 5v5 K2
+[regir/0] depth_eval R3 12820/14400 5v5 K2
+[regir/0] depth_eval R3 12830/14400 5v5 K2
+[regir/0] depth_eval R3 12840/14400 5v5 K2
+[regir/0] depth_eval R3 12850/14400 5v5 K2
+[regir/0] depth_eval R3 12860/14400 5v5 K2
+[regir/0] depth_eval R3 12870/14400 5v5 K2
+[regir/0] depth_eval R3 12880/14400 5v5 K2
+[regir/0] depth_eval R3 12890/14400 5v5 K2
+[regir/0] depth_eval R3 12900/14400 5v5 K2
+[regir/0] depth_eval R3 12910/14400 50v50 K2
+[regir/0] depth_eval R3 12920/14400 50v50 K2
+[regir/0] depth_eval R3 12930/14400 50v50 K2
+[regir/0] depth_eval R3 12940/14400 50v50 K2
+[regir/0] depth_eval R3 12950/14400 50v50 K2
+[regir/0] depth_eval R3 12960/14400 50v50 K2
+[regir/0] depth_eval R3 12970/14400 50v50 K2
+[regir/0] depth_eval R3 12980/14400 50v50 K2
+[regir/0] depth_eval R3 12990/14400 50v50 K2
+[regir/0] depth_eval R3 13000/14400 50v50 K2
+[regir/0] depth_eval R3 13010/14400 50v50 K2
+[regir/0] depth_eval R3 13020/14400 50v50 K2
+[regir/0] depth_eval R3 13030/14400 50v50 K2
+[regir/0] depth_eval R3 13040/14400 50v50 K2
+[regir/0] depth_eval R3 13050/14400 50v50 K2
+[regir/0] depth_eval R3 13060/14400 50v50 K2
+[regir/0] depth_eval R3 13070/14400 50v50 K2
+[regir/0] depth_eval R3 13080/14400 50v50 K2
+[regir/0] depth_eval R3 13090/14400 50v50 K2
+[regir/0] depth_eval R3 13100/14400 50v50 K2
+[regir/0] depth_eval R3 13110/14400 50v50 K2
+[regir/0] depth_eval R3 13120/14400 50v50 K2
+[regir/0] depth_eval R3 13130/14400 50v50 K2
+[regir/0] depth_eval R3 13140/14400 50v50 K2
+[regir/0] depth_eval R3 13150/14400 50v50 K2
+[regir/0] depth_eval R3 13160/14400 50v50 K2
+[regir/0] depth_eval R3 13170/14400 50v50 K2
+[regir/0] depth_eval R3 13180/14400 50v50 K2
+[regir/0] depth_eval R3 13190/14400 50v50 K2
+[regir/0] depth_eval R3 13200/14400 50v50 K2
+[regir/0] depth_eval R5 13200/14400
+[regir/0] depth_eval R5 13210/14400 5v5 K2
+[regir/0] depth_eval R5 13220/14400 5v5 K2
+[regir/0] depth_eval R5 13230/14400 5v5 K2
+[regir/0] depth_eval R5 13240/14400 5v5 K2
+[regir/0] depth_eval R5 13250/14400 5v5 K2
+[regir/0] depth_eval R5 13260/14400 5v5 K2
+[regir/0] depth_eval R5 13270/14400 5v5 K2
+[regir/0] depth_eval R5 13280/14400 5v5 K2
+[regir/0] depth_eval R5 13290/14400 5v5 K2
+[regir/0] depth_eval R5 13300/14400 5v5 K2
+[regir/0] depth_eval R5 13310/14400 5v5 K2
+[regir/0] depth_eval R5 13320/14400 5v5 K2
+[regir/0] depth_eval R5 13330/14400 5v5 K2
+[regir/0] depth_eval R5 13340/14400 5v5 K2
+[regir/0] depth_eval R5 13350/14400 5v5 K2
+[regir/0] depth_eval R5 13360/14400 5v5 K2
+[regir/0] depth_eval R5 13370/14400 5v5 K2
+[regir/0] depth_eval R5 13380/14400 5v5 K2
+[regir/0] depth_eval R5 13390/14400 5v5 K2
+[regir/0] depth_eval R5 13400/14400 5v5 K2
+[regir/0] depth_eval R5 13410/14400 5v5 K2
+[regir/0] depth_eval R5 13420/14400 5v5 K2
+[regir/0] depth_eval R5 13430/14400 5v5 K2
+[regir/0] depth_eval R5 13440/14400 5v5 K2
+[regir/0] depth_eval R5 13450/14400 5v5 K2
+[regir/0] depth_eval R5 13460/14400 5v5 K2
+[regir/0] depth_eval R5 13470/14400 5v5 K2
+[regir/0] depth_eval R5 13480/14400 5v5 K2
+[regir/0] depth_eval R5 13490/14400 5v5 K2
+[regir/0] depth_eval R5 13500/14400 5v5 K2
+[regir/0] depth_eval R5 13510/14400 50v50 K2
+[regir/0] depth_eval R5 13520/14400 50v50 K2
+[regir/0] depth_eval R5 13530/14400 50v50 K2
+[regir/0] depth_eval R5 13540/14400 50v50 K2
+[regir/0] depth_eval R5 13550/14400 50v50 K2
+[regir/0] depth_eval R5 13560/14400 50v50 K2
+[regir/0] depth_eval R5 13570/14400 50v50 K2
+[regir/0] depth_eval R5 13580/14400 50v50 K2
+[regir/0] depth_eval R5 13590/14400 50v50 K2
+[regir/0] depth_eval R5 13600/14400 50v50 K2
+[regir/0] depth_eval R5 13610/14400 50v50 K2
+[regir/0] depth_eval R5 13620/14400 50v50 K2
+[regir/0] depth_eval R5 13630/14400 50v50 K2
+[regir/0] depth_eval R5 13640/14400 50v50 K2
+[regir/0] depth_eval R5 13650/14400 50v50 K2
+[regir/0] depth_eval R5 13660/14400 50v50 K2
+[regir/0] depth_eval R5 13670/14400 50v50 K2
+[regir/0] depth_eval R5 13680/14400 50v50 K2
+[regir/0] depth_eval R5 13690/14400 50v50 K2
+[regir/0] depth_eval R5 13700/14400 50v50 K2
+[regir/0] depth_eval R5 13710/14400 50v50 K2
+[regir/0] depth_eval R5 13720/14400 50v50 K2
+[regir/0] depth_eval R5 13730/14400 50v50 K2
+[regir/0] depth_eval R5 13740/14400 50v50 K2
+[regir/0] depth_eval R5 13750/14400 50v50 K2
+[regir/0] depth_eval R5 13760/14400 50v50 K2
+[regir/0] depth_eval R5 13770/14400 50v50 K2
+[regir/0] depth_eval R5 13780/14400 50v50 K2
+[regir/0] depth_eval R5 13790/14400 50v50 K2
+[regir/0] depth_eval R5 13800/14400 50v50 K2
+[regir/0] depth_eval R6 13800/14400
+[regir/0] depth_eval R6 13810/14400 5v5 K2
+[regir/0] depth_eval R6 13820/14400 5v5 K2
+[regir/0] depth_eval R6 13830/14400 5v5 K2
+[regir/0] depth_eval R6 13840/14400 5v5 K2
+[regir/0] depth_eval R6 13850/14400 5v5 K2
+[regir/0] depth_eval R6 13860/14400 5v5 K2
+[regir/0] depth_eval R6 13870/14400 5v5 K2
+[regir/0] depth_eval R6 13880/14400 5v5 K2
+[regir/0] depth_eval R6 13890/14400 5v5 K2
+[regir/0] depth_eval R6 13900/14400 5v5 K2
+[regir/0] depth_eval R6 13910/14400 5v5 K2
+[regir/0] depth_eval R6 13920/14400 5v5 K2
+[regir/0] depth_eval R6 13930/14400 5v5 K2
+[regir/0] depth_eval R6 13940/14400 5v5 K2
+[regir/0] depth_eval R6 13950/14400 5v5 K2
+[regir/0] depth_eval R6 13960/14400 5v5 K2
+[regir/0] depth_eval R6 13970/14400 5v5 K2
+[regir/0] depth_eval R6 13980/14400 5v5 K2
+[regir/0] depth_eval R6 13990/14400 5v5 K2
+[regir/0] depth_eval R6 14000/14400 5v5 K2
+[regir/0] depth_eval R6 14010/14400 5v5 K2
+[regir/0] depth_eval R6 14020/14400 5v5 K2
+[regir/0] depth_eval R6 14030/14400 5v5 K2
+[regir/0] depth_eval R6 14040/14400 5v5 K2
+[regir/0] depth_eval R6 14050/14400 5v5 K2
+[regir/0] depth_eval R6 14060/14400 5v5 K2
+[regir/0] depth_eval R6 14070/14400 5v5 K2
+[regir/0] depth_eval R6 14080/14400 5v5 K2
+[regir/0] depth_eval R6 14090/14400 5v5 K2
+[regir/0] depth_eval R6 14100/14400 5v5 K2
+[regir/0] depth_eval R6 14110/14400 50v50 K2
+[regir/0] depth_eval R6 14120/14400 50v50 K2
+[regir/0] depth_eval R6 14130/14400 50v50 K2
+[regir/0] depth_eval R6 14140/14400 50v50 K2
+[regir/0] depth_eval R6 14150/14400 50v50 K2
+[regir/0] depth_eval R6 14160/14400 50v50 K2
+[regir/0] depth_eval R6 14170/14400 50v50 K2
+[regir/0] depth_eval R6 14180/14400 50v50 K2
+[regir/0] depth_eval R6 14190/14400 50v50 K2
+[regir/0] depth_eval R6 14200/14400 50v50 K2
+[regir/0] depth_eval R6 14210/14400 50v50 K2
+[regir/0] depth_eval R6 14220/14400 50v50 K2
+[regir/0] depth_eval R6 14230/14400 50v50 K2
+[regir/0] depth_eval R6 14240/14400 50v50 K2
+[regir/0] depth_eval R6 14250/14400 50v50 K2
+[regir/0] depth_eval R6 14260/14400 50v50 K2
+[regir/0] depth_eval R6 14270/14400 50v50 K2
+[regir/0] depth_eval R6 14280/14400 50v50 K2
+[regir/0] depth_eval R6 14290/14400 50v50 K2
+[regir/0] depth_eval R6 14300/14400 50v50 K2
+[regir/0] depth_eval R6 14310/14400 50v50 K2
+[regir/0] depth_eval R6 14320/14400 50v50 K2
+[regir/0] depth_eval R6 14330/14400 50v50 K2
+[regir/0] depth_eval R6 14340/14400 50v50 K2
+[regir/0] depth_eval R6 14350/14400 50v50 K2
+[regir/0] depth_eval R6 14360/14400 50v50 K2
+[regir/0] depth_eval R6 14370/14400 50v50 K2
+[regir/0] depth_eval R6 14380/14400 50v50 K2
+[regir/0] depth_eval R6 14390/14400 50v50 K2
+[regir/0] depth_eval R6 14400/14400 50v50 K2
+[regir/0] final_eval 25/7200
+[regir/0] final_eval 50/7200
+[regir/0] final_eval 75/7200
+[regir/0] final_eval 100/7200
+[regir/0] final_eval 125/7200
+[regir/0] final_eval 150/7200
+[regir/0] final_eval 175/7200
+[regir/0] final_eval 200/7200
+[regir/0] final_eval 225/7200
+[regir/0] final_eval 250/7200
+[regir/0] final_eval 275/7200
+[regir/0] final_eval 300/7200
+[regir/0] final_eval 325/7200
+[regir/0] final_eval 350/7200
+[regir/0] final_eval 375/7200
+[regir/0] final_eval 400/7200
+[regir/0] final_eval 425/7200
+[regir/0] final_eval 450/7200
+[regir/0] final_eval 475/7200
+[regir/0] final_eval 500/7200
+[regir/0] final_eval 525/7200
+[regir/0] final_eval 550/7200
+[regir/0] final_eval 575/7200
+[regir/0] final_eval 600/7200
+[regir/0] final_eval 625/7200
+[regir/0] final_eval 650/7200
+[regir/0] final_eval 675/7200
+[regir/0] final_eval 700/7200
+[regir/0] final_eval 725/7200
+[regir/0] final_eval 750/7200
+[regir/0] final_eval 775/7200
+[regir/0] final_eval 800/7200
+[regir/0] final_eval 825/7200
+[regir/0] final_eval 850/7200
+[regir/0] final_eval 875/7200
+[regir/0] final_eval 900/7200
+[regir/0] final_eval 925/7200
+[regir/0] final_eval 950/7200
+[regir/0] final_eval 975/7200
+[regir/0] final_eval 1000/7200
+[regir/0] final_eval 1025/7200
+[regir/0] final_eval 1050/7200
+[regir/0] final_eval 1075/7200
+[regir/0] final_eval 1100/7200
+[regir/0] final_eval 1125/7200
+[regir/0] final_eval 1150/7200
+[regir/0] final_eval 1175/7200
+[regir/0] final_eval 1200/7200
+[regir/0] final_eval 1225/7200
+[regir/0] final_eval 1250/7200
+[regir/0] final_eval 1275/7200
+[regir/0] final_eval 1300/7200
+[regir/0] final_eval 1325/7200
+[regir/0] final_eval 1350/7200
+[regir/0] final_eval 1375/7200
+[regir/0] final_eval 1400/7200
+[regir/0] final_eval 1425/7200
+[regir/0] final_eval 1450/7200
+[regir/0] final_eval 1475/7200
+[regir/0] final_eval 1500/7200
+[regir/0] final_eval 1525/7200
+[regir/0] final_eval 1550/7200
+[regir/0] final_eval 1575/7200
+[regir/0] final_eval 1600/7200
+[regir/0] final_eval 1625/7200
+[regir/0] final_eval 1650/7200
+[regir/0] final_eval 1675/7200
+[regir/0] final_eval 1700/7200
+[regir/0] final_eval 1725/7200
+[regir/0] final_eval 1750/7200
+[regir/0] final_eval 1775/7200
+[regir/0] final_eval 1800/7200
+[regir/0] final_eval 1825/7200
+[regir/0] final_eval 1850/7200
+[regir/0] final_eval 1875/7200
+[regir/0] final_eval 1900/7200
+[regir/0] final_eval 1925/7200
+[regir/0] final_eval 1950/7200
+[regir/0] final_eval 1975/7200
+[regir/0] final_eval 2000/7200
+[regir/0] final_eval 2025/7200
+[regir/0] final_eval 2050/7200
+[regir/0] final_eval 2075/7200
+[regir/0] final_eval 2100/7200
+[regir/0] final_eval 2125/7200
+[regir/0] final_eval 2150/7200
+[regir/0] final_eval 2175/7200
+[regir/0] final_eval 2200/7200
+[regir/0] final_eval 2225/7200
+[regir/0] final_eval 2250/7200
+[regir/0] final_eval 2275/7200
+[regir/0] final_eval 2300/7200
+[regir/0] final_eval 2325/7200
+[regir/0] final_eval 2350/7200
+[regir/0] final_eval 2375/7200
+[regir/0] final_eval 2400/7200
+[regir/0] final_eval 2425/7200
+[regir/0] final_eval 2450/7200
+[regir/0] final_eval 2475/7200
+[regir/0] final_eval 2500/7200
+[regir/0] final_eval 2525/7200
+[regir/0] final_eval 2550/7200
+[regir/0] final_eval 2575/7200
+[regir/0] final_eval 2600/7200
+[regir/0] final_eval 2625/7200
+[regir/0] final_eval 2650/7200
+[regir/0] final_eval 2675/7200
+[regir/0] final_eval 2700/7200
+[regir/0] final_eval 2725/7200
+[regir/0] final_eval 2750/7200
+[regir/0] final_eval 2775/7200
+[regir/0] final_eval 2800/7200
+[regir/0] final_eval 2825/7200
+[regir/0] final_eval 2850/7200
+[regir/0] final_eval 2875/7200
+[regir/0] final_eval 2900/7200
+[regir/0] final_eval 2925/7200
+[regir/0] final_eval 2950/7200
+[regir/0] final_eval 2975/7200
+[regir/0] final_eval 3000/7200
+[regir/0] final_eval 3025/7200
+[regir/0] final_eval 3050/7200
+[regir/0] final_eval 3075/7200
+[regir/0] final_eval 3100/7200
+[regir/0] final_eval 3125/7200
+[regir/0] final_eval 3150/7200
+[regir/0] final_eval 3175/7200
+[regir/0] final_eval 3200/7200
+[regir/0] final_eval 3225/7200
+[regir/0] final_eval 3250/7200
+[regir/0] final_eval 3275/7200
+[regir/0] final_eval 3300/7200
+[regir/0] final_eval 3325/7200
+[regir/0] final_eval 3350/7200
+[regir/0] final_eval 3375/7200
+[regir/0] final_eval 3400/7200
+[regir/0] final_eval 3425/7200
+[regir/0] final_eval 3450/7200
+[regir/0] final_eval 3475/7200
+[regir/0] final_eval 3500/7200
+[regir/0] final_eval 3525/7200
+[regir/0] final_eval 3550/7200
+[regir/0] final_eval 3575/7200
+[regir/0] final_eval 3600/7200
+[regir/0] final_eval 3625/7200
+[regir/0] final_eval 3650/7200
+[regir/0] final_eval 3675/7200
+[regir/0] final_eval 3700/7200
+[regir/0] final_eval 3725/7200
+[regir/0] final_eval 3750/7200
+[regir/0] final_eval 3775/7200
+[regir/0] final_eval 3800/7200
+[regir/0] final_eval 3825/7200
+[regir/0] final_eval 3850/7200
+[regir/0] final_eval 3875/7200
+[regir/0] final_eval 3900/7200
+[regir/0] final_eval 3925/7200
+[regir/0] final_eval 3950/7200
+[regir/0] final_eval 3975/7200
+[regir/0] final_eval 4000/7200
+[regir/0] final_eval 4025/7200
+[regir/0] final_eval 4050/7200
+[regir/0] final_eval 4075/7200
+[regir/0] final_eval 4100/7200
+[regir/0] final_eval 4125/7200
+[regir/0] final_eval 4150/7200
+[regir/0] final_eval 4175/7200
+[regir/0] final_eval 4200/7200
+[regir/0] final_eval 4225/7200
+[regir/0] final_eval 4250/7200
+[regir/0] final_eval 4275/7200
+[regir/0] final_eval 4300/7200
+[regir/0] final_eval 4325/7200
+[regir/0] final_eval 4350/7200
+[regir/0] final_eval 4375/7200
+[regir/0] final_eval 4400/7200
+[regir/0] final_eval 4425/7200
+[regir/0] final_eval 4450/7200
+[regir/0] final_eval 4475/7200
+[regir/0] final_eval 4500/7200
+[regir/0] final_eval 4525/7200
+[regir/0] final_eval 4550/7200
+[regir/0] final_eval 4575/7200
+[regir/0] final_eval 4600/7200
+[regir/0] final_eval 4625/7200
+[regir/0] final_eval 4650/7200
+[regir/0] final_eval 4675/7200
+[regir/0] final_eval 4700/7200
+[regir/0] final_eval 4725/7200
+[regir/0] final_eval 4750/7200
+[regir/0] final_eval 4775/7200
+[regir/0] final_eval 4800/7200
+[regir/0] final_eval 4825/7200
+[regir/0] final_eval 4850/7200
+[regir/0] final_eval 4875/7200
+[regir/0] final_eval 4900/7200
+[regir/0] final_eval 4925/7200
+[regir/0] final_eval 4950/7200
+[regir/0] final_eval 4975/7200
+[regir/0] final_eval 5000/7200
+[regir/0] final_eval 5025/7200
+[regir/0] final_eval 5050/7200
+[regir/0] final_eval 5075/7200
+[regir/0] final_eval 5100/7200
+[regir/0] final_eval 5125/7200
+[regir/0] final_eval 5150/7200
+[regir/0] final_eval 5175/7200
+[regir/0] final_eval 5200/7200
+[regir/0] final_eval 5225/7200
+[regir/0] final_eval 5250/7200
+[regir/0] final_eval 5275/7200
+[regir/0] final_eval 5300/7200
+[regir/0] final_eval 5325/7200
+[regir/0] final_eval 5350/7200
+[regir/0] final_eval 5375/7200
+[regir/0] final_eval 5400/7200
+[regir/0] final_eval 5425/7200
+[regir/0] final_eval 5450/7200
+[regir/0] final_eval 5475/7200
+[regir/0] final_eval 5500/7200
+[regir/0] final_eval 5525/7200
+[regir/0] final_eval 5550/7200
+[regir/0] final_eval 5575/7200
+[regir/0] final_eval 5600/7200
+[regir/0] final_eval 5625/7200
+[regir/0] final_eval 5650/7200
+[regir/0] final_eval 5675/7200
+[regir/0] final_eval 5700/7200
+[regir/0] final_eval 5725/7200
+[regir/0] final_eval 5750/7200
+[regir/0] final_eval 5775/7200
+[regir/0] final_eval 5800/7200
+[regir/0] final_eval 5825/7200
+[regir/0] final_eval 5850/7200
+[regir/0] final_eval 5875/7200
+[regir/0] final_eval 5900/7200
+[regir/0] final_eval 5925/7200
+[regir/0] final_eval 5950/7200
+[regir/0] final_eval 5975/7200
+[regir/0] final_eval 6000/7200
+[regir/0] final_eval 6025/7200
+[regir/0] final_eval 6050/7200
+[regir/0] final_eval 6075/7200
+[regir/0] final_eval 6100/7200
+[regir/0] final_eval 6125/7200
+[regir/0] final_eval 6150/7200
+[regir/0] final_eval 6175/7200
+[regir/0] final_eval 6200/7200
+[regir/0] final_eval 6225/7200
+[regir/0] final_eval 6250/7200
+[regir/0] final_eval 6275/7200
+[regir/0] final_eval 6300/7200
+[regir/0] final_eval 6325/7200
+[regir/0] final_eval 6350/7200
+[regir/0] final_eval 6375/7200
+[regir/0] final_eval 6400/7200
+[regir/0] final_eval 6425/7200
+[regir/0] final_eval 6450/7200
+[regir/0] final_eval 6475/7200
+[regir/0] final_eval 6500/7200
+[regir/0] final_eval 6525/7200
+[regir/0] final_eval 6550/7200
+[regir/0] final_eval 6575/7200
+[regir/0] final_eval 6600/7200
+[regir/0] final_eval 6625/7200
+[regir/0] final_eval 6650/7200
+[regir/0] final_eval 6675/7200
+[regir/0] final_eval 6700/7200
+[regir/0] final_eval 6725/7200
+[regir/0] final_eval 6750/7200
+[regir/0] final_eval 6775/7200
+[regir/0] final_eval 6800/7200
+[regir/0] final_eval 6825/7200
+[regir/0] final_eval 6850/7200
+[regir/0] final_eval 6875/7200
+[regir/0] final_eval 6900/7200
+[regir/0] final_eval 6925/7200
+[regir/0] final_eval 6950/7200
+[regir/0] final_eval 6975/7200
+[regir/0] final_eval 7000/7200
+[regir/0] final_eval 7025/7200
+[regir/0] final_eval 7050/7200
+[regir/0] final_eval 7075/7200
+[regir/0] final_eval 7100/7200
+[regir/0] final_eval 7125/7200
+[regir/0] final_eval 7150/7200
+[regir/0] final_eval 7175/7200
+[regir/0] final_eval 7200/7200

@@ -131,6 +131,10 @@ class EntityMAC(BasicMAC):
                 'entity_mask': batch["entity_mask"][:, t],
                 'reset': batch["reset"][:, t].float(),
                 'avail_actions': batch["avail_actions"][:, t]}
+        if "observer_entities" in batch.scheme:
+            rets['observer_entities'] = batch['observer_entities'][:, t]
+            if imagine_inps is not None:
+                imagine_inps['observer_entities'] = rets['observer_entities'].repeat(2, 1, 1, 1, 1)
         if imagine_inps is not None:
             imagine_inps['avail_actions'] = rets['avail_actions'].repeat(2, 1, 1, 1)
         if self.args.multi_task:
@@ -148,7 +152,8 @@ class EntityMAC(BasicMAC):
         return rets, imagine_inps
 
     def _get_input_shape(self, scheme):
-        agent_input_shape = scheme["entities"]["vshape"]
+        agent_input_shape = int(getattr(self.args, "actor_entity_shape",
+            getattr(self.args, "observer_entity_shape", scheme["entities"]["vshape"])))
         if self.args.entity_last_action:
             agent_input_shape += scheme["actions_onehot"]["vshape"][0]
         hier_input_shape = scheme["entities"]["vshape"]

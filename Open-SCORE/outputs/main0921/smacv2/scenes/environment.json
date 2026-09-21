@@ -1,0 +1,105 @@
+{
+  "status": "ready",
+  "protocol": "smacv2-protoss-mixed-v1",
+  "workspace": "/data3/dell/Saileron",
+  "python_prefix": "/data3/dell/Saileron/envs/saileron-smac",
+  "python_executable": "/data3/dell/Saileron/envs/saileron-smac/bin/python",
+  "python_version": "3.10.21 (main, Aug 27 2026, 14:42:07) [GCC 14.3.0]",
+  "smacv2_source": "/data3/dell/Saileron/projects/SMACv2",
+  "smacv2_commit": "577ab5a2cff2391f8df582da5731ea9cd6adf3c6",
+  "sc2_root": "/data3/dell/Saileron/envs/StarCraftII",
+  "sc2_binary": "/data3/dell/Saileron/envs/StarCraftII/Versions/Base75689/SC2_x64",
+  "sc2_version": "4.10.0",
+  "map": "/data3/dell/Saileron/envs/StarCraftII/Maps/SMAC_Maps/32x32_flat.SC2Map",
+  "shared_framework_sources": {
+    "open_score": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/open_score",
+    "had_env": "/data3/dell/Saileron/projects/HADE/had_env"
+  },
+  "cache": {
+    "conda": "/data3/dell/Saileron/.cache/conda",
+    "pip": "/data3/dell/Saileron/.cache/pip",
+    "xdg": "/data3/dell/Saileron/.cache"
+  },
+  "temporary_directory": "/data3/dell/Saileron/tmp",
+  "packages": {
+    "torch": "2.11.0+cu128",
+    "numpy": "1.26.4",
+    "protobuf": "3.20.3",
+    "pysc2": "4.0.0",
+    "SMACv2": "1.0.0",
+    "setuptools": "78.1.0",
+    "had-env": "1.0.0",
+    "open-score": "6.4.0"
+  },
+  "activation_environment": {
+    "PYTHONNOUSERSITE": "1",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONPATH": "",
+    "SC2PATH": "/data3/dell/Saileron/envs/StarCraftII",
+    "TMPDIR": "/data3/dell/Saileron/tmp",
+    "XDG_CACHE_HOME": "/data3/dell/Saileron/.cache",
+    "PIP_CACHE_DIR": "/data3/dell/Saileron/.cache/pip"
+  },
+  "gpu_selection": "chosen by launcher; no GPU pinned in runtime activation",
+  "migration": {
+    "method": "conda --clone --offline; editable SMAC source relocated; tested setuptools restored from local installed files",
+    "register_envs": false,
+    "historical_sources_retained_not_used_by_this_runtime": {
+      "python_prefix": "/home/dell/anaconda3/envs/saileron-smac",
+      "smacv2_source": "/home/dell/.local/share/saileron-smac/smacv2",
+      "sc2_source": "/home/dell/StarCraftII"
+    },
+    "sc2_local_copy_components": [
+      ".build.info",
+      "Battle.net",
+      "Interfaces",
+      "Libs",
+      "SC2Data",
+      "Versions/Base75689",
+      "Versions/Shaders41359",
+      "stableid.json",
+      "Maps/SMAC_Maps/32x32_flat.SC2Map"
+    ]
+  },
+  "verification": {
+    "dependency_check": "pip check passed",
+    "native_reset_and_step": {
+      "config": [
+        4,
+        4,
+        0
+      ],
+      "scenario_seed": 0,
+      "engine_seed": 0,
+      "reset": true,
+      "legal_step": true,
+      "joint_steps": 1,
+      "reward": 0.0,
+      "terminated": false,
+      "actor_shape": [
+        4,
+        8,
+        32
+      ],
+      "central_shape": [
+        8,
+        18
+      ],
+      "data_dir": "/data3/dell/Saileron/envs/StarCraftII"
+    },
+    "gpu_matrix": {
+      "physical_gpu": 0,
+      "device_name": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition",
+      "capability": [
+        12,
+        0
+      ],
+      "shape": [
+        64,
+        64
+      ],
+      "finite_backward": true
+    },
+    "time_unix": 1790014775.2916925
+  }
+}

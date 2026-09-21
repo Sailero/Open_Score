@@ -1,6 +1,8 @@
 # Open-SCORE
 
-当前主线为 **main**：唯一写入目录 `Open-SCORE/outputs/main/`，论文方法名暂定 **ReGIR**（代码键 `regir`，迁入自 `refil_cycle`）。主对照为 ReGIR / REFIL / QMIX-Atten / DCG / SPECTra / ALMA / Rule nv1，消融与参数匹配臂按[实验计划](docs/main实验计划.md)排队。训练 `--group main` 最多 2 路并发，评估 `eval.py` 最多 2 路；正式结果只写[本版实验报告](Open-SCORE/outputs/main/实验报告.md)。v3/v4/v5 权重迁入 main 后不再向那些目录写入。历史对照仍可查阅 [main v5](Open-SCORE/outputs/main_v5/实验报告.md)、[main v4](Open-SCORE/outputs/main_v4/实验报告.md)、[main v3](Open-SCORE/outputs/main_v3/实验报告.md)；硬掩码原版与其余适配对照见 [alma_probe_v3](Open-SCORE/outputs/alma_probe_v3/实验报告.md)。
+当前实验版本为 **main0921**：固定三种子0/1/2，HAD与SMACv2共用现有训练框架。协议、运行命令和正文/附录安排见[实验计划](Open-SCORE/outputs/main0921/实验计划.md)，全部结果汇入唯一[实验报告](Open-SCORE/outputs/main0921/实验报告.md)。原 `outputs/main` 保留历史结果与恢复信息。训练允许GPU0/GPU1，按可用显存分配、最多两路；CPU终评与机制使用独立队列。
+
+本机目录按用途组织：`/data3/dell/Saileron/projects/HADE` 与 `projects/SMACv2` 保存环境源码，`envs/saileron-smac` 保存独立Python运行环境，`envs/StarCraftII` 保存游戏运行文件。适配器并列位于 `Open-SCORE/open_score/envs/`；新缓存、临时文件均限制在该工作区。必须用计划中的绝对Python路径或 `conda run -p`，不要用可能指向历史副本的环境名称。
 
 当前代码和 viewer 接入七种方法及 ReGIR 消融臂。正式对照包括 **ReGIR（`regir`）、QMIX-Atten（`b2_qmix_atten`）、REFIL、DCG、SPECTra、ALMA**；前四者及迁入的 ReGIR seed 0 有保留权重。ALMA 按 `n_extra_tasks=9` 在 main 重训。另保留 **QMIX-Base（`b0_qmix`）与 GNN-QMIX** 的种子 0 档案。报告中的 QMIX 指 QMIX-Atten。ALMA 的上层子任务分配和下层动作网络作为一个完整模型加载。`best.pt` 是途中验证选优模型，`final.pt` 是最终保存，部分已有运行保留 `latest.pt`；文件存在不代表该运行的所有正式评估都已结束。
 
@@ -8,7 +10,7 @@
 
 ## 环境与安装
 
-唯一底层是独立仓库 [HAD Workbench](../Open_Score_HAD_Workbench/README.md)，本仓库通过 `Open-SCORE/open_score/envs/had_wrapper.py` 访问其原生实现，无第二份环境代码。本地依赖路径为 `E:/Code/Open_Score_HAD_Workbench`，当前协议为 `had-workbench-2.1.0` / `rebuild-calibrated-v3-r7-target-initialization`。历史 v7 使用 r2，不代表当前任务与规则的结果。覆盖规则评估在 `open_score.rules`；回放器为仓库根目录的 `viewer.py` 与 `viewer.html`。
+HAD底层为独立仓库 [HADE](../HADE/README.md)，本仓库通过 `Open-SCORE/open_score/envs/had_wrapper.py` 访问其原生实现。本机依赖路径为 `/data3/dell/Saileron/projects/HADE`，当前协议为 `had-workbench-2.1.0` / `rebuild-calibrated-v3-r7-target-initialization`。历史 v7 使用 r2，不代表当前任务与规则的结果。覆盖规则评估在 `open_score.rules`；回放器为仓库根目录的 `viewer.py` 与 `viewer.html`。
 
 跨规模实验使用扁平包 `Open-SCORE/open_score/`，通过仓库内可编辑安装运行。`open_score.envs.make_entity_env` 提供 damage 任务实体接口：当前训练池槽位上限为 10 红方、10 蓝方、3 目标，评估接口上限为 50 红方、50 蓝方、12 目标；每局训练规模独立采样，死亡和 padding 槽保留，模型动作编号为 0–8。仅逐步热路径绕开原生观测；reset 沿用 HAD 原生初始化。评估和规则锚点共享蓝方事件调度、物理过程、动作映射和诊断采集。
 
@@ -16,7 +18,7 @@
 & 'D:\Software\Anaconda\envs\torch310\python.exe' -m pip install -e './Open-SCORE[training]'
 ```
 
-`had-env` 声明环境依赖，`training` extra 声明七方法训练与出图所需依赖。当前运行解释器为上述 `torch310`，已安装 PyTorch 2.13.0+cu130、NumPy 1.26.4、SciPy 1.15.3、Matplotlib 3.10.9、PyYAML 6.0.3；extra 不负责选择 CUDA 构建。渲染及 Workbench 界面的安装方法见其 README。
+`had-env` 声明环境依赖，`training` extra 声明七方法训练与出图所需依赖。旧Windows示例解释器为上述 `torch310`；当前Linux入口采用main0921计划中的解释器。历史环境已安装 PyTorch 2.13.0+cu130、NumPy 1.26.4、SciPy 1.15.3、Matplotlib 3.10.9、PyYAML 6.0.3；extra 不负责选择 CUDA 构建。渲染及 Workbench 界面的安装方法见其 README。
 
 本轮支持保留源码目录的可编辑安装。方法配置保留在包外的 `Open-SCORE/configs/`，命令入口保留在 `Open-SCORE/scripts/`；独立 wheel 不是当前支持的运行方式。vendored 主干及补丁内的 YAML 与已有 LICENSE 已声明为 package data，不复制包外配置来扩展发布体系。
 

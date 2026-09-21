@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from collections import deque
 from contextlib import redirect_stderr, redirect_stdout
 from multiprocessing import get_context
@@ -97,11 +98,20 @@ def _exclusive_job(method, run, seed, lock_dir=None):
 
 
 def _worker(task, output, run, device, stop_event, results):
-    kind = task["id"].split(".")[1]
+    from open_score.eval.experiment import is_profile, run_directory
+    from open_score.utils.resources import cpu_threads
+    cpu_threads()
+    profile = is_profile(output)
+    kind = task.get("kind") or task["id"].split(".")[1]
     method = task["method"]
     seed = 0 if task["seed"] is None else int(task["seed"])
-    log_dir = Path(output) / (method or "eval") / run / f"seed_{seed}"
+    log_dir = run_directory(output, method or "eval", seed, task.get("env", "had"), run)
     log_dir.mkdir(parents=True, exist_ok=True)
+
+    def profile_stop_requested():
+        # The parent may be drawing the report; workers still observe stop
+        # directly at episode/transaction boundaries during that interval.
+        return stop_event.is_set() or (Path(output) / "eval.stop.request").exists()
 
     def on_progress(progress):
         payload = dict(progress)
@@ -115,7 +125,16 @@ def _worker(task, output, run, device, stop_event, results):
         with redirect_stdout(log), redirect_stderr(log):
             try:
                 with _exclusive_job(task["id"], run, seed, lock_dir=log_dir):
-                    if kind == "anchors":
+                    if profile and kind in ("final", "depth", "readout"):
+                        from open_score.eval.protocol import evaluate_profile_checkpoint
+                        result = evaluate_profile_checkpoint(method, task["checkpoint"], output=output,
+                            kind=kind, env=task["env"], seed=seed, device=device,
+                            on_progress=on_progress, stop_requested=profile_stop_requested)
+                    elif profile and kind == "probe":
+                        from open_score.eval.relationship_probe import evaluate_probe
+                        result = evaluate_probe(output=output, seed=seed,
+                            on_progress=on_progress, stop_requested=profile_stop_requested)
+                    elif kind == "anchors":
                         from open_score.eval.anchors import run_anchors
                         result = run_anchors(output, run=run, stop_requested=stop_event.is_set,
                                              on_progress=on_progress)
@@ -165,8 +184,12 @@ def _worker(task, output, run, device, stop_event, results):
 def _eval_job_line(item, output, run, cached):
     task = item["task"]
     seed = 0 if task["seed"] is None else int(task["seed"])
-    path = Path(output) / (task["method"] or "eval") / run / f"seed_{seed}" / "eval.console.log"
-    row = parse_eval_console(read_tail(path))
+    from open_score.eval.experiment import run_directory, is_profile
+    path = run_directory(output, task["method"] or "eval", seed, task.get("env", "had"), run) / "eval.console.log"
+    # Imported console tails may describe an old best-checkpoint evaluation.
+    # Until this worker publishes progress, show the qualified task inventory.
+    row = (dict(completed=task.get("completed", 0), total=task.get("total", 0))
+           if is_profile(output) else parse_eval_console(read_tail(path)))
     row.update({key: value for key, value in cached.items() if value is not None})
     done = int(row.get("completed", row.get("eval_completed")) or 0)
     total = int(row.get("total", row.get("eval_total")) or 0)
@@ -178,129 +201,154 @@ def _eval_job_line(item, output, run, cached):
     return f"{task['id']:<36}  {phase:<11}  {progress}{extra}{eta_bit}"
 
 
-def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RUN):
+def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RUN,
+             env="had", method=None, seed=None):
     from open_score.eval.inventory import pending_eval_jobs
     from open_score.eval.report import refresh_report
+    from open_score.eval.experiment import is_profile, scan
+    from open_score.utils.resources import cpu_admit
+    profile = is_profile(output)
     context = get_context("spawn")
     stop_event, queue = context.Event(), context.Queue()
-    failures, live_status = [], {}
-    previous = signal.getsignal(signal.SIGINT)
-    last_status = 0.0
-    status_height = 0
-    use_ansi = _enable_ansi()
+    live, failures, live_status, seen, retry_at = [], [], {}, set(), {}
+    waiting = deque()
+    selected = []
+    interrupted = False
+    previous = {sig: signal.getsignal(sig) for sig in (signal.SIGINT, signal.SIGTERM)}
+    last_status = last_scan = last_report = 0.0
+    height = 0
+    use_ansi = _enable_ansi() and sys.stdout.isatty()
 
     def request_stop(signum, frame):
-        nonlocal status_height
+        nonlocal interrupted
+        interrupted = True
         stop_event.set()
-        status_height = 0
-        print("stop requested: finish current episode", flush=True)
+        print("stop requested: finish current episodes, save records, then join workers", flush=True)
 
     def emit(message):
-        nonlocal status_height
-        status_height = 0
+        nonlocal height
+        height = 0
         print(message, flush=True)
 
-    def show_board(live, waiting, idle=False):
-        nonlocal status_height, last_status
-        now = time.monotonic()
-        if now - last_status < 3 and not idle:
-            return
-        if idle:
-            lines = ["eval idle  waiting for new checkpoints  (rescan 3 min)",
-                     "this window stays up; train is a separate process"]
+    def ingest():
+        nonlocal selected
+        if profile:
+            all_tasks = scan(output, env=env, only=only, probe_collector_seed=seed or 0)["tasks"]
+            selected = [t for t in all_tasks if t["kind"] in only
+                        and (method is None or t["method"] == method)
+                        and (seed is None or t["seed"] == seed)]
+            jobs = [t for t in selected if t["status"] == "pending"]
         else:
-            lines = [f"eval live={len(live)} queue={len(waiting)}"]
-            lines.extend(_eval_job_line(item, output, run, live_status.get(item["task"]["id"], {}))
-                         for item in live)
-            if waiting:
-                lines.append("queued: " + "  ".join(task["id"] for task in list(waiting)[:6])
-                             + (f" +{len(waiting) - 6}" if len(waiting) > 6 else ""))
-        status_height = _rewrite_block(lines, status_height, use_ansi)
-        last_status = now
+            jobs = pending_eval_jobs(output, only=only, quiet=True)
+        for task in jobs:
+            tid = task["id"]
+            if tid in seen or time.monotonic() < retry_at.get(tid, 0):
+                continue
+            seen.add(tid)
+            waiting.append(task)
+            emit(f"queue {tid} {task.get('completed', 0)}/{task.get('total', 0)}")
 
-    signal.signal(signal.SIGINT, request_stop)
-    try:
-        waiting, live, seen = deque(), [], set()
-        last_scan = 0.0
-        first_scan = True
-
-        def ingest(*, quiet):
-            try:
-                jobs = pending_eval_jobs(output, only=only, quiet=quiet)
-            except (OSError, MemoryError, TimeoutError) as error:
-                emit(f"inventory scan skipped: {type(error).__name__}")
+    def launch():
+        while waiting and len(live) < max_concurrent and not stop_event.is_set():
+            selected_index = next((i for i, task in enumerate(waiting)
+                                   if not profile or cpu_admit(env, task["kind"], live, max_concurrent)), None)
+            if selected_index is None:
                 return
-            added = 0
-            live_ids = {item["task"]["id"] for item in live}
-            for task in jobs:
-                tid = task["id"]
-                if tid in seen or tid in live_ids:
-                    continue
-                seen.add(tid)
-                waiting.append(task)
-                added += 1
-                emit(f"queue {tid:<42} {task.get('detail') or ''}".rstrip())
-            if added:
-                emit(f"eval queued +{added}  live={len(live)} waiting={len(waiting)}")
+            task = waiting[selected_index]
+            del waiting[selected_index]
+            child = context.Process(target=_worker, args=(task, str(output), run, device, stop_event, queue))
+            child.start()
+            live.append(dict(child=child, task=task))
+            emit(f"{task['id']} started pid={child.pid}")
 
-        def launch():
-            while waiting and len(live) < max_concurrent and not stop_event.is_set():
-                task = waiting.popleft()
-                child = context.Process(target=_worker, args=(task, str(output), run, device, stop_event, queue))
-                child.start()
-                live.append({"child": child, "task": task})
-                emit(f"{task['id']} started")
+    def receive():
+        nonlocal last_scan
+        while True:
+            try:
+                result = queue.get_nowait()
+            except Empty:
+                return
+            if result.get("kind") == "progress":
+                live_status[result["id"]] = result
+                continue
+            emit(f"{result.get('id')} {result.get('status')}")
+            status = result.get("status")
+            if status in ("failed", "incomplete"):
+                failures.append(result)
+            elif status in ("blocked", "skipped"):
+                seen.discard(result["id"])
+                retry_at[result["id"]] = time.monotonic() + 60
+            last_scan = 0  # Resolve readout/probe dependencies after atomic result writes.
 
+    for sig in previous:
+        signal.signal(sig, request_stop)
+    try:
         while not stop_event.is_set():
             if (Path(output) / "eval.stop.request").exists():
+                interrupted = True
+                stop_event.set()
                 break
             now = time.monotonic()
+            receive()
+            changed = False
+            for item in list(live):
+                child = item["child"]
+                if child.is_alive():
+                    continue
+                child.join()
+                live.remove(item)
+                changed = True
+                if child.exitcode != 0:
+                    failures.append(dict(id=item["task"]["id"], error=f"worker exit {child.exitcode}"))
+            if changed:
+                receive()
+                last_scan = 0
             if now - last_scan >= 60:
-                ingest(quiet=not first_scan)
+                ingest()
                 last_scan = now
-                first_scan = False
-            still = []
-            finished = False
-            for item in live:
-                if item["child"].is_alive():
-                    still.append(item)
-                    continue
-                finished = True
-                if item["child"].exitcode not in (None, 0):
-                    failures.append(dict(id=item["task"]["id"], error=f"exit {item['child'].exitcode}"))
-            live[:] = still
-            while True:
-                try:
-                    result = queue.get_nowait()
-                except Empty:
-                    break
-                if result.get("kind") == "progress":
-                    live_status[result.get("id")] = result
-                    continue
-                emit(f"{result.get('id')} {result.get('status')}")
-                if result.get("status") == "failed":
-                    failures.append(result)
             launch()
-            if finished:
-                try:
-                    refresh_report(output, run=run)
-                except (OSError, MemoryError, TimeoutError) as error:
-                    emit(f"report refresh skipped: {type(error).__name__}")
-            if not live and not waiting:
-                show_board([], [], idle=True)
-            else:
-                show_board(live, waiting)
-            time.sleep(1.0)
-        if failures:
-            print("eval jobs failed:\n" + "\n".join(item.get("error", str(item)) for item in failures), flush=True)
-            return False
-        return not stop_event.is_set()
+            if profile and not live and not waiting:
+                unfinished = [t for t in selected if t["status"] != "complete"]
+                if not unfinished:
+                    emit("all selected evaluation tasks complete")
+                    break
+                if failures and all(t["id"] in seen for t in unfinished):
+                    break
+            if now - last_status >= (5 if live else 60):
+                lines = [f"eval {env} live={len(live)} queued={len(waiting)} "
+                         f"waiting_dependencies={sum(t['status'] == 'waiting' for t in selected)}"]
+                lines.extend(_eval_job_line(i, output, run, live_status.get(i["task"]["id"], {})) for i in live)
+                height = _rewrite_block(lines, height, use_ansi)
+                last_status = now
+            if now - last_report >= 300:
+                refresh_report(output, run=run)
+                last_report = now
+            time.sleep(1)
     finally:
-        signal.signal(signal.SIGINT, previous)
+        stop_event.set()
+        last_notice = 0
+        while live:
+            receive()
+            for item in list(live):
+                item["child"].join(timeout=.2)
+                if not item["child"].is_alive():
+                    live.remove(item)
+            if live and time.monotonic() - last_notice > 30:
+                emit(f"waiting for {len(live)} workers to finish current episodes and save")
+                last_notice = time.monotonic()
+        receive()
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
+        refresh_report(output, run=run)
+    if failures:
+        print("Evaluation incomplete: " + "\n".join(str(x) for x in failures), flush=True)
+    return not failures and not interrupted
 
 
 def parser():
     result = argparse.ArgumentParser(description=__doc__)
+    result.add_argument("--profile", choices=("main0921",))
+    result.add_argument("--env", choices=("had", "smacv2"), default="had")
     result.add_argument("--stage", choices=("inventory", "migrate", "eval", "stop"), default="eval")
     result.add_argument("--group", default="main")
     result.add_argument("--method")
@@ -310,21 +358,169 @@ def parser():
     result.add_argument("--seed", type=int, default=None)
     result.add_argument("--device", default="cpu")
     result.add_argument("--resume", action="store_true")
-    result.add_argument("--max-concurrent", type=int, choices=(1, 2, 3, 4, 5), default=2)
-    result.add_argument("--only", default=None, help="comma list: anchors,final,depth,mech,timing")
+    result.add_argument("--max-concurrent", type=int, choices=range(1, 17), default=2)
+    result.add_argument("--only", default=None, help="comma list: final,depth,readout,probe; separately timing")
     result.add_argument("--depth-sweep", action="store_true")
     return result
+
+
+def run_profile_timing(output, stop_requested):
+    """Cost cells are atomic; an OOM retries unfinished cells on the same card."""
+    from open_score.eval.experiment import initialize, atomic_json, scan
+    from open_score.eval.timing import evaluate_profile_timing
+    from open_score.utils.resources import gpu_memory, is_cuda_oom
+    manifest = initialize(output)
+    task = next(t for t in scan(output, env="had")["tasks"] if t["kind"] == "timing")
+    if task["status"] == "waiting":
+        return dict(status="blocked", reason="M4 needs all cost finals and the complete common state bank")
+    selected = manifest["resources"].get("measurement_gpu")
+    required_free, retries = 12., 0
+    last_notice = 0.
+    while not stop_requested():
+        memories = {}
+        for gpu in ((selected,) if selected is not None else (0, 1)):
+            try:
+                memories[gpu] = gpu_memory(gpu)
+            except Exception:
+                pass
+        eligible = [gpu for gpu in memories if memories[gpu]["free"] >= required_free]
+        if not eligible:
+            if time.monotonic() - last_notice > 30:
+                print(f"M4 waits for >= {required_free:.1f} GiB free on registered GPU {selected}", flush=True)
+                last_notice = time.monotonic()
+            time.sleep(1)
+            continue
+        if selected is None:
+            selected = max(eligible, key=lambda gpu: memories[gpu]["free"])
+            manifest["resources"]["measurement_gpu"] = selected
+            atomic_json(Path(output) / "experiment.json", manifest)
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(selected)
+        try:
+            result = evaluate_profile_timing(output=output, stop_requested=stop_requested)
+            failure_path = Path(output) / "timing_failure.json"
+            if failure_path.exists():
+                previous = json.loads(failure_path.read_text(encoding="utf-8"))
+                atomic_json(failure_path, {**previous, "status": result.get("status", "completed"),
+                                          "updated_at": time.time()})
+            return result
+        except Exception as error:
+            if not is_cuda_oom(error):
+                raise
+            import torch
+            retries += 1
+            required_free = max(required_free, 8 + 1.25 * torch.cuda.max_memory_reserved() / 1024**3)
+            atomic_json(Path(output) / "timing_failure.json", dict(kind="cuda_oom", retry=retries,
+                physical_gpu=selected, completed_cells_retained=True, error=str(error),
+                status="retry_wait" if retries <= 3 else "failed", required_free_gib=required_free))
+        # Drop the exception frame before releasing the allocator cache.
+        import gc
+        gc.collect()
+        torch.cuda.empty_cache()
+        if retries > 3:
+            return dict(status="failed", reason="M4 CUDA OOM automatic retries exhausted; completed cells retained")
+        deadline = time.monotonic() + 60 * 2 ** (retries - 1)
+        print(f"M4 CUDA OOM: retaining completed cells; controlled retry {retries}/3", flush=True)
+        while time.monotonic() < deadline and not stop_requested():
+            time.sleep(1)
+    failure_path = Path(output) / "timing_failure.json"
+    if failure_path.exists():
+        previous = json.loads(failure_path.read_text(encoding="utf-8"))
+        atomic_json(failure_path, {**previous, "status": "stopped", "updated_at": time.time()})
+    return dict(status="stopped")
+
+
+def profile_main(options, output):
+    from open_score.eval.experiment import (initialize, scan, import_existing, SEEDS, methods,
+                                          checkpoint_info, run_directory)
+    from open_score.utils.resources import queue_lock, cpu_threads, clear_previous_stop, configure_workspace
+    initialize(output)
+    workspace = configure_workspace()
+    if options.env == "smacv2":
+        os.environ["SC2PATH"] = str(workspace / "envs/StarCraftII")
+    cpu_threads()
+    requested_at = time.time()
+    stop_path = output / "eval.stop.request"
+    def new_stop():
+        return stop_path.exists() and stop_path.stat().st_mtime > requested_at
+    if options.run != "train" or options.seed not in (None, *SEEDS):
+        raise SystemExit("main0921 fixes run=train and model seeds 0,1,2")
+    if options.method is not None and options.method not in methods(options.env):
+        raise SystemExit("--method must belong to the fixed main0921 environment matrix")
+    if options.stage == "inventory":
+        inventory = scan(output)
+        for task in inventory["tasks"]:
+            if task["env"] == options.env:
+                print(f"{task['id']:<48} {task['status']:<10} {task['completed']}/{task['total']}")
+        return
+    if options.stage == "migrate":
+        imported = import_existing(output, output.parent / "main")
+        print(f"Imported {len(imported)} final checkpoints")
+        return
+    only = set(options.only.split(",")) if options.only else (
+        {"final", "depth", "readout", "probe"} if options.env == "had" else {"final"})
+    only = {k.strip() for k in only}
+    if options.depth_sweep:
+        only = {"depth"}
+    allowed = {"final", "depth", "readout", "probe", "timing"} if options.env == "had" else {"final"}
+    if not only or not only <= allowed:
+        raise SystemExit(f"Unsupported main0921 {options.env} evaluation kinds: {sorted(only)}")
+    if options.method not in (None, "regir"):
+        if options.only and only & {"depth", "readout", "probe"}:
+            raise SystemExit("Depth/readout/probe interventions apply only to HAD Full (--method regir)")
+        only &= {"final", "timing"}
+    if "timing" in only:
+        if only != {"timing"}:
+            raise SystemExit("GPU cost measurement must run separately: --only timing")
+        if options.method is not None or options.seed is not None:
+            raise SystemExit("M4 uses its fixed eight-method, three-seed matrix; omit --method and --seed")
+        from open_score.eval.report import refresh_report
+        with queue_lock(output, "gpu", stop_requested=new_stop):
+            clear_previous_stop(stop_path, requested_at)
+            result = run_profile_timing(output, stop_requested=lambda: stop_path.exists())
+        refresh_report(output, run="train")
+        print(result)
+        if result.get("status") not in ("complete", "completed"):
+            raise SystemExit(1)
+        return
+    if options.device != "cpu":
+        raise SystemExit("main0921 formal evaluation and mechanisms require --device cpu")
+    os.environ["CUDA_VISIBLE_DEVICES"] = ""
+    if options.checkpoint:
+        if not options.method:
+            raise SystemExit("--checkpoint requires --method")
+        info = checkpoint_info(options.checkpoint, method=options.method, seed=options.seed, env=options.env)
+        expected = run_directory(output, options.method, info["seed"], options.env) / "final.pt"
+        if expected.resolve() != options.checkpoint.resolve():
+            raise SystemExit("Checkpoint must be the registered final in this independent output")
+        options.seed = info["seed"]
+    with queue_lock(output, "cpu", stop_requested=new_stop):
+        clear_previous_stop(stop_path, requested_at)
+        if options.env == "smacv2":
+            from open_score.envs.smacv2_env import generate_registered_scenes
+            generate_registered_scenes(output)
+        success = run_eval(output, max_concurrent=options.max_concurrent, only=only,
+                           device="cpu", run="train", env=options.env,
+                           method=options.method, seed=options.seed)
+    if not success:
+        raise SystemExit(1)
 
 
 def main():
     options = parser().parse_args()
     output = options.output.resolve()
+    if options.profile and output == DEFAULT_OUTPUT.resolve():
+        if any(arg == "--output" or arg.startswith("--output=") for arg in sys.argv):
+            raise SystemExit("main0921 must use an independent output, not outputs/main")
+        output = DEFAULT_OUTPUT.parent / "main0921"
     if options.stage == "stop":
         output.mkdir(parents=True, exist_ok=True)
-        (output / "eval.stop.request").write_text(
-            "Stop after the current complete evaluation episode.\n", encoding="utf-8")
+        from open_score.utils.resources import write_stop
+        write_stop(output / "eval.stop.request", "Stop after the current complete evaluation episode.")
         print("eval.stop.request written; wait for current episode, do not kill", flush=True)
         return
+    from open_score.eval.experiment import is_profile
+    if options.profile or is_profile(output):
+        return profile_main(options, output)
     if options.stage == "eval":
         (output / "eval.stop.request").unlink(missing_ok=True)
     if options.stage == "inventory":
