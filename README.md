@@ -1,6 +1,6 @@
 # Open-SCORE
 
-当前实验版本为 **main0921**：固定三种子0/1/2，HAD与SMACv2共用现有训练框架。协议、运行命令和正文/附录安排见[实验计划](Open-SCORE/outputs/main0921/实验计划.md)，全部结果汇入唯一[实验报告](Open-SCORE/outputs/main0921/实验报告.md)。原 `outputs/main` 保留历史结果与恢复信息。训练允许GPU0/GPU1，按可用显存分配，HAD最多3路、SMAC最多2路；CPU终评与机制合计最多4个任务。
+当前实验版本为 **main0921**：固定三种子0/1/2，HAD与SMACv2共用现有训练框架。协议、运行命令和正文/附录安排见[实验计划](Open-SCORE/outputs/main0921/实验计划.md)，全部结果汇入唯一[实验报告](Open-SCORE/outputs/main0921/实验报告.md)。原 `outputs/main` 保留历史结果与恢复信息。训练允许GPU0/GPU1，按可用显存分配，HAD与SMAC均每卡最多2路、两卡最多4路，按实际资源准入；CPU终评与机制合计最多4个任务。
 
 本机目录按用途组织：`/data3/dell/Saileron/projects/HADE` 与 `projects/SMACv2` 保存环境源码，`envs/saileron-smac` 保存独立Python运行环境，`envs/StarCraftII` 保存游戏运行文件。适配器并列位于 `Open-SCORE/open_score/envs/`；新缓存、临时文件均限制在该工作区。必须用计划中的绝对Python路径或 `conda run -p`，不要用可能指向历史副本的环境名称。
 

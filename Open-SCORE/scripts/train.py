@@ -491,14 +491,15 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
     from open_score.eval.report import refresh_report, refresh_report_async
     from open_score.eval.protocol import CYCLE_SERIES_METHODS, depth_eval_finished, infer_best_t_env
     from open_score.eval.experiment import is_profile, run_directory, checkpoint_info
-    from open_score.utils.resources import choose_gpu, gpu_memory
+    from open_score.utils.resources import choose_gpu, gpu_memory, gpu_train_limit
     profile = is_profile(output)
     domain = jobs[0][1].get("env", "had") if jobs else "had"
     devices = tuple(jobs[0][1].get("_devices", (0, 1))) if jobs else (0, 1)
+    per_gpu = jobs[0][1].get("_per_gpu", 2) if jobs else 2
     if profile:
         with_depth_eval = with_anchors = False
-        if not 1 <= max_concurrent <= (3 if domain == "had" else 2):
-            raise ValueError("main0921 admits at most three HAD or two SMAC trainers")
+        if not 1 <= max_concurrent <= gpu_train_limit(devices, per_gpu=per_gpu):
+            raise ValueError("main0921 admits at most two trainers per selected physical GPU")
     if max_concurrent < 1 or max_concurrent > 4:
         raise ValueError("Concurrent experiment tasks must be between 1 and 4")
     pending_train, pending_eval = [], []
@@ -679,7 +680,7 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
                     continue
                 gpu = choose_gpu(output, domain, method, live, devices, memories=memories,
                                  minimum_peak=options.get("_minimum_peak", 0),
-                                 recovering=options.get("_recovering", False)) if profile else None
+                                 recovering=options.get("_recovering", False), per_gpu=per_gpu) if profile else None
                 fits = gpu is not None if profile else _fits_gpu(method, live)
                 if method == "anchors" or fits:
                     picked = index
@@ -1380,6 +1381,7 @@ def parser():
     result.add_argument("--status-seconds", type=int, default=300,
                         help="farm status board interval in seconds")
     result.add_argument("--once", action="store_true", help="print one main0921 status screen and exit")
+    result.add_argument("--details", action="store_true", help="show the full main0921 status details and waiting queue")
     result.add_argument("--steps", type=int)
     result.add_argument("--batch-size-run", type=int, choices=(4, 8), default=4)
     result.add_argument("--seed", type=int, default=0)
@@ -1444,14 +1446,14 @@ def require_preparation(output):
 
 def profile_main(options, output):
     from open_score.eval.experiment import initialize, methods, budget, SEEDS, scan
-    from open_score.utils.resources import queue_lock, cpu_threads, clear_previous_stop, configure_workspace
+    from open_score.utils.resources import queue_lock, cpu_threads, clear_previous_stop, configure_workspace, gpu_train_limit
     initialize(output)
     workspace = configure_workspace()
     cpu_threads()
     if options.stage == "status":
         from open_score.utils.status import watch_status
         interval = options.status_seconds if any(a.startswith("--status-seconds") for a in sys.argv) else 5
-        watch_status(output, interval=max(1, interval), once=options.once)
+        watch_status(output, interval=max(1, interval), once=options.once, details=options.details)
         return
     if options.stage == "validate":
         from open_score.eval.experiment import validate_integration
@@ -1461,17 +1463,21 @@ def profile_main(options, output):
         raise SystemExit("main0921 supports train/single/farm, validate, status and stop")
     if options.env not in ("had", "smacv2"):
         raise SystemExit("main0921 environments are had and smacv2")
-    if not any(a.startswith("--max-concurrent") for a in sys.argv):
-        options.max_concurrent = 3 if options.env == "had" else 2
     devices = tuple(_parse_devices(options.devices or "0,1") or ())
     if options.cpu or not devices or not set(devices) <= {0, 1}:
         raise SystemExit("main0921 training uses physical --devices 0,1 (or an explicit subset)")
+    if not any(a.startswith("--per-gpu") for a in sys.argv):
+        options.per_gpu = 2
+    if options.per_gpu not in (1, 2):
+        raise SystemExit("main0921 allows --per-gpu 1 or 2")
+    if not any(a.startswith("--max-concurrent") for a in sys.argv):
+        options.max_concurrent = gpu_train_limit(devices, per_gpu=options.per_gpu)
     if options.run not in (None, "train") or options.seed not in SEEDS:
         raise SystemExit("main0921 fixes --run train and seeds 0,1,2")
     if options.steps not in (None, budget(options.env)):
         raise SystemExit(f"main0921 {options.env} fixes the budget at {budget(options.env)}")
-    if not 1 <= options.max_concurrent <= (3 if options.env == "had" else 2):
-        raise SystemExit("main0921 allows at most three HAD or two SMAC trainers")
+    if not 1 <= options.max_concurrent <= gpu_train_limit(devices, per_gpu=options.per_gpu):
+        raise SystemExit("main0921 allows at most two trainers per selected physical GPU")
     workers = options.batch_size_run if "--batch-size-run" in sys.argv else (8 if options.env == "had" else 4)
     if workers != (8 if options.env == "had" else 4):
         raise SystemExit("main0921 fixes 8 HAD workers or 4 SMAC workers per trainer")
@@ -1490,7 +1496,7 @@ def profile_main(options, output):
     os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, devices))
     base = dict(profile="main0921", output=str(output), env=options.env, run="train",
                 t_max=budget(options.env), batch_size_run=workers, use_cuda=True,
-                resume=options.resume, skip_final_eval=True, _devices=devices,
+                resume=options.resume, skip_final_eval=True, _devices=devices, _per_gpu=options.per_gpu,
                 reward_mode="damage", friendly_penalty=1.0,
                 concurrency=options.max_concurrent)
     if options.env == "smacv2":
@@ -1503,7 +1509,7 @@ def profile_main(options, output):
         return stop_file.exists() and stop_file.stat().st_mtime > requested_at
     with queue_lock(output, "gpu", stop_requested=new_stop):
         clear_previous_stop(stop_file, requested_at)
-        print(f"main0921 {options.env}: seeds={selected_seeds}, physical GPUs={devices}, max={options.max_concurrent}; "
+        print(f"main0921 {options.env}: seeds={selected_seeds}, physical GPUs={devices}, per GPU <= {options.per_gpu}, queue <= {options.max_concurrent}; "
               "unknown resource profiles run alone until measured", flush=True)
         success = run_group(jobs, output, max_concurrent=options.max_concurrent, with_depth_eval=False)
     if not success:

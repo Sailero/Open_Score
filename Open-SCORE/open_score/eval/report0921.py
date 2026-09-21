@@ -652,10 +652,10 @@ def _appendix(results):
                                       info.get("checkpoint_id", "—"), info.get("path", "—")])
     lines += _table(["环境", "方法", "seed", "final实际步数", "artifact ID", "来源权重"], artifact_rows)
     lines += ["### F. 当前缺口、失败、冲突与排除", "",
-              "运行上限：HAD训练3个进程，SMAC训练2个进程（第二张卡需满足显存及利用率准入）；"
+              "运行上限：HAD与SMAC训练均每卡最多2个进程，两卡最多4个，仍须通过显存准入，SMAC还检查目标卡利用率；"
               "CPU终评与机制合计4个任务。实时任务数、已完成/剩余量及条件ETA可通过"
               "`train.py --profile main0921 --stage status --output Open-SCORE/outputs/main0921`查看。"
-              "该面板只读，关闭面板不会停止训练。具体时间依据与区间见[实验计划](实验计划.md)，"
+              "该面板默认精简，--details显示完整明细；只读查看，关闭面板不会停止训练。具体时间依据与区间见[实验计划](实验计划.md)，"
               "smoke与受控恢复证据归并在[implementation_acceptance.json](implementation_acceptance.json)。", "",
               "任务状态来自本版本inventory；completed文字本身不能使结果进入统计。"
               "计入与否仍由权重身份、配置、随机流、完整回合和三种子规则决定。", ""]

@@ -9,6 +9,19 @@ import subprocess
 import time
 
 
+GPU_PER_CARD_MAX = 2
+
+
+def gpu_train_limit(devices=(0, 1), *, per_gpu=GPU_PER_CARD_MAX):
+    """Derive the queue limit from the explicitly permitted physical cards."""
+    devices = tuple(int(gpu) for gpu in devices)
+    if not devices or len(set(devices)) != len(devices) or not set(devices) <= {0, 1}:
+        raise ValueError("main0921 requires distinct physical GPUs from 0,1")
+    if per_gpu not in (1, GPU_PER_CARD_MAX):
+        raise ValueError("main0921 allows one or two trainers per physical GPU")
+    return per_gpu * len(devices)
+
+
 def cpu_threads():
     for key in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
         os.environ[key] = "1"
@@ -71,7 +84,7 @@ def queue_lock(output, kind, *, stop_requested=None):
     """OS-held locks survive stale files and release automatically on exit.
 
     GPU train/single/farm and cost measurement share one parent lease. A parent
-    may admit at most three HAD or two SMAC trainers; another command waits outside that lease.
+    may admit at most two trainers per physical GPU; another command waits outside that lease.
     CPU evaluation has one parent per experiment output.
     """
     import fcntl
@@ -116,16 +129,17 @@ def _resource(path):
     return None
 
 
-def gpu_admit(output, env, method, live, *, gpu=0, memory=None, minimum_peak=0., recovering=False):
+def gpu_admit(output, env, method, live, *, gpu=0, memory=None, minimum_peak=0., recovering=False,
+              per_gpu=GPU_PER_CARD_MAX):
     from open_score.eval.experiment import run_directory, SEEDS
-    if len(live) >= (3 if env == "had" else 2):
+    if int(gpu) not in (0, 1) or len(live) >= gpu_train_limit(per_gpu=per_gpu):
         return False
     measurements = [_resource(run_directory(output, method, s, env) / "resource.json") for s in SEEDS]
     measurements = [r for r in measurements if r]
     peak = max(float(minimum_peak), max((float(r.get("cuda_peak_reserved_gib") or r.get("cuda_reserved_gib") or 0)
                 for r in measurements), default=0.0))
     same_gpu = [item for item in live if int(item["options"].get("cuda_visible_devices", "0")) == int(gpu)]
-    if len(same_gpu) >= (2 if env == "had" else 1):
+    if len(same_gpu) >= per_gpu:
         return False
     if recovering and same_gpu:
         return False
@@ -155,8 +169,11 @@ def gpu_admit(output, env, method, live, *, gpu=0, memory=None, minimum_peak=0.,
 
 
 def choose_gpu(output, env, method, live, devices=(0, 1), *, memories=None,
-               minimum_peak=0., recovering=False):
+               minimum_peak=0., recovering=False, per_gpu=GPU_PER_CARD_MAX):
     """Choose the eligible card with most free memory, without a fixed priority."""
+    devices = tuple(int(gpu) for gpu in devices)
+    if len(live) >= gpu_train_limit(devices, per_gpu=per_gpu):
+        return None
     if memories is None:
         memories = {}
         for gpu in devices:
@@ -164,6 +181,7 @@ def choose_gpu(output, env, method, live, devices=(0, 1), *, memories=None,
                 memories[int(gpu)] = gpu_memory(gpu)
             except (OSError, ValueError, subprocess.SubprocessError):
                 continue
+    memories = {int(gpu): row for gpu, row in memories.items() if int(gpu) in devices}
     loads = {gpu: sum(int(item["options"].get("cuda_visible_devices", "0")) == gpu for item in live)
              for gpu in memories}
     def preference(gpu):
@@ -172,7 +190,7 @@ def choose_gpu(output, env, method, live, devices=(0, 1), *, memories=None,
         return (loads[gpu] == 0, memories[gpu]["free"])
     for gpu in sorted(memories, key=preference, reverse=True):
         if gpu_admit(output, env, method, live, gpu=gpu, memory=memories[gpu],
-                     minimum_peak=minimum_peak, recovering=recovering):
+                     minimum_peak=minimum_peak, recovering=recovering, per_gpu=per_gpu):
             return gpu
     return None
 

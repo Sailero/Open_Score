@@ -224,3 +224,863 @@ eval.depth.had.regir.s0               depth        1,310/5,400
 eval.depth.had.regir.s1               depth        1,326/5,400
 eval.depth.had.regir.s2               depth        1,314/5,400
 eval.final.had.refil.s0               final        1,916/7,200
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,340/5,400  R=1  eta 1:21:07
+eval.depth.had.regir.s1               depth_eval   1,361/5,400  R=1  eta 1:06:41
+eval.depth.had.regir.s2               depth_eval   1,352/5,400  R=1  eta 1:03:07
+eval.final.had.refil.s0               final_eval   2,030/7,200  eta 0:26:06
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,370/5,400  R=1  eta 1:20:16
+eval.depth.had.regir.s1               depth_eval   1,400/5,400  R=1  eta 1:04:43
+eval.depth.had.regir.s2               depth_eval   1,393/5,400  R=1  eta 1:01:02
+eval.final.had.refil.s0               final_eval   2,144/7,200  eta 0:26:49
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,374/5,400  R=1  eta 1:20:32
+eval.depth.had.regir.s1               depth_eval   1,405/5,400  R=1  eta 1:04:45
+eval.depth.had.regir.s2               depth_eval   1,397/5,400  R=1  eta 1:01:38
+eval.final.had.refil.s0               final_eval   2,157/7,200  eta 0:27:03
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,378/5,400  R=1  eta 1:20:36
+eval.depth.had.regir.s1               depth_eval   1,411/5,400  R=1  eta 1:04:30
+eval.depth.had.regir.s2               depth_eval   1,403/5,400  R=1  eta 1:01:49
+eval.final.had.refil.s0               final_eval   2,173/7,200  eta 0:26:57
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,382/5,400  R=1  eta 1:20:27
+eval.depth.had.regir.s1               depth_eval   1,416/5,400  R=1  eta 1:04:30
+eval.depth.had.regir.s2               depth_eval   1,408/5,400  R=1  eta 1:01:34
+eval.final.had.refil.s0               final_eval   2,187/7,200  eta 0:27:00
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,387/5,400  R=1  eta 1:20:14
+eval.depth.had.regir.s1               depth_eval   1,421/5,400  R=1  eta 1:04:12
+eval.depth.had.regir.s2               depth_eval   1,414/5,400  R=1  eta 1:01:22
+eval.final.had.refil.s0               final_eval   2,203/7,200  eta 0:26:51
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,391/5,400  R=1  eta 1:20:02
+eval.depth.had.regir.s1               depth_eval   1,427/5,400  R=1  eta 1:03:44
+eval.depth.had.regir.s2               depth_eval   1,419/5,400  R=1  eta 1:01:21
+eval.final.had.refil.s0               final_eval   2,218/7,200  eta 0:26:51
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,395/5,400  R=1  eta 1:19:57
+eval.depth.had.regir.s1               depth_eval   1,432/5,400  R=1  eta 1:03:40
+eval.depth.had.regir.s2               depth_eval   1,425/5,400  R=1  eta 1:01:08
+eval.final.had.refil.s0               final_eval   2,233/7,200  eta 0:26:50
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,400/5,400  R=1  eta 1:19:47
+eval.depth.had.regir.s1               depth_eval   1,438/5,400  R=1  eta 1:03:30
+eval.depth.had.regir.s2               depth_eval   1,430/5,400  R=1  eta 1:00:56
+eval.final.had.refil.s0               final_eval   2,247/7,200  eta 0:26:53
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,420/5,400  R=1  eta 1:18:58
+eval.depth.had.regir.s1               depth_eval   1,463/5,400  R=1  eta 1:03:02
+eval.depth.had.regir.s2               depth_eval   1,458/5,400  R=1  eta 1:00:10
+eval.final.had.refil.s0               final_eval   2,318/7,200  eta 0:26:44
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,425/5,400  R=1  eta 1:18:45
+eval.depth.had.regir.s1               depth_eval   1,469/5,400  R=1  eta 1:02:46
+eval.depth.had.regir.s2               depth_eval   1,463/5,400  R=1  eta 1:00:06
+eval.final.had.refil.s0               final_eval   2,333/7,200  eta 0:26:38
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,429/5,400  R=1  eta 1:18:37
+eval.depth.had.regir.s1               depth_eval   1,474/5,400  R=1  eta 1:02:49
+eval.depth.had.regir.s2               depth_eval   1,469/5,400  R=1  eta 1:00:03
+eval.final.had.refil.s0               final_eval   2,348/7,200  eta 0:26:34
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,433/5,400  R=1  eta 1:18:36
+eval.depth.had.regir.s1               depth_eval   1,479/5,400  R=1  eta 1:02:42
+eval.depth.had.regir.s2               depth_eval   1,474/5,400  R=1  eta 0:59:55
+eval.final.had.refil.s0               final_eval   2,361/7,200  eta 0:26:38
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,437/5,400  R=1  eta 1:18:39
+eval.depth.had.regir.s1               depth_eval   1,484/5,400  R=1  eta 1:02:33
+eval.depth.had.regir.s2               depth_eval   1,479/5,400  R=1  eta 0:59:56
+eval.final.had.refil.s0               final_eval   2,376/7,200  eta 0:26:34
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,441/5,400  R=1  eta 1:18:38
+eval.depth.had.regir.s1               depth_eval   1,489/5,400  R=1  eta 1:02:36
+eval.depth.had.regir.s2               depth_eval   1,485/5,400  R=1  eta 0:59:52
+eval.final.had.refil.s0               final_eval   2,391/7,200  eta 0:26:29
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,445/5,400  R=1  eta 1:18:31
+eval.depth.had.regir.s1               depth_eval   1,494/5,400  R=1  eta 1:02:35
+eval.depth.had.regir.s2               depth_eval   1,490/5,400  R=1  eta 0:59:47
+eval.final.had.refil.s0               final_eval   2,406/7,200  eta 0:26:25
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,449/5,400  R=1  eta 1:18:40
+eval.depth.had.regir.s1               depth_eval   1,499/5,400  R=1  eta 1:02:32
+eval.depth.had.regir.s2               depth_eval   1,496/5,400  R=1  eta 0:59:39
+eval.final.had.refil.s0               final_eval   2,418/7,200  eta 0:26:32
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,470/5,400  R=1  eta 1:18:40
+eval.depth.had.regir.s1               depth_eval   1,516/5,400  R=1  eta 1:05:21
+eval.depth.had.regir.s2               depth_eval   1,515/5,400  R=1  eta 1:01:40
+eval.final.had.refil.s0               final_eval   2,479/7,200  eta 0:26:51
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,474/5,400  R=1  eta 1:18:35
+eval.depth.had.regir.s1               depth_eval   1,519/5,400  R=1  eta 1:05:48
+eval.depth.had.regir.s2               depth_eval   1,519/5,400  R=1  eta 1:02:06
+eval.final.had.refil.s0               final_eval   2,493/7,200  eta 0:26:48
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,478/5,400  R=1  eta 1:18:28
+eval.depth.had.regir.s1               depth_eval   1,522/5,400  R=1  eta 1:06:17
+eval.depth.had.regir.s2               depth_eval   1,523/5,400  R=1  eta 1:02:30
+eval.final.had.refil.s0               final_eval   2,507/7,200  eta 0:26:45
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,482/5,400  R=1  eta 1:18:27
+eval.depth.had.regir.s1               depth_eval   1,525/5,400  R=1  eta 1:06:47
+eval.depth.had.regir.s2               depth_eval   1,526/5,400  R=1  eta 1:02:50
+eval.final.had.refil.s0               final_eval   2,520/7,200  eta 0:26:46
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,486/5,400  R=1  eta 1:18:18
+eval.depth.had.regir.s1               depth_eval   1,528/5,400  R=1  eta 1:07:32
+eval.depth.had.regir.s2               depth_eval   1,530/5,400  R=1  eta 1:03:13
+eval.final.had.refil.s0               final_eval   2,531/7,200  eta 0:26:49
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,490/5,400  R=1  eta 1:18:17
+eval.depth.had.regir.s1               depth_eval   1,531/5,400  R=1  eta 1:07:55
+eval.depth.had.regir.s2               depth_eval   1,533/5,400  R=1  eta 1:03:31
+eval.final.had.refil.s0               final_eval   2,543/7,200  eta 0:26:52
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,494/5,400  R=1  eta 1:18:18
+eval.depth.had.regir.s1               depth_eval   1,534/5,400  R=1  eta 1:08:25
+eval.depth.had.regir.s2               depth_eval   1,537/5,400  R=1  eta 1:03:54
+eval.final.had.refil.s0               final_eval   2,555/7,200  eta 0:26:56
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,499/5,400  R=1  eta 1:18:09
+eval.depth.had.regir.s1               depth_eval   1,538/5,400  R=1  eta 1:08:53
+eval.depth.had.regir.s2               depth_eval   1,541/5,400  R=1  eta 1:04:13
+eval.final.had.refil.s0               final_eval   2,567/7,200  eta 0:26:57
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,514/5,400  R=1  eta 1:19:51
+eval.depth.had.regir.s1               depth_eval   1,554/5,400  R=1  eta 1:10:38
+eval.depth.had.regir.s2               depth_eval   1,561/5,400  R=1  eta 1:05:21
+eval.final.had.refil.s0               final_eval   2,632/7,200  eta 0:26:53
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,517/5,400  R=1  eta 1:20:17
+eval.depth.had.regir.s1               depth_eval   1,558/5,400  R=1  eta 1:11:02
+eval.depth.had.regir.s2               depth_eval   1,565/5,400  R=1  eta 1:05:34
+eval.final.had.refil.s0               final_eval   2,645/7,200  eta 0:26:52
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,520/5,400  R=1  eta 1:20:45
+eval.depth.had.regir.s1               depth_eval   1,561/5,400  R=1  eta 1:11:18
+eval.depth.had.regir.s2               depth_eval   1,569/5,400  R=1  eta 1:05:44
+eval.final.had.refil.s0               final_eval   2,657/7,200  eta 0:26:50
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,523/5,400  R=1  eta 1:21:11
+eval.depth.had.regir.s1               depth_eval   1,564/5,400  R=1  eta 1:11:43
+eval.depth.had.regir.s2               depth_eval   1,573/5,400  R=1  eta 1:05:58
+eval.final.had.refil.s0               final_eval   2,670/7,200  eta 0:26:50
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,525/5,400  R=1  eta 1:21:23
+eval.depth.had.regir.s1               depth_eval   1,567/5,400  R=1  eta 1:12:03
+eval.depth.had.regir.s2               depth_eval   1,576/5,400  R=1  eta 1:06:06
+eval.final.had.refil.s0               final_eval   2,682/7,200  eta 0:26:49
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,556/5,400  R=1  eta 1:24:15
+eval.depth.had.regir.s1               depth_eval   1,600/5,400  R=1  eta 1:14:35
+eval.depth.had.regir.s2               depth_eval   1,613/5,400  R=1  eta 1:08:01
+eval.final.had.refil.s0               final_eval   2,791/7,200  eta 0:27:10
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,572/5,400  R=1  eta 1:25:09
+eval.depth.had.regir.s1               depth_eval   1,617/5,400  R=1  eta 1:15:34
+eval.depth.had.regir.s2               depth_eval   1,633/5,400  R=1  eta 1:08:44
+eval.final.had.refil.s0               final_eval   2,848/7,200  eta 0:27:14
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,575/5,400  R=1  eta 1:25:22
+eval.depth.had.regir.s1               depth_eval   1,621/5,400  R=1  eta 1:15:46
+eval.depth.had.regir.s2               depth_eval   1,637/5,400  R=1  eta 1:08:50
+eval.final.had.refil.s0               final_eval   2,859/7,200  eta 0:27:14
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,577/5,400  R=1  eta 1:25:34
+eval.depth.had.regir.s1               depth_eval   1,624/5,400  R=1  eta 1:15:58
+eval.depth.had.regir.s2               depth_eval   1,640/5,400  R=1  eta 1:08:58
+eval.final.had.refil.s0               final_eval   2,870/7,200  eta 0:27:12
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,580/5,400  R=1  eta 1:25:48
+eval.depth.had.regir.s1               depth_eval   1,626/5,400  R=1  eta 1:16:09
+eval.depth.had.regir.s2               depth_eval   1,644/5,400  R=1  eta 1:09:10
+eval.final.had.refil.s0               final_eval   2,880/7,200  eta 0:27:13
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,583/5,400  R=1  eta 1:26:01
+eval.depth.had.regir.s1               depth_eval   1,630/5,400  R=1  eta 1:16:26
+eval.depth.had.regir.s2               depth_eval   1,647/5,400  R=1  eta 1:09:17
+eval.final.had.refil.s0               final_eval   2,891/7,200  eta 0:27:14
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,586/5,400  R=1  eta 1:26:19
+eval.depth.had.regir.s1               depth_eval   1,633/5,400  R=1  eta 1:16:34
+eval.depth.had.regir.s2               depth_eval   1,651/5,400  R=1  eta 1:09:18
+eval.final.had.refil.s0               final_eval   2,902/7,200  eta 0:27:13
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,588/5,400  R=1  eta 1:26:31
+eval.depth.had.regir.s1               depth_eval   1,636/5,400  R=1  eta 1:16:41
+eval.depth.had.regir.s2               depth_eval   1,655/5,400  R=1  eta 1:09:26
+eval.final.had.refil.s0               final_eval   2,914/7,200  eta 0:27:12
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,591/5,400  R=1  eta 1:26:46
+eval.depth.had.regir.s1               depth_eval   1,639/5,400  R=1  eta 1:16:53
+eval.depth.had.regir.s2               depth_eval   1,659/5,400  R=1  eta 1:09:31
+eval.final.had.refil.s0               final_eval   2,925/7,200  eta 0:27:11
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,606/5,400  R=1  eta 1:27:44
+eval.depth.had.regir.s1               depth_eval   1,656/5,400  R=1  eta 1:17:38
+eval.depth.had.regir.s2               depth_eval   1,677/5,400  R=1  eta 1:10:08
+eval.final.had.refil.s0               final_eval   2,984/7,200  eta 0:27:02
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,608/5,400  R=1  eta 1:27:57
+eval.depth.had.regir.s1               depth_eval   1,659/5,400  R=1  eta 1:17:43
+eval.depth.had.regir.s2               depth_eval   1,681/5,400  R=1  eta 1:10:12
+eval.final.had.refil.s0               final_eval   2,994/7,200  eta 0:27:02
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,611/5,400  R=1  eta 1:28:10
+eval.depth.had.regir.s1               depth_eval   1,663/5,400  R=1  eta 1:17:47
+eval.depth.had.regir.s2               depth_eval   1,684/5,400  R=1  eta 1:10:17
+eval.final.had.refil.s0               final_eval   3,003/7,200  eta 0:27:04
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,614/5,400  R=1  eta 1:28:17
+eval.depth.had.regir.s1               depth_eval   1,666/5,400  R=1  eta 1:17:51
+eval.depth.had.regir.s2               depth_eval   1,688/5,400  R=1  eta 1:10:25
+eval.final.had.refil.s0               final_eval   3,011/7,200  eta 0:27:09
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,617/5,400  R=1  eta 1:28:30
+eval.depth.had.regir.s1               depth_eval   1,669/5,400  R=1  eta 1:18:03
+eval.depth.had.regir.s2               depth_eval   1,692/5,400  R=1  eta 1:10:25
+eval.final.had.refil.s0               final_eval   3,019/7,200  eta 0:27:14
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,620/5,400  R=1  eta 1:28:37
+eval.depth.had.regir.s1               depth_eval   1,672/5,400  R=1  eta 1:18:11
+eval.depth.had.regir.s2               depth_eval   1,695/5,400  R=1  eta 1:10:29
+eval.final.had.refil.s0               final_eval   3,027/7,200  eta 0:27:18
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,622/5,400  R=1  eta 1:28:41
+eval.depth.had.regir.s1               depth_eval   1,675/5,400  R=1  eta 1:18:19
+eval.depth.had.regir.s2               depth_eval   1,699/5,400  R=1  eta 1:10:33
+eval.final.had.refil.s0               final_eval   3,035/7,200  eta 0:27:22
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,625/5,400  R=1  eta 1:28:55
+eval.depth.had.regir.s1               depth_eval   1,678/5,400  R=1  eta 1:18:27
+eval.depth.had.regir.s2               depth_eval   1,703/5,400  R=1  eta 1:10:39
+eval.final.had.refil.s0               final_eval   3,042/7,200  eta 0:27:27
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,640/5,400  R=1  eta 1:29:26
+eval.depth.had.regir.s1               depth_eval   1,694/5,400  R=1  eta 1:18:59
+eval.depth.had.regir.s2               depth_eval   1,721/5,400  R=1  eta 1:10:55
+eval.final.had.refil.s0               final_eval   3,084/7,200  eta 0:27:41
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,642/5,400  R=1  eta 1:29:33
+eval.depth.had.regir.s1               depth_eval   1,697/5,400  R=1  eta 1:19:04
+eval.depth.had.regir.s2               depth_eval   1,725/5,400  R=1  eta 1:10:58
+eval.final.had.refil.s0               final_eval   3,092/7,200  eta 0:27:44
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,645/5,400  R=1  eta 1:29:43
+eval.depth.had.regir.s1               depth_eval   1,701/5,400  R=1  eta 1:19:10
+eval.depth.had.regir.s2               depth_eval   1,728/5,400  R=1  eta 1:11:02
+eval.final.had.refil.s0               final_eval   3,099/7,200  eta 0:27:48
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,648/5,400  R=1  eta 1:29:47
+eval.depth.had.regir.s1               depth_eval   1,704/5,400  R=1  eta 1:19:16
+eval.depth.had.regir.s2               depth_eval   1,732/5,400  R=1  eta 1:11:07
+eval.final.had.refil.s0               final_eval   3,107/7,200  eta 0:27:52
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,651/5,400  R=1  eta 1:29:50
+eval.depth.had.regir.s1               depth_eval   1,707/5,400  R=1  eta 1:19:23
+eval.depth.had.regir.s2               depth_eval   1,735/5,400  R=1  eta 1:11:09
+eval.final.had.refil.s0               final_eval   3,114/7,200  eta 0:27:55
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,654/5,400  R=1  eta 1:29:59
+eval.depth.had.regir.s1               depth_eval   1,710/5,400  R=1  eta 1:19:26
+eval.depth.had.regir.s2               depth_eval   1,739/5,400  R=1  eta 1:11:08
+eval.final.had.refil.s0               final_eval   3,121/7,200  eta 0:27:59
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,657/5,400  R=1  eta 1:30:07
+eval.depth.had.regir.s1               depth_eval   1,713/5,400  R=1  eta 1:19:31
+eval.depth.had.regir.s2               depth_eval   1,743/5,400  R=1  eta 1:11:13
+eval.final.had.refil.s0               final_eval   3,130/7,200  eta 0:28:01
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,659/5,400  R=1  eta 1:30:12
+eval.depth.had.regir.s1               depth_eval   1,716/5,400  R=1  eta 1:19:37
+eval.depth.had.regir.s2               depth_eval   1,746/5,400  R=1  eta 1:11:18
+eval.final.had.refil.s0               final_eval   3,137/7,200  eta 0:28:04
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,674/5,400  R=1  eta 1:30:39
+eval.depth.had.regir.s1               depth_eval   1,732/5,400  R=1  eta 1:19:59
+eval.depth.had.regir.s2               depth_eval   1,764/5,400  R=1  eta 1:11:36
+eval.final.had.refil.s0               final_eval   3,177/7,200  eta 0:28:18
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,677/5,400  R=1  eta 1:30:44
+eval.depth.had.regir.s1               depth_eval   1,736/5,400  R=1  eta 1:20:03
+eval.depth.had.regir.s2               depth_eval   1,768/5,400  R=1  eta 1:11:36
+eval.final.had.refil.s0               final_eval   3,185/7,200  eta 0:28:20
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,680/5,400  R=1  eta 1:30:43
+eval.depth.had.regir.s1               depth_eval   1,739/5,400  R=1  eta 1:20:09
+eval.depth.had.regir.s2               depth_eval   1,771/5,400  R=1  eta 1:11:39
+eval.final.had.refil.s0               final_eval   3,193/7,200  eta 0:28:22
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,683/5,400  R=1  eta 1:30:52
+eval.depth.had.regir.s1               depth_eval   1,742/5,400  R=1  eta 1:20:15
+eval.depth.had.regir.s2               depth_eval   1,775/5,400  R=1  eta 1:11:39
+eval.final.had.refil.s0               final_eval   3,201/7,200  eta 0:28:23
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,685/5,400  R=1  eta 1:30:57
+eval.depth.had.regir.s1               depth_eval   1,744/5,400  R=1  eta 1:20:16
+eval.depth.had.regir.s2               depth_eval   1,778/5,400  R=1  eta 1:11:44
+eval.final.had.refil.s0               final_eval   3,208/7,200  eta 0:28:26
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,688/5,400  R=1  eta 1:31:03
+eval.depth.had.regir.s1               depth_eval   1,747/5,400  R=1  eta 1:20:28
+eval.depth.had.regir.s2               depth_eval   1,782/5,400  R=1  eta 1:11:47
+eval.final.had.refil.s0               final_eval   3,216/7,200  eta 0:28:27
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,691/5,400  R=1  eta 1:31:08
+eval.depth.had.regir.s1               depth_eval   1,750/5,400  R=1  eta 1:20:29
+eval.depth.had.regir.s2               depth_eval   1,785/5,400  R=1  eta 1:11:48
+eval.final.had.refil.s0               final_eval   3,225/7,200  eta 0:28:28
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,694/5,400  R=1  eta 1:31:10
+eval.depth.had.regir.s1               depth_eval   1,753/5,400  R=1  eta 1:20:35
+eval.depth.had.regir.s2               depth_eval   1,789/5,400  R=1  eta 1:11:51
+eval.final.had.refil.s0               final_eval   3,232/7,200  eta 0:28:30
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,709/5,400  R=1  eta 1:31:19
+eval.depth.had.regir.s1               depth_eval   1,770/5,400  R=1  eta 1:20:43
+eval.depth.had.regir.s2               depth_eval   1,817/5,400  R=2  eta 1:10:20
+eval.final.had.refil.s0               final_eval   3,273/7,200  eta 0:28:35
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,764/5,400  R=1  eta 1:31:53
+eval.depth.had.regir.s1               depth_eval   1,899/5,400  R=2  eta 1:10:11
+eval.depth.had.regir.s2               depth_eval   1,981/5,400  R=2  eta 0:58:50
+eval.final.had.refil.s0               final_eval   3,399/7,200  eta 0:29:24
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,778/5,400  R=1  eta 1:31:55
+eval.depth.had.regir.s1               depth_eval   1,942/5,400  R=2  eta 1:06:41
+eval.depth.had.regir.s2               depth_eval   2,022/5,400  R=2  eta 0:56:41
+eval.final.had.refil.s0               final_eval   3,430/7,200  eta 0:29:34
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,781/5,400  R=1  eta 1:31:57
+eval.depth.had.regir.s1               depth_eval   1,951/5,400  R=2  eta 1:06:04
+eval.depth.had.regir.s2               depth_eval   2,030/5,400  R=2  eta 0:56:19
+eval.final.had.refil.s0               final_eval   3,436/7,200  eta 0:29:37
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,783/5,400  R=1  eta 1:31:58
+eval.depth.had.regir.s1               depth_eval   1,960/5,400  R=2  eta 1:05:24
+eval.depth.had.regir.s2               depth_eval   2,039/5,400  R=2  eta 0:55:53
+eval.final.had.refil.s0               final_eval   3,442/7,200  eta 0:29:40
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,786/5,400  R=1  eta 1:32:01
+eval.depth.had.regir.s1               depth_eval   1,969/5,400  R=2  eta 1:04:45
+eval.depth.had.regir.s2               depth_eval   2,047/5,400  R=2  eta 0:55:31
+eval.final.had.refil.s0               final_eval   3,448/7,200  eta 0:29:43
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,789/5,400  R=1  eta 1:32:05
+eval.depth.had.regir.s1               depth_eval   1,979/5,400  R=2  eta 1:04:01
+eval.depth.had.regir.s2               depth_eval   2,055/5,400  R=2  eta 0:55:09
+eval.final.had.refil.s0               final_eval   3,454/7,200  eta 0:29:45
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,792/5,400  R=1  eta 1:32:07
+eval.depth.had.regir.s1               depth_eval   1,988/5,400  R=2  eta 1:03:26
+eval.depth.had.regir.s2               depth_eval   2,063/5,400  R=2  eta 0:54:49
+eval.final.had.refil.s0               final_eval   3,460/7,200  eta 0:29:47
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,794/5,400  R=1  eta 1:32:07
+eval.depth.had.regir.s1               depth_eval   1,997/5,400  R=2  eta 1:02:50
+eval.depth.had.regir.s2               depth_eval   2,071/5,400  R=2  eta 0:54:28
+eval.final.had.refil.s0               final_eval   3,466/7,200  eta 0:29:49
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,797/5,400  R=1  eta 1:32:09
+eval.depth.had.regir.s1               depth_eval   2,007/5,400  R=2  eta 1:02:08
+eval.depth.had.regir.s2               depth_eval   2,079/5,400  R=2  eta 0:54:09
+eval.final.had.refil.s0               final_eval   3,473/7,200  eta 0:29:51
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,835/5,400  R=2  eta 1:27:32
+eval.depth.had.regir.s1               depth_eval   2,058/5,400  R=2  eta 0:58:51
+eval.depth.had.regir.s2               depth_eval   2,111/5,400  R=2  eta 0:53:09
+eval.final.had.refil.s0               final_eval   3,504/7,200  eta 0:30:00
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,844/5,400  R=2  eta 1:26:25
+eval.depth.had.regir.s1               depth_eval   2,067/5,400  R=2  eta 0:58:24
+eval.depth.had.regir.s2               depth_eval   2,115/5,400  R=2  eta 0:53:09
+eval.final.had.refil.s0               final_eval   3,510/7,200  eta 0:30:02
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,852/5,400  R=2  eta 1:25:28
+eval.depth.had.regir.s1               depth_eval   2,076/5,400  R=2  eta 0:57:53
+eval.depth.had.regir.s2               depth_eval   2,120/5,400  R=2  eta 0:53:08
+eval.final.had.refil.s0               final_eval   3,516/7,200  eta 0:30:04
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,860/5,400  R=2  eta 1:24:34
+eval.depth.had.regir.s1               depth_eval   2,085/5,400  R=2  eta 0:57:24
+eval.depth.had.regir.s2               depth_eval   2,124/5,400  R=2  eta 0:53:07
+eval.final.had.refil.s0               final_eval   3,522/7,200  eta 0:30:06
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,869/5,400  R=2  eta 1:23:34
+eval.depth.had.regir.s1               depth_eval   2,095/5,400  R=2  eta 0:56:52
+eval.depth.had.regir.s2               depth_eval   2,129/5,400  R=2  eta 0:53:03
+eval.final.had.refil.s0               final_eval   3,528/7,200  eta 0:30:07
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,877/5,400  R=2  eta 1:22:40
+eval.depth.had.regir.s1               depth_eval   2,101/5,400  R=2  eta 0:56:36
+eval.depth.had.regir.s2               depth_eval   2,133/5,400  R=2  eta 0:53:02
+eval.final.had.refil.s0               final_eval   3,534/7,200  eta 0:30:09
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,886/5,400  R=2  eta 1:21:41
+eval.depth.had.regir.s1               depth_eval   2,105/5,400  R=2  eta 0:56:36
+eval.depth.had.regir.s2               depth_eval   2,138/5,400  R=2  eta 0:53:00
+eval.final.had.refil.s0               final_eval   3,540/7,200  eta 0:30:10
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,895/5,400  R=2  eta 1:20:43
+eval.depth.had.regir.s1               depth_eval   2,109/5,400  R=2  eta 0:56:37
+eval.depth.had.regir.s2               depth_eval   2,142/5,400  R=2  eta 0:53:00
+eval.final.had.refil.s0               final_eval   3,546/7,200  eta 0:30:12
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,939/5,400  R=2  eta 1:16:25
+eval.depth.had.regir.s1               depth_eval   2,128/5,400  R=2  eta 0:56:41
+eval.depth.had.regir.s2               depth_eval   2,163/5,400  R=2  eta 0:52:54
+eval.final.had.refil.s0               final_eval   3,575/7,200  eta 0:30:20
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,948/5,400  R=2  eta 1:15:37
+eval.depth.had.regir.s1               depth_eval   2,131/5,400  R=2  eta 0:56:40
+eval.depth.had.regir.s2               depth_eval   2,168/5,400  R=2  eta 0:52:52
+eval.final.had.refil.s0               final_eval   3,582/7,200  eta 0:30:21
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,957/5,400  R=2  eta 1:14:48
+eval.depth.had.regir.s1               depth_eval   2,135/5,400  R=2  eta 0:56:40
+eval.depth.had.regir.s2               depth_eval   2,172/5,400  R=2  eta 0:52:51
+eval.final.had.refil.s0               final_eval   3,588/7,200  eta 0:30:22
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,966/5,400  R=2  eta 1:14:02
+eval.depth.had.regir.s1               depth_eval   2,139/5,400  R=2  eta 0:56:39
+eval.depth.had.regir.s2               depth_eval   2,176/5,400  R=2  eta 0:52:50
+eval.final.had.refil.s0               final_eval   3,594/7,200  eta 0:30:22
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,974/5,400  R=2  eta 1:13:22
+eval.depth.had.regir.s1               depth_eval   2,143/5,400  R=2  eta 0:56:38
+eval.depth.had.regir.s2               depth_eval   2,181/5,400  R=2  eta 0:52:49
+eval.final.had.refil.s0               final_eval   3,603/7,200  eta 0:30:20
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,983/5,400  R=2  eta 1:12:39
+eval.depth.had.regir.s1               depth_eval   2,147/5,400  R=2  eta 0:56:39
+eval.depth.had.regir.s2               depth_eval   2,184/5,400  R=2  eta 0:52:49
+eval.final.had.refil.s0               final_eval   3,623/7,200  eta 0:29:59
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,990/5,400  R=2  eta 1:12:08
+eval.depth.had.regir.s1               depth_eval   2,151/5,400  R=2  eta 0:56:39
+eval.depth.had.regir.s2               depth_eval   2,188/5,400  R=2  eta 0:52:50
+eval.final.had.refil.s0               final_eval   3,643/7,200  eta 0:29:38
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   1,998/5,400  R=2  eta 1:11:34
+eval.depth.had.regir.s1               depth_eval   2,155/5,400  R=2  eta 0:56:40
+eval.depth.had.regir.s2               depth_eval   2,192/5,400  R=2  eta 0:52:50
+eval.final.had.refil.s0               final_eval   3,664/7,200  eta 0:29:17
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,041/5,400  R=2  eta 1:08:27
+eval.depth.had.regir.s1               depth_eval   2,175/5,400  R=2  eta 0:56:33
+eval.depth.had.regir.s2               depth_eval   2,215/5,400  R=2  eta 0:52:37
+eval.final.had.refil.s0               final_eval   3,772/7,200  eta 0:27:31
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,129/5,400  R=2  eta 1:04:46
+eval.depth.had.regir.s1               depth_eval   2,227/5,400  R=2  eta 0:56:30
+eval.depth.had.regir.s2               depth_eval   2,268/5,400  R=2  eta 0:52:11
+eval.final.had.refil.s0               final_eval   3,933/7,200  eta 0:25:09
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,147/5,400  R=2  eta 1:04:53
+eval.depth.had.regir.s1               depth_eval   2,253/5,400  R=2  eta 0:56:23
+eval.depth.had.regir.s2               depth_eval   2,303/5,400  R=2  eta 0:51:56
+eval.final.had.refil.s0               final_eval   4,091/7,200  eta 0:23:00
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,159/5,400  R=2  eta 1:04:48
+eval.depth.had.regir.s1               depth_eval   2,270/5,400  R=2  eta 0:56:16
+eval.depth.had.regir.s2               depth_eval   2,322/5,400  R=2  eta 0:51:48
+eval.final.had.refil.s0               final_eval   4,309/7,200  eta 0:20:31
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,162/5,400  R=2  eta 1:04:48
+eval.depth.had.regir.s1               depth_eval   2,273/5,400  R=2  eta 0:56:17
+eval.depth.had.regir.s2               depth_eval   2,327/5,400  R=2  eta 0:51:46
+eval.final.had.refil.s0               final_eval   4,328/7,200  eta 0:20:19
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,166/5,400  R=2  eta 1:04:47
+eval.depth.had.regir.s1               depth_eval   2,277/5,400  R=2  eta 0:56:17
+eval.depth.had.regir.s2               depth_eval   2,330/5,400  R=2  eta 0:51:46
+eval.final.had.refil.s0               final_eval   4,349/7,200  eta 0:20:06
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,169/5,400  R=2  eta 1:04:48
+eval.depth.had.regir.s1               depth_eval   2,281/5,400  R=2  eta 0:56:15
+eval.depth.had.regir.s2               depth_eval   2,334/5,400  R=2  eta 0:51:44
+eval.final.had.refil.s0               final_eval   4,368/7,200  eta 0:19:54
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,172/5,400  R=2  eta 1:04:49
+eval.depth.had.regir.s1               depth_eval   2,285/5,400  R=2  eta 0:56:13
+eval.depth.had.regir.s2               depth_eval   2,339/5,400  R=2  eta 0:51:43
+eval.final.had.refil.s0               final_eval   4,384/7,200  eta 0:19:45
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,175/5,400  R=2  eta 1:04:48
+eval.depth.had.regir.s1               depth_eval   2,289/5,400  R=2  eta 0:56:10
+eval.depth.had.regir.s2               depth_eval   2,343/5,400  R=2  eta 0:51:39
+eval.final.had.refil.s0               final_eval   4,403/7,200  eta 0:19:34
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,178/5,400  R=2  eta 1:04:49
+eval.depth.had.regir.s1               depth_eval   2,293/5,400  R=2  eta 0:56:10
+eval.depth.had.regir.s2               depth_eval   2,347/5,400  R=2  eta 0:51:39
+eval.final.had.refil.s0               final_eval   4,420/7,200  eta 0:19:24
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,195/5,400  R=2  eta 1:04:49
+eval.depth.had.regir.s1               depth_eval   2,311/5,400  R=2  eta 0:56:07
+eval.depth.had.regir.s2               depth_eval   2,368/5,400  R=2  eta 0:51:30
+eval.final.had.refil.s0               final_eval   4,505/7,200  eta 0:18:38
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,198/5,400  R=2  eta 1:04:49
+eval.depth.had.regir.s1               depth_eval   2,315/5,400  R=2  eta 0:56:05
+eval.depth.had.regir.s2               depth_eval   2,371/5,400  R=2  eta 0:51:29
+eval.final.had.refil.s0               final_eval   4,522/7,200  eta 0:18:29
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,201/5,400  R=2  eta 1:04:49
+eval.depth.had.regir.s1               depth_eval   2,318/5,400  R=2  eta 0:56:05
+eval.depth.had.regir.s2               depth_eval   2,376/5,400  R=2  eta 0:51:27
+eval.final.had.refil.s0               final_eval   4,540/7,200  eta 0:18:19
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,204/5,400  R=2  eta 1:04:49
+eval.depth.had.regir.s1               depth_eval   2,322/5,400  R=2  eta 0:56:05
+eval.depth.had.regir.s2               depth_eval   2,380/5,400  R=2  eta 0:51:25
+eval.final.had.refil.s0               final_eval   4,556/7,200  eta 0:18:11
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,207/5,400  R=2  eta 1:04:50
+eval.depth.had.regir.s1               depth_eval   2,325/5,400  R=2  eta 0:56:05
+eval.depth.had.regir.s2               depth_eval   2,384/5,400  R=2  eta 0:51:23
+eval.final.had.refil.s0               final_eval   4,574/7,200  eta 0:18:01
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,211/5,400  R=2  eta 1:04:50
+eval.depth.had.regir.s1               depth_eval   2,329/5,400  R=2  eta 0:56:03
+eval.depth.had.regir.s2               depth_eval   2,388/5,400  R=2  eta 0:51:20
+eval.final.had.refil.s0               final_eval   4,593/7,200  eta 0:17:50
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,214/5,400  R=2  eta 1:04:49
+eval.depth.had.regir.s1               depth_eval   2,333/5,400  R=2  eta 0:56:00
+eval.depth.had.regir.s2               depth_eval   2,392/5,400  R=2  eta 0:51:18
+eval.final.had.refil.s0               final_eval   4,613/7,200  eta 0:17:39
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,217/5,400  R=2  eta 1:04:48
+eval.depth.had.regir.s1               depth_eval   2,337/5,400  R=2  eta 0:55:59
+eval.depth.had.regir.s2               depth_eval   2,396/5,400  R=2  eta 0:51:17
+eval.final.had.refil.s0               final_eval   4,631/7,200  eta 0:17:29
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,234/5,400  R=2  eta 1:04:48
+eval.depth.had.regir.s1               depth_eval   2,357/5,400  R=2  eta 0:55:51
+eval.depth.had.regir.s2               depth_eval   2,411/5,400  R=2  eta 0:51:33
+eval.final.had.refil.s0               final_eval   4,720/7,200  eta 0:16:44
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,237/5,400  R=2  eta 1:04:47
+eval.depth.had.regir.s1               depth_eval   2,360/5,400  R=2  eta 0:55:51
+eval.depth.had.regir.s2               depth_eval   2,414/5,400  R=2  eta 0:51:37
+eval.final.had.refil.s0               final_eval   4,737/7,200  eta 0:16:36
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,240/5,400  R=2  eta 1:04:47
+eval.depth.had.regir.s1               depth_eval   2,364/5,400  R=2  eta 0:55:49
+eval.depth.had.regir.s2               depth_eval   2,416/5,400  R=2  eta 0:51:39
+eval.final.had.refil.s0               final_eval   4,755/7,200  eta 0:16:27
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,244/5,400  R=2  eta 1:04:49
+eval.depth.had.regir.s1               depth_eval   2,368/5,400  R=2  eta 0:55:47
+eval.depth.had.regir.s2               depth_eval   2,419/5,400  R=2  eta 0:51:44
+eval.final.had.refil.s0               final_eval   4,771/7,200  eta 0:16:19
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,247/5,400  R=2  eta 1:04:49
+eval.depth.had.regir.s1               depth_eval   2,372/5,400  R=2  eta 0:55:46
+eval.depth.had.regir.s2               depth_eval   2,421/5,400  R=2  eta 0:51:47
+eval.final.had.refil.s0               final_eval   4,787/7,200  eta 0:16:11
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,250/5,400  R=2  eta 1:04:48
+eval.depth.had.regir.s1               depth_eval   2,375/5,400  R=2  eta 0:55:46
+eval.depth.had.regir.s2               depth_eval   2,424/5,400  R=2  eta 0:51:51
+eval.final.had.refil.s0               final_eval   4,802/7,200  eta 0:16:04
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,253/5,400  R=2  eta 1:04:48
+eval.depth.had.regir.s1               depth_eval   2,379/5,400  R=2  eta 0:55:43
+eval.depth.had.regir.s2               depth_eval   2,426/5,400  R=2  eta 0:51:53
+eval.final.had.refil.s0               final_eval   4,818/7,200  eta 0:15:57
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,257/5,400  R=2  eta 1:04:46
+eval.depth.had.regir.s1               depth_eval   2,383/5,400  R=2  eta 0:55:42
+eval.depth.had.regir.s2               depth_eval   2,429/5,400  R=2  eta 0:51:56
+eval.final.had.refil.s0               final_eval   4,833/7,200  eta 0:15:50
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,273/5,400  R=2  eta 1:04:40
+eval.depth.had.regir.s1               depth_eval   2,401/5,400  R=2  eta 0:55:33
+eval.depth.had.regir.s2               depth_eval   2,442/5,400  R=2  eta 0:52:12
+eval.final.had.refil.s0               final_eval   4,907/7,200  eta 0:15:17
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,337/5,400  R=2  eta 1:04:12
+eval.depth.had.regir.s1               depth_eval   2,445/5,400  R=2  eta 0:56:52
+eval.depth.had.regir.s2               depth_eval   2,493/5,400  R=2  eta 0:53:02
+eval.final.had.refil.s0               final_eval   5,183/7,200  eta 0:13:17
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,352/5,400  R=2  eta 1:04:08
+eval.depth.had.regir.s1               depth_eval   2,456/5,400  R=2  eta 0:57:08
+eval.depth.had.regir.s2               depth_eval   2,506/5,400  R=2  eta 0:53:16
+eval.final.had.refil.s0               final_eval   5,250/7,200  eta 0:12:50
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,355/5,400  R=2  eta 1:04:07
+eval.depth.had.regir.s1               depth_eval   2,458/5,400  R=2  eta 0:57:11
+eval.depth.had.regir.s2               depth_eval   2,508/5,400  R=2  eta 0:53:18
+eval.final.had.refil.s0               final_eval   5,264/7,200  eta 0:12:44
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,358/5,400  R=2  eta 1:04:08
+eval.depth.had.regir.s1               depth_eval   2,460/5,400  R=2  eta 0:57:13
+eval.depth.had.regir.s2               depth_eval   2,511/5,400  R=2  eta 0:53:20
+eval.final.had.refil.s0               final_eval   5,278/7,200  eta 0:12:38
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,361/5,400  R=2  eta 1:04:06
+eval.depth.had.regir.s1               depth_eval   2,463/5,400  R=2  eta 0:57:16
+eval.depth.had.regir.s2               depth_eval   2,513/5,400  R=2  eta 0:53:23
+eval.final.had.refil.s0               final_eval   5,291/7,200  eta 0:12:33
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,364/5,400  R=2  eta 1:04:06
+eval.depth.had.regir.s1               depth_eval   2,465/5,400  R=2  eta 0:57:20
+eval.depth.had.regir.s2               depth_eval   2,516/5,400  R=2  eta 0:53:25
+eval.final.had.refil.s0               final_eval   5,306/7,200  eta 0:12:26
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,367/5,400  R=2  eta 1:04:05
+eval.depth.had.regir.s1               depth_eval   2,468/5,400  R=2  eta 0:57:24
+eval.depth.had.regir.s2               depth_eval   2,518/5,400  R=2  eta 0:53:27
+eval.final.had.refil.s0               final_eval   5,319/7,200  eta 0:12:21
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,371/5,400  R=2  eta 1:04:03
+eval.depth.had.regir.s1               depth_eval   2,470/5,400  R=2  eta 0:57:26
+eval.depth.had.regir.s2               depth_eval   2,521/5,400  R=2  eta 0:53:29
+eval.final.had.refil.s0               final_eval   5,334/7,200  eta 0:12:15
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,374/5,400  R=2  eta 1:04:01
+eval.depth.had.regir.s1               depth_eval   2,472/5,400  R=2  eta 0:57:29
+eval.depth.had.regir.s2               depth_eval   2,523/5,400  R=2  eta 0:53:31
+eval.final.had.refil.s0               final_eval   5,348/7,200  eta 0:12:09
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,392/5,400  R=2  eta 1:03:49
+eval.depth.had.regir.s1               depth_eval   2,484/5,400  R=2  eta 0:57:46
+eval.depth.had.regir.s2               depth_eval   2,537/5,400  R=2  eta 0:53:43
+eval.final.had.refil.s0               final_eval   5,418/7,200  eta 0:11:40
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,395/5,400  R=2  eta 1:03:46
+eval.depth.had.regir.s1               depth_eval   2,486/5,400  R=2  eta 0:57:49
+eval.depth.had.regir.s2               depth_eval   2,539/5,400  R=2  eta 0:53:45
+eval.final.had.refil.s0               final_eval   5,428/7,200  eta 0:11:37
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,399/5,400  R=2  eta 1:03:43
+eval.depth.had.regir.s1               depth_eval   2,488/5,400  R=2  eta 0:57:51
+eval.depth.had.regir.s2               depth_eval   2,542/5,400  R=2  eta 0:53:47
+eval.final.had.refil.s0               final_eval   5,438/7,200  eta 0:11:34
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,401/5,400  R=2  eta 1:03:43
+eval.depth.had.regir.s1               depth_eval   2,491/5,400  R=2  eta 0:57:54
+eval.depth.had.regir.s2               depth_eval   2,544/5,400  R=2  eta 0:53:49
+eval.final.had.refil.s0               final_eval   5,448/7,200  eta 0:11:30
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,403/5,400  R=2  eta 1:03:48
+eval.depth.had.regir.s1               depth_eval   2,493/5,400  R=2  eta 0:57:56
+eval.depth.had.regir.s2               depth_eval   2,547/5,400  R=2  eta 0:53:52
+eval.final.had.refil.s0               final_eval   5,458/7,200  eta 0:11:27
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,405/5,400  R=2  eta 1:03:52
+eval.depth.had.regir.s1               depth_eval   2,496/5,400  R=2  eta 0:57:58
+eval.depth.had.regir.s2               depth_eval   2,549/5,400  R=2  eta 0:53:54
+eval.final.had.refil.s0               final_eval   5,468/7,200  eta 0:11:24
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,407/5,400  R=2  eta 1:03:56
+eval.depth.had.regir.s1               depth_eval   2,498/5,400  R=2  eta 0:58:01
+eval.depth.had.regir.s2               depth_eval   2,552/5,400  R=2  eta 0:53:54
+eval.final.had.refil.s0               final_eval   5,478/7,200  eta 0:11:20
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,409/5,400  R=2  eta 1:04:02
+eval.depth.had.regir.s1               depth_eval   2,501/5,400  R=2  eta 0:58:05
+eval.depth.had.regir.s2               depth_eval   2,555/5,400  R=2  eta 0:53:57
+eval.final.had.refil.s0               final_eval   5,488/7,200  eta 0:11:16
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,419/5,400  R=2  eta 1:04:25
+eval.depth.had.regir.s1               depth_eval   2,512/5,400  R=2  eta 0:58:18
+eval.depth.had.regir.s2               depth_eval   2,568/5,400  R=2  eta 0:54:08
+eval.final.had.refil.s0               final_eval   5,538/7,200  eta 0:11:00
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,421/5,400  R=2  eta 1:04:30
+eval.depth.had.regir.s1               depth_eval   2,515/5,400  R=2  eta 0:58:22
+eval.depth.had.regir.s2               depth_eval   2,570/5,400  R=2  eta 0:54:09
+eval.final.had.refil.s0               final_eval   5,548/7,200  eta 0:10:56
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,423/5,400  R=2  eta 1:04:33
+eval.depth.had.regir.s1               depth_eval   2,517/5,400  R=2  eta 0:58:24
+eval.depth.had.regir.s2               depth_eval   2,573/5,400  R=2  eta 0:54:10
+eval.final.had.refil.s0               final_eval   5,557/7,200  eta 0:10:53
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,425/5,400  R=2  eta 1:04:37
+eval.depth.had.regir.s1               depth_eval   2,519/5,400  R=2  eta 0:58:27
+eval.depth.had.regir.s2               depth_eval   2,576/5,400  R=2  eta 0:54:11
+eval.final.had.refil.s0               final_eval   5,567/7,200  eta 0:10:50
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,426/5,400  R=2  eta 1:04:40
+eval.depth.had.regir.s1               depth_eval   2,521/5,400  R=2  eta 0:58:29
+eval.depth.had.regir.s2               depth_eval   2,578/5,400  R=2  eta 0:54:12
+eval.final.had.refil.s0               final_eval   5,577/7,200  eta 0:10:46
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,428/5,400  R=2  eta 1:04:44
+eval.depth.had.regir.s1               depth_eval   2,524/5,400  R=2  eta 0:58:32
+eval.depth.had.regir.s2               depth_eval   2,581/5,400  R=2  eta 0:54:13
+eval.final.had.refil.s0               final_eval   5,586/7,200  eta 0:10:43
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,430/5,400  R=2  eta 1:04:48
+eval.depth.had.regir.s1               depth_eval   2,526/5,400  R=2  eta 0:58:35
+eval.depth.had.regir.s2               depth_eval   2,584/5,400  R=2  eta 0:54:15
+eval.final.had.refil.s0               final_eval   5,595/7,200  eta 0:10:40
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,432/5,400  R=2  eta 1:04:53
+eval.depth.had.regir.s1               depth_eval   2,528/5,400  R=2  eta 0:58:39
+eval.depth.had.regir.s2               depth_eval   2,586/5,400  R=2  eta 0:54:17
+eval.final.had.refil.s0               final_eval   5,605/7,200  eta 0:10:37
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,442/5,400  R=2  eta 1:05:13
+eval.depth.had.regir.s1               depth_eval   2,539/5,400  R=2  eta 0:58:51
+eval.depth.had.regir.s2               depth_eval   2,599/5,400  R=2  eta 0:54:24
+eval.final.had.refil.s0               final_eval   5,656/7,200  eta 0:10:18
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,481/5,400  R=2  eta 1:06:05
+eval.depth.had.regir.s1               depth_eval   2,583/5,400  R=2  eta 0:59:28
+eval.depth.had.regir.s2               depth_eval   2,648/5,400  R=2  eta 0:54:44
+eval.final.had.refil.s0               final_eval   5,845/7,200  eta 0:09:09
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,492/5,400  R=2  eta 1:06:20
+eval.depth.had.regir.s1               depth_eval   2,594/5,400  R=2  eta 0:59:38
+eval.depth.had.regir.s2               depth_eval   2,661/5,400  R=2  eta 0:54:49
+eval.final.had.refil.s0               final_eval   5,894/7,200  eta 0:08:51
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,494/5,400  R=2  eta 1:06:22
+eval.depth.had.regir.s1               depth_eval   2,596/5,400  R=2  eta 0:59:39
+eval.depth.had.regir.s2               depth_eval   2,663/5,400  R=2  eta 0:54:49
+eval.final.had.refil.s0               final_eval   5,904/7,200  eta 0:08:47
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,496/5,400  R=2  eta 1:06:24
+eval.depth.had.regir.s1               depth_eval   2,599/5,400  R=2  eta 0:59:40
+eval.depth.had.regir.s2               depth_eval   2,666/5,400  R=2  eta 0:54:49
+eval.final.had.refil.s0               final_eval   5,914/7,200  eta 0:08:43
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,498/5,400  R=2  eta 1:06:26
+eval.depth.had.regir.s1               depth_eval   2,601/5,400  R=2  eta 0:59:40
+eval.depth.had.regir.s2               depth_eval   2,669/5,400  R=2  eta 0:54:49
+eval.final.had.refil.s0               final_eval   5,923/7,200  eta 0:08:40
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,500/5,400  R=2  eta 1:06:30
+eval.depth.had.regir.s1               depth_eval   2,603/5,400  R=2  eta 0:59:43
+eval.depth.had.regir.s2               depth_eval   2,672/5,400  R=2  eta 0:54:50
+eval.final.had.refil.s0               final_eval   5,933/7,200  eta 0:08:36
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,502/5,400  R=2  eta 1:06:33
+eval.depth.had.regir.s1               depth_eval   2,605/5,400  R=2  eta 0:59:45
+eval.depth.had.regir.s2               depth_eval   2,674/5,400  R=2  eta 0:54:50
+eval.final.had.refil.s0               final_eval   5,942/7,200  eta 0:08:33
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,503/5,400  R=2  eta 1:06:35
+eval.depth.had.regir.s1               depth_eval   2,608/5,400  R=2  eta 0:59:47
+eval.depth.had.regir.s2               depth_eval   2,677/5,400  R=2  eta 0:54:51
+eval.final.had.refil.s0               final_eval   5,952/7,200  eta 0:08:29
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,505/5,400  R=2  eta 1:06:39
+eval.depth.had.regir.s1               depth_eval   2,610/5,400  R=2  eta 0:59:48
+eval.depth.had.regir.s2               depth_eval   2,680/5,400  R=2  eta 0:54:50
+eval.final.had.refil.s0               final_eval   5,962/7,200  eta 0:08:25
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,515/5,400  R=2  eta 1:06:55
+eval.depth.had.regir.s1               depth_eval   2,622/5,400  R=2  eta 0:59:55
+eval.depth.had.regir.s2               depth_eval   2,693/5,400  R=2  eta 0:54:53
+eval.final.had.refil.s0               final_eval   6,024/7,200  eta 0:08:00
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,517/5,400  R=2  eta 1:06:57
+eval.depth.had.regir.s1               depth_eval   2,624/5,400  R=2  eta 0:59:56
+eval.depth.had.regir.s2               depth_eval   2,696/5,400  R=2  eta 0:54:53
+eval.final.had.refil.s0               final_eval   6,044/7,200  eta 0:07:51
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,519/5,400  R=2  eta 1:06:59
+eval.depth.had.regir.s1               depth_eval   2,626/5,400  R=2  eta 0:59:58
+eval.depth.had.regir.s2               depth_eval   2,698/5,400  R=2  eta 0:54:54
+eval.final.had.refil.s0               final_eval   6,063/7,200  eta 0:07:42
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,521/5,400  R=2  eta 1:07:02
+eval.depth.had.regir.s1               depth_eval   2,629/5,400  R=2  eta 1:00:00
+eval.depth.had.regir.s2               depth_eval   2,702/5,400  R=3  eta 0:54:50
+eval.final.had.refil.s0               final_eval   6,083/7,200  eta 0:07:33
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,523/5,400  R=2  eta 1:07:04
+eval.depth.had.regir.s1               depth_eval   2,631/5,400  R=2  eta 1:00:01
+eval.depth.had.regir.s2               depth_eval   2,709/5,400  R=3  eta 0:54:35
+eval.final.had.refil.s0               final_eval   6,104/7,200  eta 0:07:24
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,525/5,400  R=2  eta 1:07:07
+eval.depth.had.regir.s1               depth_eval   2,633/5,400  R=2  eta 1:00:03
+eval.depth.had.regir.s2               depth_eval   2,716/5,400  R=3  eta 0:54:21
+eval.final.had.refil.s0               final_eval   6,125/7,200  eta 0:07:15
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,527/5,400  R=2  eta 1:07:10
+eval.depth.had.regir.s1               depth_eval   2,636/5,400  R=2  eta 1:00:03
+eval.depth.had.regir.s2               depth_eval   2,722/5,400  R=3  eta 0:54:08
+eval.final.had.refil.s0               final_eval   6,144/7,200  eta 0:07:06
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,529/5,400  R=2  eta 1:07:13
+eval.depth.had.regir.s1               depth_eval   2,638/5,400  R=2  eta 1:00:03
+eval.depth.had.regir.s2               depth_eval   2,729/5,400  R=3  eta 0:53:53
+eval.final.had.refil.s0               final_eval   6,165/7,200  eta 0:06:57
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,540/5,400  R=2  eta 1:07:22
+eval.depth.had.regir.s1               depth_eval   2,649/5,400  R=2  eta 1:00:11
+eval.depth.had.regir.s2               depth_eval   2,766/5,400  R=3  eta 0:52:34
+eval.final.had.refil.s0               final_eval   6,273/7,200  eta 0:06:10
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,542/5,400  R=2  eta 1:07:25
+eval.depth.had.regir.s1               depth_eval   2,651/5,400  R=2  eta 1:00:13
+eval.depth.had.regir.s2               depth_eval   2,773/5,400  R=3  eta 0:52:19
+eval.final.had.refil.s0               final_eval   6,291/7,200  eta 0:06:02
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,543/5,400  R=2  eta 1:07:27
+eval.depth.had.regir.s1               depth_eval   2,654/5,400  R=2  eta 1:00:16
+eval.depth.had.regir.s2               depth_eval   2,779/5,400  R=3  eta 0:52:08
+eval.final.had.refil.s0               final_eval   6,308/7,200  eta 0:05:55
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,545/5,400  R=2  eta 1:07:29
+eval.depth.had.regir.s1               depth_eval   2,656/5,400  R=2  eta 1:00:17
+eval.depth.had.regir.s2               depth_eval   2,786/5,400  R=3  eta 0:51:54
+eval.final.had.refil.s0               final_eval   6,325/7,200  eta 0:05:48
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,548/5,400  R=2  eta 1:07:31
+eval.depth.had.regir.s1               depth_eval   2,658/5,400  R=2  eta 1:00:18
+eval.depth.had.regir.s2               depth_eval   2,792/5,400  R=3  eta 0:51:42
+eval.final.had.refil.s0               final_eval   6,342/7,200  eta 0:05:40
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,550/5,400  R=2  eta 1:07:33
+eval.depth.had.regir.s1               depth_eval   2,660/5,400  R=2  eta 1:00:20
+eval.depth.had.regir.s2               depth_eval   2,800/5,400  R=3  eta 0:51:26
+eval.final.had.refil.s0               final_eval   6,362/7,200  eta 0:05:32
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,552/5,400  R=2  eta 1:07:34
+eval.depth.had.regir.s1               depth_eval   2,662/5,400  R=2  eta 1:00:22
+eval.depth.had.regir.s2               depth_eval   2,806/5,400  R=3  eta 0:51:14
+eval.final.had.refil.s0               final_eval   6,381/7,200  eta 0:05:24
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,554/5,400  R=2  eta 1:07:37
+eval.depth.had.regir.s1               depth_eval   2,664/5,400  R=2  eta 1:00:24
+eval.depth.had.regir.s2               depth_eval   2,813/5,400  R=3  eta 0:51:01
+eval.final.had.refil.s0               final_eval   6,400/7,200  eta 0:05:16
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,564/5,400  R=2  eta 1:07:47
+eval.depth.had.regir.s1               depth_eval   2,676/5,400  R=2  eta 1:00:28
+eval.depth.had.regir.s2               depth_eval   2,846/5,400  R=3  eta 0:49:59
+eval.final.had.refil.s0               final_eval   6,500/7,200  eta 0:04:34
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,601/5,400  R=2  eta 1:08:19
+eval.depth.had.regir.s1               depth_eval   2,764/5,400  R=3  eta 0:57:50
+eval.depth.had.regir.s2               depth_eval   2,972/5,400  R=3  eta 0:46:11
+eval.final.had.refil.s0               final_eval   6,728/7,200  eta 0:03:05
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,612/5,400  R=2  eta 1:08:28
+eval.depth.had.regir.s1               depth_eval   2,802/5,400  R=3  eta 0:56:16
+eval.depth.had.regir.s2               depth_eval   3,002/5,400  R=3  eta 0:45:24
+eval.final.had.refil.s0               final_eval   6,778/7,200  eta 0:02:46
+eval had live=4 queued=3 waiting_dependencies=17
+eval.depth.had.regir.s0               depth_eval   2,614/5,400  R=2  eta 1:08:29
+eval.depth.had.regir.s1               depth_eval   2,809/5,400  R=3  eta 0:56:00
+eval.depth.had.regir.s2               depth_eval   3,005/5,400  R=3  eta 0:45:23
+eval.final.had.refil.s0               final_eval   6,787/7,200  eta 0:02:43
+waiting for 2 workers to finish current episodes and save
+eval.depth.had.regir.s2 stopped
+eval.final.had.refil.s0 stopped
+eval.depth.had.regir.s1 stopped
+eval.depth.had.regir.s0 stopped

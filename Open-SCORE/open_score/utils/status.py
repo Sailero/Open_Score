@@ -406,16 +406,10 @@ def _compact(tasks):
     return result or ["  无"]
 
 
-def _estimate_lines(estimate, tasks=(), metadata=None):
-    """Render explicitly registered ranges; do not invent a global multiplier."""
-    if not isinstance(estimate, dict) or not estimate:
-        return ["  整体：暂不可估算（runtime_estimate尚未登记；未测方法/SMAC不能由HAD外推）"]
-    lines = []
-    updated = estimate.get("measured_at", estimate.get("updated_at"))
-    if updated:
-        lines.append(f"  登记估计更新时间：{updated}")
-    labels = dict(had="HAD", smacv2="SMAC", training_seconds="训练", validation_seconds="验证",
-                  evaluation_seconds="终评", mechanism_seconds="机制", stage_seconds="阶段串行上界", overall_seconds="整体")
+def _estimate_ranges(estimate, tasks=(), metadata=None):
+    """Use registered evidence and remaining work for both terminal views."""
+    if not isinstance(estimate, dict):
+        return {}
     scaled = {}
     for env in ("had", "smacv2"):
         section = estimate.get(env, {})
@@ -448,6 +442,20 @@ def _estimate_lines(estimate, tasks=(), metadata=None):
             scaled[env,"stage_seconds"] = [sum(scaled[env,key][i] for key in components) for i in (0,1)]
     if all((env,"stage_seconds") in scaled for env in ("had","smacv2")):
         scaled["overall_seconds"] = [sum(scaled[env,"stage_seconds"][i] for env in ("had","smacv2")) for i in (0,1)]
+    return scaled
+
+
+def _estimate_lines(estimate, tasks=(), metadata=None):
+    """Render explicitly registered ranges; do not invent a global multiplier."""
+    if not isinstance(estimate, dict) or not estimate:
+        return ["  整体：暂不可估算（runtime_estimate尚未登记；未测方法/SMAC不能由HAD外推）"]
+    lines = []
+    updated = estimate.get("measured_at", estimate.get("updated_at"))
+    if updated:
+        lines.append(f"  登记估计更新时间：{updated}")
+    labels = dict(had="HAD", smacv2="SMAC", training_seconds="训练", validation_seconds="验证",
+                  evaluation_seconds="终评", mechanism_seconds="机制", stage_seconds="阶段串行上界", overall_seconds="整体")
+    scaled = _estimate_ranges(estimate, tasks, metadata)
     def visit(value, path):
         if not isinstance(value, dict):
             return
@@ -484,11 +492,11 @@ def _estimate_lines(estimate, tasks=(), metadata=None):
     return lines
 
 
-def render_status(output, *, gpu_status=None, now=None):
+def _render_details(output, *, gpu_status=None, now=None, data=None):
     """Return one plain-text snapshot; useful for --once and captured terminals."""
     root = Path(output)
     now = time.time() if now is None else float(now)
-    data = _snapshot(root, now)
+    data = _snapshot(root, now) if data is None else data
     tasks, metadata = data["tasks"], data["metadata"]
     by_id = {t["id"]: t for t in tasks}
     completed = [t for t in tasks if t.get("status") in _DONE]
@@ -500,7 +508,7 @@ def render_status(output, *, gpu_status=None, now=None):
              f"输出：{root.resolve()}",
              f"任务 总数{len(tasks)} | 已完成{len(completed)} | 当前{len(live)} | 剩余{len(tasks)-len(completed)} "
              f"(排队{len(queued)} / 等待依赖或恢复{len(waiting)})",
-             "HAD训练上限3路；正式评估+机制共享4路；SMAC并发依实测准入。验证属于训练子过程，不重复算任务。"]
+             "每卡训练上限2路，两卡合计4路；正式评估+机制共享4路。验证属于训练子过程，不重复算任务。"]
     if data["inventory_age"] is None:
         lines.append("任务清单尚未生成：矩阵占位只表示计划，不表示已完成。")
     else:
@@ -510,7 +518,7 @@ def render_status(output, *, gpu_status=None, now=None):
         lines.append(f"其中{promoted}项新完成来自较新的合格调度快照；面板更新不改变正式报告资格。")
     if gpu_status:
         lines.append(gpu_status)
-    lines += ["", "训练进度（合计57项；HAD45=33项迁入+12项新增，SMAC12）"]
+    lines += ["", "训练进度（按当前实验矩阵）"]
     for env in ("had", "smacv2"):
         selected = [t for t in tasks if t["kind"] == "train" and t["env"] == env]
         done = sum(t.get("status") in _DONE for t in selected)
@@ -547,9 +555,10 @@ def render_status(output, *, gpu_status=None, now=None):
     bank_label = str(bank) if bank is not None else f"已保存{data['bank'].get('trajectory_files',0)}个场景文件，完成标记待生成"
     lines.append(f"  M3公共轨迹库：{bank_label}/500场，只采集一次；3个checkpoint分析不算1500场。")
     lines += ["", "训练内验证（与正式终评分开）"]
-    for env, expected in (("had", 60000), ("smacv2", 61440)):
+    for env in ("had", "smacv2"):
         selected = [t for t in tasks if t["kind"] == "train" and t["env"] == env and
                     (env == "smacv2" or t["method"] in metadata.get("environments", {}).get("had", {}).get("new_methods", _HAD[-4:]))]
+        expected = len(selected) * (5000 if env == "had" else 5120)
         registered = [t for t in selected if t.get("validation_completed_episodes") is not None]
         actual = sum(int(t["validation_completed_episodes"]) for t in registered)
         label = f"{actual:,}" if len(registered) == len(selected) else f"已登记{actual:,}（其余累计未知）"
@@ -596,105 +605,150 @@ def render_status(output, *, gpu_status=None, now=None):
     return "\n".join(lines)
 
 
-def _terminal_view(panel, height, width):
-    """Fit a live view while leaving the exhaustive snapshot available via --once."""
-    lines = panel.splitlines()
-    def section(title):
-        try:
-            start = lines.index(title)+1
-        except ValueError:
-            return []
-        result = []
-        for line in lines[start:]:
-            if not line:
-                break
-            result.append(line.strip())
-        return result
-    def fit(text):
-        used, result = 0, []
-        for char in text:
-            used += 2 if unicodedata.east_asian_width(char) in "WF" else 1
-            if used > width-1:
-                return "".join(result[:-1])+"…"
-            result.append(char)
+def _width(text):
+    return sum(2 if unicodedata.east_asian_width(char) in "WF" else 1 for char in str(text))
+
+
+def _fit(text, width):
+    text = str(text)
+    if _width(text) <= width:
         return text
-    def short(text):
-        text = text.replace("小时", "h").replace("分钟", "m").replace("分", "m").replace("秒", "s").replace("天", "d")
-        text = re.sub(r"(?<!\d)0m0s", "0s", text)
-        return re.sub(r"(?<=[hd])0m|(?<=[mh])0s", "", text)
-    def count(value):
-        value = int(value.replace(",", ""))
-        return f"{value/1000000:.2f}M" if value>=1000000 else f"{value/1000:.1f}k" if value>=10000 else str(value)
-    def pack(entries):
-        packed, current = [], ""
-        for entry in entries:
-            candidate = f"{current} | {entry}" if current else entry
-            if sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in candidate) > width-1 and current:
-                packed.append(current); current=entry
-            else:
-                current=candidate
-        if current:
-            packed.append(current)
-        return packed
-    output = [lines[0], next((line for line in lines if line.startswith("任务 总数")), "任务清单待登记")]
-    gpu = next((line for line in lines if line.startswith("GPU")), "GPU信息未登记")
-    gpu = re.sub(r"(GPU[01]) [^:]+:", r"\1:",gpu)
-    output += [gpu, "并发 HAD训练≤3 / 评估+机制合计≤4；SMAC按实测准入"]
-    training = []
-    for line in section("训练进度（合计57项；HAD45=33项迁入+12项新增，SMAC12）"):
-        match = re.search(r"(\w+): 完成(\d+)/(\d+)项，当前(\d+)项.*剩余([\d,]+)",line)
-        if match:
-            training.append(f"{match[1].upper()}训练 {match[2]}/{match[3]}，余{match[5]}步")
-    output += pack(training)
-    evaluations, mechanisms = [], []
-    for line in section("正式评估与机制（任务/回合/分析格分开；复用臂不重复计对局）"):
-        if "/正式终评:" in line:
-            evaluations.append(line.replace("正式终评", "终评").split("；独立")[0])
-        elif re.search(r"/M[1234]",line):
-            line = line.replace("had/", "").replace("checkpoint分析", "分析").replace("成本测量格", "格").replace("独立对局", "独立")
-            line = re.sub(r"；覆盖[^；]+；", "；", line)
-            mechanisms.append(line)
-    output += pack(evaluations) + pack(mechanisms)
-    validation = section("训练内验证（与正式终评分开）")
-    output += pack([line.split("；条件ETA")[0].replace("本版本新增计划", "验证计划").replace("已登记", "已知").replace("（其余累计未知）", "+待登记") for line in validation])
-    live = section("当前任务（逐一列出；PID已核实，未登记者明确标注）")
-    active = [line for line in live if line.startswith(("train.","eval."))]
-    output.append(f"当前任务 {len(active)}（进度 / 剩余ETA）")
-    if not active:
-        output.append("无已核实活动任务")
-    for line in active:
-        line = re.sub(r"train\.(had|smacv2)\.",lambda m:f"{m[1]}/训练/",line)
-        line = re.sub(r"eval\.(\w+)\.(had|smacv2)\.",lambda m:f"{m[2]}/{_NAMES.get(m[1],m[1])}/",line)
-        line = re.sub(r" \| PID=[^|]+\|", " |",line).replace("CPU/设备未登记", "CPU").replace("剩余ETA ", "余")
-        line = re.sub(r"([\d,]+)/([\d,]+)",lambda m:f"{count(m[1])}/{count(m[2])}",line)
-        line = line.replace("validation", "验证").replace("training", "训练").replace("collect", "采集").replace("update", "更新")
-        output.append(short(line))
-    eta = section("整体与分阶段ETA")
-    values = [short(line.split("；依据：")[0]) for line in eta if "：" in line and
-              ("；依据：" in line or line.startswith("整体：")) and "阶段串行上界" not in line]
-    output += ["ETA（条件区间；依据及完整列表见 --once）"] + pack(values or ["整体暂不可估算"])
-    issues = section("调度与异常")
-    warnings = [line for line in issues if any(word in line for word in ("异常", "退出", "failed", "Traceback")) and not line.startswith("未发现")]
-    if warnings:
-        output.append(f"异常/过期记录{len(warnings)}项：{warnings[0]}")
-    queues = section("排队（全部任务，按方法合并seed）") + section("等待依赖/恢复（全部任务）")
-    footer = "--once 显示完整队列、依赖、验证进度及估算依据；Ctrl+C仅关闭面板"
-    if len(output)>height-2:
-        # Preserve live tasks and ETA; compress secondary summaries in short terminals.
-        output = [line for line in output if not line.startswith("并发 ")]
-        output = [line.replace("覆盖", "局").replace("任务", "项").replace(" checkpoint分析", "分析") for line in output]
-    if len(output)>height-2:
-        output = [line for line in output if not line.startswith(("当前任务 ","当前项 "))]
-    remaining = max(0,height-2-len(output))
-    if remaining > 1:
-        output.append("等待/队列：")
-        output.extend(queues[:remaining-1])
-    # Very small terminals get every active task before optional queue details.
-    return "\n".join(fit(line) for line in output+[footer])
+    result, used = [], 0
+    for char in text:
+        size = 2 if unicodedata.east_asian_width(char) in "WF" else 1
+        if used + size > max(0, width - 1):
+            break
+        result.append(char)
+        used += size
+    return "".join(result) + ("…" if width else "")
 
 
-def watch_status(output, interval=5, once=False):
-    """TTY refreshes in place; redirected output prints one bounded snapshot."""
+def _cell(text, width):
+    text = _fit(text, width)
+    return text + " " * max(0, width - _width(text))
+
+
+def _short_duration(seconds):
+    value = _number(seconds)
+    if value is None:
+        return "待估"
+    value = max(0., value)
+    if value >= 86400:
+        return f"{value / 86400:.1f}天"
+    if value >= 3600:
+        return f"{value / 3600:.1f}h"
+    if value >= 60:
+        return f"{value / 60:.0f}m"
+    return f"{value:.0f}s"
+
+
+def _short_range(values):
+    if not isinstance(values, (list, tuple)) or len(values) != 2 or any(_number(x) is None for x in values):
+        return "待估"
+    low, high = sorted(max(0., float(value)) for value in values)
+    unit, scale = ("天", 86400.) if high >= 86400 else ("h", 3600.) if high >= 3600 else ("m", 60.)
+    return f"{low / scale:.1f}–{high / scale:.1f}{unit}"
+
+
+def _short_task_eta(task):
+    span = task.get("remaining_seconds_range") or task.get("eta_seconds_range")
+    if span:
+        return _short_range(span)
+    remaining = max(0, task.get("total", 0) - task.get("completed", 0))
+    if task["kind"] == "train":
+        rate = _number(task.get("training_steps_per_second"))
+        if rate and rate > 0:
+            return _short_duration(remaining / rate)
+        rates = task.get("rate_range")
+        if rates and min(rates) > 0:
+            return _short_range((remaining / max(rates), remaining / min(rates)))
+    return _short_duration(task.get("remaining_seconds"))
+
+
+def _gpu_lines(gpu_status, live, width):
+    rows = []
+    for device in (0, 1):
+        count = sum(task["kind"] == "train" and str(task.get("physical_gpu")) == str(device) for task in live)
+        match = re.search(rf"GPU{device} [^:]+: 利用率([^%]+)% / 空闲([\d.]+)/([\d.]+)GiB", gpu_status or "")
+        memory = f"{float(match[3]) - float(match[2]):.0f}/{float(match[3]):.0f}G {match[1]}%" if match else "显存待查询"
+        rows.append(f"GPU{device} 显存{memory} 训练{count}/2")
+    combined = "  |  ".join(rows)
+    return [combined] if _width(combined) <= width else rows
+
+
+def render_status(output, *, gpu_status=None, now=None, details=False, width=100):
+    """Default to a concise view for live terminals, pipes, and --once alike."""
+    root = Path(output)
+    now = time.time() if now is None else float(now)
+    data = _snapshot(root, now)
+    if details:
+        return _render_details(root, gpu_status=gpu_status, now=now, data=data)
+    width = max(32, int(width))
+    tasks, metadata = data["tasks"], data["metadata"]
+    completed = [task for task in tasks if task.get("status") in _DONE]
+    live = sorted((task for task in tasks if task.get("live") and task.get("status") not in _DONE),
+                  key=lambda task: (task["kind"] != "train", str(task.get("physical_gpu", "")), task["id"]))
+    stopping = bool(live) and any((root / name).exists() for name in ("stop.request", "eval.stop.request"))
+    if stopping:
+        state = "正在停止"
+    elif live:
+        state = "运行中"
+    elif len(completed) == len(tasks):
+        state = "已完成"
+    elif any(scheduler["alive"] for scheduler in data["schedulers"]):
+        state = "等待资源/依赖"
+    else:
+        state = "已暂停"
+    lines = [f"main0921  {state}  {datetime.fromtimestamp(now).strftime('%m-%d %H:%M:%S')}",
+             f"总任务 {len(tasks)}  完成 {len(completed)}  当前 {len(live)}  剩余 {len(tasks) - len(completed)}"]
+    for env, name in (("had", "HAD"), ("smacv2", "SMAC")):
+        groups = []
+        for kinds, label in ((("train",), "训练"), (("final",), "终评"), (("depth", "readout", "probe", "timing"), "机制")):
+            selected = [task for task in tasks if task.get("env") == env and task["kind"] in kinds]
+            if selected:
+                done = sum(task.get("status") in _DONE for task in selected)
+                groups.append(f"{label} {done}/{len(selected)}")
+        lines.append(f"{name:<4}  " + "  ".join(groups))
+    lines += _gpu_lines(gpu_status, live, width)
+    lines.append("─" * min(width, 76))
+    narrow = width < 60
+    device_width, progress_width, eta_width = (3, 6, 8) if narrow else (5, 7, 11)
+    task_width = max(8, min(33, width - device_width - progress_width - eta_width - 3))
+    def row(device, task, progress, eta):
+        return " ".join((_cell(device, device_width), _cell(task, task_width),
+                         _cell(progress, progress_width), _cell(eta, eta_width))).rstrip()
+    lines.append(row("卡" if narrow else "设备", "当前任务", "进度", "剩余ETA"))
+    names = {"regir": "Full", "regir_r1": "Single", "refil": "REFIL", "b2_qmix_atten": "QMIX-Atten",
+             "transfqmix": "TransfQMix", "regir_fixed4": "Fixed4", "regir_untied4": "Untied4", "regir_kv0": "KV0",
+             "regir_norefil": "norefil", "regir_nocount": "nocount", "regir_last": "last", "refil_matched": "matched"}
+    kind_names = dict(train="训", final="评", depth="深度", readout="读出", probe="探针", timing="计时")
+    for task in live[:8]:
+        device = f"{'G' if narrow else 'GPU'}{task['physical_gpu']}" if task.get("physical_gpu") is not None else "CPU"
+        env = "H" if task.get("env") == "had" else "S"
+        method = names.get(task.get("method"), task.get("method") or "all")
+        phase = "验" if task.get("current_phase") in ("validation", "validating") else kind_names.get(task["kind"], task["kind"])
+        label = f"{env}/{phase} {method}" + (f" s{task['seed']}" if task.get("seed") is not None else "")
+        fraction = min(100., 100. * task.get("completed", 0) / max(1, task.get("total", 0)))
+        lines.append(row(device, label, f"{fraction:.1f}%", _short_task_eta(task)))
+    if not live:
+        lines.append("  无活动任务；已有进度保留" if state == "已暂停" else "  无活动任务")
+    estimates = _estimate_ranges(metadata.get("runtime_estimate"), tasks, metadata)
+    prefix = "恢复后预计" if state == "已暂停" else "预计剩余"
+    lines.append(f"{prefix} {_short_range(estimates.get('overall_seconds'))}  （共享资源等待另计）")
+    lines.append(f"HAD {_short_range(estimates.get(('had', 'stage_seconds')))}  |  SMAC {_short_range(estimates.get(('smacv2', 'stage_seconds')))}")
+    review = metadata.get("runtime_estimate", {}).get("deadline_review", {})
+    if state == "已暂停" and review.get("decision") == "paused_deadline_not_supported":
+        lines.append(f"{review.get('deadline_days', 5)}天目标：当前估计不满足，保持暂停")
+    if len(live) > 8:
+        lines.append(f"异常：活动任务共{len(live)}项，另{len(live) - 8}项见 --details")
+    elif data["issues"]:
+        lines.append(f"提示：{len(data['issues'])}项状态异常，使用 --details 查看")
+    lines.append("--details 查看详情；Ctrl+C 仅关闭面板")
+    return "\n".join(_fit(line, width) for line in lines)
+
+
+def watch_status(output, interval=5, once=False, details=False):
+    """TTY refreshes in place; redirected output prints one compact snapshot."""
     interval = max(1., float(interval))
     tty = bool(getattr(sys.stdout, "isatty", lambda: False)())
     gpu_status, last_gpu = None, -math.inf
@@ -703,10 +757,9 @@ def watch_status(output, interval=5, once=False):
             tick = time.monotonic()
             if tick - last_gpu >= 30:
                 gpu_status, last_gpu = _gpu_snapshot(), tick
-            panel = render_status(output, gpu_status=gpu_status)
+            size = shutil.get_terminal_size((100, 24))
+            panel = render_status(output, gpu_status=gpu_status, details=details, width=max(32, size.columns - 1))
             if tty and not once:
-                size = shutil.get_terminal_size((120,40))
-                panel = _terminal_view(panel,size.lines,size.columns)
                 sys.stdout.write("\x1b[2J\x1b[H")
             sys.stdout.write(panel + "\n")
             sys.stdout.flush()
@@ -714,4 +767,4 @@ def watch_status(output, interval=5, once=False):
                 return
             time.sleep(max(.1, interval - (time.monotonic() - tick)))
     except KeyboardInterrupt:
-        print("\n状态面板已关闭；实验继续运行。", flush=True)
+        print("\n面板已关闭；不会改变实验状态。", flush=True)

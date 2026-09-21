@@ -1702,5 +1702,46 @@
     "completion_qualification": "train scheduler validates actual final.pt budget/config/artifact identity before publishing completed_ids; eval uses quota-qualified scan",
     "verification_scope": "Root CLI/status/source verification plus scoped agent mocks recorded in this session; no additional formal training or evaluation quota for these checks",
     "cleanup": "This round matrix smoke directory, temporary test scripts, temporary fixtures and duplicate first-scene acceptance removed after merging evidence here; pre-existing unique main history and required runtime caches retained"
+  },
+  "gpu_per_card_revision": {
+    "checked_at": "2026-09-21T19:46:54.712291+00:00",
+    "status": "passed",
+    "resource_admission_checks": 24,
+    "profile_entrypoint_checks": 33,
+    "scope": "HAD/SMAC train/single/farm; per-card2, optional per-gpu1, one/two selected GPUs; memory/SMAC utilization/unknown-first and OOM isolation; CPU4 unchanged",
+    "workers_launched": 0,
+    "temporary_artifacts": 0
+  },
+  "compact_terminal_revision": {
+    "checked_at": "2026-09-21T19:46:54.712291+00:00",
+    "status": "passed",
+    "default_paused_lines": 12,
+    "eight_active_tasks_80_columns_lines": 18,
+    "tested_widths": [
+      40,
+      60,
+      80,
+      120
+    ],
+    "details_opt_in": true,
+    "cli_once_exit_code": 0,
+    "temporary_artifacts": 0,
+    "matrix_not_expanded": true,
+    "deadline_summary": true,
+    "actual_interpreter_syntax": "passed"
+  },
+  "controlled_pause": {
+    "checked_at": "2026-09-21T19:46:54.712291+00:00",
+    "status": "stopped",
+    "wrapper_pid": 2100714,
+    "train_parent_pid": 2100718,
+    "eval_parent_pid": 2100719,
+    "all_captured_workers_exited": true,
+    "saved_transfqmix_steps": [
+      70763,
+      157758,
+      60109
+    ],
+    "restart": "not performed; current5-day total deadline not supported"
   }
 }
