@@ -696,6 +696,22 @@ def _recent_training_rate(task):
     return _number(task.get("recent_steps_per_second"))
 
 
+def _evaluation_rate(task):
+    """Session mean episodes/s, recovered from the evaluator's ETA formula.
+
+    Existing live workers already publish this ETA; no restart or CSV scan is
+    required. Probe and timing tasks have different units and are excluded.
+    """
+    if task.get("kind") not in ("final", "depth", "readout"):
+        return None
+    seconds = _number(task.get("remaining_seconds"))
+    completed = _number(task.get("completed"), 0)
+    remaining = _number(task.get("total"), 0) - completed
+    if seconds is None or seconds <= 0 or remaining <= 0 or completed <= 0:
+        return None
+    return remaining / seconds
+
+
 def _cpu_snapshot():
     """Host CPU use between refreshes; one short sample on first display."""
     try:
@@ -762,12 +778,12 @@ def render_status(output, *, gpu_status=None, cpu_status=None, now=None, details
     lines.append(f"{cpu_status or _cpu_snapshot()}  评估{cpu_tasks}/4")
     lines.append("─" * min(width, 76))
     narrow = width < 60
-    device_width, progress_width, speed_width, eta_width = (3, 5, 7, 6) if narrow else (5, 7, 8, 11)
+    device_width, progress_width, speed_width, eta_width = (3, 5, 9, 6) if narrow else (5, 7, 10, 11)
     task_width = max(5, min(33, width - device_width - progress_width - speed_width - eta_width - 4))
     def row(device, task, progress, speed, eta):
         return " ".join((_cell(device, device_width), _cell(task, task_width),
                          _cell(progress, progress_width), _cell(speed, speed_width), _cell(eta, eta_width))).rstrip()
-    lines.append(row("卡" if narrow else "设备", "当前任务", "进度", "步/秒", "剩余ETA"))
+    lines.append(row("卡" if narrow else "设备", "当前任务", "进度", "速度", "剩余ETA"))
     names = {"regir": "Full", "regir_r1": "Single", "refil": "REFIL", "b2_qmix_atten": "QMIX-Atten",
              "transfqmix": "TransfQMix", "regir_fixed4": "Fixed4", "regir_untied4": "Untied4", "regir_kv0": "KV0",
              "regir_norefil": "norefil", "regir_nocount": "nocount", "regir_last": "last", "refil_matched": "matched"}
@@ -781,8 +797,10 @@ def render_status(output, *, gpu_status=None, cpu_status=None, now=None, details
         label = f"{env}/{phase} {method}" + (f" s{task['seed']}" if task.get("seed") is not None else "")
         fraction = min(100., 100. * task.get("completed", 0) / max(1, task.get("total", 0)))
         rate = _recent_training_rate(task)
+        eval_rate = _evaluation_rate(task)
         speed = ("验证" if phase == "验" else
-                 f"{rate:.1f}" if rate is not None else "—")
+                 f"{rate:.1f}步/s" if rate is not None else
+                 f"{eval_rate:.2f}局/s" if eval_rate is not None else "—")
         lines.append(row(device, label, f"{fraction:.1f}%", speed, _short_task_eta(task)))
     if not live:
         lines.append("  无活动任务；已有进度保留" if state == "已暂停" else "  无活动任务")
@@ -818,7 +836,7 @@ def render_status(output, *, gpu_status=None, cpu_status=None, now=None, details
         lines.append(f"{review.get('deadline_days', 5)}天目标：当前估计不满足，保持暂停")
     if data["issues"]:
         lines.append(f"提示：{len(data['issues'])}项状态异常，使用 --details 查看")
-    lines.append("训练步/秒与ETA：近60秒，不含验证；Ctrl+C 仅关闭面板")
+    lines.append("训练近速步/s（不含验证）；评估均速局/s；Ctrl+C仅关面板")
     if height is not None and len(lines) > max(1, int(height)):
         height = max(1, int(height))
         slots = height - (len(lines) - (task_end - task_start)) - 1
