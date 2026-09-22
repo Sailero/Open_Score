@@ -495,12 +495,13 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
     profile = is_profile(output)
     domain = jobs[0][1].get("env", "had") if jobs else "had"
     devices = tuple(jobs[0][1].get("_devices", (0, 1))) if jobs else (0, 1)
-    per_gpu = jobs[0][1].get("_per_gpu", 2) if jobs else 2
+    card_limit = 3 if domain == "had" else 2
+    per_gpu = jobs[0][1].get("_per_gpu", card_limit) if jobs else card_limit
     if profile:
         with_depth_eval = with_anchors = False
-        if not 1 <= max_concurrent <= gpu_train_limit(devices, per_gpu=per_gpu):
-            raise ValueError("main0921 admits at most two trainers per selected physical GPU")
-    if max_concurrent < 1 or max_concurrent > 4:
+        if per_gpu > card_limit or not 1 <= max_concurrent <= gpu_train_limit(devices, per_gpu=per_gpu):
+            raise ValueError(f"main0921 {domain} admits at most {card_limit} trainers per selected GPU")
+    elif max_concurrent < 1 or max_concurrent > 4:
         raise ValueError("Concurrent experiment tasks must be between 1 and 4")
     pending_train, pending_eval = [], []
     live, finished, roster = [], [], []
@@ -1467,9 +1468,10 @@ def profile_main(options, output):
     if options.cpu or not devices or not set(devices) <= {0, 1}:
         raise SystemExit("main0921 training uses physical --devices 0,1 (or an explicit subset)")
     if not any(a.startswith("--per-gpu") for a in sys.argv):
-        options.per_gpu = 2
-    if options.per_gpu not in (1, 2):
-        raise SystemExit("main0921 allows --per-gpu 1 or 2")
+        options.per_gpu = 3 if options.env == "had" else 2
+    card_limit = 3 if options.env == "had" else 2
+    if options.per_gpu not in range(1, card_limit + 1):
+        raise SystemExit(f"main0921 {options.env} allows --per-gpu 1..{card_limit}")
     if not any(a.startswith("--max-concurrent") for a in sys.argv):
         options.max_concurrent = gpu_train_limit(devices, per_gpu=options.per_gpu)
     if options.run not in (None, "train") or options.seed not in SEEDS:
@@ -1477,11 +1479,13 @@ def profile_main(options, output):
     if options.steps not in (None, budget(options.env)):
         raise SystemExit(f"main0921 {options.env} fixes the budget at {budget(options.env)}")
     if not 1 <= options.max_concurrent <= gpu_train_limit(devices, per_gpu=options.per_gpu):
-        raise SystemExit("main0921 allows at most two trainers per selected physical GPU")
+        raise SystemExit(f"main0921 {options.env} allows at most {card_limit} trainers per selected GPU")
     workers = options.batch_size_run if "--batch-size-run" in sys.argv else (8 if options.env == "had" else 4)
     if workers != (8 if options.env == "had" else 4):
         raise SystemExit("main0921 fixes 8 HAD workers or 4 SMAC workers per trainer")
     if options.env == "smacv2":
+        from open_score.eval.experiment import require_smac_method_acceptance
+        require_smac_method_acceptance(output)
         pending_had = [task for task in scan(output, env="had")["tasks"] if task["status"] != "complete"]
         if pending_had:
             raise SystemExit(f"HAD-first protocol: {len(pending_had)} HAD training/evaluation/cost tasks remain; "

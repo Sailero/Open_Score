@@ -155,7 +155,7 @@ if [[ "$command" != _run ]]; then
   for attempt in {1..50}; do
     owner=$(cat "$OUT/run_all.pid" 2>/dev/null || true)
     if [[ "$owner" == "$launched" ]] && wrapper_pid_matches "$owner"; then
-      echo "main0921 resumed: PID $owner; GPUs 0,1 (at most two trainers each)."
+      echo "main0921 resumed: PID $owner; GPUs 0,1 (HAD <=3/card; SMAC <=2/card)."
       echo "Log: $OUT/run_all.console.log"
       exit 0
     fi
@@ -211,7 +211,7 @@ wait_pair() {
 echo 'Starting HAD: GPU0/GPU1 training and CPU final/mechanism queues'
 CUDA_VISIBLE_DEVICES=0,1 "$PY" -u Open-SCORE/scripts/train.py \
   --profile main0921 --stage train --group main --env had --steps 1000000 \
-  --batch-size-run 8 --per-gpu 2 --devices 0,1 --run train --resume --output "$OUT" \
+  --batch-size-run 8 --per-gpu 3 --devices 0,1 --run train --resume --output "$OUT" \
   >> "$OUT/train.had.console.log" 2>&1 9>&- &
 trainer=$!
 CUDA_VISIBLE_DEVICES='' "$PY" -u Open-SCORE/scripts/eval.py \

@@ -17,7 +17,7 @@ SEEDS = (0, 1, 2)
 OLD_METHODS = ("regir", "refil", "b2_qmix_atten", "dcg", "spectra", "alma",
                "regir_norefil", "regir_nocount", "regir_r1", "regir_last", "refil_matched")
 NEW_METHODS = ("transfqmix", "regir_fixed4", "regir_untied4", "regir_kv0")
-SMAC_METHODS = ("regir", "regir_r1", "refil", "transfqmix")
+SMAC_METHODS = ("regir", "regir_r1", "refil", "b2_qmix_atten", "spectra", "transfqmix")
 SMAC_VALIDATION = tuple((n, n, 0) for n in (4, 6, 8, 10))
 SMAC_FINAL = tuple((n, n, 0) for n in (5, 10, 12, 15, 20)) + ((10, 11, 0), (10, 12, 0), (10, 15, 0))
 DEPTH_CONFIGS = ((10, 10, 2), (30, 30, 2), (50, 50, 2))
@@ -100,13 +100,14 @@ def initialize(output):
                                 ridge_alphas=[.0001, .001, .01, .1, 1, 10, 100],
                                 read1_equivalence_verified=False,
                                 timing_methods=COST_METHODS, timing_warmup=50, timing_repeats=200),
-                resources=dict(gpu_ids=[0, 1], gpu_train_max=4, gpu_per_card_max=2, smac_gpu_train_max=4,
+                resources=dict(gpu_ids=[0, 1], gpu_train_max=6, gpu_per_card_max=3, smac_gpu_train_max=4,
                                smac_gpu_per_card_max=2, smac_next_gpu_utilization_max=90, gpu_reserve_gib=8,
                                cuda_oom_auto_retries=3, cuda_oom_backoff_seconds=[60, 120, 240],
                                gpu_peak_multiplier=1.25, cpu_total_max=4,
                                cpu_final_max=4, cpu_mechanism_max=4, smac_cpu_max=4,
                                had_workers=8, smac_workers=4),
-                sources=dict(transfqmix_commit="2ef0a0726f1f186097b4b560509ceb5a801fdafe"),
+                sources=dict(transfqmix_commit="2ef0a0726f1f186097b4b560509ceb5a801fdafe",
+                             spectra_smac_commit="ffababf6187216c9d16b2109ee8ef6fe5fdf1172"),
                 imports=[])
     atomic_json(path, data)
     return data
@@ -482,6 +483,7 @@ def validate_integration(output, env="had"):
         assert {r["method"] for r in acceptance["results"] if r["status"] == "passed"} == set(NEW_METHODS)
         assert all(r["checkpoint_restore_exact"] and r["resumed_next_update_exact"] for r in acceptance["results"])
     else:
+        require_smac_method_acceptance(root)
         native = json.loads((root / "smacv2/scenes/native_acceptance.json").read_text(encoding="utf-8"))
         if (not native.get("complete") or native.get("passed") != 33 or len(native.get("rows", [])) != 33
                 or any(r.get("status") != "passed" for r in native["rows"])):
@@ -492,3 +494,24 @@ def validate_integration(output, env="had"):
     print(f"{PROFILE} {env}: protocol and recorded implementation acceptance passed; "
           f"{len(inventory['checkpoints'])} qualified finals, seeds={SEEDS}")
     return inventory
+
+
+def require_smac_method_acceptance(output):
+    """A method-list edit alone must never authorize an unverified algorithm."""
+    root = Path(output)
+    manifest = initialize(root)
+    if tuple(manifest["environments"]["smacv2"]["methods"]) != SMAC_METHODS:
+        raise ValueError("SMAC manifest and executable method matrix differ")
+    acceptance = json.loads((root / "implementation_acceptance.json").read_text(encoding="utf-8"))
+    original = acceptance.get("matrix_smoke_runtime", {})
+    extension = acceptance.get("smac_six_method_extension", {})
+    rows = []
+    if original.get("status") == "passed":
+        rows += [r for r in original.get("cpu_matrix", []) if r.get("env") == "smacv2"]
+    if extension.get("status") == "passed":
+        rows += extension.get("cpu_matrix", [])
+    passed = {(r["method"], r["seed"]) for r in rows
+              if r.get("status") == "passed" and r.get("finite_td") and r.get("parameters_updated")}
+    missing = {(m, s) for m in SMAC_METHODS for s in SEEDS} - passed
+    if missing:
+        raise ValueError(f"SMAC native model/seed acceptance missing: {sorted(missing)}")

@@ -560,7 +560,7 @@ def _appendix(results):
         lines += _table(["方法", *map(_label, cfgs)], [
             [LABELS[method], *(results.cell("had", method, [cfg], points=True) for cfg in cfgs)]
             for method in protocol.methods("had") + ("rule_nv1", "random")])
-    lines += ["### B. SMACv2全部8配置与4个方法", "",
+    lines += [f"### B. SMACv2全部{len(protocol.SMAC_FINAL)}配置与{len(protocol.SMAC_METHODS)}个方法", "",
               "10v10在两条展示轴交叉，但正式唯一配置和统计局数只计一次。每格记法同附录A。", ""]
     for title, cfgs in (("等人数", protocol.SMAC_FINAL[:5]), ("固定己方10", protocol.SMAC_FINAL[5:])):
         lines += [f"#### B. {title}", ""] + _table(["方法", *map(_label, cfgs)], [
@@ -620,6 +620,12 @@ def _appendix(results):
               "HAD训练只见N∈{4,6,8,10}、K∈{1,2,3}，预算1M物理步；每20k步验证4配置×25局。"
               "SMACv2为4M联合环境决策步，每100k步验证4规模×32局；并行环境的步数累加，不乘智能体数。"
               "正式选用完成预算的final，best只保留为训练内验证最优档案。", ""]
+    lines += ["SMAC新增对照：QMIX-Atten使用已有局部实体输入与共享敌人动作头，关闭imagined。"
+              "SPECTra依据[作者SMAC agent](https://github.com/funny-rl/SPECTra/blob/ffababf6187216c9d16b2109ee8ef6fe5fdf1172/SPECTra_SMACv2/modules/agents/ss_rnn_agent.py)"
+              "及其mixer/config适配，采用typed projections、SAQA、GRU、六基础动作＋敌人QueryKey评分、SMAC ST-HyperNet及batch128。"
+              "与作者固定规模实现的差异包括显式局部可见性/死亡/padding mask、四采集worker及每四回合四次更新；"
+              "Adam/lr=.001、TD(λ)=.6、hidden64/head4保持作者配置。HAD SPECTra的batch32及原权重路径保留。"
+              "完整原始来源、适配边界及验收在[实验计划](实验计划.md#10-smac六方法与复现边界)和既有验收文件中。", ""]
     lines += _table(["字段", "登记值"], [[key, json.dumps(results.metadata.get(key, {}), ensure_ascii=False)]
                                             for key in ("profile", "seeds", "sources", "resources")])
     cost_contracts = []
@@ -652,7 +658,7 @@ def _appendix(results):
                                       info.get("checkpoint_id", "—"), info.get("path", "—")])
     lines += _table(["环境", "方法", "seed", "final实际步数", "artifact ID", "来源权重"], artifact_rows)
     lines += ["### F. 当前缺口、失败、冲突与排除", "",
-              "运行上限：HAD与SMAC训练均每卡最多2个进程，两卡最多4个，仍须通过显存准入，SMAC还检查目标卡利用率；"
+              "运行上限：HAD每卡最多3个进程、两卡最多6个；SMAC每卡最多2个、两卡最多4个。仍须通过显存准入，SMAC还检查目标卡利用率；"
               "CPU终评与机制合计4个任务。HAD优先，CPU按终评→深度→读出→探针排序；HAD和M4完成后进入SMAC。报告每5分钟自动刷新，阶段结束再刷新。统一恢复使用`bash Open-SCORE/outputs/main0921/run_all.sh resume`。实时任务数、已完成/剩余量及条件ETA可通过"
               "`train.py --profile main0921 --stage status --output Open-SCORE/outputs/main0921`查看。"
               "该面板默认精简，--details显示完整明细；只读查看，关闭面板不会停止训练。具体时间依据与区间见[实验计划](实验计划.md)，"
@@ -691,9 +697,16 @@ def refresh_report(output, *, run="train", report_stream=None):
     qualified = sum(results.summary(env, method, [cfg]) is not None
                     for env in ("had", "smacv2") for method in protocol.methods(env) for cfg in protocol.configs(env))
     planned = sum(len(protocol.methods(env)) * len(protocol.configs(env)) for env in ("had", "smacv2"))
+    runs = sum(len(protocol.methods(env)) * len(protocol.SEEDS) for env in ("had", "smacv2"))
+    smac_runs = len(protocol.SMAC_METHODS) * len(protocol.SEEDS)
     lines = ["# main0921：跨规模泛化与循环机制", "", f"更新时间：{now}。唯一正式报告；正文与附录共用同一数据源。",
-             f"当前三种子完整正式格：**{qualified}/{planned}**。合格 final 权重身份：**{len(results.checkpoints)}/57**。"
+             f"当前三种子完整正式格：**{qualified}/{planned}**。合格 final 权重身份：**{len(results.checkpoints)}/{runs}**。"
              "本页展示已有结果与明确缺口，不把计划任务写成结论。", "",
+             f"SMACv2固定矩阵：{'、'.join(LABELS[m] for m in protocol.SMAC_METHODS)}；"
+             f"**{len(protocol.SMAC_METHODS)}方法×{len(protocol.SEEDS)}种子＝{smac_runs}次训练**，"
+             f"每次{protocol.budget('smacv2') // 1_000_000}M步，总计{smac_runs * protocol.budget('smacv2') // 1_000_000}M步；"
+             f"训练内验证{smac_runs * 40 * len(protocol.SMAC_VALIDATION) * 32:,}局，"
+             f"正式终评{smac_runs * len(protocol.SMAC_FINAL) * 300:,}局。", "",
              "## 正文", "", "### 数据口径与展示安排", "",
              "HAD 的 D 越低越好；SMACv2 的 battle_won 胜率越高越好。所有训练种子固定为0、1、2。"
              "正式格必须匹配 inventory 中已验证的 final 权重身份和实际预算，且每种子完成规定随机流的300个唯一回合。"
@@ -701,6 +714,17 @@ def refresh_report(output, *, run="train", report_stream=None):
              "统计顺序：每种子每配置求回合均值 → 固定配置等权 → 三个训练种子等权。"
              "± 为95% t区间半宽（df=2，t=4.30265273）；散点为三个种子值，不能当作独立回合样本。"
              "规则只有一组公共场景结果，没有虚构三个训练种子或跨种子误差条。R²保留负值；未定义值显示 —。", ""]
+    if metadata.get("runtime_estimate", {}).get("status") == "six_method_throughput_pending":
+        lines += ["工期修正：此前5.4–6.8天只估算了12次SMAC训练，不能代表当前18次矩阵。"
+                  "新增QMIX-Atten/SPECTra尚无GPU实测吞吐，完整训练ETA待补测；7天仍是目标，尚不能确认达成。"
+                  "HAD继续优先执行，所有三种子、预算和评估配额保持登记值。", ""]
+    elif metadata.get("runtime_estimate", {}).get("status") == "conditional_full_two_gpu_six_method_estimate":
+        estimate = metadata["runtime_estimate"]
+        span = estimate["deadline_review"]["training_target_days"]
+        lines += [f"工期登记（{estimate['updated_at']}）：按六方法全部实测架构吞吐与当时剩余量，"
+                  f"两张物理GPU全速条件下，剩余训练、训练内验证及HAD阶段尾部约**{span[0]:.1f}–{span[1]:.1f}天**。"
+                  "这是初始化策略的短时测量估算，终端按各方法剩余步数更新；不含外部资源等待、故障重试和最终SMAC终评尾部。"
+                  "此前12次SMAC对应的5.4–6.8天已作废；当前区间跨过7天，不能承诺7天内完成。", ""]
     lines += _table(["位置 / ID", "问题与固定展示", "轴 / 指标与不确定性", "数据源 / 完成条件"], [
         ["正文 图1", "Full结构；共享更新与逐轮读取", "结构图，无结果数值", "当前方法实现；不是机制实验证据"],
         ["正文 图2a/d", "HAD与SMAC训练内学习", "训练步→D/胜率；三seed均值和95% t带", "episodes.csv/train_eval；每点100/128局×3seed"],

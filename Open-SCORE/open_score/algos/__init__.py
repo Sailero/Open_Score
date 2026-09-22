@@ -244,6 +244,9 @@ def load_config(name, overrides=None):
         base["env_args"].update(obs_last_action=False, state_last_action=False)
         if name != "transfqmix":
             base["training_iters"] = 4  # Four completed collection episodes, as in HAD's 8/8 ratio.
+        if name == "spectra":
+            # Official SMACv2 ss_qmix.yaml; the HAD/GRF batch remains 32.
+            base["batch_size"] = 128
     base["device"] = "cuda" if base["use_cuda"] else "cpu"
     base.setdefault("imagine_group", "original")
     base.setdefault("count_cond", None)

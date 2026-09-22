@@ -116,7 +116,7 @@
   "global_ffn_mult": 2,
   "global_n_heads": 4,
   "method": "regir_fixed4",
-  "seed": 0,
+  "seed": 2,
   "entity_scheme": true,
   "feature_layout": "had",
   "report_interval": 300,

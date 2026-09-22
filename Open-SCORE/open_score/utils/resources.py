@@ -9,7 +9,7 @@ import subprocess
 import time
 
 
-GPU_PER_CARD_MAX = 2
+GPU_PER_CARD_MAX = 3
 
 
 def gpu_train_limit(devices=(0, 1), *, per_gpu=GPU_PER_CARD_MAX):
@@ -17,8 +17,8 @@ def gpu_train_limit(devices=(0, 1), *, per_gpu=GPU_PER_CARD_MAX):
     devices = tuple(int(gpu) for gpu in devices)
     if not devices or len(set(devices)) != len(devices) or not set(devices) <= {0, 1}:
         raise ValueError("main0921 requires distinct physical GPUs from 0,1")
-    if per_gpu not in (1, GPU_PER_CARD_MAX):
-        raise ValueError("main0921 allows one or two trainers per physical GPU")
+    if per_gpu not in range(1, GPU_PER_CARD_MAX + 1):
+        raise ValueError("main0921 allows one to three trainers per physical GPU")
     return per_gpu * len(devices)
 
 
@@ -84,7 +84,7 @@ def queue_lock(output, kind, *, stop_requested=None):
     """OS-held locks survive stale files and release automatically on exit.
 
     GPU train/single/farm and cost measurement share one parent lease. A parent
-    may admit at most two trainers per physical GPU; another command waits outside that lease.
+    may admit at most three HAD trainers per GPU (two SMAC); another command waits outside that lease.
     CPU evaluation has one parent per experiment output.
     """
     import fcntl
@@ -142,11 +142,12 @@ def _bootstrap_peak(output, env, method):
         if accepted.get("status") != "passed":
             return 0.
         workers, limit = (8, 100) if env == "had" else (4, 200)
+        batch_size = 128 if env == "smacv2" and method == "spectra" else 32
         rows = accepted["had_full_gpu_throughput" if env == "had" else "smac_full_gpu_throughput"]
         estimates = []
         for row in rows:
             if (row.get("method") == method and row.get("workers") == workers
-                    and row.get("batch_size") == 32 and row.get("episode_limit") == limit
+                    and row.get("batch_size") == batch_size and row.get("episode_limit") == limit
                     and row.get("finite_td") is True and 1 < row.get("sequence_length", 0) <= limit + 1):
                 peak = float(row["peak_reserved_gib"])
                 if math.isfinite(peak) and peak > 0:
@@ -159,6 +160,8 @@ def _bootstrap_peak(output, env, method):
 def gpu_admit(output, env, method, live, *, gpu=0, memory=None, minimum_peak=0., recovering=False,
               per_gpu=GPU_PER_CARD_MAX):
     from open_score.eval.experiment import run_directory, SEEDS
+    if per_gpu > (2 if env == "smacv2" else GPU_PER_CARD_MAX):
+        return False
     if int(gpu) not in (0, 1) or len(live) >= gpu_train_limit(per_gpu=per_gpu):
         return False
     measurements = [_resource(run_directory(output, method, s, env) / "resource.json") for s in SEEDS]

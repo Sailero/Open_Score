@@ -1,0 +1,15 @@
+[regir_untied4] saved resume t_env=0
+[regir_untied4] 0:00:10  0/1,000,000  0.0/s  upd=0  L=-  D=-
+[regir_untied4] saved resume t_env=410
+[regir_untied4] 0:00:20  410/1,000,000  20.2/s  upd=0  L=-  D=-
+[regir_untied4] saved resume t_env=804
+[regir_untied4] 0:00:30  804/1,000,000  26.3/s  upd=0  L=-  D=-
+[regir_untied4] saved resume t_env=1,208
+[regir_untied4] 0:00:40  1,208/1,000,000  29.7/s  upd=0  L=-  D=-
+[regir_untied4] 0:00:51  1,601/1,000,000  30.8/s  upd=1  L=0.0495  D=-
+[regir_untied4] 0:01:03  1,601/1,000,000  25.1/s  upd=5  L=0.0468  D=-
+[regir_untied4] saved resume t_env=1,601
+[regir_untied4] 0:01:13  1,601/1,000,000  21.7/s  upd=8  L=0.0466  D=-
+[regir_untied4] 0:01:24  1,996/1,000,000  23.5/s  upd=9  L=0.0392  D=-
+[regir_untied4] 0:01:36  1,996/1,000,000  20.6/s  upd=14  L=0.0437  D=-
+[regir_untied4] 0:01:46  1,996/1,000,000  18.7/s  upd=16  L=0.0445  D=-

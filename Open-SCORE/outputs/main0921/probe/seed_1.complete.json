@@ -1,0 +1,20 @@
+{
+  "status": "complete",
+  "model_seed": 1,
+  "checkpoint_id": "e7aef562b6434239996cd7ecaf56f548",
+  "controls": {
+    "trained": {
+      "samples": 15175,
+      "exclusions": {
+        "nearest_other_defender_distance:no_other_visible_defender": 407
+      }
+    },
+    "random_init": {
+      "samples": 15175,
+      "exclusions": {
+        "nearest_other_defender_distance:no_other_visible_defender": 407
+      }
+    }
+  },
+  "results_rows": 540
+}

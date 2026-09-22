@@ -24,7 +24,7 @@ import unicodedata
 _HAD = ("regir", "refil", "b2_qmix_atten", "dcg", "spectra", "alma", "regir_norefil",
         "regir_nocount", "regir_r1", "regir_last", "refil_matched", "transfqmix",
         "regir_fixed4", "regir_untied4", "regir_kv0")
-_SMAC = ("regir", "regir_r1", "refil", "transfqmix")
+_SMAC = ("regir", "regir_r1", "refil", "b2_qmix_atten", "spectra", "transfqmix")
 _NAMES = dict(train="训练", final="正式终评", depth="M1深度", readout="M2读出", probe="M3探针", timing="M4成本")
 _DONE = {"complete", "completed"}
 _ACTIVE = {"running", "training", "evaluating", "starting", "waiting", "stopping", "pending"}
@@ -427,6 +427,12 @@ def _estimate_ranges(estimate, tasks=(), metadata=None):
         section = estimate.get(env, {})
         if not isinstance(section, dict):
             continue
+        registered = (metadata or {}).get("environments", {}).get(env, {}).get("methods")
+        measured = section.get("methods")
+        if registered and measured and set(registered) != set(measured):
+            # An old four-method estimate cannot be scaled by total steps
+            # to masquerade as measured throughput for new architectures.
+            continue
         reference = section.get("reference_remaining", {})
         selected = [t for t in tasks if t.get("env") == env]
         training = [t for t in selected if t["kind"] == "train"]
@@ -443,6 +449,13 @@ def _estimate_ranges(estimate, tasks=(), metadata=None):
                 baseline = _number(reference.get(reference_key))
                 factor = remaining[reference_key]/baseline if baseline and reference_key in remaining else 1.
                 scaled[env,field] = [float(x)*factor for x in values]
+        rates = section.get("training_rates", {})
+        pending = [t for t in training if t["completed"] < t["total"]]
+        if training and rates and all(t["method"] in rates for t in pending):
+            cards = max(1, int(estimate.get("assumed_full_gpus", 2)))
+            scaled[env, "training_seconds"] = [
+                sum((t["total"] - t["completed"]) / rates[t["method"]][i] for t in pending) / cards
+                for i in (1, 0)]
         mechanism = section.get("mechanism_seconds")
         if isinstance(mechanism, (list, tuple)) and len(mechanism)==2:
             # Probe fitting and M4 are fixed work, not proportional to episode count.
@@ -477,6 +490,8 @@ def _estimate_lines(estimate, tasks=(), metadata=None):
         if span is not None:
             lines.append(f"  {'/'.join(path) or '整体'}：{_range(span)}；依据：{value.get('basis', '下方登记实测与条件')}")
         for key, item in value.items():
+            if key == "superseded_four_method_estimate":
+                continue
             if isinstance(item, dict):
                 visit(item, path + [str(key)])
             elif key.endswith("_seconds") and (item is None or isinstance(item, (list, tuple))):
@@ -690,14 +705,14 @@ def _cpu_snapshot():
         return "CPU 整机利用率暂不可读"
 
 
-def _gpu_lines(gpu_status, live, width):
+def _gpu_lines(gpu_status, live, width, per_gpu=2):
     rows = []
     for device in (0, 1):
         count = sum(task["kind"] == "train" and str(task.get("physical_gpu")) == str(device) for task in live)
         match = re.search(rf"GPU{device} [^:]+: 利用率([^%]+)% / 空闲([\d.]+)/([\d.]+)GiB", gpu_status or "")
         usage = (f"利用率{match[1]}%  显存{float(match[3]) - float(match[2]):.1f}/{float(match[3]):.1f}GiB"
                  if match else "利用率/显存待查询")
-        rows.append(f"GPU{device} {usage}  训练{count}/2")
+        rows.append(f"GPU{device} {usage}  训练{count}/{per_gpu}")
     combined = "  |  ".join(rows)
     return [combined] if _width(combined) <= width else rows
 
@@ -735,7 +750,9 @@ def render_status(output, *, gpu_status=None, cpu_status=None, now=None, details
                 done = sum(task.get("status") in _DONE for task in selected)
                 groups.append(f"{label} {done}/{len(selected)}")
         lines.append(f"{name:<4}  " + "  ".join(groups))
-    lines += _gpu_lines(gpu_status, live, width)
+    smac_active = any(t.get("env") == "smacv2" and t["kind"] == "train" for t in live)
+    cap_key = "smac_gpu_per_card_max" if smac_active else "gpu_per_card_max"
+    lines += _gpu_lines(gpu_status, live, width, int(metadata.get("resources", {}).get(cap_key, 2)))
     cpu_tasks = sum(task["kind"] != "train" and task.get("physical_gpu") is None for task in live)
     lines.append(f"{cpu_status or _cpu_snapshot()}  评估{cpu_tasks}/4")
     lines.append("─" * min(width, 76))
@@ -767,7 +784,12 @@ def render_status(output, *, gpu_status=None, cpu_status=None, now=None, details
     estimates = _estimate_ranges(metadata.get("runtime_estimate"), tasks, metadata)
     prefix = "恢复后预计" if state == "已暂停" else "预计剩余"
     review = metadata.get("runtime_estimate", {}).get("deadline_review", {})
-    if review.get("decision") == "authorized_restart_full_two_gpu":
+    if metadata.get("runtime_estimate", {}).get("status") == "six_method_throughput_pending":
+        had = [estimates.get(("had", key)) for key in ("training_seconds", "validation_seconds")]
+        had_total = [sum(part[i] for part in had) for i in (0, 1)] if all(had) else None
+        lines.append(f"训练剩余：HAD {_short_range(had_total)} | SMAC 待补测（18次训练）")
+        lines.append("7天目标待复核：旧12次SMAC估算已停用")
+    elif review.get("decision") == "authorized_restart_full_two_gpu":
         training = {}
         for env in ("had", "smacv2"):
             parts = [estimates.get((env, key)) for key in ("training_seconds", "validation_seconds")]
@@ -779,6 +801,10 @@ def render_status(output, *, gpu_status=None, cpu_status=None, now=None, details
                   for i in (0, 1)] if len(training) == 2 else None)
         lines.append(f"{prefix}训练 {_short_range(total)} | 目标{review.get('deadline_days', 7)}天（两卡全速假设）")
         lines.append(f"含验证：HAD {_short_range(training.get('had'))} | SMAC {_short_range(training.get('smacv2'))}")
+        deadline_at = _stamp(review.get("deadline_at"))
+        remaining_deadline = max(0, deadline_at - now) if deadline_at else review.get('deadline_days', 7) * 86400
+        if total and total[1] > remaining_deadline:
+            lines.append("工期区间跨过目标：尚不能保证7天内训练完")
     else:
         lines.append(f"{prefix} {_short_range(estimates.get('overall_seconds'))}  （共享资源等待另计）")
         lines.append(f"HAD {_short_range(estimates.get(('had', 'stage_seconds')))}  |  SMAC {_short_range(estimates.get(('smacv2', 'stage_seconds')))}")

@@ -1,0 +1,25 @@
+[regir_untied4] saved resume t_env=0
+[regir_untied4] saved resume t_env=342
+[regir_untied4] 0:00:10  342/1,000,000  34.1/s  upd=0  L=-  D=-
+[regir_untied4] saved resume t_env=791
+[regir_untied4] saved resume t_env=1,130
+[regir_untied4] 0:00:20  1,130/1,000,000  56.2/s  upd=0  L=-  D=-
+[regir_untied4] 0:00:31  1,495/1,000,000  47.9/s  upd=5  L=0.0431  D=-
+[regir_untied4] saved resume t_env=1,495
+[regir_untied4] 0:00:42  1,835/1,000,000  43.0/s  upd=9  L=0.0480  D=-
+[regir_untied4] 0:00:54  1,835/1,000,000  33.9/s  upd=15  L=0.0437  D=-
+[regir_untied4] 0:01:04  2,256/1,000,000  34.7/s  upd=18  L=0.0390  D=-
+[regir_untied4] 0:01:15  2,256/1,000,000  30.0/s  upd=23  L=0.0372  D=-
+[regir_untied4] 0:01:25  2,637/1,000,000  30.9/s  upd=26  L=0.0540  D=-
+[regir_untied4] 0:01:35  2,637/1,000,000  27.6/s  upd=31  L=0.0431  D=-
+[regir_untied4] 0:01:46  3,035/1,000,000  28.4/s  upd=34  L=0.0392  D=-
+[regir_untied4] 0:01:59  3,035/1,000,000  25.4/s  upd=38  L=0.0400  D=-
+[regir_untied4] 0:02:11  3,396/1,000,000  25.8/s  upd=41  L=0.0401  D=-
+[regir_untied4] 0:02:23  3,396/1,000,000  23.7/s  upd=48  L=0.0446  D=-
+[regir_untied4] 0:02:35  3,769/1,000,000  24.2/s  upd=49  L=0.0448  D=-
+[regir_untied4] 0:02:46  3,769/1,000,000  22.6/s  upd=54  L=0.0457  D=-
+[regir_untied4] 0:02:56  3,769/1,000,000  21.3/s  upd=56  L=0.0433  D=-
+[regir_untied4] 0:03:08  4,087/1,000,000  21.7/s  upd=58  L=0.0420  D=-
+[regir_untied4] 0:03:19  4,087/1,000,000  20.5/s  upd=63  L=0.0390  D=-
+[regir_untied4] 0:03:29  4,087/1,000,000  19.5/s  upd=64  L=0.0340  D=-
+[regir_untied4] 0:03:40  4,455/1,000,000  20.2/s  upd=66  L=0.0415  D=-

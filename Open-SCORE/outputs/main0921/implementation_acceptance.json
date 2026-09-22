@@ -1305,6 +1305,102 @@
         ],
         "peak_reserved_gib": 3.814453125,
         "finite_td": true
+      },
+      {
+        "method": "b2_qmix_atten",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 4,
+        "episode_limit": 200,
+        "batch_size": 32,
+        "sequence_length": 56,
+        "collections": [
+          {
+            "seconds": 5.687472867895849,
+            "physical_steps": 209,
+            "episode_lengths": [
+              53,
+              64,
+              47,
+              45
+            ]
+          },
+          {
+            "seconds": 0.4729667080100626,
+            "physical_steps": 208,
+            "episode_lengths": [
+              55,
+              46,
+              55,
+              52
+            ]
+          }
+        ],
+        "update_seconds": [
+          0.2639363430207595,
+          0.09557111095637083
+        ],
+        "formal_updates_per_collection": 4,
+        "validation_seconds": 5.482238863012753,
+        "validation_episodes": 4,
+        "validation_lengths": [
+          51,
+          67,
+          60,
+          51
+        ],
+        "peak_reserved_gib": 1.1875,
+        "finite_td": true
+      },
+      {
+        "method": "spectra",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 4,
+        "episode_limit": 200,
+        "batch_size": 128,
+        "sequence_length": 56,
+        "collections": [
+          {
+            "seconds": 5.368117225007154,
+            "physical_steps": 209,
+            "episode_lengths": [
+              53,
+              64,
+              47,
+              45
+            ]
+          },
+          {
+            "seconds": 0.422309807036072,
+            "physical_steps": 208,
+            "episode_lengths": [
+              55,
+              46,
+              55,
+              52
+            ]
+          }
+        ],
+        "update_seconds": [
+          0.23406014905776829,
+          0.17724788596387953
+        ],
+        "formal_updates_per_collection": 4,
+        "validation_seconds": 5.5604189010336995,
+        "validation_episodes": 4,
+        "validation_lengths": [
+          56,
+          78,
+          59,
+          58
+        ],
+        "peak_reserved_gib": 2.95703125,
+        "finite_td": true
       }
     ],
     "smac_cpu20_final_interface": [
@@ -1440,6 +1536,22 @@
           ],
           "validation_seconds_per_episode": 1.3892657225078437,
           "formula": "physical_steps / (warm collection seconds + formal updates per collection * measured batch32 update seconds)"
+        },
+        "b2_qmix_atten": {
+          "physical_steps_per_second": [
+            136.0622465855915,
+            243.20341405397582
+          ],
+          "validation_seconds_per_episode": 1.3705597157531884,
+          "formula": "physical steps / (warm four-episode collection seconds + four batch32 update seconds)"
+        },
+        "spectra": {
+          "physical_steps_per_second": [
+            153.1043673460961,
+            183.85905739091805
+          ],
+          "validation_seconds_per_episode": 1.3901047252584249,
+          "formula": "physical steps / (warm four-episode collection seconds + four batch128 update seconds)"
         }
       }
     },
@@ -1656,7 +1768,11 @@
     "scientific_batch_sizes_unchanged": {
       "had": 8,
       "smacv2": 4
-    }
+    },
+    "gpu_train_max": 6,
+    "gpu_per_card_max": 3,
+    "smac_gpu_train_max": 4,
+    "smac_gpu_per_card_max": 2
   },
   "launch_dashboard_acceptance": {
     "checked_at": "2026-09-21T19:04:36.891572+00:00",
@@ -1763,5 +1879,386 @@
     "syntax": "actual HAD Python interpreter and bash -n passed",
     "temporary_artifacts": "all wrapper mock files and fake processes removed",
     "scope": "control flow only; original24 CPU model/seed and8 GPU architecture acceptance retained; no budget, seed or model changes"
+  },
+  "smac_six_method_extension": {
+    "status": "passed",
+    "checked_at": "2026-09-22T03:20:13.652479+00:00",
+    "scope": "Two new SMAC methods x three native CPU seeds,20v20 transfer, pinned SPECTra numerical equivalence/HAD regression, and full-natural-episode formal-batch GPU throughput for both architectures",
+    "cpu_matrix": [
+      {
+        "method": "b2_qmix_atten",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "local_information_isolated": true,
+        "padding_death_zero": true,
+        "serialized_next_update_exact": true
+      },
+      {
+        "method": "b2_qmix_atten",
+        "seed": 1,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "local_information_isolated": true,
+        "padding_death_zero": true,
+        "serialized_next_update_exact": true
+      },
+      {
+        "method": "b2_qmix_atten",
+        "seed": 2,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "local_information_isolated": true,
+        "padding_death_zero": true,
+        "serialized_next_update_exact": true
+      },
+      {
+        "method": "spectra",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 128,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "local_information_isolated": true,
+        "padding_death_zero": true,
+        "serialized_next_update_exact": true
+      },
+      {
+        "method": "spectra",
+        "seed": 1,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 128,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "local_information_isolated": true,
+        "padding_death_zero": true,
+        "serialized_next_update_exact": true
+      },
+      {
+        "method": "spectra",
+        "seed": 2,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 128,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "local_information_isolated": true,
+        "padding_death_zero": true,
+        "serialized_next_update_exact": true
+      }
+    ],
+    "cpu20_final_interface": [
+      {
+        "method": "b2_qmix_atten",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "config": [
+          20,
+          20,
+          0
+        ],
+        "strict_training_state_load": true,
+        "actions": 26,
+        "legal_actions": true,
+        "episode_length": 83,
+        "finite_terminal": true
+      },
+      {
+        "method": "spectra",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "config": [
+          20,
+          20,
+          0
+        ],
+        "strict_training_state_load": true,
+        "actions": 26,
+        "legal_actions": true,
+        "episode_length": 59,
+        "finite_terminal": true
+      }
+    ],
+    "gpu_throughput_status": "passed",
+    "gpu_records": [
+      {
+        "method": "b2_qmix_atten",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 4,
+        "episode_limit": 200,
+        "batch_size": 32,
+        "sequence_length": 56,
+        "collections": [
+          {
+            "seconds": 5.687472867895849,
+            "physical_steps": 209,
+            "episode_lengths": [
+              53,
+              64,
+              47,
+              45
+            ]
+          },
+          {
+            "seconds": 0.4729667080100626,
+            "physical_steps": 208,
+            "episode_lengths": [
+              55,
+              46,
+              55,
+              52
+            ]
+          }
+        ],
+        "update_seconds": [
+          0.2639363430207595,
+          0.09557111095637083
+        ],
+        "formal_updates_per_collection": 4,
+        "validation_seconds": 5.482238863012753,
+        "validation_episodes": 4,
+        "validation_lengths": [
+          51,
+          67,
+          60,
+          51
+        ],
+        "peak_reserved_gib": 1.1875,
+        "finite_td": true
+      },
+      {
+        "method": "spectra",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 4,
+        "episode_limit": 200,
+        "batch_size": 128,
+        "sequence_length": 56,
+        "collections": [
+          {
+            "seconds": 5.368117225007154,
+            "physical_steps": 209,
+            "episode_lengths": [
+              53,
+              64,
+              47,
+              45
+            ]
+          },
+          {
+            "seconds": 0.422309807036072,
+            "physical_steps": 208,
+            "episode_lengths": [
+              55,
+              46,
+              55,
+              52
+            ]
+          }
+        ],
+        "update_seconds": [
+          0.23406014905776829,
+          0.17724788596387953
+        ],
+        "formal_updates_per_collection": 4,
+        "validation_seconds": 5.5604189010336995,
+        "validation_episodes": 4,
+        "validation_lengths": [
+          56,
+          78,
+          59,
+          58
+        ],
+        "peak_reserved_gib": 2.95703125,
+        "finite_td": true
+      }
+    ],
+    "spectra_reference_equivalence": {
+      "status": "passed",
+      "fully_visible_unpadded_actor_max_error": 1.1920928955078125e-07,
+      "fully_visible_unpadded_mixer_max_error": 2.9802322387695312e-08,
+      "had_actor_mixer_exact": true,
+      "source_commit": "ffababf6187216c9d16b2109ee8ef6fe5fdf1172",
+      "boundary": "Explicit visibility/padding/death masking is an adaptation; upstream SAQA passes no mask."
+    },
+    "temporary_files_cleaned": true
+  },
+  "had_two_vs_three": {
+    "status": "passed",
+    "checked_at": "2026-09-22T03:34:08.692012+00:00",
+    "cases": [
+      {
+        "tasks": 2,
+        "method": "regir_fixed4",
+        "physical_gpu": 0,
+        "seconds": 58.42613166407682,
+        "aggregate_steps_per_second": 37.79130907887205,
+        "workers": [
+          {
+            "kind": "done",
+            "rank": 0,
+            "elapsed": 43.12193434499204,
+            "steps": 1029,
+            "cycles": 3,
+            "peak_reserved_gib": 11.93359375
+          },
+          {
+            "kind": "done",
+            "rank": 1,
+            "elapsed": 58.42613166407682,
+            "steps": 1179,
+            "cycles": 3,
+            "peak_reserved_gib": 19.33984375
+          }
+        ],
+        "mean_gpu_utilization": 93.33628318584071,
+        "peak_gpu_used_gib": 28.2314453125,
+        "minimum_gpu_free_gib": 66.7451171875
+      },
+      {
+        "tasks": 3,
+        "method": "regir_fixed4",
+        "physical_gpu": 0,
+        "seconds": 53.272535050986335,
+        "aggregate_steps_per_second": 41.616191117583256,
+        "workers": [
+          {
+            "kind": "done",
+            "rank": 2,
+            "elapsed": 42.83874771499541,
+            "steps": 756,
+            "cycles": 2,
+            "peak_reserved_gib": 10.306640625
+          },
+          {
+            "kind": "done",
+            "rank": 0,
+            "elapsed": 46.636731953010894,
+            "steps": 702,
+            "cycles": 2,
+            "peak_reserved_gib": 11.93359375
+          },
+          {
+            "kind": "done",
+            "rank": 1,
+            "elapsed": 53.272535050986335,
+            "steps": 759,
+            "cycles": 2,
+            "peak_reserved_gib": 12.92578125
+          }
+        ],
+        "mean_gpu_utilization": 95.58252427184466,
+        "peak_gpu_used_gib": 37.2802734375,
+        "minimum_gpu_free_gib": 57.6962890625
+      },
+      {
+        "tasks": 2,
+        "method": "regir_fixed4",
+        "physical_gpu": 0,
+        "seconds": 45.622634368017316,
+        "aggregate_steps_per_second": 39.191073132187114,
+        "workers": [
+          {
+            "kind": "done",
+            "rank": 1,
+            "elapsed": 41.557899888954125,
+            "steps": 759,
+            "cycles": 2,
+            "peak_reserved_gib": 12.92578125
+          },
+          {
+            "kind": "done",
+            "rank": 0,
+            "elapsed": 45.622634368017316,
+            "steps": 1029,
+            "cycles": 3,
+            "peak_reserved_gib": 11.93359375
+          }
+        ],
+        "mean_gpu_utilization": 95.07954545454545,
+        "peak_gpu_used_gib": 26.3056640625,
+        "minimum_gpu_free_gib": 68.6708984375
+      }
+    ],
+    "scope": "bounded40-second-per-worker GPU0 comparison, actual HAD mixed-pool sampling and8 updates of batch32 per8 collected episodes; initialized policies and repeated sampled episodes are diagnostic, not formal training",
+    "decision": "allow up to3 HAD trainers/card subject to unchanged measured-peak1.25+8GiB admission; SMAC remains2/card",
+    "three_way_gain_over_two": [
+      0.06187934627910008,
+      0.101210625721605
+    ],
+    "limits_and_memory_checks": "passed: total6/HAD, perGPU3 cap, SMAC rejects3,8GiB+1.25peak+live growth, isolated OOM recovery preserved",
+    "temporary_files_cleaned": true
   }
 }
