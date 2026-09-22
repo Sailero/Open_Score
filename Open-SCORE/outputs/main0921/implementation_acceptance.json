@@ -2260,5 +2260,21 @@
     ],
     "limits_and_memory_checks": "passed: total6/HAD, perGPU3 cap, SMAC rejects3,8GiB+1.25peak+live growth, isolated OOM recovery preserved",
     "temporary_files_cleaned": true
+  },
+  "terminal_display_fix": {
+    "status": "passed",
+    "checked_at": "2026-09-22T06:45:35.817747+00:00",
+    "scope": "read-only viewer only; no training restart or additional experimental episodes",
+    "reproduced": [
+      "9 active tasks truncated to8 and incorrectly called abnormal",
+      "recent20 steps/s displayed with cumulative40 steps/s ETA"
+    ],
+    "checks": [
+      "all10 permitted tasks shown or paged",
+      "79x23,49x17,31x15,19x12 rendering bounds",
+      "recent-speed ETA consistency and stale/validation masking",
+      "actual PTY80x24 resized50x18, five frames, explicit CRLF without terminal newline conversion",
+      "Ctrl+C restored screen/cursor; existing experiment workers remained alive"
+    ]
   }
 }

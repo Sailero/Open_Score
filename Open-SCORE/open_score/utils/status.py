@@ -678,18 +678,22 @@ def _short_range(values):
 
 
 def _short_task_eta(task):
+    if task["kind"] == "train":
+        rate = _recent_training_rate(task)
+        remaining = max(0, task.get("total", 0) - task.get("completed", 0))
+        return _short_duration(remaining / rate) if rate and rate > 0 else "—"
     span = task.get("remaining_seconds_range") or task.get("eta_seconds_range")
     if span:
         return _short_range(span)
-    remaining = max(0, task.get("total", 0) - task.get("completed", 0))
-    if task["kind"] == "train":
-        rate = _number(task.get("training_steps_per_second"))
-        if rate and rate > 0:
-            return _short_duration(remaining / rate)
-        rates = task.get("rate_range")
-        if rates and min(rates) > 0:
-            return _short_range((remaining / max(rates), remaining / min(rates)))
     return _short_duration(task.get("remaining_seconds"))
+
+
+def _recent_training_rate(task):
+    if (task.get("kind") != "train"
+            or task.get("current_phase") in ("validation", "validating")
+            or task.get("log_age", math.inf) > 60):
+        return None
+    return _number(task.get("recent_steps_per_second"))
 
 
 def _cpu_snapshot():
@@ -717,14 +721,15 @@ def _gpu_lines(gpu_status, live, width, per_gpu=2):
     return [combined] if _width(combined) <= width else rows
 
 
-def render_status(output, *, gpu_status=None, cpu_status=None, now=None, details=False, width=100):
+def render_status(output, *, gpu_status=None, cpu_status=None, now=None, details=False, width=100,
+                  height=None, page=0):
     """Default to a concise view for live terminals, pipes, and --once alike."""
     root = Path(output)
     now = time.time() if now is None else float(now)
     data = _snapshot(root, now)
     if details:
         return _render_details(root, gpu_status=gpu_status, now=now, data=data)
-    width = max(32, int(width))
+    width = max(1, int(width))
     tasks, metadata = data["tasks"], data["metadata"]
     completed = [task for task in tasks if task.get("status") in _DONE]
     live = sorted((task for task in tasks if task.get("live") and task.get("status") not in _DONE),
@@ -767,20 +772,21 @@ def render_status(output, *, gpu_status=None, cpu_status=None, now=None, details
              "transfqmix": "TransfQMix", "regir_fixed4": "Fixed4", "regir_untied4": "Untied4", "regir_kv0": "KV0",
              "regir_norefil": "norefil", "regir_nocount": "nocount", "regir_last": "last", "refil_matched": "matched"}
     kind_names = dict(train="训", final="评", depth="深度", readout="读出", probe="探针", timing="计时")
-    for task in live[:8]:
+    task_start = len(lines)
+    for task in live:
         device = f"{'G' if narrow else 'GPU'}{task['physical_gpu']}" if task.get("physical_gpu") is not None else "CPU"
         env = "H" if task.get("env") == "had" else "S"
         method = names.get(task.get("method"), task.get("method") or "all")
         phase = "验" if task.get("current_phase") in ("validation", "validating") else kind_names.get(task["kind"], task["kind"])
         label = f"{env}/{phase} {method}" + (f" s{task['seed']}" if task.get("seed") is not None else "")
         fraction = min(100., 100. * task.get("completed", 0) / max(1, task.get("total", 0)))
-        rate = _number(task.get("recent_steps_per_second"))
+        rate = _recent_training_rate(task)
         speed = ("验证" if phase == "验" else
-                 f"{rate:.1f}" if task["kind"] == "train" and rate is not None
-                 and task.get("log_age", math.inf) <= 60 else "—")
+                 f"{rate:.1f}" if rate is not None else "—")
         lines.append(row(device, label, f"{fraction:.1f}%", speed, _short_task_eta(task)))
     if not live:
         lines.append("  无活动任务；已有进度保留" if state == "已暂停" else "  无活动任务")
+    task_end = len(lines)
     estimates = _estimate_ranges(metadata.get("runtime_estimate"), tasks, metadata)
     prefix = "恢复后预计" if state == "已暂停" else "预计剩余"
     review = metadata.get("runtime_estimate", {}).get("deadline_review", {})
@@ -810,11 +816,23 @@ def render_status(output, *, gpu_status=None, cpu_status=None, now=None, details
         lines.append(f"HAD {_short_range(estimates.get(('had', 'stage_seconds')))}  |  SMAC {_short_range(estimates.get(('smacv2', 'stage_seconds')))}")
     if state == "已暂停" and review.get("decision") == "paused_deadline_not_supported":
         lines.append(f"{review.get('deadline_days', 5)}天目标：当前估计不满足，保持暂停")
-    if len(live) > 8:
-        lines.append(f"异常：活动任务共{len(live)}项，另{len(live) - 8}项见 --details")
-    elif data["issues"]:
+    if data["issues"]:
         lines.append(f"提示：{len(data['issues'])}项状态异常，使用 --details 查看")
-    lines.append("步/秒：近约60秒；--details 详情；Ctrl+C 仅关闭面板")
+    lines.append("训练步/秒与ETA：近60秒，不含验证；Ctrl+C 仅关闭面板")
+    if height is not None and len(lines) > max(1, int(height)):
+        height = max(1, int(height))
+        slots = height - (len(lines) - (task_end - task_start)) - 1
+        if slots >= 1:
+            count = task_end - task_start
+            pages = math.ceil(count / slots)
+            current = int(page) % pages
+            first = current * slots
+            shown = lines[task_start + first:min(task_end, task_start + first + slots)]
+            lines = (lines[:task_start] + shown
+                     + [f"任务 {first + 1}–{min(count, first + slots)}/{count} · {current + 1}/{pages}页（自动轮换）"]
+                     + lines[task_end:])
+        else:
+            lines = lines[:height - 1] + ["窗口过矮，请增大高度或用 --once 查看"]
     return "\n".join(_fit(line, width) for line in lines)
 
 
@@ -824,6 +842,7 @@ def watch_status(output, interval=5, once=False, details=False):
     tty = bool(getattr(sys.stdout, "isatty", lambda: False)())
     overwrite = tty and not once
     gpu_status, last_gpu = None, -math.inf
+    frame = 0
     try:
         if overwrite:
             # Use the alternate screen so refreshes never accumulate in the
@@ -835,17 +854,19 @@ def watch_status(output, interval=5, once=False, details=False):
             if tick - last_gpu >= interval:
                 gpu_status, last_gpu = _gpu_snapshot(), tick
             size = shutil.get_terminal_size((100, 24))
+            available = max(1, size.lines - 1)
             panel = render_status(output, gpu_status=gpu_status, cpu_status=_cpu_snapshot(),
-                                  details=details, width=max(32, size.columns - 1))
+                                  details=details, width=max(1, size.columns - 1),
+                                  height=available if overwrite else None, page=frame // 2)
             if overwrite:
                 lines = panel.splitlines()
-                available = max(1, size.lines - 1)
                 if len(lines) > available:
                     lines = lines[:max(0, available - 1)] + ["… 请增大终端高度以显示完整面板"]
-                sys.stdout.write("\x1b[H" + "\x1b[K\n".join(lines) + "\x1b[K\x1b[J")
+                sys.stdout.write("\x1b[H" + "\r\n".join("\x1b[2K" + line for line in lines) + "\x1b[J")
             else:
                 sys.stdout.write(panel + "\n")
             sys.stdout.flush()
+            frame += 1
             if once or not tty:
                 return
             time.sleep(max(.1, interval - (time.monotonic() - tick)))
