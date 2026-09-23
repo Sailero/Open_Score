@@ -324,6 +324,31 @@ def _curve(ax, results, env, method, configs, x, color, *, arm="final", linestyl
     return True
 
 
+def _mean_zoom(source, target, *, ylim, xlim=None):
+    """Show the plotted means at a finer damage scale; full intervals stay above."""
+    handles, labels = source.get_legend_handles_labels()
+    for handle, label in zip(handles, labels):
+        line = handle.lines[0] if hasattr(handle, "lines") else handle
+        if line is None or not hasattr(line, "get_data"):
+            continue
+        x, y = line.get_data()
+        if label == "Rule" and list(x) == [0, 1]:
+            # axhline stores its x coordinates as axes fractions, not data values.
+            target.axhline(y[0], color=line.get_color(),
+                           linestyle=line.get_linestyle(), linewidth=1.35)
+        else:
+            target.plot(x, y, color=line.get_color(), linestyle=line.get_linestyle(),
+                        marker=line.get_marker(), markersize=2.5, linewidth=1.35)
+    target.set(xlim=xlim or source.get_xlim(), ylim=ylim, ylabel="Mean D ↓")
+    tick_step = .5 if ylim[1] <= 2.5 else 1.
+    target.set_yticks([ylim[0] + tick_step * i
+                       for i in range(int((ylim[1] - ylim[0]) / tick_step) + 1)])
+    target.set_title("Low-D means only; full 95% CI above", loc="left", fontsize=8)
+    target.grid(alpha=.2)
+    if not handles:
+        _empty(target)
+
+
 def _figures(results, output):
     import matplotlib
     matplotlib.use("Agg")
@@ -370,8 +395,9 @@ def _figures(results, output):
             ha="center", fontsize=8)
     _save(fig, directory, "fig1_architecture", plt)
 
-    fig, axes = plt.subplots(2, 3, figsize=(14, 8), constrained_layout=True)
-    for env, ax in (("had", axes[0, 0]), ("smacv2", axes[1, 0])):
+    fig, axes = plt.subplots(3, 3, figsize=(14, 10), constrained_layout=True,
+                             gridspec_kw={"height_ratios": (1, .55, 1)})
+    for env, ax in (("had", axes[0, 0]), ("smacv2", axes[2, 0])):
         shown = False
         for method in BODY_HAD if env == "had" else protocol.SMAC_METHODS:
             if method == "rule_nv1":
@@ -423,22 +449,28 @@ def _figures(results, output):
         _empty(axes[0, 2])
     axes[0, 2].set(xlabel="K (solid N=10; dashed N=30)", ylabel="D ↓")
     for ax, cfgs, xlabel in (
-            (axes[1, 1], tuple((n, n, 0) for n in (5, 10, 12, 15, 20)), "N (equal teams)"),
-            (axes[1, 2], tuple((10, n, 0) for n in (10, 11, 12, 15)), "Enemies (10 allies)")):
+            (axes[2, 1], tuple((n, n, 0) for n in (5, 10, 12, 15, 20)), "N (equal teams)"),
+            (axes[2, 2], tuple((10, n, 0) for n in (10, 11, 12, 15)), "Enemies (10 allies)")):
         shown = False
         for method in protocol.SMAC_METHODS:
             shown |= _curve(ax, results, "smacv2", method, cfgs, [c[1] for c in cfgs], colors[method])
         if not shown:
             _empty(ax)
         ax.set(xlabel=xlabel, ylabel="Win rate ↑")
-    for index, (ax, title) in enumerate(zip(axes.flat, ("HAD learning", "HAD team-size transfer", "HAD target transfer",
-                                                      "SMACv2 learning", "SMACv2 team-size transfer", "SMACv2 enemy pressure"))):
+    for index, (ax, title) in enumerate(zip((*axes[0], *axes[2]),
+            ("HAD learning", "HAD team-size transfer", "HAD target transfer",
+             "SMACv2 learning", "SMACv2 team-size transfer", "SMACv2 enemy pressure"))):
         ax.set_title(f"{chr(97 + index)}. {title}", loc="left")
         ax.grid(alpha=.2)
         if index in (0, 1, 3, 4):
             handles, labels = ax.get_legend_handles_labels()
             if handles:
                 ax.legend(handles, labels, fontsize=7, ncol=2)
+    for index, limits in enumerate(((0, 2.5), (0, 3.5), (0, 3.5))):
+        _mean_zoom(axes[0, index], axes[1, index], ylim=limits,
+                   xlim=(.4, 1.0) if index == 0 else None)
+        axes[1, index].set_xlabel(axes[0, index].get_xlabel())
+    axes[1, 0].set_xticks((.4, .6, .8, 1.0))
     _save(fig, directory, "fig2_comparison", plt)
 
     fig, axes = plt.subplots(2, 2, figsize=(13, 8.8), constrained_layout=True)
@@ -461,6 +493,20 @@ def _figures(results, output):
     ax.set(title="a. Retrained structure comparisons", ylabel="D ↓")
     if shown:
         ax.legend(fontsize=8)
+        zoom = ax.inset_axes((.04, .04, .64, .28))
+        for gi, group in enumerate(("N-OOD", "K-OOD")):
+            for mi, method in enumerate(ABLATIONS):
+                summary = results.summary("had", method, HAD_GROUPS[group])
+                if summary:
+                    zoom.bar(mi + (gi - .5) * .34, summary[0], .32,
+                             color=palette(gi), alpha=.7)
+        zoom.set(xlim=(-.5, len(ABLATIONS) - .5), ylim=(0, 3.5))
+        zoom.set_xticks(range(len(ABLATIONS)),
+                        ("F", "S", "NoR", "NoC", "Last", "RefM", "Fix4", "Unt4", "KV0"))
+        zoom.set_yticks((0, 1, 2, 3))
+        zoom.set_title("Low-D means only; CI in main", loc="left", fontsize=7)
+        zoom.tick_params(labelsize=6, pad=1)
+        zoom.grid(axis="y", alpha=.2)
     else:
         _empty(ax)
     ax = axes[0, 1]
@@ -515,7 +561,21 @@ def _figures(results, output):
             ax.text(ri, .03, "待完成", transform=ax.get_xaxis_transform(), ha="center", color="#777777", fontsize=8)
     ax.set(title="d. Fixed R=4 readout: 50v50 K2", ylabel="D ↓",
            xticks=range(6), xticklabels=["Learned", "Read-1", "Read-2", "Read-3", "Read-4", "Uniform"])
-    if not shown:
+    if shown:
+        zoom = ax.inset_axes((.04, .04, .39, .30))
+        for ri, readout in enumerate(protocol.READOUTS[:3]):
+            summary = results.summary("had", "regir", [(50, 50, 2)], f"readout:{readout}")
+            if summary:
+                zoom.scatter(ri, summary[0], color=palette(ri), s=18)
+                zoom.annotate(f"{summary[0]:.2f}", (ri, summary[0]), xytext=(0, 3),
+                              textcoords="offset points", ha="center", fontsize=6)
+        zoom.set(xlim=(-.4, 2.4), ylim=(.4, 2.9))
+        zoom.set_xticks((0, 1, 2), ("Learned", "Read-1", "Read-2"))
+        zoom.set_yticks((1, 2))
+        zoom.set_title("Low-D means only; CI in main", loc="left", fontsize=7)
+        zoom.tick_params(labelsize=6, pad=1)
+        zoom.grid(axis="y", alpha=.2)
+    else:
         _empty(ax)
     for ax in (axes[0, 0], axes[0, 1], axes[1, 1]):
         ax.grid(axis="y", alpha=.2)
@@ -743,7 +803,8 @@ def refresh_report(output, *, run="train", report_stream=None):
     lines += ["### 图1：方法结构", ""] + _figure_lines("fig1_architecture", "图1 方法结构",
         "共享块重复更新实体工作区；每轮结果分别被个体读取，再融合进入策略。图示不声称已经证明压缩、收敛或语义分工。")
     lines += ["### 图2：两域主比较", ""] + _figure_lines("fig2_comparison", "图2 两域主比较",
-        "上排HAD、下排SMACv2。HAD登记的方法为Full、Single、REFIL、TransfQMix、ALMA及规则；只有完整格形成曲线。完整算法表见表1和附录。"
+        "上排HAD、中排为相同HAD数据的低损伤均值放大视图（仅均值；完整数据及95%区间在上排）、下排SMACv2。"
+        "HAD登记的方法为Full、Single、REFIL、TransfQMix、ALMA及规则；只有完整格形成曲线。完整算法表见表1和附录。"
         "HAD N=5是插值，N=10属于训练范围；目标轴实线N=10、虚线N=30。SMAC N=5是插值，10是训练边界，12/15/20为人数外推；"
         "固定己方10的敌人数变化同时改变兵力比。缺完整三种子的数据不连成趋势。")
     lines += ["### 表1：核心算法", "", "HAD：分组严格互斥；训练范围支持点和人数插值另列于附录。", ""]
@@ -754,6 +815,7 @@ def refresh_report(output, *, run="train", report_stream=None):
         [[LABELS[m], *(results.cell("smacv2", m, [c]) for c in smac_key)] for m in protocol.SMAC_METHODS])
     lines += ["### 图3：循环机制", ""] + _figure_lines("fig3_mechanism", "图3 循环机制",
         "重训、同权重执行深度、同状态关系探针和固定计算读出回答不同问题，不能互相替代。"
+        "图3a、d内嵌小图仅放大低损伤方法的均值；完整柱、种子点及95%区间以主图为准。"
         "Read-4是冻结Full的干预，Last是重新训练的方法；Read-1仅在登记等价核查通过后复用M1。"
         "图3c颜色显示三checkpoint平均R²，完整种子值、95% t区间及随机初始化/置乱标签控制见附录D。")
     lines += ["### 表2：参数与全队决策成本", "",

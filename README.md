@@ -1,10 +1,10 @@
 # Open-SCORE
 
-当前实验版本为 **main0921**：固定三种子0/1/2，HAD与SMACv2共用现有训练框架。协议、运行命令和正文/附录安排见[实验计划](Open-SCORE/outputs/main0921/实验计划.md)，全部结果汇入唯一[实验报告](Open-SCORE/outputs/main0921/实验报告.md)。原 `outputs/main` 保留历史结果与恢复信息。训练允许GPU0/GPU1，按可用显存分配，HAD与SMAC均每卡最多2路、两卡最多4路，按实际资源准入；CPU终评与机制合计最多4个任务。
+当前实验版本为 **main0921**：固定三种子0/1/2，HAD与SMACv2共用现有训练框架。协议、运行命令和正文/附录安排见[实验计划](Open-SCORE/outputs/main0921/实验计划.md)，全部结果汇入唯一[实验报告](Open-SCORE/outputs/main0921/实验报告.md)。原 `outputs/main` 保留历史结果与恢复信息。训练允许GPU0/GPU1，按可用显存分配，HAD每卡最多3路、两卡最多6路，SMAC每卡最多2路、两卡最多4路，按实际资源准入；CPU终评与机制合计最多4个任务。
 
 本机目录按用途组织：`/data3/dell/Saileron/projects/HADE` 与 `projects/SMACv2` 保存环境源码，`envs/saileron-smac` 保存独立Python运行环境，`envs/StarCraftII` 保存游戏运行文件。适配器并列位于 `Open-SCORE/open_score/envs/`；新缓存、临时文件均限制在该工作区。必须用计划中的绝对Python路径或 `conda run -p`，不要用可能指向历史副本的环境名称。
 
-当前代码和 viewer 接入七种方法及 ReGIR 消融臂。正式对照包括 **ReGIR（`regir`）、QMIX-Atten（`b2_qmix_atten`）、REFIL、DCG、SPECTra、ALMA**；前四者及迁入的 ReGIR seed 0 有保留权重。ALMA 按 `n_extra_tasks=9` 在 main 重训。另保留 **QMIX-Base（`b0_qmix`）与 GNN-QMIX** 的种子 0 档案。报告中的 QMIX 指 QMIX-Atten。ALMA 的上层子任务分配和下层动作网络作为一个完整模型加载。`best.pt` 是途中验证选优模型，`final.pt` 是最终保存，部分已有运行保留 `latest.pt`；文件存在不代表该运行的所有正式评估都已结束。
+main0921 的 HAD 正式矩阵登记 15 个学习方法，SMACv2 登记 6 个方法；方法定义、权重身份与已完成结果分别见[实验计划](Open-SCORE/outputs/main0921/实验计划.md)和[正式报告](Open-SCORE/outputs/main0921/实验报告.md)。viewer 仍可发现本机保留的历史兼容权重。`best.pt` 是训练内验证选优档案，`final.pt` 是达到预算的终评权重；文件存在不代表该运行的正式评估已经结束。
 
 旧研究主线已于 **2026-09-08 16:00:19 +08:00** 确认停止；探索 final 为 Git `cc2ab86`，历史研究源码可从该提交查阅。随后的环境标定与覆盖式规则已并入 [main v1](Open-SCORE/outputs/main_v1/实验报告.md)。该轮停止决定与“仅保留规则”的描述属于历史轮次。
 
@@ -107,7 +107,7 @@ observations, infos = env.reset(seed=0)
 - 伤害任务保留固定槽到整局结束。死亡槽零观测、强制空动作，但继续接收团队奖励。`agent_mask` 用于 actor，`bootstrap_mask` 用于团队 critic。死亡当步更新使用动作产生前的存活掩码。同队 `team_reward` 已是同一份团队奖励，不能再按队员相加。
 - 累计伤害、时间和维度通过 `info` 提供。任意红蓝 MARL 策略可接 Parallel 联合动作字典，或接 MPE 固定顺序动作列表；网页通过 `red_strategy/blue_strategy` 对象传入统一入口。分组适配器保留原 27 个动作编号，二维只从其中 9 个平面方向选择，与训练接口的 0–8 编号勿混用。
 
-此前环境接入轮次的 Parallel RNG、实体缓存和伤害距离过滤调整属于历史环境修改；当前跨规模训练与评估状态以[本版实验报告](Open-SCORE/outputs/main_v3/实验报告.md)为准。完整原生接口见 [HAD API](../Open_Score_HAD_Workbench/docs/API.md)。
+此前环境接入轮次的 Parallel RNG、实体缓存和伤害距离过滤调整属于历史环境修改；当前跨规模训练与评估状态以[main0921 正式实验报告](Open-SCORE/outputs/main0921/实验报告.md)为准，研究判断见[项目核心分析与论文定位](docs/当前实验分析与论文主张讨论.md)。完整原生接口见 [HAD API](../Open_Score_HAD_Workbench/docs/API.md)。
 
 ```python
 from open_score.rules import make_grouping_env, RulePolicy

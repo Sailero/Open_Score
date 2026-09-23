@@ -9,7 +9,7 @@ from pathlib import Path
 import statistics
 
 from . import experiment as protocol
-from .report0921 import HAD_GROUPS, LABELS, PROBE_LABELS, Results, _stats
+from .report0921 import HAD_GROUPS, LABELS, PROBE_LABELS, Results, _mean_zoom, _stats
 
 
 _STYLES = {
@@ -131,10 +131,11 @@ def _generalization(results, directory, plt):
             panels.append((title, configs, xlabel, dimension, data))
     if not panels:
         return None
-    fig, axes = plt.subplots(1, len(panels), figsize=(3.35 * len(panels), 3.3),
-                             squeeze=False)
-    axes = list(axes[0])
-    fig.subplots_adjust(left=.07, right=.99, top=.85, bottom=.25, wspace=.27)
+    fig, grid = plt.subplots(2, len(panels), figsize=(3.35 * len(panels), 5.6),
+                             squeeze=False, gridspec_kw={"height_ratios": (1, .6)})
+    axes, zoom_axes = list(grid[0]), list(grid[1])
+    fig.subplots_adjust(left=.07, right=.99, top=.92, bottom=.15,
+                        wspace=.27, hspace=.47)
     for index, (ax, panel) in enumerate(zip(axes, panels)):
         title, configs, xlabel, dimension, data = panel
         x = [cfg[dimension] for cfg in configs]
@@ -145,8 +146,12 @@ def _generalization(results, directory, plt):
         _title(ax, index, title)
         ax.set_xlabel(xlabel)
         ax.set_xticks((5, 10, 20, 30, 40, 50) if dimension == 0 else x)
+        zoom = zoom_axes[index]
+        _mean_zoom(ax, zoom, ylim=(0, 3.5))
+        _style_axes(zoom)
+        zoom.set_xlabel(xlabel)
+        zoom.set_xticks(ax.get_xticks())
     axes[0].set_ylabel("Damage D ↓")
-    _share_limits(axes)
     _shared_legend(fig, axes)
     return _save_figure(fig, directory, "paper_generalization", plt)
 
@@ -180,10 +185,11 @@ def _learning(results, directory, plt):
               if any(any(data[method][1]) for method in methods)]
     if not panels:
         return None
-    fig, axes = plt.subplots(1, len(panels), figsize=(4.3 * len(panels), 3.6),
-                             squeeze=False)
-    axes = list(axes[0])
-    fig.subplots_adjust(left=.08, right=.99, top=.87, bottom=.30, wspace=.22)
+    fig, grid = plt.subplots(2, len(panels), figsize=(4.3 * len(panels), 5.8),
+                             squeeze=False, gridspec_kw={"height_ratios": (1, .6)})
+    axes, zoom_axes = list(grid[0]), list(grid[1])
+    fig.subplots_adjust(left=.08, right=.99, top=.92, bottom=.16,
+                        wspace=.22, hspace=.47)
     for index, (ax, (title, methods)) in enumerate(zip(axes, panels)):
         for method in methods:
             x, summaries = data[method]
@@ -202,8 +208,12 @@ def _learning(results, directory, plt):
         ax.set_xlabel("Training environment steps (million)")
         ax.set_xlim(0, max(1.01, ax.get_xlim()[1]))
         ax.set_xticks((0, .2, .4, .6, .8, 1.0))
+        zoom = zoom_axes[index]
+        _mean_zoom(ax, zoom, ylim=(0, 2.5), xlim=(.4, 1.0))
+        _style_axes(zoom)
+        zoom.set_xlabel("Training environment steps (million)")
+        zoom.set_xticks((.4, .6, .8, 1.0))
     axes[0].set_ylabel("Validation damage D ↓")
-    _share_limits(axes)
     _shared_legend(fig, axes, ncol=4)
     return _save_figure(fig, directory, "paper_learning", plt)
 
@@ -287,6 +297,20 @@ def _mechanism(results, directory, plt):
             ax.set(xlabel="Damage D ↓ (K = 2, R = 4)",
                    yticks=range(len(names)), yticklabels=[labels[name] for name in names],
                    ylim=(len(names) - .5, -.5))
+            zoom = ax.inset_axes((.03, .63, .25, .30))
+            for position, name in enumerate(("learned", "read1", "read2")):
+                summary = readout.get(name)
+                if summary:
+                    zoom.scatter(summary[0], position, color="#004C78" if position == 0 else "#657A89",
+                                 s=16)
+                    zoom.annotate(f"{summary[0]:.2f}", (summary[0], position), xytext=(3, 0),
+                                  textcoords="offset points", va="center", fontsize=6)
+            zoom.set(xlim=(.5, 3.1), ylim=(2.5, -.5))
+            zoom.set_yticks(range(3), ("Learned", "Read-1", "Read-2"))
+            zoom.set_xticks((1, 2, 3))
+            zoom.set_title("Means only; CI in main", loc="left", fontsize=6.5)
+            zoom.tick_params(labelsize=6, pad=1)
+            zoom.grid(axis="x", alpha=.2)
     _shared_legend(fig, axes, ncol=3)
     return _save_figure(fig, directory, "paper_mechanism", plt)
 
@@ -409,7 +433,8 @@ def _paper_markdown(results, created_at):
     lines += _table(["方法", "ID", "人数外推", "目标数外推", "联合外推"], rows)
     lines += figure("paper_generalization", "图 1", "人数与目标数变化下的泛化表现",
                      "(a) 固定 $K=2$ 改变双方人数；(b–c) 分别固定双方人数为 10 和 30，改变目标数。"
-                     "曲线为三个训练种子的均值，误差线为 95% $t$ 置信区间；Rule 仅显示公共参照均值。"
+                     "上排曲线为三个训练种子的均值，误差线为 95% $t$ 置信区间；下排仅放大低损伤均值，"
+                     "完整数据与置信区间以上排为准；Rule 仅显示公共参照均值。"
                      "$N=5$ 为人数插值，$N=10,K=2$ 为训练支持；缺失配置处断开曲线")
     lines += [
         "图 1 表明，随着人数或目标数增加，Full 的损伤整体保持在 REFIL 与 ALMA 之下；"
@@ -462,7 +487,8 @@ def _paper_markdown(results, created_at):
     ]
     lines += figure("paper_learning", "图 A1", "训练期间的分布内验证",
                      "左图比较 Full 与主要学习基线，右图比较结构变体。每个验证点在四个 ID 配置上各评估 25 局；"
-                     "曲线与阴影为三个训练种子的均值及 95% $t$ 置信区间，未作平滑")
+                     "上排曲线与阴影为三个训练种子的均值及 95% $t$ 置信区间，未作平滑；"
+                     "下排仅放大后 0.4–1.0M 步的低损伤均值，完整区间以上排为准")
     lines += [
         "为便于区分总体均值与训练随机性，表 A2 列出 Full、Single 与 REFIL 的逐种子分组结果。"
         "Full 相比 Single 的四组结果均呈现相同分化：种子 0 更好，而种子 1、2 更差。"
@@ -482,7 +508,8 @@ def _paper_markdown(results, created_at):
               "这些结果不支持“规模越大便需要更多循环轮数”的单调解释；正文仍按预先设定的四轮模型报告。", ""]
     lines += figure("paper_mechanism", "图 A2", "冻结 Full 的执行深度与读出干预",
                      "(a) 同一最终模型在 1–6 轮下的表现；(b) 固定计算四轮，在 $50\\mathrm{v}50,K=2$ 下替换读出方式。"
-                     "误差表示三个训练种子的 95% $t$ 置信区间。Read-4 是冻结后的干预，不同于图 2 中重新训练的 Last")
+                     "误差表示三个训练种子的 95% $t$ 置信区间；(b) 内嵌小图仅展示前三种读出的低损伤均值，"
+                     "完整区间以主图为准。Read-4 是冻结后的干预，不同于图 2 中重新训练的 Last")
     lines += ["**表 A3｜固定四轮时的读出干预。** Learned 使用原学习权重，Read-$r$ 只读取第 $r$ 轮，"
               "Uniform 对四轮读出等权平均。", ""]
     readout_names = ("Learned", "Read-1", "Read-2", "Read-3", "Read-4", "Uniform")
