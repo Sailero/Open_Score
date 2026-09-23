@@ -189,6 +189,19 @@ def gpu_admit(output, env, method, live, *, gpu=0, memory=None, minimum_peak=0.,
             # waiting for all seeds of the current method to finish.
             return not same_gpu and free >= 8.0 + 1.25 * bootstrap
         return not live and free >= 9.0  # First real run is measured alone, with >=8 GiB reserve.
+    # The explicitly requested six-way HAD queue can use tighter headroom
+    # for measured architectures. Unknown profiles and SMAC retain the original
+    # admission rules; allocation failures still use transactional OOM recovery.
+    reserve, multiplier = 8.0, 1.25
+    if env == "had":
+        try:
+            policy = json.loads((Path(output) / "experiment.json").read_text())["resources"].get("had_gpu_admission", {})
+            reserve = float(policy.get("reserve_gib", reserve))
+            multiplier = float(policy.get("peak_multiplier", multiplier))
+            if not (6.0 <= reserve <= 32.0 and 1.10 <= multiplier <= 2.0):
+                return False
+        except (OSError, ValueError, TypeError, KeyError):
+            return False
     growth = 0.0
     for item in live:
         options = item["options"]
@@ -199,8 +212,8 @@ def gpu_admit(output, env, method, live, *, gpu=0, memory=None, minimum_peak=0.,
             continue
         observed = float(row.get("cuda_peak_reserved_gib") or row.get("cuda_reserved_gib") or 0)
         current = float(row.get("cuda_reserved_gib") or observed)
-        growth += max(0.0, 1.25 * observed - current)
-    return free >= 8.0 + 1.25 * peak + growth
+        growth += max(0.0, multiplier * observed - current)
+    return free >= reserve + multiplier * peak + growth
 
 
 def choose_gpu(output, env, method, live, devices=(0, 1), *, memories=None,
@@ -238,13 +251,13 @@ def is_cuda_oom(error):
 
 def cpu_admit(env, kind, live, maximum):
     import psutil
-    if len(live) >= min(4, maximum):
+    if len(live) >= maximum:
         return False
     kinds = [item["task"]["kind"] for item in live]
-    if env == "smacv2":
-        return len(live) < min(4, maximum) and psutil.virtual_memory().available >= 12 * 1024**3
-    if kind == "final" and kinds.count("final") >= 4:
-        return False
     if kind != "final" and sum(k != "final" for k in kinds) >= 4:
         return False
-    return psutil.virtual_memory().available >= 8 * 1024**3
+    # Reserve host memory for training and account for just-spawned evaluators
+    # that have not loaded their model/environment yet. No synthetic benchmark.
+    warming = sum(time.monotonic() - item.get("started_at", 0) < 30 for item in live)
+    reserve_gib = 16 + warming * (4 if env == "smacv2" else 1.5)
+    return psutil.virtual_memory().available >= reserve_gib * 1024**3

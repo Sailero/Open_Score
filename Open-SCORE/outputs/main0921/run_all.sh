@@ -208,15 +208,16 @@ wait_pair() {
   if (( result )); then stop_children; return "$result"; fi
   trainer= evaluator=
 }
-echo 'Starting HAD: GPU0/GPU1 training and CPU final/mechanism queues'
+echo 'Starting HAD: GPU0/GPU1 training and CPU+GPU final/mechanism queues'
 CUDA_VISIBLE_DEVICES=0,1 "$PY" -u Open-SCORE/scripts/train.py \
   --profile main0921 --stage train --group main --env had --steps 1000000 \
   --batch-size-run 8 --per-gpu 3 --devices 0,1 --run train --resume --output "$OUT" \
   >> "$OUT/train.had.console.log" 2>&1 9>&- &
 trainer=$!
-CUDA_VISIBLE_DEVICES='' "$PY" -u Open-SCORE/scripts/eval.py \
+CUDA_VISIBLE_DEVICES=0,1 "$PY" -u Open-SCORE/scripts/eval.py \
   --profile main0921 --stage eval --env had --only final,depth,readout,probe \
-  --device cpu --max-concurrent 4 --resume --output "$OUT" \
+  --device auto --devices 0,1 --gpu-workers-per-device 2 --final-shards 96 \
+  --max-concurrent 80 --resume --output "$OUT" \
   >> "$OUT/eval.had.console.log" 2>&1 9>&- &
 evaluator=$!
 echo "HAD trainer=$trainer evaluator=$evaluator"
@@ -228,15 +229,16 @@ CUDA_VISIBLE_DEVICES=0,1 "$PY" -u Open-SCORE/scripts/eval.py \
 measurer=$!
 wait "$measurer"
 measurer=
-echo 'Starting SMACv2: up to two trainers per GPU after memory/utilization admission and up to four CPU evaluators'
+echo 'Starting SMACv2: up to two trainers and two admitted evaluators per GPU, with CPU evaluation fallback'
 PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0,1 "$SMAC_PY" -u Open-SCORE/scripts/train.py \
   --profile main0921 --stage train --group main --env smacv2 --steps 4000000 \
   --batch-size-run 4 --per-gpu 2 --devices 0,1 --run train --resume --output "$OUT" \
   >> "$OUT/train.smacv2.console.log" 2>&1 9>&- &
 trainer=$!
-PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES='' "$SMAC_PY" -u Open-SCORE/scripts/eval.py \
-  --profile main0921 --stage eval --env smacv2 --only final --device cpu \
-  --max-concurrent 4 --resume --output "$OUT" >> "$OUT/eval.smacv2.console.log" 2>&1 9>&- &
+PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0,1 "$SMAC_PY" -u Open-SCORE/scripts/eval.py \
+  --profile main0921 --stage eval --env smacv2 --only final --device auto \
+  --devices 0,1 --gpu-workers-per-device 2 --final-shards 32 --max-concurrent 16 \
+  --resume --output "$OUT" >> "$OUT/eval.smacv2.console.log" 2>&1 9>&- &
 evaluator=$!
 echo "SMACv2 trainer=$trainer evaluator=$evaluator"
 wait_pair

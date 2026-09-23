@@ -534,7 +534,7 @@ def evaluate_depth_sweep(method, checkpoint, *, output=None, run=None, seed=None
     return dict(status="complete", completed=completed, total=total)
 
 
-def _smac_eval_runner(saved, config):
+def _smac_eval_runner(saved, config, device="cpu"):
     """Rebuild capacity, retaining all learned parameter shapes and native inputs."""
     import copy
     from types import SimpleNamespace
@@ -543,7 +543,7 @@ def _smac_eval_runner(saved, config):
     from runners.parallel_runner import ParallelRunner
     from open_score.models import build_mac
     cfg = copy.deepcopy(saved["config"])
-    cfg.update(device="cpu", use_cuda=False, batch_size_run=1)
+    cfg.update(device=device, use_cuda=device == "cuda", batch_size_run=1)
     cfg["env_args"].update(pad=(config["N_R"], config["N_B"]), config=config, max_retries=1)
     args = SimpleNamespace(**cfg)
     runner = ParallelRunner(args, LearnerLogger())
@@ -558,6 +558,8 @@ def _smac_eval_runner(saved, config):
         mac.agent.load_state_dict(saved["networks"]["agent"])
         if "mac" in saved["networks"]:
             mac.load_state_dict(saved["networks"]["mac"])
+        if args.use_cuda:
+            mac.cuda()
         mac.eval()
         runner.setup(scheme, groups, preprocess, mac)
         return runner
@@ -567,62 +569,110 @@ def _smac_eval_runner(saved, config):
 
 
 def evaluate_profile_checkpoint(method, checkpoint, *, output, kind="final", env="had",
-                                seed=None, device="cpu", on_progress=None, stop_requested=None):
+                                seed=None, device="cpu", on_progress=None, stop_requested=None,
+                                assigned_jobs=None, shard_id=None, resume_shard=False):
     """One fixed checkpoint/arm queue, resumed by immutable result identity."""
     import json
+    import os
+    import re
+    import numpy as np
     import torch
     from .experiment import (checkpoint_info, initialize, evaluation_jobs,
-                             remaining_evaluations, atomic_json)
+                             remaining_evaluations, result_identity, atomic_json)
     from open_score.utils.logging import ExperimentLogger, read_records
     from open_score.utils.resources import cpu_threads
     cpu_threads()
     torch.set_num_threads(1)
-    if device != "cpu":
-        raise ValueError("main0921 final/depth/readout evaluation uses CPU; GPU0 is reserved for training/cost")
+    if device not in ("cpu", "cuda"):
+        raise ValueError("Evaluation device must be cpu or cuda with one visible physical GPU")
+    if device == "cuda" and os.environ.get("CUDA_VISIBLE_DEVICES") not in ("0", "1"):
+        raise ValueError("CUDA evaluation workers require one permitted physical GPU (0 or 1)")
+    if shard_id is not None:
+        shard_id = str(shard_id)
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+", shard_id):
+            raise ValueError("Evaluation shard identity must be a safe filename component")
     info = checkpoint_info(checkpoint, method=method, seed=seed, env=env)
     if kind != "final" and (method != "regir" or env != "had"):
         raise ValueError("Depth and readout interventions require the HAD Full final")
     manifest = initialize(output)
-    existing = read_records(output, "episodes", run="train", env=env, method=method, seed=info["seed"])
-    jobs = remaining_evaluations(info, kind, existing,
-        read1_equivalent=manifest["mechanisms"]["read1_equivalence_verified"])
-    total = len(evaluation_jobs(info, kind))
+    frozen_jobs = evaluation_jobs(info, kind)
+    if assigned_jobs is None:
+        existing = read_records(output, "episodes", run="train", env=env, method=method, seed=info["seed"])
+        jobs = remaining_evaluations(info, kind, existing,
+            read1_equivalent=manifest["mechanisms"]["read1_equivalence_verified"])
+        total = len(frozen_jobs)
+    else:
+        # The sole parent has already removed completed episodes and assigned
+        # disjoint cells. Fresh workers do not each rescan the shared history.
+        canonical = {result_identity(job): job for job in frozen_jobs}
+        identities = [result_identity(job) for job in assigned_jobs]
+        if len(set(identities)) != len(identities) or any(key not in canonical for key in identities):
+            raise ValueError("Assigned evaluation jobs must be a unique subset of this frozen checkpoint/arm")
+        jobs = [dict(canonical[key]) for key in identities]
+        total = len(jobs)
+        if resume_shard:
+            existing = read_records(output, "episodes", run="train", env=env, method=method, seed=info["seed"])
+            pending = {result_identity(job) for job in remaining_evaluations(info, kind, existing,
+                read1_equivalent=manifest["mechanisms"]["read1_equivalence_verified"])}
+            jobs = [job for job in jobs if result_identity(job) in pending]
     completed = initial = total - len(jobs)
     logger = ExperimentLogger(output, method, info["seed"], "train", env=env)
     start = time.monotonic()
     policy = runner = None
     runner_config = None
     failed = {}
-    failure_path = Path(checkpoint).parent / "evaluation_failures.json"
+    legacy_failure_path = Path(checkpoint).parent / "evaluation_failures.json"
+    failure_path = (legacy_failure_path if shard_id is None else
+                    legacy_failure_path.with_name(f"evaluation_failures.{shard_id}.json"))
     if env == "had":
         from open_score.algos import load_policy
         from open_score.rules import register_end_to_end_policy, run_episode
         from .anchors import BLUE_STRATEGY
         policy = load_policy(method, checkpoint)
+        policy.set_device(device)
         policy_name = f"main0921_{next(_POLICY_IDS)}"
         register_end_to_end_policy("red", policy_name, "main0921 frozen final", lambda _: policy)
     else:
         from open_score.envs.smacv2_env import generate_registered_scenes
         scenes = generate_registered_scenes(output)
         saved = torch.load(checkpoint, map_location="cpu", weights_only=False)
-        if failure_path.exists():
-            old = json.loads(failure_path.read_text())
-            if old.get("checkpoint_id") == info["checkpoint_id"]:
-                failed = old.get("scenes", {})
+        scene_ids = {f"{job['config']['N_R']}v{job['config']['N_B']}.s{job['episode_seed']}" for job in jobs}
+        # Resuming with a different shard count must not reset a scene's
+        # registered retry limit. Each current worker still writes its own file.
+        for path in (legacy_failure_path, *legacy_failure_path.parent.glob("evaluation_failures.part*.json")):
+            if path.exists():
+                old = json.loads(path.read_text())
+                if old.get("checkpoint_id") == info["checkpoint_id"]:
+                    for scene_id, failure in old.get("scenes", {}).items():
+                        if (scene_id in scene_ids and
+                                failure.get("attempts", 0) >= failed.get(scene_id, {}).get("attempts", 0)):
+                            failed[scene_id] = failure
+
+    def policy_seed(job):
+        # Keep policy draws independent of worker order, retries and shard
+        # boundaries. CUDA and CPU still use their own RNG implementations.
+        return int(np.random.SeedSequence([info["seed"], job["config"]["N_R"],
+            job["config"]["N_B"], job["config"]["K"], job["episode_seed"]]).generate_state(1)[0])
 
     def progress(status, job=None):
         row = dict(phase=f"{kind}_eval", status=status, completed=completed, total=total,
                    t_env=info["t_env"], checkpoint=info["checkpoint"], checkpoint_id=info["checkpoint_id"],
+                   eval_device=device, physical_gpu=os.environ.get("CUDA_VISIBLE_DEVICES") if device == "cuda" else None,
+                   shard=shard_id,
                    remaining_seconds=(total-completed)*(time.monotonic()-start)/max(1, completed-initial))
         if job:
-            row.update(arm=job["arm"], cycle_depth=job.get("cycle_depth"), readout=job.get("readout"))
-        logger.progress(**row)
+            row.update(arm=job["arm"], cycle_depth=job.get("cycle_depth"), readout=job.get("readout"),
+                       config=job["config"], episode_seed=job["episode_seed"], policy_seed=policy_seed(job))
+        if status != "running" or (completed - initial) % 25 == 0:
+            logger.progress(**row)
         if on_progress:
             on_progress(row)
         return dict(status=status, completed=completed, total=total, failed_scenes=len(failed))
 
+    last_job = None
     try:
         for job in jobs:
+            last_job = job
             if stop_requested and stop_requested():
                 return progress("stopped", job)
             if env == "had":
@@ -630,12 +680,14 @@ def evaluate_profile_checkpoint(method, checkpoint, *, output, kind="final", env
                     policy.set_eval_depth(job["cycle_depth"])
                 if kind == "readout":
                     policy.mac.agent.global_net.readout_override = job["readout"]
-                result = run_episode(targets=job["config"]["K"], red=job["config"]["N_R"],
-                    blue=job["config"]["N_B"], seed=job["episode_seed"],
-                    red_strategy={"architecture": "end_to_end", "policy": policy_name},
-                    blue_strategy=BLUE_STRATEGY, max_steps=100, record=False, task_mode="damage",
-                    spatial_dim=2, target_initialization="random", diagnostics=True, record_events=True,
-                    retain_trajectory=job["retain_trajectory"])
+                torch.manual_seed(policy_seed(job))
+                with torch.inference_mode():
+                    result = run_episode(targets=job["config"]["K"], red=job["config"]["N_R"],
+                        blue=job["config"]["N_B"], seed=job["episode_seed"],
+                        red_strategy={"architecture": "end_to_end", "policy": policy_name},
+                        blue_strategy=BLUE_STRATEGY, max_steps=100, record=False, task_mode="damage",
+                        spatial_dim=2, target_initialization="random", diagnostics=True, record_events=True,
+                        retain_trajectory=job["retain_trajectory"])
                 summary, trajectory = dict(result["episode_summary"]), result.get("trajectory")
                 if hasattr(policy, "episode_q_statistics"):
                     summary.update(policy.episode_q_statistics())
@@ -652,9 +704,11 @@ def evaluate_profile_checkpoint(method, checkpoint, *, output, kind="final", env
                         if runner is None or runner_config != job["config"]:
                             if runner is not None:
                                 runner.close_env()
-                            runner = _smac_eval_runner(saved, job["config"])
+                            runner = _smac_eval_runner(saved, job["config"], device=device)
                             runner_config = dict(job["config"])
-                        _, summaries = runner.run(test_mode=True, jobs=[job])
+                        torch.manual_seed(policy_seed(job))
+                        with torch.inference_mode():
+                            _, summaries = runner.run(test_mode=True, jobs=[job])
                         summary = dict(summaries[0])
                         trajectory = runner.last_trajectories[0]
                         failed.pop(scene_id, None)
@@ -684,7 +738,7 @@ def evaluate_profile_checkpoint(method, checkpoint, *, output, kind="final", env
             progress("running", job)
             if completed % 25 == 0:
                 print(f"[{env}/{method}/{info['seed']}] {kind}_eval {completed}/{total}", flush=True)
-        return progress("complete" if completed == total else "incomplete")
+        return progress("complete" if completed == total else "incomplete", last_job)
     finally:
         if runner is not None:
             runner.close_env()

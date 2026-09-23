@@ -10,6 +10,7 @@ from pathlib import Path
 from queue import Empty
 import os
 import signal
+import subprocess
 import sys
 import time
 import traceback
@@ -98,6 +99,11 @@ def _exclusive_job(method, run, seed, lock_dir=None):
 
 
 def _worker(task, output, run, device, stop_event, results):
+    # Each evaluator sees only its assigned physical GPU. CPU workers never
+    # initialize CUDA, and the parent keeps both cards visible for admission.
+    physical_gpu = task.get("physical_gpu")
+    if device == "cpu" or "assigned_jobs" in task:
+        os.environ["CUDA_VISIBLE_DEVICES"] = "" if physical_gpu is None else str(physical_gpu)
     from open_score.eval.experiment import is_profile, run_directory
     from open_score.utils.resources import cpu_threads
     cpu_threads()
@@ -121,7 +127,8 @@ def _worker(task, output, run, device, stop_event, results):
         except Exception:
             pass
 
-    with (log_dir / "eval.console.log").open("a", encoding="utf-8", buffering=1) as log:
+    log_name = f"eval.{task['shard_id']}.console.log" if task.get("shard_id") else "eval.console.log"
+    with (log_dir / log_name).open("a", encoding="utf-8", buffering=1) as log:
         with redirect_stdout(log), redirect_stderr(log):
             try:
                 with _exclusive_job(task["id"], run, seed, lock_dir=log_dir):
@@ -129,7 +136,9 @@ def _worker(task, output, run, device, stop_event, results):
                         from open_score.eval.protocol import evaluate_profile_checkpoint
                         result = evaluate_profile_checkpoint(method, task["checkpoint"], output=output,
                             kind=kind, env=task["env"], seed=seed, device=device,
-                            on_progress=on_progress, stop_requested=profile_stop_requested)
+                            on_progress=on_progress, stop_requested=profile_stop_requested,
+                            assigned_jobs=task.get("assigned_jobs"), shard_id=task.get("shard_id"),
+                            resume_shard=task.get("resume_shard", False))
                     elif profile and kind == "probe":
                         from open_score.eval.relationship_probe import evaluate_probe
                         result = evaluate_probe(output=output, seed=seed,
@@ -175,10 +184,38 @@ def _worker(task, output, run, device, stop_event, results):
             except _JobAlreadyRunning as error:
                 print(error, flush=True)
                 results.put(dict(id=task["id"], status="skipped", error=str(error)))
-            except BaseException:
+            except BaseException as error:
                 detail = traceback.format_exc()
                 print(detail, flush=True)
-                results.put(dict(id=task["id"], status="failed", error=detail))
+                from open_score.utils.resources import is_cuda_oom
+                recoverable = "assigned_jobs" in task and device == "cuda" and is_cuda_oom(error)
+                results.put(dict(id=task["id"], status="retry_cpu" if recoverable else "failed", error=detail))
+
+
+def _final_shards(task, output, count):
+    """Read history once per final, then partition the frozen episode identities."""
+    from open_score.eval.experiment import (checkpoint_info, evaluation_jobs,
+        remaining_evaluations, result_identity)
+    from open_score.utils.logging import read_records
+    info = checkpoint_info(task["checkpoint"], method=task["method"], seed=task["seed"], env=task["env"])
+    canonical = evaluation_jobs(info, "final")
+    existing = read_records(output, "episodes", run="train", env=task["env"],
+                            method=task["method"], seed=task["seed"])
+    pending = {result_identity(job) for job in remaining_evaluations(info, "final", existing)}
+    # Contiguous blocks preserve config locality (especially SC2 environment
+    # startup) and provide stable IDs across stop/resume and device changes.
+    width = max(1, (len(canonical) + count - 1) // count)
+    shards = []
+    for start in range(0, len(canonical), width):
+        assigned = [j for j in canonical[start:start + width] if result_identity(j) in pending]
+        if not assigned:
+            continue
+        shard_id = f"part{start // width:03d}"
+        shards.append({**task, "id": f"{task['id']}.{shard_id}", "parent_id": task["id"],
+                       "shard_id": shard_id, "assigned_jobs": assigned,
+                       "completed": 0, "total": len(assigned)})
+    # Expensive large-agent scenes start first, reducing the serial tail.
+    return sorted(shards, key=lambda t: -t["assigned_jobs"][0]["config"]["N_R"])
 
 
 def _eval_job_line(item, output, run, cached):
@@ -202,20 +239,25 @@ def _eval_job_line(item, output, run, cached):
 
 
 def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RUN,
-             env="had", method=None, seed=None):
+             env="had", method=None, seed=None, final_shards=1, devices=(0, 1),
+             gpu_workers_per_device=2):
     from open_score.eval.inventory import pending_eval_jobs
-    from open_score.eval.report import refresh_report
+    from open_score.eval.report import refresh_report, refresh_report_async
     from open_score.eval.experiment import is_profile, scan
-    from open_score.utils.resources import cpu_admit
+    from open_score.utils.resources import cpu_admit, gpu_memory
     profile = is_profile(output)
     context = get_context("spawn")
     stop_event, queue = context.Event(), context.Queue()
     live, failures, live_status, seen, retry_at = [], [], {}, set(), {}
     waiting = deque()
     selected = []
+    shard_tasks, parent_parts, finished_parts = {}, {}, set()
     interrupted = False
     previous = {sig: signal.getsignal(sig) for sig in (signal.SIGINT, signal.SIGTERM)}
     last_status = last_scan = last_report = 0.0
+    last_checkpoint_poll = last_gpu_poll = 0.0
+    checkpoint_stamp = None
+    gpu_snapshots = {}
     height = 0
     use_ansi = _enable_ansi() and sys.stdout.isatty()
 
@@ -245,10 +287,20 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
             if tid in seen or time.monotonic() < retry_at.get(tid, 0):
                 continue
             seen.add(tid)
-            waiting.append(task)
+            if profile and task["kind"] == "final" and final_shards > 1:
+                parts = _final_shards(task, output, final_shards)
+                parent_parts[tid] = {part["id"] for part in parts}
+                shard_tasks.update({part["id"]: part for part in parts})
+                seen.update(parent_parts[tid])
+                waiting.extend(parts)
+                if not parts:
+                    task.update(status="complete", completed=task["total"])
+            else:
+                waiting.append(task)
             emit(f"queue {tid} {task.get('completed', 0)}/{task.get('total', 0)}")
 
     def launch():
+        nonlocal last_gpu_poll, gpu_snapshots
         if profile:
             # New final checkpoints take precedence over queued mechanism
             # work. Stable order preserves seeds; running episodes continue.
@@ -256,17 +308,40 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
             ordered = sorted(waiting, key=lambda task: priority.get(task["kind"], 5))
             waiting.clear()
             waiting.extend(ordered)
+        if device == "auto" and waiting and time.monotonic() - last_gpu_poll >= 5:
+            gpu_snapshots = {}
+            for gpu in devices:
+                try:
+                    gpu_snapshots[gpu] = gpu_memory(gpu)
+                except (OSError, ValueError, subprocess.SubprocessError):
+                    pass
+            last_gpu_poll = time.monotonic()
         while waiting and len(live) < max_concurrent and not stop_event.is_set():
             selected_index = next((i for i, task in enumerate(waiting)
-                                   if not profile or cpu_admit(env, task["kind"], live, max_concurrent)), None)
+                                   if time.monotonic() >= retry_at.get(task["id"], 0)
+                                   and not any(item["task"]["id"] == task["id"] for item in live)
+                                   and (not profile or cpu_admit(env, task["kind"], live, max_concurrent))), None)
             if selected_index is None:
                 return
             task = waiting[selected_index]
             del waiting[selected_index]
-            child = context.Process(target=_worker, args=(task, str(output), run, device, stop_event, queue))
+            task_device = "cpu" if device == "auto" else device
+            if device == "auto" and task["kind"] == "final" and not task.get("force_cpu"):
+                for gpu in sorted(gpu_snapshots, key=lambda g: -gpu_snapshots[g]["free"]):
+                    row = gpu_snapshots[gpu]
+                    occupied = sum(item["task"].get("physical_gpu") == gpu for item in live)
+                    # Busy training cards get one inference process; a card
+                    # with compute headroom can admit the configured maximum.
+                    limit = min(gpu_workers_per_device, 1 if row["utilization"] >= 90 else gpu_workers_per_device)
+                    if occupied < limit and row["free"] >= 8 + 2 * (occupied + 1):
+                        task["physical_gpu"] = gpu
+                        task_device = "cuda"
+                        break
+            task["eval_device"] = task_device
+            child = context.Process(target=_worker, args=(task, str(output), run, task_device, stop_event, queue))
             child.start()
-            live.append(dict(child=child, task=task))
-            emit(f"{task['id']} started pid={child.pid}")
+            live.append(dict(child=child, task=task, started_at=time.monotonic()))
+            emit(f"{task['id']} started pid={child.pid} device={task_device} physical_gpu={task.get('physical_gpu')}")
 
     def receive():
         nonlocal last_scan
@@ -280,23 +355,44 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
                 continue
             emit(f"{result.get('id')} {result.get('status')}")
             status = result.get("status")
-            if status in ("failed", "incomplete"):
+            tid = result["id"]
+            if status == "retry_cpu":
+                task = shard_tasks[tid]
+                task.update(force_cpu=True, resume_shard=True)
+                task.pop("physical_gpu", None)
+                waiting.append(task)
+                retry_at[tid] = time.monotonic() + 5
+                emit(f"{tid}: CUDA OOM; resume only unfinished episodes on CPU")
+            elif status in ("failed", "incomplete"):
                 failures.append(result)
             elif status in ("blocked", "skipped"):
-                seen.discard(result["id"])
-                retry_at[result["id"]] = time.monotonic() + 60
-            last_scan = 0  # Resolve readout/probe dependencies after atomic result writes.
+                if tid in shard_tasks:
+                    shard_tasks[tid]["resume_shard"] = True
+                    waiting.append(shard_tasks[tid])
+                else:
+                    seen.discard(tid)
+                retry_at[tid] = time.monotonic() + 60
+            if tid in shard_tasks:
+                if status in ("complete", "completed"):
+                    finished_parts.add(tid)
+                parent = shard_tasks[tid]["parent_id"]
+                if parent_parts[parent] <= finished_parts:
+                    last_scan = 0
+            else:
+                last_scan = 0  # Resolve dependencies after atomic result writes.
 
     def publish_status(status="running"):
         if not profile:
             return
         from open_score.eval.experiment import atomic_json
-        active = [{**item["task"], **live_status.get(item["task"]["id"], {}), "pid": item["child"].pid,
+        active = [{**{k: v for k, v in item["task"].items() if k != "assigned_jobs"},
+                   **live_status.get(item["task"]["id"], {}), "pid": item["child"].pid,
                    "kind": item["task"]["kind"]} for item in live]
-        active_ids = {row["id"] for row in active}
+        active_ids = {row.get("parent_id", row["id"]) for row in active}
         atomic_json(Path(output) / f"scheduler.eval.{env}.json", dict(
             kind="eval", env=env, pid=os.getpid(), status=status, updated_at=time.time(),
-            max_concurrent=max_concurrent, total=len(selected),
+            max_concurrent=max_concurrent, device=device, devices=list(devices), final_shards=final_shards,
+            gpu_workers_per_device=gpu_workers_per_device, total=len(selected),
             completed=sum(t["status"] == "complete" for t in selected), live=active,
             completed_ids=[t["id"] for t in selected if t["status"] == "complete"],
             waiting=[t for t in selected if t["status"] != "complete" and t["id"] not in active_ids],
@@ -324,8 +420,24 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
                     failures.append(dict(id=item["task"]["id"], error=f"worker exit {child.exitcode}"))
             if changed:
                 receive()
-                last_scan = 0
-            if now - last_scan >= 60:
+                if not parent_parts:
+                    last_scan = 0
+            for tid, deadline in list(retry_at.items()):
+                if tid not in seen and now >= deadline:
+                    retry_at.pop(tid)
+                    last_scan = 0
+            # Poll tiny final.pt metadata frequently. Do not parse the growing
+            # episode CSV every minute while nothing is ready.
+            if profile and now - last_checkpoint_poll >= 5:
+                from open_score.eval.experiment import methods, run_directory, SEEDS
+                paths = [run_directory(output, m, s, env) / "final.pt"
+                         for m in methods(env) for s in SEEDS]
+                stamp = tuple((str(p), p.stat().st_mtime_ns) for p in paths if p.exists())
+                if stamp != checkpoint_stamp:
+                    checkpoint_stamp = stamp
+                    last_scan = 0
+                last_checkpoint_poll = now
+            if last_scan == 0 or (not profile and now - last_scan >= 60):
                 ingest()
                 last_scan = now
             launch()
@@ -334,7 +446,7 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
                 if not unfinished:
                     emit("all selected evaluation tasks complete")
                     break
-                if failures and all(t["id"] in seen for t in unfinished):
+                if failures:
                     break
             if now - last_status >= (5 if live else 60):
                 lines = [f"eval {env} live={len(live)} queued={len(waiting)} "
@@ -344,7 +456,7 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
                 publish_status()
                 last_status = now
             if now - last_report >= 300:
-                refresh_report(output, run=run)
+                refresh_report_async(output, run=run)
                 last_report = now
             time.sleep(1)
     except BaseException as error:
@@ -393,7 +505,11 @@ def parser():
     result.add_argument("--seed", type=int, default=None)
     result.add_argument("--device", default="cpu")
     result.add_argument("--resume", action="store_true")
-    result.add_argument("--max-concurrent", type=int, choices=range(1, 17), default=2)
+    result.add_argument("--max-concurrent", type=int, choices=range(1, 257), default=2)
+    result.add_argument("--devices", default="0,1", help="permitted physical GPUs for --device auto")
+    result.add_argument("--gpu-workers-per-device", type=int, choices=range(1, 5), default=2)
+    result.add_argument("--final-shards", type=int, choices=range(1, 301), default=1,
+                        help="stable episode partitions per final checkpoint")
     result.add_argument("--only", default=None, help="comma list: final,depth,readout,probe; separately timing")
     result.add_argument("--depth-sweep", action="store_true")
     return result
@@ -467,7 +583,7 @@ def run_profile_timing(output, stop_requested):
 
 
 def profile_main(options, output):
-    from open_score.eval.experiment import (initialize, scan, import_existing, SEEDS, methods,
+    from open_score.eval.experiment import (initialize, atomic_json, scan, import_existing, SEEDS, methods,
                                           checkpoint_info, run_directory)
     from open_score.utils.resources import queue_lock, cpu_threads, clear_previous_stop, configure_workspace
     initialize(output)
@@ -478,8 +594,8 @@ def profile_main(options, output):
     requested_at = time.time()
     if not any(a.startswith("--max-concurrent") for a in sys.argv):
         options.max_concurrent = 4
-    if not 1 <= options.max_concurrent <= 4:
-        raise SystemExit("main0921 evaluation and mechanism tasks share a maximum of four workers")
+    if not 1 <= options.max_concurrent <= 256:
+        raise SystemExit("main0921 evaluation requires 1 to 256 workers")
     stop_path = output / "eval.stop.request"
     def new_stop():
         return stop_path.exists() and stop_path.stat().st_mtime > requested_at
@@ -523,9 +639,17 @@ def profile_main(options, output):
         if result.get("status") not in ("complete", "completed"):
             raise SystemExit(1)
         return
-    if options.device != "cpu":
-        raise SystemExit("main0921 formal evaluation and mechanisms require --device cpu")
-    os.environ["CUDA_VISIBLE_DEVICES"] = ""
+    if options.device not in ("cpu", "auto"):
+        raise SystemExit("main0921 evaluation uses --device cpu or --device auto (CPU+GPU)")
+    try:
+        devices = tuple(int(x) for x in options.devices.split(","))
+    except ValueError:
+        raise SystemExit("--devices must select physical GPU 0 and/or 1")
+    if not devices or len(set(devices)) != len(devices) or not set(devices) <= {0, 1}:
+        raise SystemExit("--devices must select distinct physical GPUs from 0,1")
+    if options.device == "auto" and options.final_shards == 1:
+        raise SystemExit("--device auto requires --final-shards greater than one")
+    os.environ["CUDA_VISIBLE_DEVICES"] = "" if options.device == "cpu" else ",".join(map(str, devices))
     if options.checkpoint:
         if not options.method:
             raise SystemExit("--checkpoint requires --method")
@@ -536,12 +660,21 @@ def profile_main(options, output):
         options.seed = info["seed"]
     with queue_lock(output, "cpu", stop_requested=new_stop):
         clear_previous_stop(stop_path, requested_at)
+        manifest = initialize(output)
+        manifest["resources"].setdefault("evaluation", {})[options.env] = dict(
+            device=options.device, max_concurrent=options.max_concurrent,
+            final_shards=options.final_shards, physical_gpus=list(devices) if options.device == "auto" else [],
+            gpu_workers_per_device=options.gpu_workers_per_device,
+            gpu_reserve_gib=8, checkpoint_poll_seconds=5, cpu_threads_per_worker=1,
+            policy_rng="per_episode_seed_v1", updated_at=time.time())
+        atomic_json(output / "experiment.json", manifest)
         if options.env == "smacv2":
             from open_score.envs.smacv2_env import generate_registered_scenes
             generate_registered_scenes(output)
         success = run_eval(output, max_concurrent=options.max_concurrent, only=only,
-                           device="cpu", run="train", env=options.env,
-                           method=options.method, seed=options.seed)
+                           device=options.device, run="train", env=options.env,
+                           method=options.method, seed=options.seed, final_shards=options.final_shards,
+                           devices=devices, gpu_workers_per_device=options.gpu_workers_per_device)
     if not success:
         raise SystemExit(1)
 

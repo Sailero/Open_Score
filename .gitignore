@@ -11,6 +11,7 @@
 *.npy
 *.npz
 *.h5
+*.log
 
 # Python / packaging
 __pycache__/

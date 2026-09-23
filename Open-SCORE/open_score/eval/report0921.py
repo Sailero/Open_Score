@@ -659,7 +659,9 @@ def _appendix(results):
     lines += _table(["环境", "方法", "seed", "final实际步数", "artifact ID", "来源权重"], artifact_rows)
     lines += ["### F. 当前缺口、失败、冲突与排除", "",
               "运行上限：HAD每卡最多3个进程、两卡最多6个；SMAC每卡最多2个、两卡最多4个。仍须通过显存准入，SMAC还检查目标卡利用率；"
-              "CPU终评与机制合计4个任务。HAD优先，CPU按终评→深度→读出→探针排序；HAD和M4完成后进入SMAC。报告每5分钟自动刷新，阶段结束再刷新。统一恢复使用`bash Open-SCORE/outputs/main0921/run_all.sh resume`。实时任务数、已完成/剩余量及条件ETA可通过"
+              "终评支持CPU与GPU共同执行，将同一个final的固定回合拆分为互不重叠的任务；实际设备、并发和分片数见experiment.json的resources.evaluation及scheduler.eval.*.json。"
+              "机制任务仍最多4个，终评优先；GPU推理须留足显存，CUDA内存不足时仅将未完成回合转回CPU。完成的终评保留，CPU/GPU浮点结果不承诺逐位一致。"
+              "报告每5分钟异步刷新，阶段结束再刷新。统一恢复脚本会重启整个队列，正在训练时不要用它单独切换终评。实时任务数、已完成/剩余量及条件ETA可通过"
               "`train.py --profile main0921 --stage status --output Open-SCORE/outputs/main0921`查看。"
               "该面板默认精简，--details显示完整明细；只读查看，关闭面板不会停止训练。具体时间依据与区间见[实验计划](实验计划.md)，"
               "smoke与受控恢复证据归并在[implementation_acceptance.json](implementation_acceptance.json)。", "",

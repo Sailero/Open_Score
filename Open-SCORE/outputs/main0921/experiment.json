@@ -494,7 +494,31 @@
     "smac_gpu_train_max": 4,
     "smac_gpu_per_card_max": 2,
     "smac_next_gpu_utilization_max": 90,
-    "bootstrap_admission": "accepted full natural episode GPU peak scaled by native sequence limit; idle physical card only; provisional until live PID resources, not worst-case memory proof"
+    "bootstrap_admission": "accepted full natural episode GPU peak scaled by native sequence limit; idle physical card only; provisional until live PID resources, not worst-case memory proof",
+    "evaluation": {
+      "had": {
+        "device": "auto",
+        "max_concurrent": 80,
+        "final_shards": 96,
+        "physical_gpus": [
+          0,
+          1
+        ],
+        "gpu_workers_per_device": 2,
+        "gpu_reserve_gib": 8,
+        "checkpoint_poll_seconds": 5,
+        "cpu_threads_per_worker": 1,
+        "policy_rng": "per_episode_seed_v1",
+        "updated_at": 1790095646.6979501
+      }
+    },
+    "had_gpu_admission": {
+      "reserve_gib": 6.0,
+      "peak_multiplier": 1.1,
+      "requested_concurrency": 6,
+      "updated_at": 1790095516.8078728,
+      "reason": "User explicitly requires six concurrent HAD training tasks; measured architectures only. Defaults for SMAC and unmeasured bootstrap remain unchanged."
+    }
   },
   "sources": {
     "transfqmix_commit": "2ef0a0726f1f186097b4b560509ceb5a801fdafe",

@@ -1,4 +1,4 @@
-"""Refresh the one Markdown report and figures from existing records."""
+"""Refresh a report and figures from existing records."""
 from __future__ import annotations
 
 import argparse
@@ -14,7 +14,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--run", default=FORMAL_RUN)
+    parser.add_argument("--paper", action="store_true",
+                        help="Render the concise main0921 paper edition and publication figures")
     args = parser.parse_args()
+    if args.paper:
+        from open_score.eval.paper_report import render_report
+        print(render_report(args.output, run=args.run))
+        return
     from open_score.eval.experiment import is_profile
     if is_profile(args.output):
         from open_score.utils.resources import configure_workspace, cpu_threads

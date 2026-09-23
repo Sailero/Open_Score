@@ -12,3 +12,11 @@ stop.request written; wait for stopped + resume, do not kill
 eval.stop.request written; wait for current episode, do not kill
 Starting HAD: GPU0/GPU1 training and CPU final/mechanism queues
 HAD trainer=3136320 evaluator=3136321
+stop.request written; wait for stopped + resume, do not kill
+eval.stop.request written; wait for current episode, do not kill
+Starting HAD: GPU0/GPU1 training and CPU+GPU final/mechanism queues
+HAD trainer=391590 evaluator=391591
+stop.request written; wait for stopped + resume, do not kill
+eval.stop.request written; wait for current episode, do not kill
+Starting HAD: GPU0/GPU1 training and CPU+GPU final/mechanism queues
+HAD trainer=402876 evaluator=402877
