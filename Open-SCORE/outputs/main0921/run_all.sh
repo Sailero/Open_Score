@@ -231,7 +231,7 @@ wait "$measurer"
 measurer=
 echo 'Starting SMACv2: up to two trainers and two admitted evaluators per GPU, with CPU evaluation fallback'
 PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES=0,1 "$SMAC_PY" -u Open-SCORE/scripts/train.py \
-  --profile main0921 --stage train --group main --env smacv2 --steps 4000000 \
+  --profile main0921 --stage train --group main --env smacv2 --steps 2000000 \
   --batch-size-run 4 --per-gpu 2 --devices 0,1 --run train --resume --output "$OUT" \
   >> "$OUT/train.smacv2.console.log" 2>&1 9>&- &
 trainer=$!

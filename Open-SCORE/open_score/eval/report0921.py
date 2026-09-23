@@ -194,7 +194,7 @@ class Results:
                 continue
             if phase == "train_eval":
                 point = int(row.get("eval_point") or 0)
-                if 1 <= point <= (50 if env == "had" else 40) and (cfg, episode) in expected_validation[env]:
+                if 1 <= point <= protocol.validation_point_count(env) and (cfg, episode) in expected_validation[env]:
                     key = (env, method, seed, point)
                     self._put(self.validation, key, (cfg, episode), metric)
                     self.validation_steps[key] = max(self.validation_steps.get(key, 0), int(row.get("t_env") or 0))
@@ -408,7 +408,7 @@ def _figures(results, output):
                 continue
             x, y, lo, hi = [], [], [], []
             points = []
-            for point in range(1, (50 if env == "had" else 40) + 1):
+            for point in range(1, protocol.validation_point_count(env) + 1):
                 means = []
                 steps = []
                 for seed in protocol.SEEDS:
@@ -678,7 +678,10 @@ def _appendix(results):
               "进度：[progress.csv](progress.csv)；权重资格与任务清单：[inventory.json](inventory.json)；"
               "冻结协议：[experiment.json](experiment.json)。这些是同一实验根下的原始数据，不另造第二套汇总CSV。", "",
               "HAD训练只见N∈{4,6,8,10}、K∈{1,2,3}，预算1M物理步；每20k步验证4配置×25局。"
-              "SMACv2为4M联合环境决策步，每100k步验证4规模×32局；并行环境的步数累加，不乘智能体数。"
+              f"SMACv2为{protocol.budget('smacv2') // 1_000_000}M联合环境决策步，"
+              f"验证点与HAD同为{protocol.validation_point_count('smacv2')}个"
+              f"（每{protocol.budget('smacv2') // protocol.validation_point_count('smacv2') // 1000}k步），"
+              "每点四训练规模各32局；并行环境的步数累加，不乘智能体数。"
               "正式选用完成预算的final，best只保留为训练内验证最优档案。", ""]
     lines += ["SMAC新增对照：QMIX-Atten使用已有局部实体输入与共享敌人动作头，关闭imagined。"
               "SPECTra依据[作者SMAC agent](https://github.com/funny-rl/SPECTra/blob/ffababf6187216c9d16b2109ee8ef6fe5fdf1172/SPECTra_SMACv2/modules/agents/ss_rnn_agent.py)"
@@ -767,7 +770,7 @@ def refresh_report(output, *, run="train", report_stream=None):
              f"SMACv2固定矩阵：{'、'.join(LABELS[m] for m in protocol.SMAC_METHODS)}；"
              f"**{len(protocol.SMAC_METHODS)}方法×{len(protocol.SEEDS)}种子＝{smac_runs}次训练**，"
              f"每次{protocol.budget('smacv2') // 1_000_000}M步，总计{smac_runs * protocol.budget('smacv2') // 1_000_000}M步；"
-             f"训练内验证{smac_runs * 40 * len(protocol.SMAC_VALIDATION) * 32:,}局，"
+             f"训练内验证{smac_runs * protocol.validation_point_count('smacv2') * len(protocol.SMAC_VALIDATION) * 32:,}局，"
              f"正式终评{smac_runs * len(protocol.SMAC_FINAL) * 300:,}局。", "",
              "## 正文", "", "### 数据口径与展示安排", "",
              "HAD 的 D 越低越好；SMACv2 的 battle_won 胜率越高越好。所有训练种子固定为0、1、2。"

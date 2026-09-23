@@ -1,4 +1,0 @@
-[regir_r1] no resume checkpoint; start this arm from step 0
-[regir_r1] 0:00:10  755/1,000,000  75.5/s  upd=0  L=-  D=-
-[regir_r1] 0:00:20  1,102/1,000,000  54.9/s  upd=0  L=-  D=-
-[regir_r1] saved resume t_env=1,460

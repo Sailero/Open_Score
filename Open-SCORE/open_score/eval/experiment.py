@@ -46,7 +46,12 @@ def methods(env="had"):
 
 def budget(env="had"):
     methods(env)
-    return 1_000_000 if env == "had" else 4_000_000
+    return 1_000_000 if env == "had" else 2_000_000
+
+
+def validation_point_count(env="had"):
+    methods(env)
+    return 50
 
 
 def run_directory(output, method, seed, env="had", run="train"):
@@ -88,7 +93,8 @@ def initialize(output):
                                 validation_episodes_per_config=25, final_configs=FINAL_CONFIGS,
                                 metric="D", direction="min"),
                     "smacv2": dict(methods=list(SMAC_METHODS), budget=budget("smacv2"),
-                                   validation_configs=SMAC_VALIDATION, validation_points=40,
+                                   validation_configs=SMAC_VALIDATION,
+                                   validation_points=validation_point_count("smacv2"),
                                    validation_episodes_per_config=32, final_configs=SMAC_FINAL,
                                    metric="battle_won", direction="max",
                                    upstream_commit="577ab5a2cff2391f8df582da5731ea9cd6adf3c6",
@@ -127,7 +133,7 @@ def configs(env="had", validation=False):
 
 
 def validation_thresholds(env):
-    count = 50 if env == "had" else 40
+    count = validation_point_count(env)
     return [math.ceil(budget(env) * i / count) for i in range(1, count + 1)]
 
 
@@ -208,7 +214,7 @@ def evaluation_jobs(info, kind="final"):
     jobs = []
     for config, depth, readout, arm in specifications:
         for offset in range(300):
-            jobs.append(dict(env=env, phase=f"{kind}_eval", eval_point=50 if env == "had" else 40,
+            jobs.append(dict(env=env, phase=f"{kind}_eval", eval_point=validation_point_count(env),
                              config=config_dict(config), episode_seed=base + offset,
                              t_env=info["t_env"], checkpoint=info["checkpoint"],
                              checkpoint_id=info["checkpoint_id"], arm=arm,
@@ -463,7 +469,8 @@ def validate_integration(output, env="had"):
     assert len(validation_jobs("had", 1, 0)) == 100
     assert len(validation_jobs("smacv2", 1, 0)) == 128
     assert validation_thresholds("had")[-1] == 1_000_000
-    assert validation_thresholds("smacv2")[-1] == 4_000_000
+    assert validation_thresholds("smacv2")[-1] == 2_000_000
+    assert validation_point_count("smacv2") == validation_point_count("had") == 50
     for method in methods(env):
         args = load_config(method, dict(profile=PROFILE, output=str(root), env=env,
             t_max=budget(env), run="train", seed=0, use_cuda=False,

@@ -564,6 +564,12 @@ class GlobalBranch(nn.Module):
         return th.full((total,), int(1 if depth is None else depth), dtype=th.long, device=device)
 
     def _agent_query(self, own, hidden):
+        if getattr(self.args, "global_query_no_memory", False):
+            hidden = th.zeros_like(hidden)
+        elif getattr(self.args, "global_query_detach_memory", False):
+            # Backprop through time via the readout attention explodes on
+            # large-norm deep rounds; the GRU's own recurrence keeps its gradient.
+            hidden = hidden.detach()
         return self.query_proj(th.cat((own, hidden), dim=-1)).unsqueeze(1)
 
     def _jk(self, states, query, mem_mask, depth):
@@ -640,6 +646,8 @@ class GlobalBranch(nn.Module):
         if not getattr(self.args, "skip_count_inject", False):
             injected = injected + layer("count_to_token")(count).unsqueeze(1)
         memory = initial if self.rer_update == "kv0" and initial is not None else tokens
+        if getattr(self.args, "global_kv_prenorm", False):
+            memory = layer("norm_attn")(memory).masked_fill(mask.unsqueeze(-1), 0)
         attn = layer("self_attn")
         tokens = tokens + attn(injected, memory, memory, mask)
         if getattr(self, "capture_attention", False) and hasattr(attn, "last_weights"):
@@ -682,6 +690,8 @@ class GlobalBranch(nn.Module):
         # retain an own query while excluding that entity from the key set.
         memory = tokens.masked_fill(key_mask.unsqueeze(-1), 0)
         initial = memory
+        if getattr(self.args, "global_read_h0", False):
+            return [memory], key_mask
         embed = None
         bt = None if pack is None else pack["idx"] // int(pack["na"])
         for round_id in range(n_rounds):

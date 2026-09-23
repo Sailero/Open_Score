@@ -204,7 +204,7 @@
         "spectra",
         "transfqmix"
       ],
-      "budget": 4000000,
+      "budget": 2000000,
       "validation_configs": [
         [
           4,
@@ -227,7 +227,7 @@
           0
         ]
       ],
-      "validation_points": 40,
+      "validation_points": 50,
       "validation_episodes_per_config": 32,
       "final_configs": [
         [
@@ -313,8 +313,8 @@
       "source_directory": "/data3/dell/Saileron/projects/SMACv2",
       "sc2path": "/data3/dell/Saileron/envs/StarCraftII",
       "training_runs": 18,
-      "total_training_steps": 72000000,
-      "total_validation_episodes": 92160,
+      "total_training_steps": 36000000,
+      "total_validation_episodes": 115200,
       "total_final_episodes": 43200,
       "spectra": {
         "source_commit": "ffababf6187216c9d16b2109ee8ef6fe5fdf1172",
@@ -509,7 +509,7 @@
         "checkpoint_poll_seconds": 5,
         "cpu_threads_per_worker": 1,
         "policy_rng": "per_episode_seed_v1",
-        "updated_at": 1790095646.6979501
+        "updated_at": 1790171247.3813417
       }
     },
     "had_gpu_admission": {
@@ -891,7 +891,7 @@
       "HAD permits at most3 trainers per card (6 total), SMAC2/card (4 total). Aggregate serial GPU work is divided by2 physical GPUs. No concurrency speedup is applied to the ETA; GPU0 short diagnostic observed only6–10% gain for3 versus2.",
       "CPU final and mechanism evaluation share a total cap of4; stage sums are conservative and do not assume two independent four-worker pools. CPU overlap with training may shorten elapsed time.",
       "HAD-first execution waits for its evaluation/mechanism tail and M4 before SMAC; reserve0-8h for this transition. Final SMAC evaluation can continue after the training deadline.",
-      "SMAC six-method correction includes72M training steps,92160 validation episodes and43200 final episodes. Old12-run ETA is superseded history. Remaining training is recomputed method by method."
+      "SMAC six-method remaining work was first recorded at 72M training steps and 92160 validation episodes. On 2026-09-23, before any SMAC run started, the registered budget became 2M per run (36M steps, 50 validation points matching HAD, 115200 validation episodes, 43200 final episodes). Current remaining SMAC training times are the previous 4M remaining work scaled by 1/2; validation times are the previous 4M/40-point remaining work scaled by 50/40."
     ],
     "cpu_evaluation_concurrency": 4,
     "had": {
@@ -966,12 +966,12 @@
     },
     "smacv2": {
       "training_seconds": [
-        351117.67286317557,
-        441476.5531285847
+        175558.83643158778,
+        220738.27656429235
       ],
       "validation_seconds": [
-        64689.890745431185,
-        64689.890745431185
+        80862.36343178898,
+        80862.36343178898
       ],
       "evaluation_seconds": [
         59400.0,
@@ -982,13 +982,13 @@
         0
       ],
       "stage_seconds": [
-        475207.56360860675,
-        641166.4438740159
+        315821.1998633768,
+        436600.63999608136
       ],
       "concurrency": 4,
       "reference_remaining": {
-        "training_steps": 72000000,
-        "validation_episodes": 92160,
+        "training_steps": 36000000,
+        "validation_episodes": 115200,
         "final_episodes": 43200,
         "mechanism_episodes": 0
       },
@@ -1030,8 +1030,8 @@
       }
     },
     "overall_seconds": [
-      601665.7463218482,
-      897753.1700929379
+      442279.3825766183,
+      693187.3662150033
     ],
     "updated_at": "2026-09-22T03:29:39.690402+00:00",
     "deadline_review": {
@@ -1046,13 +1046,13 @@
           31.82301402874115
         ],
         "smacv2": [
-          97.53268690643766,
-          122.6323758690513
+          48.76634345321883,
+          61.31618793452565
         ]
       },
       "ideal_two_card_training_plus_validation_days": [
-        6.026223915762133,
-        7.24482835755715
+        4.181474335377526,
+        4.8771685904514275
       ],
       "transfqmix_saved_steps": [
         70763,
@@ -1066,15 +1066,15 @@
           34.55521937238737
         ]
       },
-      "interpretation": "Recomputed for18 SMAC runs with both new architectures measured at actual batch sizes; range crosses7 days, so7 days is not assured. HAD remains authorized and runs first.",
+      "interpretation": "Recomputed for18 SMAC runs with both new architectures measured at actual batch sizes; range crosses7 days, so7 days is not assured. HAD remains authorized and runs first. SMAC budget revised 4M→2M on 2026-09-23 before any SMAC run; validation points then matched HAD at 50 (40k-step interval). Remaining SMAC train times scaled by 1/2; validation times scaled by 50/40 from the 4M/40-point estimate.",
       "deadline_scope": "Original seven-day training deadline retained; quoted ETA is remaining duration as of measurement time, not a restarted seven-day clock. Includes validation/HAD transition; final SMAC evaluation and contention excluded.",
       "had_transition_tail_seconds": [
         0,
         28800
       ],
       "training_target_days": [
-        6.026223915762133,
-        7.578161690890483
+        4.181474335377526,
+        5.2105019237847605
       ],
       "shared_resource_reference_days": [
         7,
@@ -1169,7 +1169,18 @@
         ]
       }
     },
-    "assumed_full_gpus": 2
+    "assumed_full_gpus": 2,
+    "smac_budget_revision": {
+      "changed_at": "2026-09-23T19:40:04+08:00",
+      "from_steps": 4000000,
+      "to_steps": 2000000,
+      "from_validation_points": 40,
+      "to_validation_points": 50,
+      "reason": "User requested 2M before any SMAC run started; all six methods use the same budget. Validation point count then matched HAD at 50; interval is 40k steps.",
+      "validation_interval_steps": 40000,
+      "validation_revision_at": "2026-09-23T19:53:04+08:00",
+      "via_validation_points": 20
+    }
   },
   "scheduling": {
     "environment_order": [

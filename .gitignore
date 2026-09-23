@@ -40,3 +40,11 @@ eval.stop.request
 # Local diagnostic trajectories and process handles
 *.json.gz
 *.pid
+
+# Per-run runtime state (rewritten continuously; not results)
+resource.json
+resource_retry.json
+failure.json
+scheduler.*.json
+queue.*.json
+Open-SCORE/outputs/*/smacv2/scenes/manifest.json

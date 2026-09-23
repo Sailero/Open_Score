@@ -21,10 +21,18 @@ import time
 import unicodedata
 
 
+from open_score.eval.experiment import validation_point_count
+
 _HAD = ("regir", "refil", "b2_qmix_atten", "dcg", "spectra", "alma", "regir_norefil",
         "regir_nocount", "regir_r1", "regir_last", "refil_matched", "transfqmix",
         "regir_fixed4", "regir_untied4", "regir_kv0")
 _SMAC = ("regir", "regir_r1", "refil", "b2_qmix_atten", "spectra", "transfqmix")
+
+
+def _validation_quota(env):
+    return validation_point_count(env) * (100 if env == "had" else 128)
+
+
 _NAMES = dict(train="训练", final="正式终评", depth="M1深度", readout="M2读出", probe="M3探针", timing="M4成本")
 _DONE = {"complete", "completed"}
 _ACTIVE = {"running", "training", "evaluating", "starting", "waiting", "stopping", "pending"}
@@ -152,7 +160,7 @@ def _tasks(metadata, inventory):
                 final = checkpoints.get((env, method, seed))
                 tasks.setdefault(identity, dict(base, id=identity, kind="train",
                     status="complete" if final else "pending", completed=final.get("t_env", 0) if final else 0,
-                    total=config.get("budget", 1000000 if env == "had" else 4000000),
+                    total=config.get("budget", 1000000 if env == "had" else 2000000),
                     detail="已登记合格final" if final else "尚未登记训练完成"))
                 for kind in (("final", "depth", "readout") if env == "had" and method == "regir" else ("final",)):
                     identity = f"eval.{kind}.{env}.{method}.s{seed}"
@@ -441,7 +449,7 @@ def _estimate_ranges(estimate, tasks=(), metadata=None):
         remaining = dict(training_steps=sum(max(0, t["total"]-t.get("completed",0)) for t in training),
                          final_episodes=sum(max(0,t["total"]-t.get("completed",0)) for t in selected if t["kind"]=="final"))
         if validation and all(t.get("validation_completed_episodes") is not None for t in validation):
-            remaining["validation_episodes"] = sum(max(0, t.get("validation_total_episodes",5000 if env=="had" else 5120)-t["validation_completed_episodes"]) for t in validation)
+            remaining["validation_episodes"] = sum(max(0, t.get("validation_total_episodes", _validation_quota(env))-t["validation_completed_episodes"]) for t in validation)
         for field, reference_key in (("training_seconds","training_steps"), ("validation_seconds","validation_episodes"),
                                      ("evaluation_seconds","final_episodes")):
             values = section.get(field)
@@ -585,7 +593,7 @@ def _render_details(output, *, gpu_status=None, now=None, data=None):
     for env in ("had", "smacv2"):
         selected = [t for t in tasks if t["kind"] == "train" and t["env"] == env and
                     (env == "smacv2" or t["method"] in metadata.get("environments", {}).get("had", {}).get("new_methods", _HAD[-4:]))]
-        expected = len(selected) * (5000 if env == "had" else 5120)
+        expected = len(selected) * _validation_quota(env)
         registered = [t for t in selected if t.get("validation_completed_episodes") is not None]
         actual = sum(int(t["validation_completed_episodes"]) for t in registered)
         label = f"{actual:,}" if len(registered) == len(selected) else f"已登记{actual:,}（其余累计未知）"

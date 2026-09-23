@@ -39,6 +39,8 @@ MAIN_METHODS = ("regir", "refil", "b2_qmix_atten", "dcg", "spectra", "alma")
 MAIN_ABLATION_METHODS = ("regir_norefil", "regir_nocount", "regir_r1", "regir_last")
 MAIN0921_METHODS = ("transfqmix", "regir_fixed4", "regir_untied4", "regir_kv0")
 MAIN_TRAIN_METHODS = MAIN_METHODS + MAIN_ABLATION_METHODS + ("refil_matched",) + MAIN0921_METHODS
+MAIN0923_METHODS = ("regir_r0", "regir_kv0_norefil", "regir_kv0_fixed4", "regir_kv0_nomem",
+                    "regir_kv0_nocount", "regir_prenorm")
 METHOD_ALIASES = {"refil_cycle": "regir", "regia": "regir"}
 MAIN_OVERRIDES = {
     "regir": dict(_CYCLE),
@@ -51,6 +53,13 @@ MAIN_OVERRIDES = {
     "regir_fixed4": {**_CYCLE, "global_depths": [4]},
     "regir_untied4": {**_CYCLE, "global_depths": [4], "rer_update": "untied4"},
     "regir_kv0": {**_CYCLE, "rer_update": "kv0"},
+    "regir_r0": {**_CYCLE, "global_depths": [1], "global_eval_depth": 1, "global_read_h0": True},
+    "regir_kv0_norefil": {**_CYCLE, "rer_update": "kv0", "lmbda": 0.0, "skip_refil_local": True,
+                          "agent": {"imagine": False}},
+    "regir_kv0_fixed4": {**_CYCLE, "rer_update": "kv0", "global_depths": [4]},
+    "regir_kv0_nomem": {**_CYCLE, "rer_update": "kv0", "global_query_no_memory": True},
+    "regir_kv0_nocount": {**_CYCLE, "rer_update": "kv0", "skip_count_inject": True},
+    "regir_prenorm": {**_CYCLE, "global_kv_prenorm": True},
     "transfqmix": {"mac": "transfqmix_mac", "learner": "transfqmix_learner",
                     "mixer": "transfqmix", "lr": .001, "weight_decay": 0,
                     "optimizer": "adam", "gamma": .99, "td_lambda": .6,
@@ -65,7 +74,7 @@ MAIN_OVERRIDES = {
     "refil_matched": {"imagine_group": "original", "global_branch": None},
 }
 POLICY_METHODS = METHODS + PROBE_METHODS + tuple(dict.fromkeys(
-    (*V4_METHODS, *V5_METHODS, *MAIN_TRAIN_METHODS, "refil_cycle", "alma_legacy",
+    (*V4_METHODS, *V5_METHODS, *MAIN_TRAIN_METHODS, *MAIN0923_METHODS, "refil_cycle", "alma_legacy",
      "refil_count_ln")))
 V4_OVERRIDES = {
     "refil_local_mild": {
@@ -657,7 +666,8 @@ def train(name, cfg):
                 validation_completed_episodes=int(state["validation_completed_episodes"]),
                 validation_measured_episodes=int(state["validation_measured_episodes"]),
                 validation_measured_seconds=state["validation_measured_seconds"],
-                validation_total_episodes=5000 if args.env == "had" else 5120,
+                validation_total_episodes=(experiment.validation_point_count(args.env)
+                    * (100 if args.env == "had" else 128)),
                 eval_completed=eval_progress["completed"], eval_total=eval_progress["total"],
                 estimate_ready=bool(observed_update)))
         return resource_latest
