@@ -131,8 +131,9 @@ def _worker(task, output, run, device, stop_event, results):
     with (log_dir / log_name).open("a", encoding="utf-8", buffering=1) as log:
         with redirect_stdout(log), redirect_stderr(log):
             try:
+                from open_score.eval.experiment import EVAL_PHASES
                 with _exclusive_job(task["id"], run, seed, lock_dir=log_dir):
-                    if profile and kind in ("final", "depth", "readout"):
+                    if profile and kind in EVAL_PHASES:
                         from open_score.eval.protocol import evaluate_profile_checkpoint
                         result = evaluate_profile_checkpoint(method, task["checkpoint"], output=output,
                             kind=kind, env=task["env"], seed=seed, device=device,
@@ -192,16 +193,22 @@ def _worker(task, output, run, device, stop_event, results):
                 results.put(dict(id=task["id"], status="retry_cpu" if recoverable else "failed", error=detail))
 
 
-def _final_shards(task, output, count):
-    """Read history once per final, then partition the frozen episode identities."""
+def _final_shards(task, output, count, index=None, read1_equivalent=False):
+    """Partition the frozen episode identities of one checkpoint/kind into stable shards."""
     from open_score.eval.experiment import (checkpoint_info, evaluation_jobs,
         remaining_evaluations, result_identity)
     from open_score.utils.logging import read_records
     info = checkpoint_info(task["checkpoint"], method=task["method"], seed=task["seed"], env=task["env"])
-    canonical = evaluation_jobs(info, "final")
-    existing = read_records(output, "episodes", run="train", env=task["env"],
-                            method=task["method"], seed=task["seed"])
-    pending = {result_identity(job) for job in remaining_evaluations(info, "final", existing)}
+    kind = task["kind"]
+    canonical = evaluation_jobs(info, kind)
+    count = max(1, min(count, (len(canonical) + 74) // 75))
+    if index is None:
+        existing = read_records(output, "episodes", run="train", env=task["env"],
+                                method=task["method"], seed=task["seed"])
+        remaining = remaining_evaluations(info, kind, existing, read1_equivalent=read1_equivalent)
+    else:
+        remaining = remaining_evaluations(info, kind, read1_equivalent=read1_equivalent, index=index)
+    pending = {result_identity(job) for job in remaining}
     # Contiguous blocks preserve config locality (especially SC2 environment
     # startup) and provide stable IDs across stop/resume and device changes.
     width = max(1, (len(canonical) + count - 1) // count)
@@ -240,12 +247,17 @@ def _eval_job_line(item, output, run, cached):
 
 def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RUN,
              env="had", method=None, seed=None, final_shards=1, devices=(0, 1),
-             gpu_workers_per_device=2):
+             gpu_workers_per_device=2, queue_path=None):
     from open_score.eval.inventory import pending_eval_jobs
     from open_score.eval.report import refresh_report, refresh_report_async
     from open_score.eval.experiment import is_profile, scan
     from open_score.utils.resources import cpu_admit, gpu_memory
     profile = is_profile(output)
+    from open_score.eval.experiment import EpisodeIndex, EVAL_PHASES, initialize, read_json
+    index = EpisodeIndex(output) if profile else None
+    read1 = bool(initialize(output)["mechanisms"].get("read1_equivalence_verified")) if profile else False
+    queue_state = dict(closed=queue_path is None, stamp=None)
+    failure_counts = {}
     context = get_context("spawn")
     stop_event, queue = context.Event(), context.Queue()
     live, failures, live_status, seen, retry_at = [], [], {}, set(), {}
@@ -275,8 +287,14 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
     def ingest():
         nonlocal selected
         if profile:
-            all_tasks = scan(output, env=env, only=only, probe_collector_seed=seed or 0)["tasks"]
+            allowed = None
+            if queue_path is not None:
+                state = read_json(queue_path, {}) or {}
+                allowed = set(state.get("eval", []))
+                queue_state["closed"] = bool(state.get("closed"))
+            all_tasks = scan(output, env=env, only=only, index=index)["tasks"]
             selected = [t for t in all_tasks if t["kind"] in only
+                        and (allowed is None or t["id"] in allowed)
                         and (method is None or t["method"] == method)
                         and (seed is None or t["seed"] == seed)]
             jobs = [t for t in selected if t["status"] == "pending"]
@@ -287,8 +305,8 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
             if tid in seen or time.monotonic() < retry_at.get(tid, 0):
                 continue
             seen.add(tid)
-            if profile and task["kind"] == "final" and final_shards > 1:
-                parts = _final_shards(task, output, final_shards)
+            if profile and task["kind"] in EVAL_PHASES and final_shards > 1:
+                parts = _final_shards(task, output, final_shards, index=index, read1_equivalent=read1)
                 parent_parts[tid] = {part["id"] for part in parts}
                 shard_tasks.update({part["id"]: part for part in parts})
                 seen.update(parent_parts[tid])
@@ -304,8 +322,9 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
         if profile:
             # New final checkpoints take precedence over queued mechanism
             # work. Stable order preserves seeds; running episodes continue.
-            priority = {"final": 0, "depth": 1, "readout": 2, "probe": 3, "timing": 4}
-            ordered = sorted(waiting, key=lambda task: priority.get(task["kind"], 5))
+            priority = {"final": 0, "gate_depth": 1, "dup": 2, "depth": 3, "r1deploy": 4, "readout": 5,
+                        "intent_intervention": 6, "probe": 7, "timing": 8}
+            ordered = sorted(waiting, key=lambda task: (task.get("rank", 0), priority.get(task["kind"], 9)))
             waiting.clear()
             waiting.extend(ordered)
         if device == "auto" and waiting and time.monotonic() - last_gpu_poll >= 5:
@@ -326,7 +345,7 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
             task = waiting[selected_index]
             del waiting[selected_index]
             task_device = "cpu" if device == "auto" else device
-            if device == "auto" and task["kind"] == "final" and not task.get("force_cpu"):
+            if device == "auto" and task["kind"] in EVAL_PHASES and not task.get("force_cpu"):
                 for gpu in sorted(gpu_snapshots, key=lambda g: -gpu_snapshots[g]["free"]):
                     row = gpu_snapshots[gpu]
                     occupied = sum(item["task"].get("physical_gpu") == gpu for item in live)
@@ -364,7 +383,17 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
                 retry_at[tid] = time.monotonic() + 5
                 emit(f"{tid}: CUDA OOM; resume only unfinished episodes on CPU")
             elif status in ("failed", "incomplete"):
-                failures.append(result)
+                failure_counts[tid] = failure_counts.get(tid, 0) + 1
+                if profile and queue_path is not None and failure_counts[tid] <= 2:
+                    emit(f"{tid}: {status}; retry {failure_counts[tid]}/2 in 5 min")
+                    if tid in shard_tasks:
+                        shard_tasks[tid]["resume_shard"] = True
+                        waiting.append(shard_tasks[tid])
+                    else:
+                        seen.discard(tid)
+                    retry_at[tid] = time.monotonic() + 300
+                else:
+                    failures.append(result)
             elif status in ("blocked", "skipped"):
                 if tid in shard_tasks:
                     shard_tasks[tid]["resume_shard"] = True
@@ -417,7 +446,18 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
                 live.remove(item)
                 changed = True
                 if child.exitcode != 0:
-                    failures.append(dict(id=item["task"]["id"], error=f"worker exit {child.exitcode}"))
+                    tid = item["task"]["id"]
+                    failure_counts[tid] = failure_counts.get(tid, 0) + 1
+                    if profile and queue_path is not None and failure_counts[tid] <= 2:
+                        emit(f"{tid}: worker exit {child.exitcode}; retry {failure_counts[tid]}/2 in 5 min")
+                        if tid in shard_tasks:
+                            shard_tasks[tid]["resume_shard"] = True
+                            waiting.append(shard_tasks[tid])
+                        else:
+                            seen.discard(tid)
+                        retry_at[tid] = time.monotonic() + 300
+                    else:
+                        failures.append(dict(id=tid, error=f"worker exit {child.exitcode}"))
             if changed:
                 receive()
                 if not parent_parts:
@@ -429,9 +469,12 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
             # Poll tiny final.pt metadata frequently. Do not parse the growing
             # episode CSV every minute while nothing is ready.
             if profile and now - last_checkpoint_poll >= 5:
-                from open_score.eval.experiment import methods, run_directory, SEEDS
+                from open_score.eval.experiment import methods, run_directory, method_seeds
                 paths = [run_directory(output, m, s, env) / "final.pt"
-                         for m in methods(env) for s in SEEDS]
+                         for m in methods(env) for s in method_seeds(env, m)]
+                if queue_path is not None:
+                    paths.append(Path(queue_path))
+                paths.append(Path(output) / "decision" / "branch.json")
                 stamp = tuple((str(p), p.stat().st_mtime_ns) for p in paths if p.exists())
                 if stamp != checkpoint_stamp:
                     checkpoint_stamp = stamp
@@ -443,10 +486,14 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
             launch()
             if profile and not live and not waiting:
                 unfinished = [t for t in selected if t["status"] != "complete"]
-                if not unfinished:
-                    emit("all selected evaluation tasks complete")
-                    break
-                if failures:
+                if queue_path is None:
+                    if not unfinished:
+                        emit("all selected evaluation tasks complete")
+                        break
+                    if failures:
+                        break
+                elif queue_state["closed"] and not any(t["status"] == "pending" for t in selected):
+                    emit("queue closed and no runnable evaluation remains")
                     break
             if now - last_status >= (5 if live else 60):
                 lines = [f"eval {env} live={len(live)} queued={len(waiting)} "
@@ -489,12 +536,15 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
             print(f"Final scheduler status write failed: {error}", flush=True)
     if failures:
         print("Evaluation incomplete: " + "\n".join(str(x) for x in failures), flush=True)
+    if queue_path is not None:
+        return not interrupted
     return not failures and not interrupted
 
 
 def parser():
     result = argparse.ArgumentParser(description=__doc__)
-    result.add_argument("--profile", choices=("main0921",))
+    result.add_argument("--profile", choices=("main0923",))
+    result.add_argument("--queue", type=Path, default=None, help="pipeline queue file (main0923)")
     result.add_argument("--env", choices=("had", "smacv2"), default="had")
     result.add_argument("--stage", choices=("inventory", "migrate", "eval", "stop"), default="eval")
     result.add_argument("--group", default="main")
@@ -583,8 +633,9 @@ def run_profile_timing(output, stop_requested):
 
 
 def profile_main(options, output):
-    from open_score.eval.experiment import (initialize, atomic_json, scan, import_existing, SEEDS, methods,
-                                          checkpoint_info, run_directory)
+    from open_score.eval.experiment import (initialize, atomic_json, scan, import_main0921, methods,
+                                          checkpoint_info, run_directory, PROFILE, SOURCE_PROFILE,
+                                          EVAL_PHASES, ALL_SEEDS)
     from open_score.utils.resources import queue_lock, cpu_threads, clear_previous_stop, configure_workspace
     initialize(output)
     workspace = configure_workspace()
@@ -594,53 +645,29 @@ def profile_main(options, output):
     requested_at = time.time()
     if not any(a.startswith("--max-concurrent") for a in sys.argv):
         options.max_concurrent = 4
-    if not 1 <= options.max_concurrent <= 256:
-        raise SystemExit("main0921 evaluation requires 1 to 256 workers")
     stop_path = output / "eval.stop.request"
     def new_stop():
         return stop_path.exists() and stop_path.stat().st_mtime > requested_at
-    if options.run != "train" or options.seed not in (None, *SEEDS):
-        raise SystemExit("main0921 fixes run=train and model seeds 0,1,2")
+    if options.run != "train" or options.seed not in (None, *ALL_SEEDS):
+        raise SystemExit(f"{PROFILE} fixes run=train and model seeds 0-4")
     if options.method is not None and options.method not in methods(options.env):
-        raise SystemExit("--method must belong to the fixed main0921 environment matrix")
+        raise SystemExit(f"--method must belong to the fixed {PROFILE} environment matrix")
     if options.stage == "inventory":
         inventory = scan(output)
         for task in inventory["tasks"]:
             if task["env"] == options.env:
-                print(f"{task['id']:<48} {task['status']:<10} {task['completed']}/{task['total']}")
+                print(f"{task['id']:<56} {task['status']:<10} {task['completed']}/{task['total']}")
         return
     if options.stage == "migrate":
-        imported = import_existing(output, output.parent / "main")
-        print(f"Imported {len(imported)} final checkpoints")
+        imported = import_main0921(output, output.parent / SOURCE_PROFILE)
+        print(f"Imported {len(imported)} final checkpoints from {SOURCE_PROFILE}")
         return
-    only = set(options.only.split(",")) if options.only else (
-        {"final", "depth", "readout", "probe"} if options.env == "had" else {"final"})
-    only = {k.strip() for k in only}
-    if options.depth_sweep:
-        only = {"depth"}
-    allowed = {"final", "depth", "readout", "probe", "timing"} if options.env == "had" else {"final"}
+    allowed = set(EVAL_PHASES) if options.env == "had" else {"final", "depth"}
+    only = ({k.strip() for k in options.only.split(",")} if options.only else set(allowed))
     if not only or not only <= allowed:
-        raise SystemExit(f"Unsupported main0921 {options.env} evaluation kinds: {sorted(only)}")
-    if options.method not in (None, "regir"):
-        if options.only and only & {"depth", "readout", "probe"}:
-            raise SystemExit("Depth/readout/probe interventions apply only to HAD Full (--method regir)")
-        only &= {"final", "timing"}
-    if "timing" in only:
-        if only != {"timing"}:
-            raise SystemExit("GPU cost measurement must run separately: --only timing")
-        if options.method is not None or options.seed is not None:
-            raise SystemExit("M4 uses its fixed eight-method, three-seed matrix; omit --method and --seed")
-        from open_score.eval.report import refresh_report
-        with queue_lock(output, "gpu", stop_requested=new_stop):
-            clear_previous_stop(stop_path, requested_at)
-            result = run_profile_timing(output, stop_requested=lambda: stop_path.exists())
-        refresh_report(output, run="train")
-        print(result)
-        if result.get("status") not in ("complete", "completed"):
-            raise SystemExit(1)
-        return
+        raise SystemExit(f"Unsupported {PROFILE} {options.env} evaluation kinds: {sorted(only - allowed)}")
     if options.device not in ("cpu", "auto"):
-        raise SystemExit("main0921 evaluation uses --device cpu or --device auto (CPU+GPU)")
+        raise SystemExit(f"{PROFILE} evaluation uses --device cpu or --device auto (CPU+GPU)")
     try:
         devices = tuple(int(x) for x in options.devices.split(","))
     except ValueError:
@@ -650,16 +677,9 @@ def profile_main(options, output):
     if options.device == "auto" and options.final_shards == 1:
         raise SystemExit("--device auto requires --final-shards greater than one")
     os.environ["CUDA_VISIBLE_DEVICES"] = "" if options.device == "cpu" else ",".join(map(str, devices))
-    if options.checkpoint:
-        if not options.method:
-            raise SystemExit("--checkpoint requires --method")
-        info = checkpoint_info(options.checkpoint, method=options.method, seed=options.seed, env=options.env)
-        expected = run_directory(output, options.method, info["seed"], options.env) / "final.pt"
-        if expected.resolve() != options.checkpoint.resolve():
-            raise SystemExit("Checkpoint must be the registered final in this independent output")
-        options.seed = info["seed"]
-    with queue_lock(output, "cpu", stop_requested=new_stop):
-        clear_previous_stop(stop_path, requested_at)
+    with queue_lock(output, f"cpu.{options.env}", stop_requested=new_stop):
+        if stop_path.exists() and stop_path.stat().st_mtime <= requested_at:
+            clear_previous_stop(stop_path, requested_at)
         manifest = initialize(output)
         manifest["resources"].setdefault("evaluation", {})[options.env] = dict(
             device=options.device, max_concurrent=options.max_concurrent,
@@ -674,7 +694,8 @@ def profile_main(options, output):
         success = run_eval(output, max_concurrent=options.max_concurrent, only=only,
                            device=options.device, run="train", env=options.env,
                            method=options.method, seed=options.seed, final_shards=options.final_shards,
-                           devices=devices, gpu_workers_per_device=options.gpu_workers_per_device)
+                           devices=devices, gpu_workers_per_device=options.gpu_workers_per_device,
+                           queue_path=options.queue)
     if not success:
         raise SystemExit(1)
 
@@ -684,8 +705,8 @@ def main():
     output = options.output.resolve()
     if options.profile and output == DEFAULT_OUTPUT.resolve():
         if any(arg == "--output" or arg.startswith("--output=") for arg in sys.argv):
-            raise SystemExit("main0921 must use an independent output, not outputs/main")
-        output = DEFAULT_OUTPUT.parent / "main0921"
+            raise SystemExit("the profile must use an independent output, not outputs/main")
+        output = DEFAULT_OUTPUT.parent / options.profile
     if options.stage == "stop":
         output.mkdir(parents=True, exist_ok=True)
         from open_score.utils.resources import write_stop

@@ -418,7 +418,8 @@ def _job_entry(method, options, stop_event, results):
                         failure = json.loads(path.read_text(encoding="utf-8"))
                     except (OSError, ValueError):
                         pass
-                recoverable = (options.get("profile") == "main0921" and is_cuda_oom(error)
+                from open_score.eval.experiment import PROFILE
+                recoverable = (options.get("profile") == PROFILE and is_cuda_oom(error)
                                and failure.get("automatic_recovery")
                                and Path(failure.get("safe_checkpoint_path", "")).is_file())
                 results.put(dict(method=method, run=options["run"], seed=options["seed"],
@@ -942,6 +943,287 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
             print(f"Final scheduler status write failed: {error}", flush=True)
 
 
+TASK_RETRIES = 2
+
+
+def _task_failure_path(output, env, method, seed):
+    from open_score.eval.experiment import run_directory
+    return run_directory(output, method, seed, env) / "task_failure.json"
+
+
+def run_queue(output, env, template, devices, queue_path, *, per_gpu_default):
+    """Persistent trainer pool fed by the pipeline's queue file.
+
+    Each worker is isolated: a failure retries the same run from its last
+    complete resume point (at most TASK_RETRIES times) without stopping others.
+    A job listed under "pause" saves resume and stops; it is relaunched when
+    it reappears in "train".
+    """
+    from open_score.eval.experiment import (atomic_json, read_json, run_directory,
+                                          checkpoint_info)
+    from open_score.utils.resources import choose_gpu, gpu_memory
+    output, queue_path = Path(output), Path(queue_path)
+    context = get_context("spawn")
+    stop_event, results = context.Event(), context.Queue()
+    live, waiting, known = [], [], {}
+    not_before, oom_counts = {}, {}
+    previous = {sig: signal.getsignal(sig) for sig in (signal.SIGINT, signal.SIGTERM)}
+    last_refill = last_status = 0.0
+    closed = False
+    per_gpu = per_gpu_default
+    paused = set()
+
+    def emit(message):
+        print(f"{time.strftime('%m-%d %H:%M:%S')} {message}", flush=True)
+
+    def failure_count(method, seed):
+        value = read_json(_task_failure_path(output, env, method, seed), {}) or {}
+        return int(value.get("count", 0))
+
+    def record_failure(method, seed, error):
+        path = _task_failure_path(output, env, method, seed)
+        value = read_json(path, {}) or {}
+        value.update(count=int(value.get("count", 0)) + 1, updated_at=time.time(),
+                     last_error=str(error)[-4000:], retries_allowed=TASK_RETRIES)
+        atomic_json(path, value)
+        return value["count"]
+
+    def finished(method, seed):
+        final = run_directory(output, method, seed, env) / "final.pt"
+        if not final.exists():
+            return False
+        try:
+            checkpoint_info(final, method=method, seed=seed, env=env)
+            return True
+        except (ValueError, KeyError, OSError):
+            return False
+
+    def options_for(method, seed):
+        directory = run_directory(output, method, seed, env)
+        options = {**template, "seed": int(seed)}
+        from open_score.algos import resume_files
+        options["resume"] = any(path.exists() for path in resume_files(directory))
+        saved_config = directory / "config.json"
+        if saved_config.exists() and options["resume"]:
+            saved = json.loads(saved_config.read_text(encoding="utf-8"))
+            for field in ("seed", "env", "batch_size_run", "t_max"):
+                if saved[field] != options[field]:
+                    raise ValueError(f"Resume configuration differs: {method}/{field}")
+        elif saved_config.exists() and not options["resume"]:
+            raise RuntimeError(f"Recorded run has no recoverable checkpoint: {directory}")
+        return options
+
+    def refill():
+        nonlocal closed, per_gpu, paused
+        queue = read_json(queue_path, None)
+        if not isinstance(queue, dict):
+            return
+        closed = bool(queue.get("closed"))
+        per_gpu = int(queue.get("per_gpu", per_gpu_default))
+        paused = set(queue.get("pause", []))
+        wanted = [(row["method"], int(row["seed"])) for row in queue.get("train", [])]
+        wanted_ids = {f"train.{env}.{m}.s{s}" for m, s in wanted}
+        for item in live:
+            identity = item["id"]
+            pause = run_directory(output, item["method"], item["options"]["seed"], env) / "pause.request"
+            if identity in paused or identity not in wanted_ids:
+                if not pause.exists():
+                    pause.write_text("paused by pipeline\n", encoding="utf-8")
+                    emit(f"pause {identity}: save resume and stop")
+        waiting[:] = [row for row in waiting if row[2] in wanted_ids and row[2] not in paused]
+        queued = {row[2] for row in waiting} | {item["id"] for item in live}
+        for method, seed in wanted:
+            identity = f"train.{env}.{method}.s{seed}"
+            if identity in queued or identity in paused or finished(method, seed):
+                continue
+            if failure_count(method, seed) > TASK_RETRIES:
+                continue
+            (run_directory(output, method, seed, env) / "pause.request").unlink(missing_ok=True)
+            try:
+                options = options_for(method, seed)
+            except (ValueError, RuntimeError) as error:
+                record_failure(method, seed, error)
+                emit(f"{identity} cannot start: {error}")
+                continue
+            waiting.append((method, options, identity))
+            queued.add(identity)
+        order = {f"train.{env}.{m}.s{s}": i for i, (m, s) in enumerate(wanted)}
+        waiting.sort(key=lambda row: order.get(row[2], len(order)))
+
+    def launch():
+        memories = {}
+        for gpu in devices:
+            try:
+                memories[gpu] = gpu_memory(gpu)
+            except Exception:
+                pass
+        for item in live:
+            opts = item["options"]
+            if not opts.get("_recovering"):
+                continue
+            row = read_json(run_directory(output, item["method"], opts["seed"], env) / "resource.json", {}) or {}
+            if (row.get("pid") == item["child"].pid and row.get("estimate_ready")
+                    and row.get("safe_checkpoint_t_env", 0) > opts.get("_recovery_safe_t_env", 0)):
+                opts["_recovering"] = False
+        while waiting and not stop_event.is_set() and len(live) < per_gpu * len(devices):
+            picked = None
+            for index, (method, options, identity) in enumerate(waiting):
+                if time.monotonic() < not_before.get(identity, 0):
+                    continue
+                gpu = choose_gpu(output, env, method, live, devices, memories=memories,
+                                 minimum_peak=options.get("_minimum_peak", 0),
+                                 recovering=options.get("_recovering", False), per_gpu=per_gpu)
+                if gpu is not None:
+                    picked = (index, gpu)
+                break  # Keep queue order: never let a later job overtake the head.
+            if picked is None:
+                return
+            index, gpu = picked
+            method, options, identity = waiting.pop(index)
+            options = {**options, "cuda_visible_devices": str(gpu)}
+            child = context.Process(target=_job_entry, args=(method, options, stop_event, results))
+            child.start()
+            live.append(dict(child=child, method=method, options=options, id=identity,
+                             started_at=time.time(), gpu=gpu))
+            known[identity] = dict(method=method, seed=options["seed"])
+            emit(f"launch {identity} on GPU{gpu} (resume={options['resume']})")
+            memories = {}
+            for card in devices:
+                try:
+                    memories[card] = gpu_memory(card)
+                except Exception:
+                    pass
+
+    def requeue(method, seed, identity, delay, extra=None):
+        try:
+            options = {**options_for(method, seed), **(extra or {})}
+        except (ValueError, RuntimeError) as error:
+            record_failure(method, seed, error)
+            return
+        not_before[identity] = time.monotonic() + delay
+        waiting.insert(0, (method, options, identity))
+
+    def accept(result):
+        method, seed = result.get("method"), result.get("seed")
+        identity = f"train.{env}.{method}.s{seed}"
+        status = result.get("status")
+        if status == "completed":
+            try:
+                checkpoint_info(result["checkpoint"], method=method, seed=seed, env=env)
+                emit(f"{identity} completed")
+            except (ValueError, KeyError, OSError) as error:
+                count = record_failure(method, seed, f"final not qualified: {error}")
+                emit(f"{identity} final not qualified ({count}): {error}")
+        elif status == "resource_wait":
+            failure = result.get("failure") or {}
+            oom_counts[identity] = oom_counts.get(identity, 0) + 1
+            if oom_counts[identity] > 3:
+                count = record_failure(method, seed, "CUDA OOM automatic retries exhausted")
+                emit(f"{identity} CUDA OOM retries exhausted ({count})")
+                if count <= TASK_RETRIES:
+                    oom_counts[identity] = 0
+                    requeue(method, seed, identity, 600)
+                return
+            item = dict(_retry_count=oom_counts[identity], _recovering=True,
+                        _recovery_safe_t_env=int(failure.get("safe_checkpoint_t_env") or 0),
+                        _minimum_peak=float(failure.get("cuda_peak_reserved_gib") or 0)
+                        + float(failure.get("requested_allocation_gib") or 0))
+            emit(f"{identity} CUDA OOM: resume from safe checkpoint after memory admission")
+            requeue(method, seed, identity, 60 * 2 ** (oom_counts[identity] - 1), item)
+        elif status == "failed":
+            count = record_failure(method, seed, result.get("error", "failed"))
+            emit(f"{identity} FAILED ({count}/{TASK_RETRIES + 1}):\n{result.get('error', '')[-3000:]}")
+            if count <= TASK_RETRIES and not stop_event.is_set():
+                requeue(method, seed, identity, 120)
+        elif status == "stopped":
+            emit(f"{identity} stopped with resume point")
+        elif status == "skipped":
+            emit(f"{identity} already owned by another trainer: {result.get('error')}")
+
+    def publish(status="running"):
+        active = []
+        for item in live:
+            opts = item["options"]
+            row = read_json(run_directory(output, item["method"], opts["seed"], env) / "resource.json", {}) or {}
+            if row.get("pid") != item["child"].pid:
+                row = {}
+            active.append({**row, "id": item["id"], "kind": "train", "method": item["method"],
+                           "seed": opts["seed"], "pid": item["child"].pid, "physical_gpu": item["gpu"],
+                           "total": opts["t_max"], "started_at": item["started_at"],
+                           "elapsed_seconds": time.time() - item["started_at"]})
+        atomic_json(output / f"scheduler.train.{env}.json", dict(
+            kind="train", env=env, pid=os.getpid(), status=status, updated_at=time.time(),
+            per_gpu=per_gpu, devices=list(devices), live=active,
+            waiting=[dict(id=i, method=m, seed=o["seed"]) for m, o, i in waiting], closed=closed))
+
+    def request_stop(signum, frame):
+        stop_event.set()
+        emit("stop requested: every trainer finishes its batch and saves resume")
+
+    for sig in previous:
+        signal.signal(sig, request_stop)
+    try:
+        while True:
+            if (output / "stop.request").exists():
+                stop_event.set()
+            now = time.monotonic()
+            if not stop_event.is_set() and now - last_refill >= 20:
+                refill()
+                last_refill = now
+            while True:
+                try:
+                    accept(results.get_nowait())
+                except Empty:
+                    break
+            for item in list(live):
+                if item["child"].is_alive():
+                    continue
+                item["child"].join()
+                live.remove(item)
+                (run_directory(output, item["method"], item["options"]["seed"], env) / "pause.request").unlink(missing_ok=True)
+                if item["child"].exitcode not in (0, None):
+                    while True:
+                        try:
+                            accept(results.get_nowait())
+                        except Empty:
+                            break
+                    method, seed = item["method"], item["options"]["seed"]
+                    if not finished(method, seed) and not stop_event.is_set():
+                        count = record_failure(method, seed, f"worker exit code {item['child'].exitcode}")
+                        emit(f"{item['id']} worker exit {item['child'].exitcode} ({count})")
+                        if count <= TASK_RETRIES:
+                            requeue(method, seed, item["id"], 120)
+                last_refill = 0.0
+            if not stop_event.is_set():
+                launch()
+            if now - last_status >= 10:
+                publish("stopping" if stop_event.is_set() else "running")
+                last_status = now
+            if not live and (stop_event.is_set() or (closed and not waiting)):
+                break
+            try:
+                accept(results.get(timeout=1.0))
+            except Empty:
+                pass
+        return not stop_event.is_set()
+    finally:
+        stop_event.set()
+        for item in live:
+            while item["child"].is_alive():
+                try:
+                    accept(results.get_nowait())
+                except Empty:
+                    pass
+                item["child"].join(timeout=1)
+        live.clear()
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
+        try:
+            publish("stopped")
+        except (OSError, ValueError):
+            pass
+
+
 def validate(output):
     """Run the remaining approved V1-V3 checks; reuse recorded passing items."""
     setup_runtime()
@@ -1366,7 +1648,8 @@ def run_farm(output, *, steps, batch_size_run, per_gpu=4, status_seconds=300, re
 
 def parser():
     result = argparse.ArgumentParser(description=__doc__)
-    result.add_argument("--profile", choices=("main0921",))
+    result.add_argument("--profile", choices=("main0923",))
+    result.add_argument("--queue", type=Path, default=None, help="pipeline queue file (main0923)")
     result.add_argument("--stage", choices=("validate", "e0", "benchmark", "train", "single", "stop", "status", "farm"), required=True)
     result.add_argument("--method", choices=POLICY_METHODS)
     result.add_argument("--group", choices=tuple(METHOD_GROUPS), default="main",
@@ -1446,76 +1729,57 @@ def require_preparation(output):
 
 
 def profile_main(options, output):
-    from open_score.eval.experiment import initialize, methods, budget, SEEDS, scan
+    from open_score.eval.experiment import initialize, budget, PROFILE
     from open_score.utils.resources import queue_lock, cpu_threads, clear_previous_stop, configure_workspace, gpu_train_limit
     initialize(output)
     workspace = configure_workspace()
     cpu_threads()
     if options.stage == "status":
-        from open_score.utils.status import watch_status
-        interval = options.status_seconds if any(a.startswith("--status-seconds") for a in sys.argv) else 5
-        watch_status(output, interval=max(1, interval), once=options.once, details=options.details)
+        from open_score.eval.pipeline import status
+        status(output, once=options.once)
         return
     if options.stage == "validate":
         from open_score.eval.experiment import validate_integration
         validate_integration(output, options.env)
         return
-    if options.stage not in ("train", "single", "farm"):
-        raise SystemExit("main0921 supports train/single/farm, validate, status and stop")
+    if options.stage != "train":
+        raise SystemExit(f"{PROFILE} supports train (queue-driven), validate, status and stop")
     if options.env not in ("had", "smacv2"):
-        raise SystemExit("main0921 environments are had and smacv2")
+        raise SystemExit(f"{PROFILE} environments are had and smacv2")
     devices = tuple(_parse_devices(options.devices or "0,1") or ())
     if options.cpu or not devices or not set(devices) <= {0, 1}:
-        raise SystemExit("main0921 training uses physical --devices 0,1 (or an explicit subset)")
-    if not any(a.startswith("--per-gpu") for a in sys.argv):
-        options.per_gpu = 3 if options.env == "had" else 2
+        raise SystemExit(f"{PROFILE} training uses physical --devices 0,1 (or an explicit subset)")
     card_limit = 3 if options.env == "had" else 2
+    if not any(a.startswith("--per-gpu") for a in sys.argv):
+        options.per_gpu = card_limit
     if options.per_gpu not in range(1, card_limit + 1):
-        raise SystemExit(f"main0921 {options.env} allows --per-gpu 1..{card_limit}")
-    if not any(a.startswith("--max-concurrent") for a in sys.argv):
-        options.max_concurrent = gpu_train_limit(devices, per_gpu=options.per_gpu)
-    if options.run not in (None, "train") or options.seed not in SEEDS:
-        raise SystemExit("main0921 fixes --run train and seeds 0,1,2")
+        raise SystemExit(f"{PROFILE} {options.env} allows --per-gpu 1..{card_limit}")
+    if options.run not in (None, "train"):
+        raise SystemExit(f"{PROFILE} fixes --run train")
     if options.steps not in (None, budget(options.env)):
-        raise SystemExit(f"main0921 {options.env} fixes the budget at {budget(options.env)}")
-    if not 1 <= options.max_concurrent <= gpu_train_limit(devices, per_gpu=options.per_gpu):
-        raise SystemExit(f"main0921 {options.env} allows at most {card_limit} trainers per selected GPU")
+        raise SystemExit(f"{PROFILE} {options.env} fixes the budget at {budget(options.env)}")
     workers = options.batch_size_run if "--batch-size-run" in sys.argv else (8 if options.env == "had" else 4)
     if workers != (8 if options.env == "had" else 4):
-        raise SystemExit("main0921 fixes 8 HAD workers or 4 SMAC workers per trainer")
-    if options.env == "smacv2":
-        from open_score.eval.experiment import require_smac_method_acceptance
-        require_smac_method_acceptance(output)
-        pending_had = [task for task in scan(output, env="had")["tasks"] if task["status"] != "complete"]
-        if pending_had:
-            raise SystemExit(f"HAD-first protocol: {len(pending_had)} HAD training/evaluation/cost tasks remain; "
-                             "finish the HAD queue and M4 before formal SMAC training")
-    chosen = methods(options.env)
-    if options.stage == "single":
-        if options.method not in chosen:
-            raise SystemExit("single requires a method in the frozen main0921 environment matrix")
-        chosen = (options.method,)
-    elif options.group != "main":
-        raise SystemExit("main0921 uses its explicit --group main matrix")
+        raise SystemExit(f"{PROFILE} fixes 8 HAD workers or 4 SMAC workers per trainer")
+    if options.queue is None:
+        raise SystemExit(f"{PROFILE} training is fed by the pipeline: pass --queue $OUT/queue.{options.env}.json")
     os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, devices))
-    base = dict(profile="main0921", output=str(output), env=options.env, run="train",
+    base = dict(profile=PROFILE, output=str(output), env=options.env, run="train",
                 t_max=budget(options.env), batch_size_run=workers, use_cuda=True,
-                resume=options.resume, skip_final_eval=True, _devices=devices, _per_gpu=options.per_gpu,
-                reward_mode="damage", friendly_penalty=1.0,
-                concurrency=options.max_concurrent)
+                skip_final_eval=True, reward_mode="damage", friendly_penalty=1.0,
+                concurrency=options.per_gpu * len(devices))
     if options.env == "smacv2":
         base["env_args"] = {"sc2path": str(workspace / "envs/StarCraftII")}
-    selected_seeds = (options.seed,) if options.stage == "single" else SEEDS
-    jobs = [(method, {**base, "seed": seed}) for method in chosen for seed in selected_seeds]
     requested_at = time.time()
     stop_file = output / "stop.request"
     def new_stop():
         return stop_file.exists() and stop_file.stat().st_mtime > requested_at
-    with queue_lock(output, "gpu", stop_requested=new_stop):
-        clear_previous_stop(stop_file, requested_at)
-        print(f"main0921 {options.env}: seeds={selected_seeds}, physical GPUs={devices}, per GPU <= {options.per_gpu}, queue <= {options.max_concurrent}; "
-              "unknown resource profiles run alone until measured", flush=True)
-        success = run_group(jobs, output, max_concurrent=options.max_concurrent, with_depth_eval=False)
+    with queue_lock(output, f"gpu.{options.env}", stop_requested=new_stop):
+        if stop_file.exists() and stop_file.stat().st_mtime <= requested_at:
+            clear_previous_stop(stop_file, requested_at)
+        print(f"{PROFILE} {options.env}: queue={options.queue}, physical GPUs={devices}, "
+              f"per GPU <= {options.per_gpu} (queue may lower/raise it)", flush=True)
+        success = run_queue(output, options.env, base, devices, options.queue, per_gpu_default=options.per_gpu)
     if not success:
         raise SystemExit(130)
 
@@ -1526,8 +1790,8 @@ def main():
     output = options.output.resolve()
     if options.profile and output == DEFAULT_OUTPUT.resolve():
         if any(arg == "--output" or arg.startswith("--output=") for arg in sys.argv):
-            raise SystemExit("main0921 must use an independent output, not outputs/main")
-        output = DEFAULT_OUTPUT.parent / "main0921"
+            raise SystemExit("the profile must use an independent output, not outputs/main")
+        output = DEFAULT_OUTPUT.parent / options.profile
     probe_job = options.group == "alma_probe" or options.method in PROBE_METHODS
     if probe_job and output == DEFAULT_OUTPUT.resolve():
         output = PROBE_OUTPUT.resolve()

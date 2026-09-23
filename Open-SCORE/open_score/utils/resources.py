@@ -1,4 +1,4 @@
-"""Shared admission for main0921 on the user's two shared GPUs."""
+"""Shared admission for the main09xx profiles on the user's two shared GPUs."""
 from __future__ import annotations
 
 from contextlib import contextmanager
@@ -16,9 +16,9 @@ def gpu_train_limit(devices=(0, 1), *, per_gpu=GPU_PER_CARD_MAX):
     """Derive the queue limit from the explicitly permitted physical cards."""
     devices = tuple(int(gpu) for gpu in devices)
     if not devices or len(set(devices)) != len(devices) or not set(devices) <= {0, 1}:
-        raise ValueError("main0921 requires distinct physical GPUs from 0,1")
+        raise ValueError("requires distinct physical GPUs from 0,1")
     if per_gpu not in range(1, GPU_PER_CARD_MAX + 1):
-        raise ValueError("main0921 allows one to three trainers per physical GPU")
+        raise ValueError("allows one to three trainers per physical GPU")
     return per_gpu * len(devices)
 
 
@@ -70,7 +70,7 @@ def clear_previous_stop(path, requested_at):
 def gpu_memory(gpu):
     """Only inspect the explicitly permitted physical device."""
     if int(gpu) not in (0, 1):
-        raise ValueError("main0921 permits physical GPUs 0 and 1")
+        raise ValueError("permits physical GPUs 0 and 1")
     result = subprocess.check_output([
         "nvidia-smi", f"--id={int(gpu)}", "--query-gpu=memory.free,memory.used,memory.total,utilization.gpu",
         "--format=csv,noheader,nounits"], text=True, timeout=5)
@@ -88,9 +88,12 @@ def queue_lock(output, kind, *, stop_requested=None):
     CPU evaluation has one parent per experiment output.
     """
     import fcntl
+    from open_score.eval.experiment import PROFILE
     workspace = Path(__file__).resolve().parents[5]
-    path = (workspace / ".cache/main0921.gpus.lock"
-            if kind in ("gpu", "gpu0") else Path(output) / ".cpu-eval.lock")
+    base, _, env = kind.partition(".")
+    suffix = f".{env}" if env else ""
+    path = (workspace / f".cache/{PROFILE}.gpus{suffix}.lock"
+            if base in ("gpu", "gpu0") else Path(output) / f".cpu-eval{suffix}.lock")
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a+", encoding="utf-8") as handle:
         last_message = 0.0
@@ -157,17 +160,37 @@ def _bootstrap_peak(output, env, method):
         return 0.
 
 
+def _source_peak(output, env, method):
+    """Measured peak of the same architecture in the source experiment (the SG switch does not
+    change memory). Intent variants have no source measurement and start as unknown."""
+    from open_score.eval.experiment import run_directory, SOURCE_PROFILE, ALL_SEEDS, INTENT_METHODS
+    if method in INTENT_METHODS:
+        return 0.
+    source = Path(output).parent / SOURCE_PROFILE
+    base = method[:-3] if method.endswith("_sg") else method
+    # Relation variants share one module size; main0921 measured only its four new methods.
+    family = (base, "regir_kv0", "regir_fixed4", "regir_untied4") if base.startswith("regir") else (base,)
+    for name in family:
+        rows = [_resource(run_directory(source, name, s, env) / "resource.json") for s in ALL_SEEDS]
+        peak = max((float(r.get("cuda_peak_reserved_gib") or 0) for r in rows if r), default=0.)
+        if peak:
+            return peak
+    return 0.
+
+
 def gpu_admit(output, env, method, live, *, gpu=0, memory=None, minimum_peak=0., recovering=False,
               per_gpu=GPU_PER_CARD_MAX):
-    from open_score.eval.experiment import run_directory, SEEDS
+    from open_score.eval.experiment import run_directory, ALL_SEEDS
     if per_gpu > (2 if env == "smacv2" else GPU_PER_CARD_MAX):
         return False
     if int(gpu) not in (0, 1) or len(live) >= gpu_train_limit(per_gpu=per_gpu):
         return False
-    measurements = [_resource(run_directory(output, method, s, env) / "resource.json") for s in SEEDS]
+    measurements = [_resource(run_directory(output, method, s, env) / "resource.json") for s in ALL_SEEDS]
     measurements = [r for r in measurements if r]
     peak = max(float(minimum_peak), max((float(r.get("cuda_peak_reserved_gib") or r.get("cuda_reserved_gib") or 0)
                 for r in measurements), default=0.0))
+    if not peak:
+        peak = _source_peak(output, env, method)
     same_gpu = [item for item in live if int(item["options"].get("cuda_visible_devices", "0")) == int(gpu)]
     if len(same_gpu) >= per_gpu:
         return False

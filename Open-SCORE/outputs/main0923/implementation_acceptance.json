@@ -1,0 +1,4243 @@
+{
+  "status": "passed",
+  "scope": "CPU implementation acceptance; no formal training run or training CSV; 32 real HAD steps per new method, one initial update and one RNG-matched continuation on original/restored learner",
+  "results": [
+    {
+      "method": "transfqmix",
+      "status": "passed",
+      "physical_steps": 32,
+      "workers": 8,
+      "scales": [
+        4,
+        6,
+        8,
+        10,
+        4,
+        6,
+        8,
+        10
+      ],
+      "loss": 14684.517578125,
+      "checkpoint_restore_exact": true,
+      "resumed_next_update_exact": true,
+      "mixer_recurrent_tokens": 3,
+      "actor_hidden_width": 32,
+      "actor_token_detached_in_mixer": true,
+      "chosen_q_gradient_nonzero": true
+    },
+    {
+      "method": "regir_fixed4",
+      "status": "passed",
+      "physical_steps": 32,
+      "workers": 8,
+      "scales": [
+        4,
+        6,
+        8,
+        10,
+        4,
+        6,
+        8,
+        10
+      ],
+      "loss": 0.003428884781897068,
+      "checkpoint_restore_exact": true,
+      "resumed_next_update_exact": true
+    },
+    {
+      "method": "regir_untied4",
+      "status": "passed",
+      "physical_steps": 32,
+      "workers": 8,
+      "scales": [
+        4,
+        6,
+        8,
+        10,
+        4,
+        6,
+        8,
+        10
+      ],
+      "loss": 0.0035354611463844776,
+      "checkpoint_restore_exact": true,
+      "resumed_next_update_exact": true
+    },
+    {
+      "method": "regir_kv0",
+      "status": "passed",
+      "physical_steps": 32,
+      "workers": 8,
+      "scales": [
+        4,
+        6,
+        8,
+        10,
+        4,
+        6,
+        8,
+        10
+      ],
+      "loss": 0.010415703989565372,
+      "checkpoint_restore_exact": true,
+      "resumed_next_update_exact": true
+    }
+  ],
+  "previous_direct_checks": {
+    "had_regression": "regir/regir_r1/regir_last/refil keys, initial values, RNG, Q/history bitwise against backup",
+    "untied": "H1-H4 initially bitwise equal; block storage independent; outside initial values/RNG unchanged",
+    "kv0": "R1 H/Q/input and parameter gradients exact with nonzero fusion and key gradient",
+    "readout": "read1@4 equals depth1 Q/history; uniform equals mean all four reads",
+    "smac": "Full/Single/REFIL roster-variable strict load; factual/imagined masks and central-state isolation",
+    "probe": "known-state labels; visibility exclusions; teacher-forced actual actions; disjoint scene splits; ridge controls"
+  },
+  "smac_type_semantics": {
+    "status": "passed",
+    "native_actor_roles": [
+      "self",
+      "ally",
+      "enemy"
+    ],
+    "shared_count_and_gating_types": [
+      "self+ally",
+      "enemy",
+      "zero target"
+    ],
+    "visible_counts": [
+      3,
+      2,
+      0
+    ],
+    "imagined_masked_counts": [
+      2,
+      1,
+      0
+    ],
+    "actor_features_unchanged": true
+  },
+  "smac_real_cpu_td": {
+    "native_config": [
+      4,
+      4,
+      0
+    ],
+    "pad": [
+      10,
+      10
+    ],
+    "transitions": 4,
+    "torch_version": "2.11.0+cu128",
+    "torch_source": "/home/dell/.local/lib/python3.10/site-packages/torch/__init__.py",
+    "checks": {
+      "regir": {
+        "finite_td": true,
+        "parameters_updated": true,
+        "statistics": {
+          "losses/q_loss": 0.00034498661989346147,
+          "losses/im_loss": 0.0005103679141029716,
+          "train_metrics/q_grad_norm": 0.014469808898866177,
+          "train_metrics/td_error_abs": 0.011483851820230484,
+          "train_metrics/q_taken_mean": -0.0009807873517274856,
+          "train_metrics/target_mean": 0.00016759781865403057
+        }
+      },
+      "refil": {
+        "finite_td": true,
+        "parameters_updated": true,
+        "statistics": {
+          "losses/q_loss": 9.468292410019785e-05,
+          "losses/im_loss": 0.00010520044452277943,
+          "train_metrics/q_grad_norm": 0.007211549673229456,
+          "train_metrics/td_error_abs": 0.008448565378785133,
+          "train_metrics/q_taken_mean": 0.0002972498070448637,
+          "train_metrics/target_mean": 0.0011421063914895057
+        }
+      },
+      "refil_matched": {
+        "finite_td": true,
+        "parameters_updated": true,
+        "statistics": {
+          "losses/q_loss": 0.0002923867432400584,
+          "losses/im_loss": 0.0002888075541704893,
+          "train_metrics/q_grad_norm": 0.014561302028596401,
+          "train_metrics/td_error_abs": 0.01688050478696823,
+          "train_metrics/q_taken_mean": -0.00046864040195941924,
+          "train_metrics/target_mean": 0.001219410076737404
+        },
+        "scope": "extra capacity/interface check; not a formal SMAC arm"
+      },
+      "transfqmix": {
+        "finite_td": true,
+        "parameters_updated": true,
+        "statistics": {
+          "loss_td": 216.8995361328125,
+          "grad_norm": 5253.939453125,
+          "td_error_abs": 20.10477066040039,
+          "q_tot_mean": -0.553528904914856,
+          "q_tot_std": 4.965908050537109
+        }
+      },
+      "timeout_boundary": {
+        "native_and_adapter_clocks_set_to": 199,
+        "native_step_executed": true,
+        "terminal_for_learning": true,
+        "bootstrap_mask": 0.0
+      },
+      "regir_r1": {
+        "finite_td": true,
+        "parameters_updated": true,
+        "statistics": {
+          "losses/q_loss": 0.00034498661989346147,
+          "losses/im_loss": 0.0005103679141029716,
+          "train_metrics/q_grad_norm": 0.014453626237809658,
+          "train_metrics/td_error_abs": 0.011483851820230484,
+          "train_metrics/q_taken_mean": -0.0009807873517274856,
+          "train_metrics/target_mean": 0.00016759781865403057
+        },
+        "scope": "formal method interface check",
+        "depths": [
+          1
+        ]
+      }
+    }
+  },
+  "smac_isolated_environment": {
+    "python": "3.10.21 (main, Aug 27 2026, 14:42:07) [GCC 14.3.0]",
+    "prefix": "/home/dell/anaconda3/envs/saileron-smac",
+    "torch_version": "2.11.0+cu128",
+    "torch_source": "/home/dell/anaconda3/envs/saileron-smac/lib/python3.10/site-packages/torch/__init__.py",
+    "numpy": "1.26.4",
+    "protobuf": "3.20.3",
+    "pysc2": "4.0.0",
+    "smacv2": "1.0.0",
+    "cuda_visible_devices": "0",
+    "device_count": 1,
+    "device_name": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition",
+    "device_capability": [
+      12,
+      0
+    ],
+    "sm120_compiled": true,
+    "cuda_tensor_backward_finite": true
+  },
+  "smac_real_gpu_td": {
+    "native_config": [
+      4,
+      4,
+      0
+    ],
+    "pad": [
+      10,
+      10
+    ],
+    "transitions": 4,
+    "methods": {
+      "regir": {
+        "finite_td": true,
+        "parameters_updated": true,
+        "statistics": {
+          "losses/q_loss": 0.00034746917663142085,
+          "losses/im_loss": 0.0005153330857865512,
+          "train_metrics/q_grad_norm": 0.014545554295182228,
+          "train_metrics/td_error_abs": 0.011483852751553059,
+          "train_metrics/q_taken_mean": -0.0009807875379920007,
+          "train_metrics/target_mean": 0.00016759776044636965
+        }
+      },
+      "refil": {
+        "finite_td": true,
+        "parameters_updated": true,
+        "statistics": {
+          "losses/q_loss": 6.391580973286182e-05,
+          "losses/im_loss": 2.8628375730477273e-05,
+          "train_metrics/q_grad_norm": 0.005785861983895302,
+          "train_metrics/td_error_abs": 0.009680865332484245,
+          "train_metrics/q_taken_mean": 7.986781420186163e-05,
+          "train_metrics/target_mean": 0.0010479543358087539
+        }
+      },
+      "refil_matched": {
+        "finite_td": true,
+        "parameters_updated": true,
+        "statistics": {
+          "losses/q_loss": 9.480505832470953e-05,
+          "losses/im_loss": 9.937200229614973e-05,
+          "train_metrics/q_grad_norm": 0.008315946906805038,
+          "train_metrics/td_error_abs": 0.009377216920256615,
+          "train_metrics/q_taken_mean": 0.0018520193174481393,
+          "train_metrics/target_mean": 0.0027897410094738007
+        },
+        "scope": "extra capacity/interface check; not a formal SMAC arm"
+      },
+      "transfqmix": {
+        "finite_td": true,
+        "parameters_updated": true,
+        "statistics": {
+          "loss_td": 1745.359130859375,
+          "grad_norm": 28253.697265625,
+          "td_error_abs": 53.48985290527344,
+          "q_tot_mean": 16.239267349243164,
+          "q_tot_std": 24.720619201660156
+        }
+      },
+      "regir_r1": {
+        "finite_td": true,
+        "parameters_updated": true,
+        "statistics": {
+          "losses/q_loss": 9.68181702774018e-05,
+          "losses/im_loss": 0.00010664723959052935,
+          "train_metrics/q_grad_norm": 0.006824902258813381,
+          "train_metrics/td_error_abs": 0.008639203384518623,
+          "train_metrics/q_taken_mean": -0.002485382743179798,
+          "train_metrics/target_mean": -0.0016214624047279358
+        },
+        "scope": "formal method interface check",
+        "depths": [
+          1
+        ]
+      }
+    },
+    "gpu": 0
+  },
+  "oom_transaction_recovery": {
+    "status": "passed",
+    "scope": "Injected CUDA-OOM exceptions on CPU with real 8-worker HAD collection capped to 8 physical steps per batch; no actual GPU exhaustion; temporary checkpoints and memory-only log sink; no formal training or validation CSV.",
+    "total_acceptance_physical_steps": 176,
+    "forward_boundary": {
+      "status": "passed",
+      "observed_t_env": 32,
+      "safe_t_env": 24,
+      "warmup_saves": [
+        0,
+        8,
+        16,
+        24
+      ],
+      "saved_updates": 0
+    },
+    "after_partial_update": {
+      "status": "passed",
+      "observed_t_env": 32,
+      "safe_t_env": 24,
+      "optimizer_updates_executed_before_fault": 2,
+      "saved_updates": 0,
+      "saved_replay_episodes": 24
+    },
+    "resumed_complete_batch": {
+      "status": "passed",
+      "safe_t_env": 32,
+      "saved_updates": 8,
+      "all_updates_complete_before_stop": true,
+      "network_optimizer_targets_replay_rng_runner_bitwise_equal": true
+    },
+    "initialization": {
+      "status": "passed",
+      "physical_steps": 0,
+      "recovery_status": "start_failure",
+      "automatic_recovery": false,
+      "no_config_or_checkpoint_overwrite": true
+    },
+    "allocation_parser": {
+      "requested_allocation_gib": 0.0625,
+      "minimum_additional_gib": 0.046875,
+      "ordinary_error_not_classified_as_oom": true
+    },
+    "validation_invariant": "Pre-validation full checkpoint is written before any validation rows. Profile exceptions never overwrite it; resuming that point keeps the recorded policy weights.",
+    "comparison_note": "First pass numeric network/RNG/runner checks passed; replay comparator rejected OneHot object identity, so a focused second pass compared replay tensors directly."
+  },
+  "scheduler_recovery": {
+    "status": "passed",
+    "scope": "In-memory scheduler mocks with no GPU allocation or training; independent PID absence check for the root-run CPU formal evaluation stop",
+    "classification": {
+      "cublas_allocation_failure_consistent": true
+    },
+    "train_mock": [
+      {
+        "injected_oom_count": 3,
+        "launch_seconds": [
+          0,
+          60,
+          180,
+          420
+        ],
+        "retry_delays": [
+          60,
+          120,
+          240
+        ],
+        "final_status": "completed",
+        "joined": 4,
+        "handlers_restored": true,
+        "resume_on_each_retry": true
+      },
+      {
+        "injected_oom_count": 4,
+        "launch_seconds": [
+          0,
+          60,
+          180,
+          420
+        ],
+        "retry_delays": [
+          60,
+          120,
+          240
+        ],
+        "final_status": "failed",
+        "joined": 4,
+        "handlers_restored": true,
+        "resume_on_each_retry": true
+      }
+    ],
+    "timing_mock": [
+      {
+        "case": "recovered",
+        "injected_oom_count": 3,
+        "launch_seconds": [
+          0,
+          60,
+          180,
+          420
+        ],
+        "fixed_physical_gpu": 1,
+        "final_status": "complete",
+        "original_error_retained": true
+      },
+      {
+        "case": "exhausted",
+        "injected_oom_count": 4,
+        "launch_seconds": [
+          0,
+          60,
+          180,
+          420
+        ],
+        "fixed_physical_gpu": 1,
+        "final_status": "failed",
+        "original_error_retained": true
+      },
+      {
+        "case": "stop_during_backoff",
+        "injected_oom_count": 1,
+        "launch_seconds": [
+          0
+        ],
+        "fixed_physical_gpu": 1,
+        "final_status": "stopped",
+        "original_error_retained": true
+      },
+      {
+        "case": "stop_from_measurement",
+        "injected_oom_count": 1,
+        "launch_seconds": [
+          0,
+          60
+        ],
+        "fixed_physical_gpu": 1,
+        "final_status": "stopped",
+        "original_error_retained": true
+      }
+    ],
+    "admission_mock": {
+      "prefers_more_free_memory": true,
+      "occupied_card_excluded": true,
+      "single_device_also_one_worker": true,
+      "total_limit_two": true
+    },
+    "cpu_stop": {
+      "parent_pid": 2009787,
+      "worker_pid": 2010591,
+      "parent_absent": true,
+      "worker_absent": true,
+      "exit_code_reported_by_root": 1,
+      "meaning": "controlled stop; existing formal final quota retained",
+      "evidence": "root observed stop request and exit; reviewer independently checked both PIDs absent"
+    },
+    "checked_at": "2026-09-21T18:32:15.098902+00:00"
+  },
+  "matrix_smoke_runtime": {
+    "status": "passed",
+    "checked_at": "2026-09-21T18:53:18.153849+00:00",
+    "scope": "24 explicit model-seed CPU smoke combinations; per-architecture GPU smoke and full-natural-episode throughput; no formal training run or formal evaluation quotas added",
+    "cpu_matrix": [
+      {
+        "env": "had",
+        "method": "transfqmix",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 1.382816825993359
+      },
+      {
+        "env": "had",
+        "method": "regir_fixed4",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 4.5582989669637755
+      },
+      {
+        "env": "had",
+        "method": "regir_untied4",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 4.264259792980738
+      },
+      {
+        "env": "had",
+        "method": "regir_kv0",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 1.635965446010232
+      },
+      {
+        "env": "had",
+        "method": "transfqmix",
+        "seed": 1,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 0.5009603669168428
+      },
+      {
+        "env": "had",
+        "method": "regir_fixed4",
+        "seed": 1,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 4.520957051077858
+      },
+      {
+        "env": "had",
+        "method": "regir_untied4",
+        "seed": 1,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 4.173092299955897
+      },
+      {
+        "env": "had",
+        "method": "regir_kv0",
+        "seed": 1,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 1.7481670130509883
+      },
+      {
+        "env": "had",
+        "method": "transfqmix",
+        "seed": 2,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 0.48637209995649755
+      },
+      {
+        "env": "had",
+        "method": "regir_fixed4",
+        "seed": 2,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 4.3914375270251185
+      },
+      {
+        "env": "had",
+        "method": "regir_untied4",
+        "seed": 2,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 4.009181141038425
+      },
+      {
+        "env": "had",
+        "method": "regir_kv0",
+        "seed": 2,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 3.395350283011794
+      },
+      {
+        "env": "smacv2",
+        "method": "regir",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 7.180267445044592
+      },
+      {
+        "env": "smacv2",
+        "method": "regir_r1",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 6.496809520991519
+      },
+      {
+        "env": "smacv2",
+        "method": "refil",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 5.769536601030268
+      },
+      {
+        "env": "smacv2",
+        "method": "transfqmix",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 5.405538614024408
+      },
+      {
+        "env": "smacv2",
+        "method": "regir",
+        "seed": 1,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 8.582276663044468
+      },
+      {
+        "env": "smacv2",
+        "method": "regir_r1",
+        "seed": 1,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 6.571717901038937
+      },
+      {
+        "env": "smacv2",
+        "method": "refil",
+        "seed": 1,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 5.757881233934313
+      },
+      {
+        "env": "smacv2",
+        "method": "transfqmix",
+        "seed": 1,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 5.440744476974942
+      },
+      {
+        "env": "smacv2",
+        "method": "regir",
+        "seed": 2,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 6.731734045082703
+      },
+      {
+        "env": "smacv2",
+        "method": "regir_r1",
+        "seed": 2,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 6.635898592998274
+      },
+      {
+        "env": "smacv2",
+        "method": "refil",
+        "seed": 2,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 5.736662216950208
+      },
+      {
+        "env": "smacv2",
+        "method": "transfqmix",
+        "seed": 2,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "episode_limit": 200,
+        "finite_td": true,
+        "parameters_updated": true,
+        "validation_mode_forward": true,
+        "network_optimizer_runner_roundtrip": true,
+        "seconds": 5.507303239079192
+      }
+    ],
+    "had_gpu_architecture_smoke": [
+      {
+        "env": "had",
+        "method": "transfqmix",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 8,
+        "physical_steps": 32,
+        "batch_size": 32,
+        "sequence_length": 5,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "peak_reserved_gib": 0.35546875,
+        "seconds": 0.5456084599718451,
+        "scope": "short sequence architecture/GPU smoke; not throughput or worst-case memory estimate"
+      },
+      {
+        "env": "had",
+        "method": "regir_fixed4",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 8,
+        "physical_steps": 32,
+        "batch_size": 32,
+        "sequence_length": 5,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "peak_reserved_gib": 0.927734375,
+        "seconds": 0.18315550405532122,
+        "scope": "short sequence architecture/GPU smoke; not throughput or worst-case memory estimate"
+      },
+      {
+        "env": "had",
+        "method": "regir_untied4",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 8,
+        "physical_steps": 32,
+        "batch_size": 32,
+        "sequence_length": 5,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "peak_reserved_gib": 0.927734375,
+        "seconds": 0.13359889795538038,
+        "scope": "short sequence architecture/GPU smoke; not throughput or worst-case memory estimate"
+      },
+      {
+        "env": "had",
+        "method": "regir_kv0",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 8,
+        "physical_steps": 32,
+        "batch_size": 32,
+        "sequence_length": 5,
+        "episode_limit": 100,
+        "finite_td": true,
+        "parameters_updated": true,
+        "peak_reserved_gib": 0.869140625,
+        "seconds": 0.12434518290683627,
+        "scope": "short sequence architecture/GPU smoke; not throughput or worst-case memory estimate"
+      }
+    ],
+    "had_full_gpu_throughput": [
+      {
+        "env": "had",
+        "method": "transfqmix",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 8,
+        "physical_steps": 407,
+        "collection_seconds": 0.6745677789440379,
+        "episode_lengths": [
+          42,
+          79,
+          43,
+          36,
+          74,
+          48,
+          41,
+          44
+        ],
+        "batch_size": 32,
+        "sequence_length": 80,
+        "episode_limit": 100,
+        "finite_td": true,
+        "update_seconds": [
+          0.7498797250445932,
+          0.48961987800430506
+        ],
+        "formal_updates_per_collection": 8,
+        "validation_seconds": 0.48340813105460256,
+        "validation_episodes": 8,
+        "validation_lengths": [
+          100,
+          60,
+          44,
+          46,
+          40,
+          66,
+          43,
+          44
+        ],
+        "peak_reserved_gib": 5.12109375
+      },
+      {
+        "env": "had",
+        "method": "regir_fixed4",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 8,
+        "physical_steps": 405,
+        "collection_seconds": 0.512216386036016,
+        "episode_lengths": [
+          42,
+          64,
+          49,
+          36,
+          65,
+          64,
+          41,
+          44
+        ],
+        "batch_size": 32,
+        "sequence_length": 66,
+        "episode_limit": 100,
+        "finite_td": true,
+        "update_seconds": [
+          1.2701682430924848,
+          1.268331415951252
+        ],
+        "formal_updates_per_collection": 8,
+        "validation_seconds": 0.7686955960234627,
+        "validation_episodes": 8,
+        "validation_lengths": [
+          100,
+          67,
+          44,
+          46,
+          41,
+          63,
+          47,
+          43
+        ],
+        "peak_reserved_gib": 9.181640625
+      },
+      {
+        "env": "had",
+        "method": "regir_untied4",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 8,
+        "physical_steps": 388,
+        "collection_seconds": 0.49808811000548303,
+        "episode_lengths": [
+          42,
+          64,
+          49,
+          36,
+          48,
+          64,
+          41,
+          44
+        ],
+        "batch_size": 32,
+        "sequence_length": 65,
+        "episode_limit": 100,
+        "finite_td": true,
+        "update_seconds": [
+          1.1854528830153868,
+          1.2684539750916883
+        ],
+        "formal_updates_per_collection": 8,
+        "validation_seconds": 0.7846807099413127,
+        "validation_episodes": 8,
+        "validation_lengths": [
+          100,
+          67,
+          44,
+          46,
+          41,
+          63,
+          47,
+          43
+        ],
+        "peak_reserved_gib": 9.2578125
+      },
+      {
+        "env": "had",
+        "method": "regir_kv0",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 8,
+        "physical_steps": 388,
+        "collection_seconds": 0.5066492879996076,
+        "episode_lengths": [
+          42,
+          64,
+          49,
+          36,
+          48,
+          64,
+          41,
+          44
+        ],
+        "batch_size": 32,
+        "sequence_length": 65,
+        "episode_limit": 100,
+        "finite_td": true,
+        "update_seconds": [
+          0.9714700689073652,
+          1.276657440001145
+        ],
+        "formal_updates_per_collection": 8,
+        "validation_seconds": 0.7668881081044674,
+        "validation_episodes": 8,
+        "validation_lengths": [
+          100,
+          67,
+          44,
+          46,
+          41,
+          63,
+          47,
+          43
+        ],
+        "peak_reserved_gib": 9.23828125
+      }
+    ],
+    "smac_full_gpu_throughput": [
+      {
+        "method": "regir",
+        "model_seed": 0,
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 4,
+        "episode_limit": 200,
+        "batch_size": 32,
+        "sequence_length": 74,
+        "collections": [
+          {
+            "seconds": 5.991114757955074,
+            "physical_steps": 213,
+            "episode_lengths": [
+              47,
+              49,
+              55,
+              62
+            ]
+          },
+          {
+            "seconds": 0.7663056099554524,
+            "physical_steps": 228,
+            "episode_lengths": [
+              52,
+              50,
+              73,
+              53
+            ]
+          }
+        ],
+        "update_seconds": [
+          1.4052550870692357,
+          0.8991600710432976
+        ],
+        "formal_updates_per_collection": 4,
+        "validation_seconds": 5.8922765859169886,
+        "validation_episodes": 4,
+        "validation_lengths": [
+          44,
+          59,
+          64,
+          68
+        ],
+        "peak_reserved_gib": 9.34375,
+        "finite_td": true
+      },
+      {
+        "method": "regir_r1",
+        "model_seed": 0,
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 4,
+        "episode_limit": 200,
+        "batch_size": 32,
+        "sequence_length": 70,
+        "collections": [
+          {
+            "seconds": 0.597523620002903,
+            "physical_steps": 211,
+            "episode_lengths": [
+              47,
+              47,
+              57,
+              60
+            ]
+          },
+          {
+            "seconds": 0.6415607070084661,
+            "physical_steps": 221,
+            "episode_lengths": [
+              48,
+              46,
+              69,
+              58
+            ]
+          }
+        ],
+        "update_seconds": [
+          0.6306837239535525,
+          0.6087158160516992
+        ],
+        "formal_updates_per_collection": 4,
+        "validation_seconds": 5.717190057970583,
+        "validation_episodes": 4,
+        "validation_lengths": [
+          40,
+          68,
+          64,
+          68
+        ],
+        "peak_reserved_gib": 7.927734375,
+        "finite_td": true
+      },
+      {
+        "method": "refil",
+        "model_seed": 0,
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 4,
+        "episode_limit": 200,
+        "batch_size": 32,
+        "sequence_length": 78,
+        "collections": [
+          {
+            "seconds": 0.5181884160265326,
+            "physical_steps": 224,
+            "episode_lengths": [
+              50,
+              49,
+              63,
+              62
+            ]
+          },
+          {
+            "seconds": 0.5590887439902872,
+            "physical_steps": 250,
+            "episode_lengths": [
+              54,
+              59,
+              77,
+              60
+            ]
+          }
+        ],
+        "update_seconds": [
+          0.25412119005341083,
+          0.24434821505565196
+        ],
+        "formal_updates_per_collection": 4,
+        "validation_seconds": 5.4834641319466755,
+        "validation_episodes": 4,
+        "validation_lengths": [
+          40,
+          67,
+          64,
+          76
+        ],
+        "peak_reserved_gib": 3.255859375,
+        "finite_td": true
+      },
+      {
+        "method": "transfqmix",
+        "model_seed": 0,
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 4,
+        "episode_limit": 200,
+        "batch_size": 32,
+        "sequence_length": 66,
+        "collections": [
+          {
+            "seconds": 0.4606444340897724,
+            "physical_steps": 221,
+            "episode_lengths": [
+              49,
+              52,
+              62,
+              58
+            ]
+          },
+          {
+            "seconds": 0.4912446750095114,
+            "physical_steps": 232,
+            "episode_lengths": [
+              54,
+              53,
+              65,
+              60
+            ]
+          }
+        ],
+        "update_seconds": [
+          0.5188657230464742,
+          0.44366059091407806
+        ],
+        "formal_updates_per_collection": 4,
+        "validation_seconds": 5.557062890031375,
+        "validation_episodes": 4,
+        "validation_lengths": [
+          88,
+          48,
+          71,
+          49
+        ],
+        "peak_reserved_gib": 3.814453125,
+        "finite_td": true
+      },
+      {
+        "method": "b2_qmix_atten",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 4,
+        "episode_limit": 200,
+        "batch_size": 32,
+        "sequence_length": 56,
+        "collections": [
+          {
+            "seconds": 5.687472867895849,
+            "physical_steps": 209,
+            "episode_lengths": [
+              53,
+              64,
+              47,
+              45
+            ]
+          },
+          {
+            "seconds": 0.4729667080100626,
+            "physical_steps": 208,
+            "episode_lengths": [
+              55,
+              46,
+              55,
+              52
+            ]
+          }
+        ],
+        "update_seconds": [
+          0.2639363430207595,
+          0.09557111095637083
+        ],
+        "formal_updates_per_collection": 4,
+        "validation_seconds": 5.482238863012753,
+        "validation_episodes": 4,
+        "validation_lengths": [
+          51,
+          67,
+          60,
+          51
+        ],
+        "peak_reserved_gib": 1.1875,
+        "finite_td": true
+      },
+      {
+        "method": "spectra",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 4,
+        "episode_limit": 200,
+        "batch_size": 128,
+        "sequence_length": 56,
+        "collections": [
+          {
+            "seconds": 5.368117225007154,
+            "physical_steps": 209,
+            "episode_lengths": [
+              53,
+              64,
+              47,
+              45
+            ]
+          },
+          {
+            "seconds": 0.422309807036072,
+            "physical_steps": 208,
+            "episode_lengths": [
+              55,
+              46,
+              55,
+              52
+            ]
+          }
+        ],
+        "update_seconds": [
+          0.23406014905776829,
+          0.17724788596387953
+        ],
+        "formal_updates_per_collection": 4,
+        "validation_seconds": 5.5604189010336995,
+        "validation_episodes": 4,
+        "validation_lengths": [
+          56,
+          78,
+          59,
+          58
+        ],
+        "peak_reserved_gib": 2.95703125,
+        "finite_td": true
+      }
+    ],
+    "smac_cpu20_final_interface": [
+      {
+        "method": "regir",
+        "model_seed": 0,
+        "config": [
+          20,
+          20,
+          0
+        ],
+        "device": "cpu",
+        "workers": 1,
+        "episode_limit": 200,
+        "seconds": 5.777436522068456,
+        "episode_length": 77,
+        "battle_won": false,
+        "n_agents": 20
+      },
+      {
+        "method": "regir_r1",
+        "model_seed": 0,
+        "config": [
+          20,
+          20,
+          0
+        ],
+        "device": "cpu",
+        "workers": 1,
+        "episode_limit": 200,
+        "seconds": 5.645251195994206,
+        "episode_length": 77,
+        "battle_won": false,
+        "n_agents": 20
+      },
+      {
+        "method": "refil",
+        "model_seed": 0,
+        "config": [
+          20,
+          20,
+          0
+        ],
+        "device": "cpu",
+        "workers": 1,
+        "episode_limit": 200,
+        "seconds": 5.530926530016586,
+        "episode_length": 77,
+        "battle_won": false,
+        "n_agents": 20
+      },
+      {
+        "method": "transfqmix",
+        "model_seed": 0,
+        "config": [
+          20,
+          20,
+          0
+        ],
+        "device": "cpu",
+        "workers": 1,
+        "episode_limit": 200,
+        "seconds": 5.53410774609074,
+        "episode_length": 72,
+        "battle_won": false,
+        "n_agents": 20
+      }
+    ],
+    "throughput": {
+      "had": {
+        "transfqmix": {
+          "physical_steps_per_second": [
+            60.98652297678083,
+            88.64153852613538
+          ],
+          "validation_seconds_per_episode": 0.06042601638182532,
+          "formula": "physical_steps / (warm collection seconds + formal updates per collection * measured batch32 update seconds)"
+        },
+        "regir_fixed4": {
+          "physical_steps_per_second": [
+            37.944220256458586,
+            37.996531233941305
+          ],
+          "validation_seconds_per_episode": 0.09608694950293284,
+          "formula": "physical_steps / (warm collection seconds + formal updates per collection * measured batch32 update seconds)"
+        },
+        "regir_untied4": {
+          "physical_steps_per_second": [
+            36.446572261270994,
+            38.871090660852865
+          ],
+          "validation_seconds_per_episode": 0.09808508874266408,
+          "formula": "physical_steps / (warm collection seconds + formal updates per collection * measured batch32 update seconds)"
+        },
+        "regir_kv0": {
+          "physical_steps_per_second": [
+            36.194337745683804,
+            46.86890447969799
+          ],
+          "validation_seconds_per_episode": 0.09586101351305842,
+          "formula": "physical_steps / (warm collection seconds + formal updates per collection * measured batch32 update seconds)"
+        }
+      },
+      "smacv2": {
+        "regir": {
+          "physical_steps_per_second": [
+            35.69568885178609,
+            52.25826896153513
+          ],
+          "validation_seconds_per_episode": 1.4730691464792471,
+          "formula": "physical_steps / (warm collection seconds + formal updates per collection * measured batch32 update seconds)"
+        },
+        "regir_r1": {
+          "physical_steps_per_second": [
+            69.84176819727566,
+            71.83665257708273
+          ],
+          "validation_seconds_per_episode": 1.4292975144926459,
+          "formula": "physical_steps / (warm collection seconds + formal updates per collection * measured batch32 update seconds)"
+        },
+        "refil": {
+          "physical_steps_per_second": [
+            158.672381410929,
+            162.70940004392006
+          ],
+          "validation_seconds_per_episode": 1.3708660329866689,
+          "formula": "physical_steps / (warm collection seconds + formal updates per collection * measured batch32 update seconds)"
+        },
+        "transfqmix": {
+          "physical_steps_per_second": [
+            90.38817002963135,
+            102.38815794480375
+          ],
+          "validation_seconds_per_episode": 1.3892657225078437,
+          "formula": "physical_steps / (warm collection seconds + formal updates per collection * measured batch32 update seconds)"
+        },
+        "b2_qmix_atten": {
+          "physical_steps_per_second": [
+            136.0622465855915,
+            243.20341405397582
+          ],
+          "validation_seconds_per_episode": 1.3705597157531884,
+          "formula": "physical steps / (warm four-episode collection seconds + four batch32 update seconds)"
+        },
+        "spectra": {
+          "physical_steps_per_second": [
+            153.1043673460961,
+            183.85905739091805
+          ],
+          "validation_seconds_per_episode": 1.3901047252584249,
+          "formula": "physical steps / (warm four-episode collection seconds + four batch128 update seconds)"
+        }
+      }
+    },
+    "verification_details": [
+      "CPU matrix uses actual method rollout, finite gradients, parameter changes, validation-mode Q outputs, and serialized network/optimizer/runner round-trip. Full next-update RNG equivalence remains covered by prior implementation and OOM transaction checks.",
+      "CPU model seeds0/1/2 are explicit; environment-worker processes are reused with explicit scenario seeds and mixed4/6/8/10 configurations. Native engine seed/config acceptance remains covered by earlier33 checks.",
+      "GPU throughput uses model seed0,2 updates per architecture and full natural episodes; episode_limit remains100 HAD/200 SMAC. It is not a200-step SMAC worst-memory proof.",
+      "Earlier GPU TD evidence with unrecorded model seeds is retained unchanged; current GPU rows now explicitly record seed0.",
+      "Latest modified core imports, syntax and all24 load_config interfaces rechecked after root validation-counter change."
+    ],
+    "gpu_monitor": {
+      "physical_gpu": 0,
+      "samples": 39,
+      "mean_utilization_percent": 12.384615384615385,
+      "max_utilization_percent": 97.0,
+      "minimum_free_gib": 28.1142578125,
+      "interpretation": "Short measurement includes fresh-game startup and validation idle time; mean utilization does not justify a third trainer. Warm training updates dominate estimated cycle time."
+    },
+    "had_cpu_large_scale_existing_evidence": {
+      "method": "regir_nocount",
+      "seed": 0,
+      "config": [
+        50,
+        50,
+        2
+      ],
+      "phase": "final",
+      "episodes": 37,
+      "first_recorded_at": "2026-09-21T18:33:53+00:00",
+      "last_recorded_at": "2026-09-21T18:35:45+00:00",
+      "seconds": 112,
+      "intervals": 36,
+      "seconds_per_episode": 3.111111111111111,
+      "source": "existing episodes.csv; no additional episodes"
+    },
+    "runtime_estimate": {
+      "measured_at": "2026-09-21T18:53:18.153849+00:00",
+      "status": "conditional_planning_estimate",
+      "basis": [
+        "Measured full natural training episodes, formal batch32, and 8 HAD / 4 SMAC updates per collection; diagnostic batches repeat actual episodes to batch32 and are not independent replay samples.",
+        "One initial model seed per GPU architecture for throughput; CPU architecture/seed matrix explicitly covers 0/1/2. Policies are untrained; long-run trajectory lengths, replay distribution, CPU contention and shared GPU load can change throughput.",
+        "Ranges assume at least one GPU remains available; lower end uses two useful GPUs, upper end uses one useful GPU plus approximately 1.5x throughput allowance. They do not bound indefinite resource waits.",
+        "HAD max3 trainer processes still share only two physical GPUs, so serial GPU work is not divided by3. SMAC starts alone and allows at most2/one per card after memory and utilization admission.",
+        "CPU final and mechanism evaluation share a total cap of4; stage sums are conservative and do not assume two independent four-worker pools. CPU overlap with training may shorten elapsed time."
+      ],
+      "cpu_evaluation_concurrency": 4,
+      "had": {
+        "training_seconds": [
+          136800,
+          406800
+        ],
+        "validation_seconds": [
+          1080.0,
+          7200
+        ],
+        "evaluation_seconds": [
+          10800,
+          86400
+        ],
+        "mechanism_seconds": [
+          10800,
+          50400
+        ],
+        "stage_seconds": [
+          159480.0,
+          550800
+        ],
+        "concurrency": 3,
+        "reference_remaining": {
+          "training_steps": 11963643,
+          "validation_episodes": 59900,
+          "final_episodes": 101010,
+          "mechanism_episodes": 24444,
+          "depth_episodes": 12250,
+          "readout_episodes": 11700,
+          "probe_scenes_remaining": 494
+        },
+        "evaluation_basis": "Existing formal CPU logs: small-N REFIL about0.21s/episode and QMIX-Atten about0.275; actual regir_nocount seed0 50v50 K2 yielded37 consecutive episodes over112s/36 intervals=3.111s/episode. Remaining101010 final episodes across4 total CPU workers; all model/scale combinations not individually timed.",
+        "mechanism_basis": "Remaining12250 independent depth and11700 readout episodes plus public probe scenes; observed R1 CPU approximately0.76-0.79s/episode, higher-depth and larger-N costs bounded by assumptions. Probe feature/fitting and M4 cost measurement add an unmeasured1-4h allowance within the3-14h mechanism range."
+      },
+      "smacv2": {
+        "training_seconds": [
+          320400,
+          961200
+        ],
+        "validation_seconds": [
+          43200,
+          129600
+        ],
+        "evaluation_seconds": [
+          39600,
+          90000
+        ],
+        "mechanism_seconds": [
+          0,
+          0
+        ],
+        "stage_seconds": [
+          403200,
+          1180800
+        ],
+        "concurrency": 2,
+        "reference_remaining": {
+          "training_steps": 48000000,
+          "validation_episodes": 61440,
+          "final_episodes": 28800,
+          "mechanism_episodes": 0
+        },
+        "evaluation_basis": "Four actual CPU20v20 native-capacity complete episodes, one per formal architecture, each5.53-5.78s including fresh SC2 launch;28800 registered final episodes /4 CPU workers. Other scales and learned long-lived policies may differ."
+      },
+      "overall_seconds": [
+        562680.0,
+        1731600
+      ]
+    },
+    "temporary_files_cleaned": true
+  },
+  "probe_first_scene": {
+    "status": "passed",
+    "trajectory": "trajectories/scene_200000.json.gz",
+    "checkpoint_id": "b817b949ab93410bbf190bcea9ca4483",
+    "model_seed": 0,
+    "config": [
+      10,
+      10,
+      2
+    ],
+    "threads": 1,
+    "new_trajectories": 0,
+    "fitting_performed": false,
+    "behavior_prefix_checks": {
+      "frames": 44,
+      "live_behavior_actions": 185,
+      "stored_actions": 440,
+      "previous_action_inputs": 430
+    },
+    "selected_times": [
+      0,
+      13,
+      26,
+      39
+    ],
+    "X_shape": [
+      30,
+      5,
+      64
+    ],
+    "y_shape": [
+      30,
+      3
+    ],
+    "defined_labels": {
+      "nearest_target_distance": 30,
+      "nearest_other_defender_distance": 28,
+      "nearest_target_region_imbalance": 30
+    },
+    "exclusions": {
+      "nearest_other_defender_distance:no_other_visible_defender": 2
+    },
+    "independent_label_max_abs_error": 0.0,
+    "feature_path": "features/seed_0/trained/scene_200000.pt",
+    "reusable_by_evaluate_probe": true
+  },
+  "probe_collection_registration": {
+    "status": "passed",
+    "root_cause": "collector registered identical policy name per episode in a process-global registry",
+    "fix": "one resettable recorder/registration per behavior and collection call; unique collection ID for same-process resume",
+    "same_process_collections": 2,
+    "unique_registrations": 3,
+    "existing_trajectories_unchanged": 2,
+    "added_authorized_scenes": [
+      {
+        "seed": 200002,
+        "behavior": "regir",
+        "steps": 44
+      },
+      {
+        "seed": 200003,
+        "behavior": "regir",
+        "steps": 40
+      },
+      {
+        "seed": 200004,
+        "behavior": "regir",
+        "steps": 46
+      },
+      {
+        "seed": 200050,
+        "behavior": "refil",
+        "steps": 34
+      }
+    ],
+    "public_bank_completed": 6,
+    "public_bank_budget": 500,
+    "temporary_script_removed": true
+  },
+  "latest_resource_limits": {
+    "status": "passed",
+    "had_total": 3,
+    "had_per_card": 2,
+    "smac_total": 2,
+    "smac_per_card": 1,
+    "smac_second_card_utilization_below_percent": 90,
+    "cpu_evaluation_and_mechanism_total": 4,
+    "verified": [
+      "HAD admits third only with memory margin",
+      "HAD denies fourth",
+      "single-card HAD denies third",
+      "SMAC busy second GPU waits",
+      "SMAC eligible second GPU admitted",
+      "CPU fifth task denied even when caller asks16",
+      "profile eval CLI rejects max_concurrent5"
+    ],
+    "scientific_batch_sizes_unchanged": {
+      "had": 8,
+      "smacv2": 4
+    },
+    "gpu_train_max": 6,
+    "gpu_per_card_max": 3,
+    "smac_gpu_train_max": 4,
+    "smac_gpu_per_card_max": 2
+  },
+  "launch_dashboard_acceptance": {
+    "checked_at": "2026-09-21T19:04:36.891572+00:00",
+    "status": "passed",
+    "registered_tasks": 124,
+    "registered_training_tasks": 57,
+    "prelaunch_completed_tasks": 63,
+    "prelaunch_completed_training_tasks": 33,
+    "actual_status_once": {
+      "exit_code": 0,
+      "seconds": 0.2,
+      "loads_models": false,
+      "scans_episode_csv": false
+    },
+    "dashboard_cases": [
+      "TTY compact 80x24 and wider dimensions; full --once output",
+      "PID exit and stale snapshot are not running",
+      "completed_ids require registered env/kind, newer snapshot and live parent or completed/stopped final status",
+      "independent episode coverage excludes alias reuse",
+      "paused queues do not decrement ETA by elapsed calendar time"
+    ],
+    "scheduler_exception_cases": [
+      "injected parent admission failure preserves original exception and publishes failed",
+      "injected eval scan failure preserves original exception and publishes failed",
+      "SIGINT/SIGTERM handlers restored and child queues drained"
+    ],
+    "paired_validation_telemetry": {
+      "cases": [
+        "normal",
+        "stop after committed group",
+        "runner failure",
+        "CSV write failure",
+        "all validation episodes reused"
+      ],
+      "status": "passed",
+      "rng_restored": true,
+      "legacy_resume_without_paired_fields": [
+        0,
+        0
+      ],
+      "eta_uses_only_committed_measured_episode_time_pair": true
+    },
+    "completion_qualification": "train scheduler validates actual final.pt budget/config/artifact identity before publishing completed_ids; eval uses quota-qualified scan",
+    "verification_scope": "Root CLI/status/source verification plus scoped agent mocks recorded in this session; no additional formal training or evaluation quota for these checks",
+    "cleanup": "This round matrix smoke directory, temporary test scripts, temporary fixtures and duplicate first-scene acceptance removed after merging evidence here; pre-existing unique main history and required runtime caches retained"
+  },
+  "gpu_per_card_revision": {
+    "checked_at": "2026-09-21T19:46:54.712291+00:00",
+    "status": "passed",
+    "resource_admission_checks": 24,
+    "profile_entrypoint_checks": 33,
+    "scope": "HAD/SMAC train/single/farm; per-card2, optional per-gpu1, one/two selected GPUs; memory/SMAC utilization/unknown-first and OOM isolation; CPU4 unchanged",
+    "workers_launched": 0,
+    "temporary_artifacts": 0
+  },
+  "compact_terminal_revision": {
+    "checked_at": "2026-09-21T19:46:54.712291+00:00",
+    "status": "passed",
+    "default_paused_lines": 12,
+    "eight_active_tasks_80_columns_lines": 18,
+    "tested_widths": [
+      40,
+      60,
+      80,
+      120
+    ],
+    "details_opt_in": true,
+    "cli_once_exit_code": 0,
+    "temporary_artifacts": 0,
+    "matrix_not_expanded": true,
+    "deadline_summary": true,
+    "actual_interpreter_syntax": "passed"
+  },
+  "controlled_pause": {
+    "checked_at": "2026-09-21T19:46:54.712291+00:00",
+    "status": "stopped",
+    "wrapper_pid": 2100714,
+    "train_parent_pid": 2100718,
+    "eval_parent_pid": 2100719,
+    "all_captured_workers_exited": true,
+    "saved_transfqmix_steps": [
+      70763,
+      157758,
+      60109
+    ],
+    "restart": "not performed; current5-day total deadline not supported"
+  },
+  "seven_day_restart": {
+    "checked_at": "2026-09-21T20:02:55.117860+00:00",
+    "status": "passed",
+    "priority": "stable final-depth-readout-probe order with new final insertion; no running task preemption",
+    "gpu_bootstrap": "actual accepted natural-episode peak, native-sequence scaled; empty physical card only, seven scoped checks passed",
+    "resume_wrapper": [
+      "invalid command rejected",
+      "duplicate wrapper lease rejected",
+      "HAD controlled stop",
+      "detached resume and safe replacement",
+      "M4 stop prevents SMAC transition",
+      "concurrent resume rejected while control operation active",
+      "orphan job lock must release before restart",
+      "HAD-M4-SMAC-report full mock order and device visibility"
+    ],
+    "m4_complete_reuse": "passes without any GPU memory query",
+    "syntax": "actual HAD Python interpreter and bash -n passed",
+    "temporary_artifacts": "all wrapper mock files and fake processes removed",
+    "scope": "control flow only; original24 CPU model/seed and8 GPU architecture acceptance retained; no budget, seed or model changes"
+  },
+  "smac_six_method_extension": {
+    "status": "passed",
+    "checked_at": "2026-09-22T03:20:13.652479+00:00",
+    "scope": "Two new SMAC methods x three native CPU seeds,20v20 transfer, pinned SPECTra numerical equivalence/HAD regression, and full-natural-episode formal-batch GPU throughput for both architectures",
+    "cpu_matrix": [
+      {
+        "method": "b2_qmix_atten",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "local_information_isolated": true,
+        "padding_death_zero": true,
+        "serialized_next_update_exact": true
+      },
+      {
+        "method": "b2_qmix_atten",
+        "seed": 1,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "local_information_isolated": true,
+        "padding_death_zero": true,
+        "serialized_next_update_exact": true
+      },
+      {
+        "method": "b2_qmix_atten",
+        "seed": 2,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 32,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "local_information_isolated": true,
+        "padding_death_zero": true,
+        "serialized_next_update_exact": true
+      },
+      {
+        "method": "spectra",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 128,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "local_information_isolated": true,
+        "padding_death_zero": true,
+        "serialized_next_update_exact": true
+      },
+      {
+        "method": "spectra",
+        "seed": 1,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 128,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "local_information_isolated": true,
+        "padding_death_zero": true,
+        "serialized_next_update_exact": true
+      },
+      {
+        "method": "spectra",
+        "seed": 2,
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "batch_size": 128,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "local_information_isolated": true,
+        "padding_death_zero": true,
+        "serialized_next_update_exact": true
+      }
+    ],
+    "cpu20_final_interface": [
+      {
+        "method": "b2_qmix_atten",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "config": [
+          20,
+          20,
+          0
+        ],
+        "strict_training_state_load": true,
+        "actions": 26,
+        "legal_actions": true,
+        "episode_length": 83,
+        "finite_terminal": true
+      },
+      {
+        "method": "spectra",
+        "seed": 0,
+        "status": "passed",
+        "device": "cpu",
+        "config": [
+          20,
+          20,
+          0
+        ],
+        "strict_training_state_load": true,
+        "actions": 26,
+        "legal_actions": true,
+        "episode_length": 59,
+        "finite_terminal": true
+      }
+    ],
+    "gpu_throughput_status": "passed",
+    "gpu_records": [
+      {
+        "method": "b2_qmix_atten",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 4,
+        "episode_limit": 200,
+        "batch_size": 32,
+        "sequence_length": 56,
+        "collections": [
+          {
+            "seconds": 5.687472867895849,
+            "physical_steps": 209,
+            "episode_lengths": [
+              53,
+              64,
+              47,
+              45
+            ]
+          },
+          {
+            "seconds": 0.4729667080100626,
+            "physical_steps": 208,
+            "episode_lengths": [
+              55,
+              46,
+              55,
+              52
+            ]
+          }
+        ],
+        "update_seconds": [
+          0.2639363430207595,
+          0.09557111095637083
+        ],
+        "formal_updates_per_collection": 4,
+        "validation_seconds": 5.482238863012753,
+        "validation_episodes": 4,
+        "validation_lengths": [
+          51,
+          67,
+          60,
+          51
+        ],
+        "peak_reserved_gib": 1.1875,
+        "finite_td": true
+      },
+      {
+        "method": "spectra",
+        "model_seed": 0,
+        "status": "passed",
+        "device": "cuda:0",
+        "physical_gpu": 0,
+        "workers": 4,
+        "episode_limit": 200,
+        "batch_size": 128,
+        "sequence_length": 56,
+        "collections": [
+          {
+            "seconds": 5.368117225007154,
+            "physical_steps": 209,
+            "episode_lengths": [
+              53,
+              64,
+              47,
+              45
+            ]
+          },
+          {
+            "seconds": 0.422309807036072,
+            "physical_steps": 208,
+            "episode_lengths": [
+              55,
+              46,
+              55,
+              52
+            ]
+          }
+        ],
+        "update_seconds": [
+          0.23406014905776829,
+          0.17724788596387953
+        ],
+        "formal_updates_per_collection": 4,
+        "validation_seconds": 5.5604189010336995,
+        "validation_episodes": 4,
+        "validation_lengths": [
+          56,
+          78,
+          59,
+          58
+        ],
+        "peak_reserved_gib": 2.95703125,
+        "finite_td": true
+      }
+    ],
+    "spectra_reference_equivalence": {
+      "status": "passed",
+      "fully_visible_unpadded_actor_max_error": 1.1920928955078125e-07,
+      "fully_visible_unpadded_mixer_max_error": 2.9802322387695312e-08,
+      "had_actor_mixer_exact": true,
+      "source_commit": "ffababf6187216c9d16b2109ee8ef6fe5fdf1172",
+      "boundary": "Explicit visibility/padding/death masking is an adaptation; upstream SAQA passes no mask."
+    },
+    "temporary_files_cleaned": true
+  },
+  "had_two_vs_three": {
+    "status": "passed",
+    "checked_at": "2026-09-22T03:34:08.692012+00:00",
+    "cases": [
+      {
+        "tasks": 2,
+        "method": "regir_fixed4",
+        "physical_gpu": 0,
+        "seconds": 58.42613166407682,
+        "aggregate_steps_per_second": 37.79130907887205,
+        "workers": [
+          {
+            "kind": "done",
+            "rank": 0,
+            "elapsed": 43.12193434499204,
+            "steps": 1029,
+            "cycles": 3,
+            "peak_reserved_gib": 11.93359375
+          },
+          {
+            "kind": "done",
+            "rank": 1,
+            "elapsed": 58.42613166407682,
+            "steps": 1179,
+            "cycles": 3,
+            "peak_reserved_gib": 19.33984375
+          }
+        ],
+        "mean_gpu_utilization": 93.33628318584071,
+        "peak_gpu_used_gib": 28.2314453125,
+        "minimum_gpu_free_gib": 66.7451171875
+      },
+      {
+        "tasks": 3,
+        "method": "regir_fixed4",
+        "physical_gpu": 0,
+        "seconds": 53.272535050986335,
+        "aggregate_steps_per_second": 41.616191117583256,
+        "workers": [
+          {
+            "kind": "done",
+            "rank": 2,
+            "elapsed": 42.83874771499541,
+            "steps": 756,
+            "cycles": 2,
+            "peak_reserved_gib": 10.306640625
+          },
+          {
+            "kind": "done",
+            "rank": 0,
+            "elapsed": 46.636731953010894,
+            "steps": 702,
+            "cycles": 2,
+            "peak_reserved_gib": 11.93359375
+          },
+          {
+            "kind": "done",
+            "rank": 1,
+            "elapsed": 53.272535050986335,
+            "steps": 759,
+            "cycles": 2,
+            "peak_reserved_gib": 12.92578125
+          }
+        ],
+        "mean_gpu_utilization": 95.58252427184466,
+        "peak_gpu_used_gib": 37.2802734375,
+        "minimum_gpu_free_gib": 57.6962890625
+      },
+      {
+        "tasks": 2,
+        "method": "regir_fixed4",
+        "physical_gpu": 0,
+        "seconds": 45.622634368017316,
+        "aggregate_steps_per_second": 39.191073132187114,
+        "workers": [
+          {
+            "kind": "done",
+            "rank": 1,
+            "elapsed": 41.557899888954125,
+            "steps": 759,
+            "cycles": 2,
+            "peak_reserved_gib": 12.92578125
+          },
+          {
+            "kind": "done",
+            "rank": 0,
+            "elapsed": 45.622634368017316,
+            "steps": 1029,
+            "cycles": 3,
+            "peak_reserved_gib": 11.93359375
+          }
+        ],
+        "mean_gpu_utilization": 95.07954545454545,
+        "peak_gpu_used_gib": 26.3056640625,
+        "minimum_gpu_free_gib": 68.6708984375
+      }
+    ],
+    "scope": "bounded40-second-per-worker GPU0 comparison, actual HAD mixed-pool sampling and8 updates of batch32 per8 collected episodes; initialized policies and repeated sampled episodes are diagnostic, not formal training",
+    "decision": "allow up to3 HAD trainers/card subject to unchanged measured-peak1.25+8GiB admission; SMAC remains2/card",
+    "three_way_gain_over_two": [
+      0.06187934627910008,
+      0.101210625721605
+    ],
+    "limits_and_memory_checks": "passed: total6/HAD, perGPU3 cap, SMAC rejects3,8GiB+1.25peak+live growth, isolated OOM recovery preserved",
+    "temporary_files_cleaned": true
+  },
+  "terminal_display_fix": {
+    "status": "passed",
+    "checked_at": "2026-09-22T06:45:35.817747+00:00",
+    "scope": "read-only viewer only; no training restart or additional experimental episodes",
+    "reproduced": [
+      "9 active tasks truncated to8 and incorrectly called abnormal",
+      "recent20 steps/s displayed with cumulative40 steps/s ETA"
+    ],
+    "checks": [
+      "all10 permitted tasks shown or paged",
+      "79x23,49x17,31x15,19x12 rendering bounds",
+      "recent-speed ETA consistency and stale/validation masking",
+      "actual PTY80x24 resized50x18, five frames, explicit CRLF without terminal newline conversion",
+      "Ctrl+C restored screen/cursor; existing experiment workers remained alive"
+    ]
+  },
+  "main0923_new_methods": {
+    "status": "passed",
+    "checked_at": "2026-09-24T02:58:23+0800",
+    "seconds": 329.4,
+    "implementation_revision": "main0923_sg_v1",
+    "results": [
+      {
+        "method": "regir_fixed4_sg",
+        "seed": 0,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.004357863217592239,
+        "intent_loss": null,
+        "seconds": 7.2,
+        "detach": {
+          "loss_equal": true,
+          "query_memory_gradient_zero": true,
+          "gradient_present_without_detach": true
+        },
+        "targeted": {
+          "training_depth_fixed4": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_fixed4_sg",
+        "seed": 1,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.011942725628614426,
+        "intent_loss": null,
+        "seconds": 7.5
+      },
+      {
+        "method": "regir_fixed4_sg",
+        "seed": 2,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.002830210607498884,
+        "intent_loss": null,
+        "seconds": 6.9
+      },
+      {
+        "method": "regir_intent_sg",
+        "seed": 0,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.04950220137834549,
+        "intent_loss": 2.2572169303894043,
+        "seconds": 3.5,
+        "detach": {
+          "loss_equal": true,
+          "query_memory_gradient_zero": true,
+          "gradient_present_without_detach": true
+        },
+        "targeted": {},
+        "intent": {
+          "init_same_parameters": true,
+          "extra_parameters": [
+            "global_net.intent_embed.weight",
+            "global_net.intent_head.bias",
+            "global_net.intent_head.weight"
+          ],
+          "init_q_equal": true,
+          "label_alignment": true,
+          "labelled_pairs": 1232,
+          "self_dead_hidden_padding_excluded": true,
+          "information_isolated": true,
+          "embedding_bounded": true,
+          "aux_loss_first20": 2.1119410037994384,
+          "aux_loss_last20": 0.6213313490152359,
+          "aux_loss_decreases": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_intent_sg",
+        "seed": 1,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.05642729252576828,
+        "intent_loss": 2.2242283821105957,
+        "seconds": 3.7,
+        "intent": null,
+        "intent_init": {
+          "init_same_parameters": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_intent_sg",
+        "seed": 2,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.04803118109703064,
+        "intent_loss": 2.2600486278533936,
+        "seconds": 5.5,
+        "intent": null,
+        "intent_init": {
+          "init_same_parameters": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_kv0_fixed4_sg",
+        "seed": 0,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.004357863217592239,
+        "intent_loss": null,
+        "seconds": 5.1,
+        "detach": {
+          "loss_equal": true,
+          "query_memory_gradient_zero": true,
+          "gradient_present_without_detach": true
+        },
+        "targeted": {
+          "training_depth_fixed4": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_kv0_fixed4_sg",
+        "seed": 1,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.011942725628614426,
+        "intent_loss": null,
+        "seconds": 7.0
+      },
+      {
+        "method": "regir_kv0_fixed4_sg",
+        "seed": 2,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.002830210607498884,
+        "intent_loss": null,
+        "seconds": 7.2
+      },
+      {
+        "method": "regir_kv0_intent_noaux_sg",
+        "seed": 0,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.004357863217592239,
+        "intent_loss": 2.245131015777588,
+        "seconds": 4.2,
+        "detach": {
+          "loss_equal": true,
+          "query_memory_gradient_zero": true,
+          "gradient_present_without_detach": true
+        },
+        "targeted": {},
+        "intent": {
+          "init_same_parameters": true,
+          "extra_parameters": [
+            "global_net.intent_embed.weight",
+            "global_net.intent_head.bias",
+            "global_net.intent_head.weight"
+          ],
+          "init_q_equal": true,
+          "label_alignment": true,
+          "labelled_pairs": 1232,
+          "self_dead_hidden_padding_excluded": true,
+          "information_isolated": true,
+          "embedding_bounded": true,
+          "aux_loss_first20": 2.271290826797485,
+          "aux_loss_last20": 2.4275503516197205,
+          "aux_loss_decreases": null,
+          "zero_weight_no_aux_gradient": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_kv0_intent_noaux_sg",
+        "seed": 1,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.011942725628614426,
+        "intent_loss": 2.2195780277252197,
+        "seconds": 5.0,
+        "intent": null,
+        "intent_init": {
+          "init_same_parameters": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_kv0_intent_noaux_sg",
+        "seed": 2,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.002830210607498884,
+        "intent_loss": 2.2599966526031494,
+        "seconds": 4.7,
+        "intent": null,
+        "intent_init": {
+          "init_same_parameters": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_kv0_intent_nomem",
+        "seed": 0,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.04926048219203949,
+        "intent_loss": 2.245131015777588,
+        "seconds": 4.6,
+        "detach": null,
+        "targeted": {
+          "query_ignores_memory": true,
+          "status": "passed"
+        },
+        "intent": {
+          "init_same_parameters": true,
+          "extra_parameters": [
+            "global_net.intent_embed.weight",
+            "global_net.intent_head.bias",
+            "global_net.intent_head.weight"
+          ],
+          "init_q_equal": true,
+          "label_alignment": true,
+          "labelled_pairs": 1232,
+          "self_dead_hidden_padding_excluded": true,
+          "information_isolated": true,
+          "embedding_bounded": true,
+          "aux_loss_first20": 2.106373918056488,
+          "aux_loss_last20": 0.7654510349035263,
+          "aux_loss_decreases": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_kv0_intent_nomem",
+        "seed": 1,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.05633428692817688,
+        "intent_loss": 2.2195780277252197,
+        "seconds": 4.2,
+        "intent": null,
+        "intent_init": {
+          "init_same_parameters": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_kv0_intent_nomem",
+        "seed": 2,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.04803014174103737,
+        "intent_loss": 2.2599966526031494,
+        "seconds": 5.7,
+        "intent": null,
+        "intent_init": {
+          "init_same_parameters": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_kv0_intent_norefil_sg",
+        "seed": 0,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.04917849972844124,
+        "intent_loss": 2.2397570610046387,
+        "seconds": 4.0,
+        "detach": {
+          "loss_equal": true,
+          "query_memory_gradient_zero": true,
+          "gradient_present_without_detach": true
+        },
+        "targeted": {},
+        "intent": {
+          "init_same_parameters": true,
+          "extra_parameters": [
+            "global_net.intent_embed.weight",
+            "global_net.intent_head.bias",
+            "global_net.intent_head.weight"
+          ],
+          "init_q_equal": true,
+          "label_alignment": true,
+          "labelled_pairs": 1232,
+          "self_dead_hidden_padding_excluded": true,
+          "information_isolated": true,
+          "embedding_bounded": true,
+          "aux_loss_first20": 2.108476793766022,
+          "aux_loss_last20": 0.7923049062490464,
+          "aux_loss_decreases": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_kv0_intent_norefil_sg",
+        "seed": 1,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.056137219071388245,
+        "intent_loss": 2.2209250926971436,
+        "seconds": 3.5,
+        "intent": null,
+        "intent_init": {
+          "init_same_parameters": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_kv0_intent_norefil_sg",
+        "seed": 2,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.04782073572278023,
+        "intent_loss": 2.2459890842437744,
+        "seconds": 3.8,
+        "intent": null,
+        "intent_init": {
+          "init_same_parameters": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_kv0_intent_sg",
+        "seed": 0,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.04926048219203949,
+        "intent_loss": 2.245131015777588,
+        "seconds": 6.1,
+        "detach": {
+          "loss_equal": true,
+          "query_memory_gradient_zero": true,
+          "gradient_present_without_detach": true
+        },
+        "targeted": {},
+        "intent": {
+          "init_same_parameters": true,
+          "extra_parameters": [
+            "global_net.intent_embed.weight",
+            "global_net.intent_head.bias",
+            "global_net.intent_head.weight"
+          ],
+          "init_q_equal": true,
+          "label_alignment": true,
+          "labelled_pairs": 1232,
+          "self_dead_hidden_padding_excluded": true,
+          "information_isolated": true,
+          "embedding_bounded": true,
+          "aux_loss_first20": 2.1040123403072357,
+          "aux_loss_last20": 0.7524600863456726,
+          "aux_loss_decreases": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_kv0_intent_sg",
+        "seed": 1,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.05633428692817688,
+        "intent_loss": 2.2195780277252197,
+        "seconds": 6.1,
+        "intent": null,
+        "intent_init": {
+          "init_same_parameters": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_kv0_intent_sg",
+        "seed": 2,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.04803014174103737,
+        "intent_loss": 2.2599966526031494,
+        "seconds": 6.4,
+        "intent": null,
+        "intent_init": {
+          "init_same_parameters": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_kv0_intent_sg",
+        "seed": 3,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.04711050167679787,
+        "intent_loss": 2.24552583694458,
+        "seconds": 5.4,
+        "intent": null,
+        "intent_init": {
+          "init_same_parameters": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_kv0_intent_sg",
+        "seed": 4,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.04848726838827133,
+        "intent_loss": 2.208807945251465,
+        "seconds": 5.4,
+        "intent": null,
+        "intent_init": {
+          "init_same_parameters": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_kv0_nocount_sg",
+        "seed": 0,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.004357863217592239,
+        "intent_loss": null,
+        "seconds": 4.3,
+        "detach": {
+          "loss_equal": true,
+          "query_memory_gradient_zero": true,
+          "gradient_present_without_detach": true
+        },
+        "targeted": {}
+      },
+      {
+        "method": "regir_kv0_nocount_sg",
+        "seed": 1,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.011942725628614426,
+        "intent_loss": null,
+        "seconds": 4.0
+      },
+      {
+        "method": "regir_kv0_nocount_sg",
+        "seed": 2,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.002830210607498884,
+        "intent_loss": null,
+        "seconds": 5.7
+      },
+      {
+        "method": "regir_kv0_nomem",
+        "seed": 0,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.004357863217592239,
+        "intent_loss": null,
+        "seconds": 3.9,
+        "detach": null,
+        "targeted": {
+          "query_ignores_memory": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_kv0_nomem",
+        "seed": 1,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.011942725628614426,
+        "intent_loss": null,
+        "seconds": 3.9
+      },
+      {
+        "method": "regir_kv0_nomem",
+        "seed": 2,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.002830210607498884,
+        "intent_loss": null,
+        "seconds": 3.4
+      },
+      {
+        "method": "regir_kv0_norefil_sg",
+        "seed": 0,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.004383358638733625,
+        "intent_loss": null,
+        "seconds": 3.5,
+        "detach": {
+          "loss_equal": true,
+          "query_memory_gradient_zero": true,
+          "gradient_present_without_detach": true
+        },
+        "targeted": {}
+      },
+      {
+        "method": "regir_kv0_norefil_sg",
+        "seed": 1,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.011718714609742165,
+        "intent_loss": null,
+        "seconds": 3.2
+      },
+      {
+        "method": "regir_kv0_norefil_sg",
+        "seed": 2,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.0029009555000811815,
+        "intent_loss": null,
+        "seconds": 3.9
+      },
+      {
+        "method": "regir_kv0_sg",
+        "seed": 0,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.004357863217592239,
+        "intent_loss": null,
+        "seconds": 5.3,
+        "detach": {
+          "loss_equal": true,
+          "query_memory_gradient_zero": true,
+          "gradient_present_without_detach": true
+        },
+        "targeted": {}
+      },
+      {
+        "method": "regir_kv0_sg",
+        "seed": 1,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.011942725628614426,
+        "intent_loss": null,
+        "seconds": 6.0
+      },
+      {
+        "method": "regir_kv0_sg",
+        "seed": 2,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.002830210607498884,
+        "intent_loss": null,
+        "seconds": 5.7
+      },
+      {
+        "method": "regir_kv0_sg",
+        "seed": 3,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.0021999841555953026,
+        "intent_loss": null,
+        "seconds": 6.3
+      },
+      {
+        "method": "regir_kv0_sg",
+        "seed": 4,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.004311108961701393,
+        "intent_loss": null,
+        "seconds": 6.2
+      },
+      {
+        "method": "regir_r0_sg",
+        "seed": 0,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.004357863217592239,
+        "intent_loss": null,
+        "seconds": 4.6,
+        "detach": {
+          "loss_equal": true,
+          "query_memory_gradient_zero": true,
+          "gradient_present_without_detach": true
+        },
+        "targeted": {
+          "round_parameters_unused": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_r0_sg",
+        "seed": 1,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.011942725628614426,
+        "intent_loss": null,
+        "seconds": 4.5
+      },
+      {
+        "method": "regir_r0_sg",
+        "seed": 2,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.002830210607498884,
+        "intent_loss": null,
+        "seconds": 4.8
+      },
+      {
+        "method": "regir_r1_nocount_sg",
+        "seed": 0,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.004357863217592239,
+        "intent_loss": null,
+        "seconds": 3.3,
+        "detach": {
+          "loss_equal": true,
+          "query_memory_gradient_zero": true,
+          "gradient_present_without_detach": true
+        },
+        "targeted": {}
+      },
+      {
+        "method": "regir_r1_nocount_sg",
+        "seed": 1,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.011942725628614426,
+        "intent_loss": null,
+        "seconds": 3.4
+      },
+      {
+        "method": "regir_r1_nocount_sg",
+        "seed": 2,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.002830210607498884,
+        "intent_loss": null,
+        "seconds": 3.8
+      },
+      {
+        "method": "regir_r1_nomem",
+        "seed": 0,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.004357863217592239,
+        "intent_loss": null,
+        "seconds": 3.5,
+        "detach": null,
+        "targeted": {
+          "query_ignores_memory": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_r1_nomem",
+        "seed": 1,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.011942725628614426,
+        "intent_loss": null,
+        "seconds": 3.4
+      },
+      {
+        "method": "regir_r1_nomem",
+        "seed": 2,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.002830210607498884,
+        "intent_loss": null,
+        "seconds": 3.2
+      },
+      {
+        "method": "regir_r1_norefil_sg",
+        "seed": 0,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.004383358638733625,
+        "intent_loss": null,
+        "seconds": 1.8,
+        "detach": {
+          "loss_equal": true,
+          "query_memory_gradient_zero": true,
+          "gradient_present_without_detach": true
+        },
+        "targeted": {}
+      },
+      {
+        "method": "regir_r1_norefil_sg",
+        "seed": 1,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.011718714609742165,
+        "intent_loss": null,
+        "seconds": 2.1
+      },
+      {
+        "method": "regir_r1_norefil_sg",
+        "seed": 2,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.0029009555000811815,
+        "intent_loss": null,
+        "seconds": 2.3
+      },
+      {
+        "method": "regir_r1_sg",
+        "seed": 0,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.004357863217592239,
+        "intent_loss": null,
+        "seconds": 5.1,
+        "detach": {
+          "loss_equal": true,
+          "query_memory_gradient_zero": true,
+          "gradient_present_without_detach": true
+        },
+        "targeted": {}
+      },
+      {
+        "method": "regir_r1_sg",
+        "seed": 1,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.011942725628614426,
+        "intent_loss": null,
+        "seconds": 5.3
+      },
+      {
+        "method": "regir_r1_sg",
+        "seed": 2,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.002830210607498884,
+        "intent_loss": null,
+        "seconds": 5.5
+      },
+      {
+        "method": "regir_r1_sg",
+        "seed": 3,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.0021999841555953026,
+        "intent_loss": null,
+        "seconds": 5.2
+      },
+      {
+        "method": "regir_r1_sg",
+        "seed": 4,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.004311108961701393,
+        "intent_loss": null,
+        "seconds": 4.7
+      },
+      {
+        "method": "regir_sg",
+        "seed": 0,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.004357863217592239,
+        "intent_loss": null,
+        "seconds": 6.2,
+        "detach": {
+          "loss_equal": true,
+          "query_memory_gradient_zero": true,
+          "gradient_present_without_detach": true
+        },
+        "targeted": {}
+      },
+      {
+        "method": "regir_sg",
+        "seed": 1,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.011942725628614426,
+        "intent_loss": null,
+        "seconds": 6.1
+      },
+      {
+        "method": "regir_sg",
+        "seed": 2,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.002830210607498884,
+        "intent_loss": null,
+        "seconds": 6.7
+      },
+      {
+        "method": "regir_untied4_sg",
+        "seed": 0,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.004357863217592239,
+        "intent_loss": null,
+        "seconds": 7.8,
+        "detach": {
+          "loss_equal": true,
+          "query_memory_gradient_zero": true,
+          "gradient_present_without_detach": true
+        },
+        "targeted": {
+          "training_depth_fixed4": true,
+          "status": "passed"
+        }
+      },
+      {
+        "method": "regir_untied4_sg",
+        "seed": 1,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.011942725628614426,
+        "intent_loss": null,
+        "seconds": 8.5
+      },
+      {
+        "method": "regir_untied4_sg",
+        "seed": 2,
+        "env": "had",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 8,
+        "physical_steps": 32,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.002830210607498884,
+        "intent_loss": null,
+        "seconds": 8.0
+      }
+    ]
+  },
+  "smac_main0923_extension": {
+    "status": "passed",
+    "checked_at": "2026-09-24T02:58:46+0800",
+    "seconds": 22.6,
+    "implementation_revision": "main0923_sg_v1",
+    "cpu_matrix": [
+      {
+        "method": "regir_kv0_intent_sg",
+        "seed": 0,
+        "env": "smacv2",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.07713872194290161,
+        "intent_loss": 1.9880621433258057,
+        "seconds": 8.9,
+        "padding_death_zero": true,
+        "input_path": "unchanged from main0921 accepted regir/regir_r1 (smac_six_method_extension)",
+        "intent_classes": 7,
+        "intent_label_mapping": "a<6 -> a; attack(any enemy) -> 6",
+        "intent_ok": true,
+        "final_interface_20v20": {
+          "status": "passed",
+          "ep_len": 88,
+          "battle_won": 0.0
+        }
+      },
+      {
+        "method": "regir_kv0_intent_sg",
+        "seed": 1,
+        "env": "smacv2",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.13745278120040894,
+        "intent_loss": 1.982077956199646,
+        "seconds": 8.9,
+        "padding_death_zero": true,
+        "input_path": "unchanged from main0921 accepted regir/regir_r1 (smac_six_method_extension)",
+        "intent_classes": 7,
+        "intent_label_mapping": "a<6 -> a; attack(any enemy) -> 6",
+        "intent_ok": true
+      },
+      {
+        "method": "regir_kv0_intent_sg",
+        "seed": 2,
+        "env": "smacv2",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.04925747960805893,
+        "intent_loss": 1.9674620628356934,
+        "seconds": 8.6,
+        "padding_death_zero": true,
+        "input_path": "unchanged from main0921 accepted regir/regir_r1 (smac_six_method_extension)",
+        "intent_classes": 7,
+        "intent_label_mapping": "a<6 -> a; attack(any enemy) -> 6",
+        "intent_ok": true
+      },
+      {
+        "method": "regir_kv0_sg",
+        "seed": 0,
+        "env": "smacv2",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.037377484142780304,
+        "intent_loss": null,
+        "seconds": 8.9,
+        "padding_death_zero": true,
+        "input_path": "unchanged from main0921 accepted regir/regir_r1 (smac_six_method_extension)",
+        "final_interface_20v20": {
+          "status": "passed",
+          "ep_len": 77,
+          "battle_won": 0.0
+        }
+      },
+      {
+        "method": "regir_kv0_sg",
+        "seed": 1,
+        "env": "smacv2",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.09781122207641602,
+        "intent_loss": null,
+        "seconds": 8.8,
+        "padding_death_zero": true,
+        "input_path": "unchanged from main0921 accepted regir/regir_r1 (smac_six_method_extension)"
+      },
+      {
+        "method": "regir_kv0_sg",
+        "seed": 2,
+        "env": "smacv2",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.009908239357173443,
+        "intent_loss": null,
+        "seconds": 8.7,
+        "padding_death_zero": true,
+        "input_path": "unchanged from main0921 accepted regir/regir_r1 (smac_six_method_extension)"
+      },
+      {
+        "method": "regir_r1_sg",
+        "seed": 0,
+        "env": "smacv2",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.037377484142780304,
+        "intent_loss": null,
+        "seconds": 8.5,
+        "padding_death_zero": true,
+        "input_path": "unchanged from main0921 accepted regir/regir_r1 (smac_six_method_extension)",
+        "final_interface_20v20": {
+          "status": "passed",
+          "ep_len": 86,
+          "battle_won": 0.0
+        }
+      },
+      {
+        "method": "regir_r1_sg",
+        "seed": 1,
+        "env": "smacv2",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.09781122207641602,
+        "intent_loss": null,
+        "seconds": 8.4,
+        "padding_death_zero": true,
+        "input_path": "unchanged from main0921 accepted regir/regir_r1 (smac_six_method_extension)"
+      },
+      {
+        "method": "regir_r1_sg",
+        "seed": 2,
+        "env": "smacv2",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.009908239357173443,
+        "intent_loss": null,
+        "seconds": 8.2,
+        "padding_death_zero": true,
+        "input_path": "unchanged from main0921 accepted regir/regir_r1 (smac_six_method_extension)"
+      },
+      {
+        "method": "regir_sg",
+        "seed": 0,
+        "env": "smacv2",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.037377484142780304,
+        "intent_loss": null,
+        "seconds": 8.1,
+        "padding_death_zero": true,
+        "input_path": "unchanged from main0921 accepted regir/regir_r1 (smac_six_method_extension)",
+        "final_interface_20v20": {
+          "status": "passed",
+          "ep_len": 77,
+          "battle_won": 0.0
+        }
+      },
+      {
+        "method": "regir_sg",
+        "seed": 1,
+        "env": "smacv2",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          8,
+          10
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.09781122207641602,
+        "intent_loss": null,
+        "seconds": 8.8,
+        "padding_death_zero": true,
+        "input_path": "unchanged from main0921 accepted regir/regir_r1 (smac_six_method_extension)"
+      },
+      {
+        "method": "regir_sg",
+        "seed": 2,
+        "env": "smacv2",
+        "status": "passed",
+        "device": "cpu",
+        "workers": 4,
+        "physical_steps": 16,
+        "sequence_length": 5,
+        "mixed_scales": [
+          4,
+          6,
+          8
+        ],
+        "finite_td": true,
+        "parameters_updated": true,
+        "checkpoint_restore_exact": true,
+        "resumed_next_update_exact": true,
+        "loss": 0.009908239357173443,
+        "intent_loss": null,
+        "seconds": 8.6,
+        "padding_death_zero": true,
+        "input_path": "unchanged from main0921 accepted regir/regir_r1 (smac_six_method_extension)"
+      }
+    ]
+  }
+}

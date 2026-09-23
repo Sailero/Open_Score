@@ -592,8 +592,11 @@ def evaluate_profile_checkpoint(method, checkpoint, *, output, kind="final", env
         if not re.fullmatch(r"[A-Za-z0-9_.-]+", shard_id):
             raise ValueError("Evaluation shard identity must be a safe filename component")
     info = checkpoint_info(checkpoint, method=method, seed=seed, env=env)
-    if kind != "final" and (method != "regir" or env != "had"):
-        raise ValueError("Depth and readout interventions require the HAD Full final")
+    from .experiment import test_depth, EVAL_PHASES, PROFILE
+    if kind not in EVAL_PHASES:
+        raise ValueError(f"Unknown evaluation kind {kind}")
+    if kind in ("depth", "readout", "r1deploy", "gate_depth") and test_depth(method) is None:
+        raise ValueError("Depth and readout interventions require a relation-cycle final")
     manifest = initialize(output)
     frozen_jobs = evaluation_jobs(info, kind)
     if assigned_jobs is None:
@@ -630,8 +633,10 @@ def evaluate_profile_checkpoint(method, checkpoint, *, output, kind="final", env
         from .anchors import BLUE_STRATEGY
         policy = load_policy(method, checkpoint)
         policy.set_device(device)
-        policy_name = f"main0921_{next(_POLICY_IDS)}"
-        register_end_to_end_policy("red", policy_name, "main0921 frozen final", lambda _: policy)
+        policy_name = f"{PROFILE}_{next(_POLICY_IDS)}"
+        register_end_to_end_policy("red", policy_name, f"{PROFILE} frozen final", lambda _: policy)
+        branch = getattr(policy.mac.agent, "global_net", None)
+        default_depth = test_depth(method)
     else:
         from open_score.envs.smacv2_env import generate_registered_scenes
         scenes = generate_registered_scenes(output)
@@ -678,8 +683,12 @@ def evaluate_profile_checkpoint(method, checkpoint, *, output, kind="final", env
             if env == "had":
                 if job.get("cycle_depth") is not None:
                     policy.set_eval_depth(job["cycle_depth"])
+                elif default_depth is not None:
+                    policy.set_eval_depth(default_depth)
                 if kind == "readout":
                     policy.mac.agent.global_net.readout_override = job["readout"]
+                if branch is not None and getattr(branch, "intent", False):
+                    branch.intent_override = job.get("intent_override")
                 torch.manual_seed(policy_seed(job))
                 with torch.inference_mode():
                     result = run_episode(targets=job["config"]["K"], red=job["config"]["N_R"],
@@ -706,6 +715,9 @@ def evaluate_profile_checkpoint(method, checkpoint, *, output, kind="final", env
                                 runner.close_env()
                             runner = _smac_eval_runner(saved, job["config"], device=device)
                             runner_config = dict(job["config"])
+                        if job.get("cycle_depth") is not None:
+                            runner.mac.set_global_depth(int(job["cycle_depth"]))
+                            runner.mac.args.global_eval_depth = int(job["cycle_depth"])
                         torch.manual_seed(policy_seed(job))
                         with torch.inference_mode():
                             _, summaries = runner.run(test_mode=True, jobs=[job])

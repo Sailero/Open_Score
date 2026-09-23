@@ -458,6 +458,18 @@ class QLearner:
             im_loss = (im_masked_td_error ** 2).sum() / mask.sum()
             loss = (1 - im_prop) * loss + im_prop * im_loss
 
+        intent = None
+        if getattr(self.args, "rer_intent", False):
+            from open_score.models.entity_encoder import intent_auxiliary
+            intent = intent_auxiliary(self.mac.agent, actions.squeeze(-1), org_mask.squeeze(-1),
+                                      batch.batch_size)
+            weight = float(getattr(self.args, "intent_aux_weight", 0.0))
+            if intent is not None and weight > 0:
+                loss = loss + weight * intent[0]
+            # Drop the recorded graph so activations are not retained until the next update.
+            self.mac.agent.global_net.last_intent = None
+            self.target_mac.agent.global_net.last_intent = None
+
         if self.use_copa and self.args.hier_agent['copa_vi_loss']:
             # VI loss
             q_mu, q_logvar = self.mac.copa_recog(batch)
@@ -510,6 +522,9 @@ class QLearner:
                              "td_error_abs": float(masked_td_error.detach().abs().sum() / mask.sum())}
         if self.args.agent['imagine']:
             self.last_metrics['im_loss'] = float(im_loss.detach())
+        if intent is not None:
+            self.last_metrics['intent_loss'] = float(intent[0].detach())
+            self.last_metrics['intent_acc'] = float(intent[1])
         return self.last_metrics
 
     def _update_targets(self):

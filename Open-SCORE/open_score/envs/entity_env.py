@@ -281,6 +281,7 @@ class FrozenPolicyAdapter:
         self.mac.init_hidden(batch_size=1)
         self.last_step, self.last_result = -1, None
         self.q_tot, self.q_i = [], []
+        self.intent_stats = dict(count={}, correct={}, nll={}, label_hist=[0] * 9)
         self.roster = None
         self._alloc_hold = 0
         self._last_nearest = None
@@ -335,7 +336,21 @@ class FrozenPolicyAdapter:
                         hier_decision=[[int(self._hier_decision(state, absent, step, env_args))]])
         self.batch.update(data, ts=step)
         with th.no_grad():
+            branch = getattr(self.mac.agent, "global_net", None)
+            oracle = branch is not None and getattr(branch, "intent_override", None) == "oracle"
+            if oracle:
+                # Diagnostic upper bound: inject the teammates' actual actions of this step.
+                hidden = self.mac.hidden_states.clone()
+                branch.intent_override = None
+                first = self.mac.select_actions(self.batch, t_ep=step, t_env=0, test_mode=True)
+                self.mac.hidden_states = hidden
+                branch.intent_oracle_actions = first.reshape(1, -1).long()
+                branch.intent_override = "oracle"
             actions = self.mac.select_actions(self.batch, t_ep=step, t_env=0, test_mode=True)
+            if oracle:
+                branch.intent_oracle_actions = None
+            if branch is not None and getattr(branch, "intent", False):
+                self._record_intent(branch, actions)
             self.batch.update({"actions": actions.unsqueeze(-1)}, ts=step, mark_filled=False)
             if hasattr(self.mac, "evaluation_values"):
                 values = self.mac.evaluation_values(self.batch, step, actions, [0], self.mixer)
@@ -374,7 +389,37 @@ class FrozenPolicyAdapter:
             self._last_alive = alive
         return decide
 
+    def _record_intent(self, branch, actions):
+        """Per-round top-1 hits and NLL of teammate-action predictions against this step's actions."""
+        import torch as th
+        record = branch.last_intent
+        if record is None or "idx" not in record:
+            return
+        na = actions.shape[-1]
+        labels = actions.reshape(-1, na).long()
+        bt = record["idx"] // na
+        origin = record["origin"].long().clamp(0, na - 1)
+        target = labels.index_select(0, bt).gather(1, origin)
+        valid = record["teammate"]
+        stats = self.intent_stats
+        stats["label_hist"] = (np.asarray(stats["label_hist"])
+                               + np.bincount(target[valid].cpu().numpy(), minlength=9)[:9]).tolist()
+        for round_id, logits in enumerate(record["logits"]):
+            keep = valid & (record["depth"] > round_id).unsqueeze(-1)
+            n = int(keep.sum())
+            if n == 0:
+                continue
+            chosen, truth = logits[keep], target[keep]
+            key = str(round_id + 1)
+            stats["count"][key] = stats["count"].get(key, 0) + n
+            stats["correct"][key] = stats["correct"].get(key, 0) + int((chosen.argmax(-1) == truth).sum())
+            stats["nll"][key] = stats["nll"].get(key, 0.0) + float(
+                th.nn.functional.cross_entropy(chosen, truth, reduction="sum"))
+
     def episode_q_statistics(self):
-        return {"q_tot_mean": float(np.mean(self.q_tot)) if self.q_tot else None,
-                "q_tot_std": float(np.std(self.q_tot)) if self.q_tot else None,
-                "q_i_mean": float(np.mean(self.q_i)) if self.q_i else None}
+        values = {"q_tot_mean": float(np.mean(self.q_tot)) if self.q_tot else None,
+                  "q_tot_std": float(np.std(self.q_tot)) if self.q_tot else None,
+                  "q_i_mean": float(np.mean(self.q_i)) if self.q_i else None}
+        if self.intent_stats["count"]:
+            values["intent_stats"] = dict(self.intent_stats)
+        return values

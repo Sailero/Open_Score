@@ -82,6 +82,18 @@ def trajectory_frame(adapter, native_actions):
             "step_damage": float(adapter.env.step_target_damage)}
 
 
+PURSUIT_DISTANCE, PURSUIT_ANGLE = 1500.0, np.deg2rad(30.0)
+
+
+def pursuit_matrix(red_positions, red_velocities, blue_positions):
+    """[n_red, n_blue] bool: red is within 1500 m of blue and heading within 30 degrees of it."""
+    offset = blue_positions[None] - red_positions[:, None]
+    distance = np.linalg.norm(offset, axis=-1)
+    speed = np.linalg.norm(red_velocities, axis=-1)[:, None]
+    cosine = (offset * red_velocities[:, None]).sum(-1) / np.maximum(distance * speed, 1e-9)
+    return (distance < PURSUIT_DISTANCE) & (speed > 1e-9) & (cosine > np.cos(PURSUIT_ANGLE))
+
+
 def red_friendly_collision_pairs(env):
     """Unique Red-Red collision incidents this physics step."""
     red_ids = {int(agent.Id) for agent in env.red_agents}
@@ -149,6 +161,7 @@ class EpisodeDiagnostics:
         self.wipeout_steps = 0
         self.speed_sum = self.speed_count = self.distance_sum = self.distance_count = 0
         self.target_distance_sum = self.target_distance_count = 0
+        self.dup_pursuit_sum = self.dup_pursuit_count = 0
         self.minimum_distances = []
         self.trajectory = []
 
@@ -175,6 +188,12 @@ class EpisodeDiagnostics:
                 self.distance_sum += float(pairs.sum())
                 self.distance_count += len(pairs)
                 self.minimum_distances.append(float(pairs.min()))
+            blue = [b for b in env.blue_agents if b.Health > 0]
+            if blue:
+                pursuers = pursuit_matrix(positions, np.asarray([a.velocity[:2] for a in red], dtype=np.float64),
+                                          np.asarray([b.position[:2] for b in blue], dtype=np.float64))
+                self.dup_pursuit_sum += float((pursuers.sum(0) >= 2).mean())
+                self.dup_pursuit_count += 1
 
     def after_step(self, native_actions):
         env = self.adapter.env
@@ -242,6 +261,7 @@ class EpisodeDiagnostics:
             "friendly_overkill": int(self.friendly_overkill) if known_causes else None,
             "wipeout_steps": int(self.wipeout_steps),
             "min_pairwise_dist_p05": float(np.quantile(self.minimum_distances, .05)) if self.minimum_distances else None,
+            "dup_pursuit_frac": mean(self.dup_pursuit_sum, self.dup_pursuit_count),
         }
 
 

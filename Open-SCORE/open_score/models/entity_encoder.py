@@ -486,6 +486,11 @@ def _global_width(args):
     return src, dim, heads, ffn_mult
 
 
+def intent_classes(args):
+    """HAD: the 9 planar actions. SMAC: 6 basic actions + one merged "attack" class."""
+    return 7 if getattr(args, "action_head", None) == "common6_enemy" else int(args.n_actions)
+
+
 class GlobalBranch(nn.Module):
     def __init__(self, args, kind):
         super().__init__()
@@ -531,6 +536,20 @@ class GlobalBranch(nn.Module):
             self.untied_blocks = nn.ModuleList([
                 nn.ModuleDict({name: deepcopy(getattr(self, name)) for name in names})
                 for _ in range(3)])
+        self.intent = bool(getattr(args, "rer_intent", False))
+        if self.intent:
+            if kind != "cycle" or self.rer_update == "untied4":
+                raise ValueError("rer_intent requires a shared-parameter cycle branch")
+            n_actions = intent_classes(args)
+            # Drawn from a forked RNG so every other module (and the mixer
+            # built afterwards) initializes exactly as the same-seed ARR.
+            with th.random.fork_rng(devices=[]):
+                self.intent_head = nn.Linear(dim, n_actions)
+                self.intent_embed = nn.Linear(n_actions, dim, bias=False)
+            nn.init.zeros_(self.intent_embed.weight)
+        self.intent_override = None
+        self.intent_oracle_actions = None
+        self.last_intent = None
         self.readout_override = None
 
     def project(self, tokens):
@@ -638,7 +657,7 @@ class GlobalBranch(nn.Module):
             parts.append(self._maybe_checkpoint(fn, *(tensor[sl] for tensor in aligned), *extra))
         return th.cat(parts, 0)
 
-    def _cycle_round(self, tokens, mask, count, initial=None, round_id=0):
+    def _cycle_round(self, tokens, mask, count, initial=None, round_id=0, kv_extra=None):
         block = self.untied_blocks[round_id - 1] if self.rer_update == "untied4" and round_id else None
         def layer(name):
             return getattr(self, name) if block is None else block[name]
@@ -646,6 +665,8 @@ class GlobalBranch(nn.Module):
         if not getattr(self.args, "skip_count_inject", False):
             injected = injected + layer("count_to_token")(count).unsqueeze(1)
         memory = initial if self.rer_update == "kv0" and initial is not None else tokens
+        if kv_extra is not None:
+            memory = memory + kv_extra
         if getattr(self.args, "global_kv_prenorm", False):
             memory = layer("norm_attn")(memory).masked_fill(mask.unsqueeze(-1), 0)
         attn = layer("self_attn")
@@ -662,6 +683,33 @@ class GlobalBranch(nn.Module):
         slots = slots + self.cross_attn(query, tokens, tokens, mask)
         slots = slots + self.self_attn(self.norm_attn(slots), slots, slots)
         return slots + self.ffn(self.norm_ffn(slots))
+
+    def _intent_probs(self, logits, teammate, origin, bt):
+        probs = th.softmax(logits, dim=-1)
+        mode = self.intent_override
+        if mode is None:
+            return probs
+        if self.training:
+            raise ValueError("Intent overrides are evaluation-only")
+        if mode == "uniform":
+            return th.full_like(probs, 1.0 / probs.shape[-1])
+        if mode == "shuffle":
+            # Permute predicted distributions among each observer's visible teammates.
+            shuffled = probs.clone()
+            for row in range(probs.shape[0]):
+                slots = teammate[row].nonzero(as_tuple=False).flatten()
+                if slots.numel() > 1:
+                    order = slots[th.randperm(slots.numel(), device=slots.device)]
+                    shuffled[row, slots] = probs[row, order]
+            return shuffled
+        if mode == "oracle":
+            actions = self.intent_oracle_actions
+            if actions is None or bt is None:
+                raise ValueError("Oracle intent requires this step's teammate actions")
+            n_agents = actions.shape[-1]
+            chosen = actions.index_select(0, bt).gather(1, origin.clamp(0, n_agents - 1).long())
+            return F.one_hot(chosen.clamp(max=probs.shape[-1] - 1), probs.shape[-1]).to(probs.dtype)
+        raise ValueError(f"Unknown intent override {mode!r}")
 
     def _own_prefs(self, memory):
         return th.softmax(self.pref_logits(memory[:, 0]), dim=-1)
@@ -694,17 +742,34 @@ class GlobalBranch(nn.Module):
             return [memory], key_mask
         embed = None
         bt = None if pack is None else pack["idx"] // int(pack["na"])
+        teammate, logits, kv_extra = None, [], None
+        if self.intent:
+            # Visible, live Red teammates in this observer's view; slot 0 is the observer.
+            n_agents = int(self.args.n_agents)
+            teammate = (origin < n_agents) & ~key_mask
+            teammate[:, 0] = False
         for round_id in range(n_rounds):
             if self.kind == "feedback" and embed is not None:
                 memory = self._map_chunks(
                     self._inject_chunk, memory, origin, key_mask, bt, extra=(embed,))
             if self.kind == "feedback":
                 memory = self._map_chunks(self._cycle_round, memory, key_mask, count)
+            elif kv_extra is not None:
+                def cycle(current, mask, counts, h0, extra, iteration=round_id):
+                    return self._cycle_round(current, mask, counts, h0, iteration, extra)
+                memory = self._maybe_checkpoint(cycle, memory, key_mask, count, initial, kv_extra)
             else:
                 def cycle(current, mask, counts, h0, iteration=round_id):
                     return self._cycle_round(current, mask, counts, h0, iteration)
                 memory = self._maybe_checkpoint(cycle, memory, key_mask, count, initial)
             states.append(memory)
+            if self.intent:
+                logits.append(self.intent_head(memory))
+                if round_id + 1 < n_rounds:
+                    probs = self._intent_probs(logits[-1], teammate, origin, bt)
+                    kv_extra = self.intent_embed(probs) * teammate.unsqueeze(-1).to(memory.dtype)
+            if self.intent and round_id + 1 == n_rounds:
+                self.last_intent = dict(logits=logits, teammate=teammate, origin=origin)
             if self.kind == "feedback" and round_id + 1 < n_rounds:
                 prefs = self._own_prefs(memory)
                 dense = prefs.new_zeros(pack["n_obs"], prefs.shape[-1])
@@ -909,6 +974,7 @@ class EntityAgent(ALMAAgent):
             depth = 1
         kind = self.global_branch
         outputs = []
+        self.global_net.last_intent = None
         if kind in ("cycle", "slot", "feedback"):
             if getattr(self.global_net, "capture_attention", False):
                 self.global_net.last_self_attn = []
@@ -926,10 +992,12 @@ class EntityAgent(ALMAAgent):
                 ty = types.reshape(n_obs, n_ent, 3).index_select(0, idx)
                 dpt = depth_flat.index_select(0, idx)
                 extra = {}
-                if kind == "feedback":
+                if kind == "feedback" or self.global_net.intent:
                     extra["origin"] = origin.reshape(n_obs, n_ent).index_select(0, idx)
                     extra["pack"] = dict(idx=idx, n_obs=n_obs, bs=bs, ts=ts, na=na)
                 states_live, mem_mask_live = self.global_net.build_memories(tok, km, ty, dpt, **extra)
+                if self.global_net.intent:
+                    self.global_net.last_intent.update(idx=idx, depth=dpt, shape=(bs, ts, na))
                 n_mem = states_live[0].shape[1]
                 states_full = []
                 for memory in states_live:
@@ -1009,6 +1077,55 @@ class EntityAgent(ALMAAgent):
         groups = tuple(g.bool() | blocked for g in groups)
         imagined["imagine_mask"] = th.cat(groups, dim=0).to(th.uint8)
         return imagined, groups
+
+
+def intent_targets(agent, actions, step_mask, n_main):
+    """Map every live observer's teammate slot back to that teammate's executed action.
+
+    Returns (record, observer rows, labels [rows, n_ent], valid [rows, n_ent], depth [rows]).
+    """
+    record = getattr(agent.global_net, "last_intent", None)
+    if record is None or "idx" not in record:
+        return None
+    idx = record["idx"]
+    _, ts, na = record["shape"]
+    b, t = idx // (ts * na), (idx // na) % ts
+    rows = ((b < n_main) & (t < ts - 1)).nonzero(as_tuple=False).flatten()
+    if rows.numel() == 0:
+        return None
+    b, t = b.index_select(0, rows), t.index_select(0, rows)
+    origin = record["origin"].index_select(0, rows).long().clamp(0, na - 1)
+    classes = record["logits"][0].shape[-1]
+    labels = actions[b, t].gather(1, origin).clamp(max=classes - 1)
+    valid = record["teammate"].index_select(0, rows) & (step_mask[b, t] > 0).unsqueeze(-1)
+    return record, rows, labels, valid, record["depth"].index_select(0, rows)
+
+
+def intent_auxiliary(agent, actions, step_mask, n_main):
+    """Cross-entropy of each round's teammate-action prediction against the
+    action that teammate executed at the same step (main batch only).
+
+    actions: [bs, T-1, n_agents] long; step_mask: [bs, T-1] (1 = learnable step).
+    Returns (loss averaged over rounds and visible teammates, top-1 accuracy, count).
+    """
+    targets = intent_targets(agent, actions, step_mask, n_main)
+    if targets is None:
+        return None
+    record, rows, labels, valid, depth = targets
+    total, correct, count = 0.0, 0.0, 0
+    for round_id, logits in enumerate(record["logits"]):
+        keep = valid & (depth > round_id).unsqueeze(-1)
+        n = int(keep.sum())
+        if n == 0:
+            continue
+        chosen = logits.index_select(0, rows)[keep]
+        target = labels[keep]
+        total = total + F.cross_entropy(chosen, target, reduction="sum")
+        correct += float((chosen.detach().argmax(-1) == target).sum())
+        count += n
+    if count == 0:
+        return None
+    return total / count, correct / count, count
 
 
 class PolicyValueMixin:

@@ -1,0 +1,4328 @@
+{
+  "profile": "main0923",
+  "branch": null,
+  "checkpoints": [
+    {
+      "env": "had",
+      "method": "refil",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "8437bce5209e4a92add0b18b10171e7b",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/refil/train/seed_0/final.pt",
+      "source_profile": null
+    },
+    {
+      "env": "had",
+      "method": "refil",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "92d90971bb874c75bd1c4f77f9bfe268",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/refil/train/seed_1/final.pt",
+      "source_profile": null
+    },
+    {
+      "env": "had",
+      "method": "refil",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "7ea826c2179f463885c7893dba9687af",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/refil/train/seed_2/final.pt",
+      "source_profile": null
+    },
+    {
+      "env": "had",
+      "method": "refil_matched",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "986e65ea27a84ab0aab149048c9e097b",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/refil_matched/train/seed_0/final.pt",
+      "source_profile": null
+    },
+    {
+      "env": "had",
+      "method": "refil_matched",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "704a7ee2f9a1417693c1f81797e39c22",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/refil_matched/train/seed_1/final.pt",
+      "source_profile": null
+    },
+    {
+      "env": "had",
+      "method": "refil_matched",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "e33d205e725c4bfd88fbdb3159ca8828",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/refil_matched/train/seed_2/final.pt",
+      "source_profile": null
+    },
+    {
+      "env": "had",
+      "method": "b2_qmix_atten",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "7c6a03bb5b234b4d9cf78e82b49f14e0",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/b2_qmix_atten/train/seed_0/final.pt",
+      "source_profile": null
+    },
+    {
+      "env": "had",
+      "method": "b2_qmix_atten",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "b845741854d24b5fa23e86d2c1d9113d",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/b2_qmix_atten/train/seed_1/final.pt",
+      "source_profile": null
+    },
+    {
+      "env": "had",
+      "method": "b2_qmix_atten",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "0bee87e082924244a6ddf96016eac02f",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/b2_qmix_atten/train/seed_2/final.pt",
+      "source_profile": null
+    },
+    {
+      "env": "had",
+      "method": "dcg",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "f77b760225934887b4539f2a98e69d28",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/dcg/train/seed_0/final.pt",
+      "source_profile": null
+    },
+    {
+      "env": "had",
+      "method": "dcg",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "0a94180eb9624fa4be99e1aa60a36b9f",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/dcg/train/seed_1/final.pt",
+      "source_profile": null
+    },
+    {
+      "env": "had",
+      "method": "dcg",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "db7315cc100e406e815e7667e91bb694",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/dcg/train/seed_2/final.pt",
+      "source_profile": null
+    },
+    {
+      "env": "had",
+      "method": "spectra",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "53e7f877dd9548a784e6d7376b42b7e2",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/spectra/train/seed_0/final.pt",
+      "source_profile": null
+    },
+    {
+      "env": "had",
+      "method": "spectra",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "c3769d11d2bd4250838f8bdaa29cf3a2",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/spectra/train/seed_1/final.pt",
+      "source_profile": null
+    },
+    {
+      "env": "had",
+      "method": "spectra",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "84ab91a1215f4d83afa8921d9054905d",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/spectra/train/seed_2/final.pt",
+      "source_profile": null
+    },
+    {
+      "env": "had",
+      "method": "alma",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "b649c32be10f45dd9f58b56c9ee7541b",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/alma/train/seed_0/final.pt",
+      "source_profile": null
+    },
+    {
+      "env": "had",
+      "method": "alma",
+      "seed": 1,
+      "t_env": 1000007,
+      "checkpoint_id": "bef1d569c3d1481eb943218335bc1a2d",
+      "checkpoint": "final@1000007",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/alma/train/seed_1/final.pt",
+      "source_profile": null
+    },
+    {
+      "env": "had",
+      "method": "alma",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "ec7ba92b0aff4edc84da0193569d67b7",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/alma/train/seed_2/final.pt",
+      "source_profile": null
+    },
+    {
+      "env": "had",
+      "method": "transfqmix",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "ba6ad0aad4844160892a1bc20a57e682",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/transfqmix/train/seed_0/final.pt",
+      "source_profile": "main0921"
+    },
+    {
+      "env": "had",
+      "method": "transfqmix",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "55ae92a6386a4ba3919d33fb1966e070",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/transfqmix/train/seed_1/final.pt",
+      "source_profile": "main0921"
+    },
+    {
+      "env": "had",
+      "method": "transfqmix",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "0a9f5fd11b1f4f0daaccc0e617fc3290",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/transfqmix/train/seed_2/final.pt",
+      "source_profile": "main0921"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "train.had.refil.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "refil",
+      "seed": 0,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000000,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.refil.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "refil",
+      "seed": 1,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000000,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.refil.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "refil",
+      "seed": 2,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000000,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.refil_matched.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "refil_matched",
+      "seed": 0,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000000,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.refil_matched.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "refil_matched",
+      "seed": 1,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000000,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.refil_matched.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "refil_matched",
+      "seed": 2,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000000,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.b2_qmix_atten.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "b2_qmix_atten",
+      "seed": 0,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000000,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.b2_qmix_atten.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "b2_qmix_atten",
+      "seed": 1,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000000,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.b2_qmix_atten.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "b2_qmix_atten",
+      "seed": 2,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000000,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.dcg.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "dcg",
+      "seed": 0,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000000,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.dcg.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "dcg",
+      "seed": 1,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000000,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.dcg.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "dcg",
+      "seed": 2,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000000,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.spectra.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "spectra",
+      "seed": 0,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000000,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.spectra.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "spectra",
+      "seed": 1,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000000,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.spectra.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "spectra",
+      "seed": 2,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000000,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.alma.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "alma",
+      "seed": 0,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000000,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.alma.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "alma",
+      "seed": 1,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000007,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.alma.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "alma",
+      "seed": 2,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000000,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.transfqmix.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "transfqmix",
+      "seed": 0,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000000,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.transfqmix.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "transfqmix",
+      "seed": 1,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000000,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.transfqmix.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "transfqmix",
+      "seed": 2,
+      "segments": {
+        "imported": null
+      },
+      "rank": 0,
+      "order": -1,
+      "status": "complete",
+      "completed": 1000000,
+      "total": 1000000,
+      "detail": "qualified final"
+    },
+    {
+      "id": "train.had.regir_kv0_intent_sg.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 0,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "order": 0,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_intent_sg.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 1,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "order": 1,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_intent_sg.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 2,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "order": 2,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_intent_sg.s3",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 3,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "order": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_intent_sg.s4",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 4,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "order": 4,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_sg.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 0,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "order": 5,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_sg.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 1,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "order": 6,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_sg.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 2,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "order": 7,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_sg.s3",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 3,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "order": 8,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_sg.s4",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 4,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "order": 9,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_r1_sg.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_r1_sg",
+      "seed": 0,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "order": 10,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_r1_sg.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_r1_sg",
+      "seed": 1,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "order": 11,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_r1_sg.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_r1_sg",
+      "seed": 2,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "order": 12,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_r1_sg.s3",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_r1_sg",
+      "seed": 3,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "order": 13,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_r1_sg.s4",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_r1_sg",
+      "seed": 4,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "order": 14,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_r0_sg.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_r0_sg",
+      "seed": 0,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "order": 15,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_r0_sg.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_r0_sg",
+      "seed": 1,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "order": 16,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_r0_sg.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_r0_sg",
+      "seed": 2,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "order": 17,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_sg.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_sg",
+      "seed": 0,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "order": 18,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_sg.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_sg",
+      "seed": 1,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "order": 19,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_sg.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_sg",
+      "seed": 2,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "order": 20,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_untied4_sg.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_untied4_sg",
+      "seed": 0,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "order": 21,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_untied4_sg.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_untied4_sg",
+      "seed": 1,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "order": 22,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_untied4_sg.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_untied4_sg",
+      "seed": 2,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "order": 23,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_r1_nomem.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_r1_nomem",
+      "seed": 0,
+      "segments": {
+        "branch:C": "P0"
+      },
+      "rank": 2,
+      "order": 24,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_r1_nomem.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_r1_nomem",
+      "seed": 1,
+      "segments": {
+        "branch:C": "P0"
+      },
+      "rank": 2,
+      "order": 25,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_r1_nomem.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_r1_nomem",
+      "seed": 2,
+      "segments": {
+        "branch:C": "P0"
+      },
+      "rank": 2,
+      "order": 26,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_r1_norefil_sg.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_r1_norefil_sg",
+      "seed": 0,
+      "segments": {
+        "branch:C": "P1"
+      },
+      "rank": 4,
+      "order": 27,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_r1_norefil_sg.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_r1_norefil_sg",
+      "seed": 1,
+      "segments": {
+        "branch:C": "P1"
+      },
+      "rank": 4,
+      "order": 28,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_r1_norefil_sg.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_r1_norefil_sg",
+      "seed": 2,
+      "segments": {
+        "branch:C": "P1"
+      },
+      "rank": 4,
+      "order": 29,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_r1_nocount_sg.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_r1_nocount_sg",
+      "seed": 0,
+      "segments": {
+        "branch:C": "P2"
+      },
+      "rank": 6,
+      "order": 30,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_r1_nocount_sg.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_r1_nocount_sg",
+      "seed": 1,
+      "segments": {
+        "branch:C": "P2"
+      },
+      "rank": 6,
+      "order": 31,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_r1_nocount_sg.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_r1_nocount_sg",
+      "seed": 2,
+      "segments": {
+        "branch:C": "P2"
+      },
+      "rank": 6,
+      "order": 32,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_nomem.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_nomem",
+      "seed": 0,
+      "segments": {
+        "branch:A": "P0"
+      },
+      "rank": 2,
+      "order": 33,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_nomem.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_nomem",
+      "seed": 1,
+      "segments": {
+        "branch:A": "P0"
+      },
+      "rank": 2,
+      "order": 34,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_nomem.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_nomem",
+      "seed": 2,
+      "segments": {
+        "branch:A": "P0"
+      },
+      "rank": 2,
+      "order": 35,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_norefil_sg.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_norefil_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "P1"
+      },
+      "rank": 4,
+      "order": 36,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_norefil_sg.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_norefil_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "P1"
+      },
+      "rank": 4,
+      "order": 37,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_norefil_sg.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_norefil_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "P1"
+      },
+      "rank": 4,
+      "order": 38,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_fixed4_sg.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_fixed4_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "P1"
+      },
+      "rank": 4,
+      "order": 39,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_fixed4_sg.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_fixed4_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "P1"
+      },
+      "rank": 4,
+      "order": 40,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_fixed4_sg.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_fixed4_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "P1"
+      },
+      "rank": 4,
+      "order": 41,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_fixed4_sg.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_fixed4_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 6,
+      "order": 42,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_fixed4_sg.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_fixed4_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 6,
+      "order": 43,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_fixed4_sg.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_fixed4_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 6,
+      "order": 44,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_nocount_sg.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_nocount_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 6,
+      "order": 45,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_nocount_sg.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_nocount_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 6,
+      "order": 46,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_nocount_sg.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_nocount_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 6,
+      "order": 47,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_intent_noaux_sg.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_intent_noaux_sg",
+      "seed": 0,
+      "segments": {
+        "branch:B": "P0"
+      },
+      "rank": 2,
+      "order": 48,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_intent_noaux_sg.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_intent_noaux_sg",
+      "seed": 1,
+      "segments": {
+        "branch:B": "P0"
+      },
+      "rank": 2,
+      "order": 49,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_intent_noaux_sg.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_intent_noaux_sg",
+      "seed": 2,
+      "segments": {
+        "branch:B": "P0"
+      },
+      "rank": 2,
+      "order": 50,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_intent_nomem.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_intent_nomem",
+      "seed": 0,
+      "segments": {
+        "branch:B": "P1"
+      },
+      "rank": 4,
+      "order": 51,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_intent_nomem.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_intent_nomem",
+      "seed": 1,
+      "segments": {
+        "branch:B": "P1"
+      },
+      "rank": 4,
+      "order": 52,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_intent_nomem.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_intent_nomem",
+      "seed": 2,
+      "segments": {
+        "branch:B": "P1"
+      },
+      "rank": 4,
+      "order": 53,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_intent_sg.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_intent_sg",
+      "seed": 0,
+      "segments": {
+        "branch:B": "P2"
+      },
+      "rank": 6,
+      "order": 54,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_intent_sg.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_intent_sg",
+      "seed": 1,
+      "segments": {
+        "branch:B": "P2"
+      },
+      "rank": 6,
+      "order": 55,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_intent_sg.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_intent_sg",
+      "seed": 2,
+      "segments": {
+        "branch:B": "P2"
+      },
+      "rank": 6,
+      "order": 56,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_intent_norefil_sg.s0",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_intent_norefil_sg",
+      "seed": 0,
+      "segments": {
+        "branch:B": "P2"
+      },
+      "rank": 6,
+      "order": 57,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_intent_norefil_sg.s1",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_intent_norefil_sg",
+      "seed": 1,
+      "segments": {
+        "branch:B": "P2"
+      },
+      "rank": 6,
+      "order": 58,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.had.regir_kv0_intent_norefil_sg.s2",
+      "kind": "train",
+      "env": "had",
+      "method": "regir_kv0_intent_norefil_sg",
+      "seed": 2,
+      "segments": {
+        "branch:B": "P2"
+      },
+      "rank": 6,
+      "order": 59,
+      "status": "pending",
+      "completed": 0,
+      "total": 1000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_intent_sg.s0",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 0,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_intent_sg.s1",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 1,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_intent_sg.s2",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 2,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_intent_sg.s3",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 3,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_intent_sg.s4",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 4,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_sg.s0",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 0,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_sg.s1",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 1,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_sg.s2",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 2,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_sg.s3",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 3,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_sg.s4",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 4,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_r1_sg.s0",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_r1_sg",
+      "seed": 0,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_r1_sg.s1",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_r1_sg",
+      "seed": 1,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_r1_sg.s2",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_r1_sg",
+      "seed": 2,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_r1_sg.s3",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_r1_sg",
+      "seed": 3,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_r1_sg.s4",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_r1_sg",
+      "seed": 4,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_r0_sg.s0",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_r0_sg",
+      "seed": 0,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_r0_sg.s1",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_r0_sg",
+      "seed": 1,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_r0_sg.s2",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_r0_sg",
+      "seed": 2,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_sg.s0",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_sg",
+      "seed": 0,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_sg.s1",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_sg",
+      "seed": 1,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_sg.s2",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_sg",
+      "seed": 2,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_untied4_sg.s0",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_untied4_sg",
+      "seed": 0,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_untied4_sg.s1",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_untied4_sg",
+      "seed": 1,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_untied4_sg.s2",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_untied4_sg",
+      "seed": 2,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_r1_nomem.s0",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_r1_nomem",
+      "seed": 0,
+      "segments": {
+        "branch:C": "P0"
+      },
+      "rank": 2,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_r1_nomem.s1",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_r1_nomem",
+      "seed": 1,
+      "segments": {
+        "branch:C": "P0"
+      },
+      "rank": 2,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_r1_nomem.s2",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_r1_nomem",
+      "seed": 2,
+      "segments": {
+        "branch:C": "P0"
+      },
+      "rank": 2,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_r1_norefil_sg.s0",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_r1_norefil_sg",
+      "seed": 0,
+      "segments": {
+        "branch:C": "P1"
+      },
+      "rank": 4,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_r1_norefil_sg.s1",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_r1_norefil_sg",
+      "seed": 1,
+      "segments": {
+        "branch:C": "P1"
+      },
+      "rank": 4,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_r1_norefil_sg.s2",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_r1_norefil_sg",
+      "seed": 2,
+      "segments": {
+        "branch:C": "P1"
+      },
+      "rank": 4,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_r1_nocount_sg.s0",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_r1_nocount_sg",
+      "seed": 0,
+      "segments": {
+        "branch:C": "P2"
+      },
+      "rank": 6,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_r1_nocount_sg.s1",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_r1_nocount_sg",
+      "seed": 1,
+      "segments": {
+        "branch:C": "P2"
+      },
+      "rank": 6,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_r1_nocount_sg.s2",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_r1_nocount_sg",
+      "seed": 2,
+      "segments": {
+        "branch:C": "P2"
+      },
+      "rank": 6,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_nomem.s0",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_nomem",
+      "seed": 0,
+      "segments": {
+        "branch:A": "P0"
+      },
+      "rank": 2,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_nomem.s1",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_nomem",
+      "seed": 1,
+      "segments": {
+        "branch:A": "P0"
+      },
+      "rank": 2,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_nomem.s2",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_nomem",
+      "seed": 2,
+      "segments": {
+        "branch:A": "P0"
+      },
+      "rank": 2,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_norefil_sg.s0",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_norefil_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "P1"
+      },
+      "rank": 4,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_norefil_sg.s1",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_norefil_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "P1"
+      },
+      "rank": 4,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_norefil_sg.s2",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_norefil_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "P1"
+      },
+      "rank": 4,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_fixed4_sg.s0",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_fixed4_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "P1"
+      },
+      "rank": 4,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_fixed4_sg.s1",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_fixed4_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "P1"
+      },
+      "rank": 4,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_fixed4_sg.s2",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_fixed4_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "P1"
+      },
+      "rank": 4,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_fixed4_sg.s0",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_fixed4_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 6,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_fixed4_sg.s1",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_fixed4_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 6,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_fixed4_sg.s2",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_fixed4_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 6,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_nocount_sg.s0",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_nocount_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 6,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_nocount_sg.s1",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_nocount_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 6,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_nocount_sg.s2",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_nocount_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 6,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_intent_noaux_sg.s0",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_intent_noaux_sg",
+      "seed": 0,
+      "segments": {
+        "branch:B": "P0"
+      },
+      "rank": 2,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_intent_noaux_sg.s1",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_intent_noaux_sg",
+      "seed": 1,
+      "segments": {
+        "branch:B": "P0"
+      },
+      "rank": 2,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_intent_noaux_sg.s2",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_intent_noaux_sg",
+      "seed": 2,
+      "segments": {
+        "branch:B": "P0"
+      },
+      "rank": 2,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_intent_nomem.s0",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_intent_nomem",
+      "seed": 0,
+      "segments": {
+        "branch:B": "P1"
+      },
+      "rank": 4,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_intent_nomem.s1",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_intent_nomem",
+      "seed": 1,
+      "segments": {
+        "branch:B": "P1"
+      },
+      "rank": 4,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_intent_nomem.s2",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_intent_nomem",
+      "seed": 2,
+      "segments": {
+        "branch:B": "P1"
+      },
+      "rank": 4,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_intent_sg.s0",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_intent_sg",
+      "seed": 0,
+      "segments": {
+        "branch:B": "P2"
+      },
+      "rank": 6,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_intent_sg.s1",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_intent_sg",
+      "seed": 1,
+      "segments": {
+        "branch:B": "P2"
+      },
+      "rank": 6,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_intent_sg.s2",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_intent_sg",
+      "seed": 2,
+      "segments": {
+        "branch:B": "P2"
+      },
+      "rank": 6,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_intent_norefil_sg.s0",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_intent_norefil_sg",
+      "seed": 0,
+      "segments": {
+        "branch:B": "P2"
+      },
+      "rank": 6,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_intent_norefil_sg.s1",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_intent_norefil_sg",
+      "seed": 1,
+      "segments": {
+        "branch:B": "P2"
+      },
+      "rank": 6,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.had.regir_kv0_intent_norefil_sg.s2",
+      "kind": "final",
+      "env": "had",
+      "method": "regir_kv0_intent_norefil_sg",
+      "seed": 2,
+      "segments": {
+        "branch:B": "P2"
+      },
+      "rank": 6,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.gate_depth.had.regir_kv0_sg.s0",
+      "kind": "gate_depth",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 0,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.gate_depth.had.regir_kv0_sg.s1",
+      "kind": "gate_depth",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 1,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.gate_depth.had.regir_kv0_sg.s2",
+      "kind": "gate_depth",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 2,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.gate_depth.had.regir_kv0_sg.s3",
+      "kind": "gate_depth",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 3,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.gate_depth.had.regir_kv0_sg.s4",
+      "kind": "gate_depth",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 4,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.gate_depth.had.regir_kv0_intent_sg.s0",
+      "kind": "gate_depth",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 0,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.gate_depth.had.regir_kv0_intent_sg.s1",
+      "kind": "gate_depth",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 1,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.gate_depth.had.regir_kv0_intent_sg.s2",
+      "kind": "gate_depth",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 2,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.gate_depth.had.regir_kv0_intent_sg.s3",
+      "kind": "gate_depth",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 3,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.gate_depth.had.regir_kv0_intent_sg.s4",
+      "kind": "gate_depth",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 4,
+      "segments": {
+        "trial": "T"
+      },
+      "rank": 0,
+      "status": "waiting",
+      "completed": 0,
+      "total": 200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.dup.had.refil.s0",
+      "kind": "dup",
+      "env": "had",
+      "method": "refil",
+      "seed": 0,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/refil/train/seed_0/final.pt",
+      "checkpoint_id": "8437bce5209e4a92add0b18b10171e7b"
+    },
+    {
+      "id": "eval.dup.had.refil.s1",
+      "kind": "dup",
+      "env": "had",
+      "method": "refil",
+      "seed": 1,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/refil/train/seed_1/final.pt",
+      "checkpoint_id": "92d90971bb874c75bd1c4f77f9bfe268"
+    },
+    {
+      "id": "eval.dup.had.refil.s2",
+      "kind": "dup",
+      "env": "had",
+      "method": "refil",
+      "seed": 2,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/refil/train/seed_2/final.pt",
+      "checkpoint_id": "7ea826c2179f463885c7893dba9687af"
+    },
+    {
+      "id": "eval.dup.had.refil_matched.s0",
+      "kind": "dup",
+      "env": "had",
+      "method": "refil_matched",
+      "seed": 0,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/refil_matched/train/seed_0/final.pt",
+      "checkpoint_id": "986e65ea27a84ab0aab149048c9e097b"
+    },
+    {
+      "id": "eval.dup.had.refil_matched.s1",
+      "kind": "dup",
+      "env": "had",
+      "method": "refil_matched",
+      "seed": 1,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/refil_matched/train/seed_1/final.pt",
+      "checkpoint_id": "704a7ee2f9a1417693c1f81797e39c22"
+    },
+    {
+      "id": "eval.dup.had.refil_matched.s2",
+      "kind": "dup",
+      "env": "had",
+      "method": "refil_matched",
+      "seed": 2,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/refil_matched/train/seed_2/final.pt",
+      "checkpoint_id": "e33d205e725c4bfd88fbdb3159ca8828"
+    },
+    {
+      "id": "eval.dup.had.b2_qmix_atten.s0",
+      "kind": "dup",
+      "env": "had",
+      "method": "b2_qmix_atten",
+      "seed": 0,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/b2_qmix_atten/train/seed_0/final.pt",
+      "checkpoint_id": "7c6a03bb5b234b4d9cf78e82b49f14e0"
+    },
+    {
+      "id": "eval.dup.had.b2_qmix_atten.s1",
+      "kind": "dup",
+      "env": "had",
+      "method": "b2_qmix_atten",
+      "seed": 1,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/b2_qmix_atten/train/seed_1/final.pt",
+      "checkpoint_id": "b845741854d24b5fa23e86d2c1d9113d"
+    },
+    {
+      "id": "eval.dup.had.b2_qmix_atten.s2",
+      "kind": "dup",
+      "env": "had",
+      "method": "b2_qmix_atten",
+      "seed": 2,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/b2_qmix_atten/train/seed_2/final.pt",
+      "checkpoint_id": "0bee87e082924244a6ddf96016eac02f"
+    },
+    {
+      "id": "eval.dup.had.dcg.s0",
+      "kind": "dup",
+      "env": "had",
+      "method": "dcg",
+      "seed": 0,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/dcg/train/seed_0/final.pt",
+      "checkpoint_id": "f77b760225934887b4539f2a98e69d28"
+    },
+    {
+      "id": "eval.dup.had.dcg.s1",
+      "kind": "dup",
+      "env": "had",
+      "method": "dcg",
+      "seed": 1,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/dcg/train/seed_1/final.pt",
+      "checkpoint_id": "0a94180eb9624fa4be99e1aa60a36b9f"
+    },
+    {
+      "id": "eval.dup.had.dcg.s2",
+      "kind": "dup",
+      "env": "had",
+      "method": "dcg",
+      "seed": 2,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/dcg/train/seed_2/final.pt",
+      "checkpoint_id": "db7315cc100e406e815e7667e91bb694"
+    },
+    {
+      "id": "eval.dup.had.spectra.s0",
+      "kind": "dup",
+      "env": "had",
+      "method": "spectra",
+      "seed": 0,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/spectra/train/seed_0/final.pt",
+      "checkpoint_id": "53e7f877dd9548a784e6d7376b42b7e2"
+    },
+    {
+      "id": "eval.dup.had.spectra.s1",
+      "kind": "dup",
+      "env": "had",
+      "method": "spectra",
+      "seed": 1,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/spectra/train/seed_1/final.pt",
+      "checkpoint_id": "c3769d11d2bd4250838f8bdaa29cf3a2"
+    },
+    {
+      "id": "eval.dup.had.spectra.s2",
+      "kind": "dup",
+      "env": "had",
+      "method": "spectra",
+      "seed": 2,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/spectra/train/seed_2/final.pt",
+      "checkpoint_id": "84ab91a1215f4d83afa8921d9054905d"
+    },
+    {
+      "id": "eval.dup.had.alma.s0",
+      "kind": "dup",
+      "env": "had",
+      "method": "alma",
+      "seed": 0,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/alma/train/seed_0/final.pt",
+      "checkpoint_id": "b649c32be10f45dd9f58b56c9ee7541b"
+    },
+    {
+      "id": "eval.dup.had.alma.s1",
+      "kind": "dup",
+      "env": "had",
+      "method": "alma",
+      "seed": 1,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/alma/train/seed_1/final.pt",
+      "checkpoint_id": "bef1d569c3d1481eb943218335bc1a2d"
+    },
+    {
+      "id": "eval.dup.had.alma.s2",
+      "kind": "dup",
+      "env": "had",
+      "method": "alma",
+      "seed": 2,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/alma/train/seed_2/final.pt",
+      "checkpoint_id": "ec7ba92b0aff4edc84da0193569d67b7"
+    },
+    {
+      "id": "eval.dup.had.transfqmix.s0",
+      "kind": "dup",
+      "env": "had",
+      "method": "transfqmix",
+      "seed": 0,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/transfqmix/train/seed_0/final.pt",
+      "checkpoint_id": "ba6ad0aad4844160892a1bc20a57e682"
+    },
+    {
+      "id": "eval.dup.had.transfqmix.s1",
+      "kind": "dup",
+      "env": "had",
+      "method": "transfqmix",
+      "seed": 1,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/transfqmix/train/seed_1/final.pt",
+      "checkpoint_id": "55ae92a6386a4ba3919d33fb1966e070"
+    },
+    {
+      "id": "eval.dup.had.transfqmix.s2",
+      "kind": "dup",
+      "env": "had",
+      "method": "transfqmix",
+      "seed": 2,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 300,
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/transfqmix/train/seed_2/final.pt",
+      "checkpoint_id": "0a9f5fd11b1f4f0daaccc0e617fc3290"
+    },
+    {
+      "id": "eval.depth.had.regir_kv0_sg.s0",
+      "kind": "depth",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "M",
+        "branch:B": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 5400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.had.regir_kv0_sg.s1",
+      "kind": "depth",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "M",
+        "branch:B": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 5400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.had.regir_kv0_sg.s2",
+      "kind": "depth",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "M",
+        "branch:B": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 5400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.had.regir_kv0_sg.s3",
+      "kind": "depth",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 3,
+      "segments": {
+        "branch:A": "M",
+        "branch:B": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 5400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.had.regir_kv0_sg.s4",
+      "kind": "depth",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 4,
+      "segments": {
+        "branch:A": "M",
+        "branch:B": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 5400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.had.regir_sg.s0",
+      "kind": "depth",
+      "env": "had",
+      "method": "regir_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 5400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.had.regir_sg.s1",
+      "kind": "depth",
+      "env": "had",
+      "method": "regir_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 5400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.had.regir_sg.s2",
+      "kind": "depth",
+      "env": "had",
+      "method": "regir_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 5400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.had.regir_kv0_fixed4_sg.s0",
+      "kind": "depth",
+      "env": "had",
+      "method": "regir_kv0_fixed4_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 5400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.had.regir_kv0_fixed4_sg.s1",
+      "kind": "depth",
+      "env": "had",
+      "method": "regir_kv0_fixed4_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 5400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.had.regir_kv0_fixed4_sg.s2",
+      "kind": "depth",
+      "env": "had",
+      "method": "regir_kv0_fixed4_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 5400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.had.regir_untied4_sg.s0",
+      "kind": "depth",
+      "env": "had",
+      "method": "regir_untied4_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 3600,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.had.regir_untied4_sg.s1",
+      "kind": "depth",
+      "env": "had",
+      "method": "regir_untied4_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 3600,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.had.regir_untied4_sg.s2",
+      "kind": "depth",
+      "env": "had",
+      "method": "regir_untied4_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 3600,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.readout.had.regir_kv0_sg.s0",
+      "kind": "readout",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 3600,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.readout.had.regir_kv0_sg.s1",
+      "kind": "readout",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 3600,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.readout.had.regir_kv0_sg.s2",
+      "kind": "readout",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 3600,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.readout.had.regir_kv0_sg.s3",
+      "kind": "readout",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 3,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 3600,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.readout.had.regir_kv0_sg.s4",
+      "kind": "readout",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 4,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 3600,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.readout.had.regir_sg.s0",
+      "kind": "readout",
+      "env": "had",
+      "method": "regir_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 3600,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.readout.had.regir_sg.s1",
+      "kind": "readout",
+      "env": "had",
+      "method": "regir_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 3600,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.readout.had.regir_sg.s2",
+      "kind": "readout",
+      "env": "had",
+      "method": "regir_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 3600,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.r1deploy.had.regir_kv0_sg.s0",
+      "kind": "r1deploy",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.r1deploy.had.regir_kv0_sg.s1",
+      "kind": "r1deploy",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.r1deploy.had.regir_kv0_sg.s2",
+      "kind": "r1deploy",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.r1deploy.had.regir_kv0_sg.s3",
+      "kind": "r1deploy",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 3,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.r1deploy.had.regir_kv0_sg.s4",
+      "kind": "r1deploy",
+      "env": "had",
+      "method": "regir_kv0_sg",
+      "seed": 4,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 7200,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.had.regir_kv0_intent_sg.s0",
+      "kind": "depth",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 0,
+      "segments": {
+        "branch:B": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 5400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.had.regir_kv0_intent_sg.s1",
+      "kind": "depth",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 1,
+      "segments": {
+        "branch:B": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 5400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.had.regir_kv0_intent_sg.s2",
+      "kind": "depth",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 2,
+      "segments": {
+        "branch:B": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 5400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.had.regir_kv0_intent_sg.s3",
+      "kind": "depth",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 3,
+      "segments": {
+        "branch:B": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 5400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.had.regir_kv0_intent_sg.s4",
+      "kind": "depth",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 4,
+      "segments": {
+        "branch:B": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 5400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.intent_intervention.had.regir_kv0_intent_sg.s0",
+      "kind": "intent_intervention",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 0,
+      "segments": {
+        "branch:B": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 900,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.intent_intervention.had.regir_kv0_intent_sg.s1",
+      "kind": "intent_intervention",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 1,
+      "segments": {
+        "branch:B": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 900,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.intent_intervention.had.regir_kv0_intent_sg.s2",
+      "kind": "intent_intervention",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 2,
+      "segments": {
+        "branch:B": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 900,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.intent_intervention.had.regir_kv0_intent_sg.s3",
+      "kind": "intent_intervention",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 3,
+      "segments": {
+        "branch:B": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 900,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.intent_intervention.had.regir_kv0_intent_sg.s4",
+      "kind": "intent_intervention",
+      "env": "had",
+      "method": "regir_kv0_intent_sg",
+      "seed": 4,
+      "segments": {
+        "branch:B": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 900,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "train.smacv2.refil.s0",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "refil",
+      "seed": 0,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "order": 0,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.refil.s1",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "refil",
+      "seed": 1,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "order": 1,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.refil.s2",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "refil",
+      "seed": 2,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "order": 2,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.spectra.s0",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "spectra",
+      "seed": 0,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "order": 3,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.spectra.s1",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "spectra",
+      "seed": 1,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "order": 4,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.spectra.s2",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "spectra",
+      "seed": 2,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "order": 5,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.transfqmix.s0",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "transfqmix",
+      "seed": 0,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "order": 6,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.transfqmix.s1",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "transfqmix",
+      "seed": 1,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "order": 7,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.transfqmix.s2",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "transfqmix",
+      "seed": 2,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "order": 8,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.regir_r1_sg.s0",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "regir_r1_sg",
+      "seed": 0,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "order": 9,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.regir_r1_sg.s1",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "regir_r1_sg",
+      "seed": 1,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "order": 10,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.regir_r1_sg.s2",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "regir_r1_sg",
+      "seed": 2,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "order": 11,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.b2_qmix_atten.s0",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "b2_qmix_atten",
+      "seed": 0,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "order": 12,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.b2_qmix_atten.s1",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "b2_qmix_atten",
+      "seed": 1,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "order": 13,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.b2_qmix_atten.s2",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "b2_qmix_atten",
+      "seed": 2,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "order": 14,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.regir_kv0_sg.s0",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "regir_kv0_sg",
+      "seed": 0,
+      "segments": {
+        "branch:C": "P2",
+        "branch:A": "P0",
+        "branch:B": "P1"
+      },
+      "rank": 2,
+      "order": 15,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.regir_kv0_sg.s1",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "regir_kv0_sg",
+      "seed": 1,
+      "segments": {
+        "branch:C": "P2",
+        "branch:A": "P0",
+        "branch:B": "P1"
+      },
+      "rank": 2,
+      "order": 16,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.regir_kv0_sg.s2",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "regir_kv0_sg",
+      "seed": 2,
+      "segments": {
+        "branch:C": "P2",
+        "branch:A": "P0",
+        "branch:B": "P1"
+      },
+      "rank": 2,
+      "order": 17,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.regir_sg.s0",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "regir_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 6,
+      "order": 21,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.regir_sg.s1",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "regir_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 6,
+      "order": 22,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.regir_sg.s2",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "regir_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 6,
+      "order": 23,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.regir_kv0_intent_sg.s0",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "regir_kv0_intent_sg",
+      "seed": 0,
+      "segments": {
+        "branch:B": "P0"
+      },
+      "rank": 2,
+      "order": 24,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.regir_kv0_intent_sg.s1",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "regir_kv0_intent_sg",
+      "seed": 1,
+      "segments": {
+        "branch:B": "P0"
+      },
+      "rank": 2,
+      "order": 25,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "train.smacv2.regir_kv0_intent_sg.s2",
+      "kind": "train",
+      "env": "smacv2",
+      "method": "regir_kv0_intent_sg",
+      "seed": 2,
+      "segments": {
+        "branch:B": "P0"
+      },
+      "rank": 2,
+      "order": 26,
+      "status": "pending",
+      "completed": 0,
+      "total": 2000000,
+      "detail": "final checkpoint not yet available"
+    },
+    {
+      "id": "eval.final.smacv2.refil.s0",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "refil",
+      "seed": 0,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.refil.s1",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "refil",
+      "seed": 1,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.refil.s2",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "refil",
+      "seed": 2,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.spectra.s0",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "spectra",
+      "seed": 0,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.spectra.s1",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "spectra",
+      "seed": 1,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.spectra.s2",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "spectra",
+      "seed": 2,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.transfqmix.s0",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "transfqmix",
+      "seed": 0,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.transfqmix.s1",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "transfqmix",
+      "seed": 1,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.transfqmix.s2",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "transfqmix",
+      "seed": 2,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.regir_r1_sg.s0",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "regir_r1_sg",
+      "seed": 0,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.regir_r1_sg.s1",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "regir_r1_sg",
+      "seed": 1,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.regir_r1_sg.s2",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "regir_r1_sg",
+      "seed": 2,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 1,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.b2_qmix_atten.s0",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "b2_qmix_atten",
+      "seed": 0,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.b2_qmix_atten.s1",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "b2_qmix_atten",
+      "seed": 1,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.b2_qmix_atten.s2",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "b2_qmix_atten",
+      "seed": 2,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 3,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.regir_kv0_sg.s0",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "regir_kv0_sg",
+      "seed": 0,
+      "segments": {
+        "branch:C": "P2",
+        "branch:A": "P0",
+        "branch:B": "P1"
+      },
+      "rank": 2,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.regir_kv0_sg.s1",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "regir_kv0_sg",
+      "seed": 1,
+      "segments": {
+        "branch:C": "P2",
+        "branch:A": "P0",
+        "branch:B": "P1"
+      },
+      "rank": 2,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.regir_kv0_sg.s2",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "regir_kv0_sg",
+      "seed": 2,
+      "segments": {
+        "branch:C": "P2",
+        "branch:A": "P0",
+        "branch:B": "P1"
+      },
+      "rank": 2,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.regir_sg.s0",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "regir_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 6,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.regir_sg.s1",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "regir_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 6,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.regir_sg.s2",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "regir_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 6,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.regir_kv0_intent_sg.s0",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "regir_kv0_intent_sg",
+      "seed": 0,
+      "segments": {
+        "branch:B": "P0"
+      },
+      "rank": 2,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.regir_kv0_intent_sg.s1",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "regir_kv0_intent_sg",
+      "seed": 1,
+      "segments": {
+        "branch:B": "P0"
+      },
+      "rank": 2,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.final.smacv2.regir_kv0_intent_sg.s2",
+      "kind": "final",
+      "env": "smacv2",
+      "method": "regir_kv0_intent_sg",
+      "seed": 2,
+      "segments": {
+        "branch:B": "P0"
+      },
+      "rank": 2,
+      "status": "waiting",
+      "completed": 0,
+      "total": 2400,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.smacv2.regir_kv0_sg.s0",
+      "kind": "depth",
+      "env": "smacv2",
+      "method": "regir_kv0_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 900,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.smacv2.regir_kv0_sg.s1",
+      "kind": "depth",
+      "env": "smacv2",
+      "method": "regir_kv0_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 900,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.smacv2.regir_kv0_sg.s2",
+      "kind": "depth",
+      "env": "smacv2",
+      "method": "regir_kv0_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 900,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.smacv2.regir_kv0_intent_sg.s0",
+      "kind": "depth",
+      "env": "smacv2",
+      "method": "regir_kv0_intent_sg",
+      "seed": 0,
+      "segments": {
+        "branch:B": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 900,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.smacv2.regir_kv0_intent_sg.s1",
+      "kind": "depth",
+      "env": "smacv2",
+      "method": "regir_kv0_intent_sg",
+      "seed": 1,
+      "segments": {
+        "branch:B": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 900,
+      "detail": "waiting for final"
+    },
+    {
+      "id": "eval.depth.smacv2.regir_kv0_intent_sg.s2",
+      "kind": "depth",
+      "env": "smacv2",
+      "method": "regir_kv0_intent_sg",
+      "seed": 2,
+      "segments": {
+        "branch:B": "M"
+      },
+      "rank": 7,
+      "status": "waiting",
+      "completed": 0,
+      "total": 900,
+      "detail": "waiting for final"
+    }
+  ],
+  "scanned_at": 1790189942.971613
+}

@@ -40,8 +40,19 @@ MAIN_ABLATION_METHODS = ("regir_norefil", "regir_nocount", "regir_r1", "regir_la
 MAIN0921_METHODS = ("transfqmix", "regir_fixed4", "regir_untied4", "regir_kv0")
 MAIN_TRAIN_METHODS = MAIN_METHODS + MAIN_ABLATION_METHODS + ("refil_matched",) + MAIN0921_METHODS
 MAIN0923_METHODS = ("regir_r0", "regir_kv0_norefil", "regir_kv0_fixed4", "regir_kv0_nomem",
-                    "regir_kv0_nocount", "regir_prenorm")
+                    "regir_kv0_nocount", "regir_prenorm",
+                    "regir_r1_sg", "regir_kv0_sg", "regir_sg", "regir_untied4_sg", "regir_fixed4_sg",
+                    "regir_r0_sg", "regir_kv0_norefil_sg", "regir_kv0_fixed4_sg", "regir_kv0_nocount_sg",
+                    "regir_kv0_intent_sg", "regir_kv0_intent_noaux_sg", "regir_kv0_intent_nomem",
+                    "regir_intent_sg", "regir_kv0_intent_norefil_sg",
+                    "regir_r1_nomem", "regir_r1_norefil_sg", "regir_r1_nocount_sg")
 METHOD_ALIASES = {"refil_cycle": "regir", "regia": "regir"}
+_NOREFIL = {"lmbda": 0.0, "skip_refil_local": True, "agent": {"imagine": False}}
+_INTENT = {"rer_intent": True, "intent_aux_weight": 0.02}
+
+
+def _sg(cfg):
+    return {**cfg, "global_query_detach_memory": True}
 MAIN_OVERRIDES = {
     "regir": dict(_CYCLE),
     "refil_cycle": dict(_CYCLE),
@@ -73,6 +84,19 @@ MAIN_OVERRIDES = {
                     "dropout": 0., "agent": {"imagine": False}, "lmbda": 0.},
     "refil_matched": {"imagine_group": "original", "global_branch": None},
 }
+for _name in ("regir_r1", "regir_kv0", "regir", "regir_untied4", "regir_fixed4", "regir_r0",
+              "regir_kv0_norefil", "regir_kv0_fixed4", "regir_kv0_nocount"):
+    MAIN_OVERRIDES[f"{_name}_sg"] = _sg(MAIN_OVERRIDES[_name])
+MAIN_OVERRIDES.update({
+    "regir_kv0_intent_sg": _sg({**MAIN_OVERRIDES["regir_kv0"], **_INTENT}),
+    "regir_kv0_intent_noaux_sg": _sg({**MAIN_OVERRIDES["regir_kv0"], **_INTENT, "intent_aux_weight": 0.0}),
+    "regir_kv0_intent_nomem": {**MAIN_OVERRIDES["regir_kv0"], **_INTENT, "global_query_no_memory": True},
+    "regir_intent_sg": _sg({**MAIN_OVERRIDES["regir"], **_INTENT}),
+    "regir_kv0_intent_norefil_sg": _sg({**MAIN_OVERRIDES["regir_kv0"], **_INTENT, **_NOREFIL}),
+    "regir_r1_nomem": {**MAIN_OVERRIDES["regir_r1"], "global_query_no_memory": True},
+    "regir_r1_norefil_sg": _sg({**MAIN_OVERRIDES["regir_r1"], **_NOREFIL}),
+    "regir_r1_nocount_sg": _sg({**MAIN_OVERRIDES["regir_r1"], "skip_count_inject": True}),
+})
 POLICY_METHODS = METHODS + PROBE_METHODS + tuple(dict.fromkeys(
     (*V4_METHODS, *V5_METHODS, *MAIN_TRAIN_METHODS, *MAIN0923_METHODS, "refil_cycle", "alma_legacy",
      "refil_count_ln")))
@@ -547,12 +571,13 @@ def train(name, cfg):
     from open_score.eval import experiment
     profile = getattr(args, "profile", None) == experiment.PROFILE
     if profile:
-        if name not in experiment.methods(args.env) or int(args.seed) not in experiment.SEEDS:
-            raise ValueError("Method/environment/seed is outside the frozen main0921 matrix")
+        if (name not in experiment.methods(args.env)
+                or int(args.seed) not in experiment.method_seeds(args.env, name)):
+            raise ValueError(f"Method/environment/seed is outside the frozen {experiment.PROFILE} matrix")
         if args.run != "train" or int(args.t_max) != experiment.budget(args.env):
-            raise ValueError("main0921 requires run=train and its frozen environment budget")
+            raise ValueError(f"{experiment.PROFILE} requires run=train and its frozen environment budget")
         args.skip_final_eval = True
-        args.implementation_revision = "main0921_rer_transfqmix_smac_v1"
+        args.implementation_revision = experiment.IMPLEMENTATION_REVISION
     if int(args.t_max) <= 0:
         raise ValueError("t_max must be an explicitly selected positive physical-step budget")
     output = Path(args.output)
@@ -562,7 +587,7 @@ def train(name, cfg):
         raise FileExistsError(f"Existing run: {run_dir}; use --resume to continue it")
     if profile and not args.resume and any((run_dir / filename).exists()
                                            for filename in ("config.json", "final.pt", "best.pt")):
-        raise FileExistsError(f"Existing main0921 run must not be overwritten: {run_dir}")
+        raise FileExistsError(f"Existing {experiment.PROFILE} run must not be overwritten: {run_dir}")
     if args.resume and getattr(args, "global_branch", None) not in (None, False, "off", "none", ""):
         saved_cfg_path = run_dir / "config.json"
         if saved_cfg_path.exists():
@@ -609,6 +634,7 @@ def train(name, cfg):
     process = psutil.Process()
     resource_previous = (time.monotonic(), 0.0)
     resource_latest = {}
+    learner_ref = {}
     observed_update = False
     transaction_complete = True
     transaction_phase = "initializing"
@@ -669,6 +695,11 @@ def train(name, cfg):
                 validation_total_episodes=(experiment.validation_point_count(args.env)
                     * (100 if args.env == "had" else 128)),
                 eval_completed=eval_progress["completed"], eval_total=eval_progress["total"],
+                grad_spikes=int(state.get("grad_spikes", 0)),
+                grad_norm_last=getattr(learner_ref.get("learner"), "last_metrics", {}).get("grad_norm"),
+                intent_loss=getattr(learner_ref.get("learner"), "last_metrics", {}).get("intent_loss"),
+                intent_acc=getattr(learner_ref.get("learner"), "last_metrics", {}).get("intent_acc"),
+                latest_validation_D=state.get("latest_validation_D"),
                 estimate_ready=bool(observed_update)))
         return resource_latest
     started = time.monotonic()
@@ -693,7 +724,7 @@ def train(name, cfg):
             saved, loaded_from = _load_resume(run_dir, require_complete=profile)
             if saved is None:
                 if profile:
-                    raise FileNotFoundError(f"Requested main0921 resume has no recoverable checkpoint: {run_dir}")
+                    raise FileNotFoundError(f"Requested {experiment.PROFILE} resume has no recoverable checkpoint: {run_dir}")
                 print(f"[{name}] no resume checkpoint; start this arm from step 0", flush=True)
                 args.resume = False
         _set_seed(args.seed, False)
@@ -732,6 +763,7 @@ def train(name, cfg):
         mac = build_mac(model_scheme, groups, args)
         runner.setup(scheme, groups, preprocess, mac)
         learner = build_learner(mac, model_scheme, logger, args)
+        learner_ref["learner"] = learner
         if args.device == "cuda":
             th.cuda.manual_seed_all(args.seed)
             learner.cuda()
@@ -808,7 +840,8 @@ def train(name, cfg):
             nonlocal last_progress, stop_requested, collection_steps_seen
             if transaction_phase == "collecting" and not evaluating:
                 collection_steps_seen = max(collection_steps_seen, int(in_flight))
-            if (stop_event is not None and stop_event.is_set()) or (output / "stop.request").exists():
+            if ((stop_event is not None and stop_event.is_set()) or (output / "stop.request").exists()
+                    or (profile and (run_dir / "pause.request").exists())):
                 stop_requested = True
             now = time.monotonic()
             if now - last_progress < args.progress_interval:
@@ -998,6 +1031,18 @@ def train(name, cfg):
             if update_metrics:
                 for key in update_metrics[-1]:
                     metrics[key] = float(np.mean([item[key] for item in update_metrics if key in item]))
+                norms = [float(item["grad_norm"]) for item in update_metrics if "grad_norm" in item]
+                if norms:
+                    # Spike: >10, or >20x the running median of the previous 200 updates.
+                    history = list(state.get("grad_norm_history", []))
+                    for value in norms:
+                        median = float(np.median(history)) if history else None
+                        if value > 10 or (median is not None and value > 20 * median):
+                            state["grad_spikes"] = int(state.get("grad_spikes", 0)) + 1
+                        history = (history + [value])[-200:]
+                    state["grad_norm_history"] = history
+                    metrics["grad_norm_max"] = max(norms)
+                    metrics["grad_spikes"] = int(state.get("grad_spikes", 0))
             metrics.update(updates=state["updates"], return_mean=float(np.mean([s["return"] for s in summaries])),
                            implementation_revision=args.implementation_revision,
                            ep_len_mean=float(np.mean([s["ep_len"] for s in summaries])),
