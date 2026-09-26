@@ -592,6 +592,7 @@ class GlobalBranch(nn.Module):
         return self.query_proj(th.cat((own, hidden), dim=-1)).unsqueeze(1)
 
     def _jk(self, states, query, mem_mask, depth):
+        self.captured_read_attn = None
         mode = self.readout_override or getattr(self.args, "rer_readout", "learned")
         if mode not in ("learned", "read1", "read2", "read3", "read4", "uniform"):
             raise ValueError(f"Unknown RER readout {mode!r}")
@@ -607,12 +608,16 @@ class GlobalBranch(nn.Module):
                 alpha = th.zeros(index.shape[0], stacked.shape[0], device=index.device)
                 alpha[th.arange(index.shape[0], device=index.device), index] = 1
                 self.last_alpha = alpha.detach()
+                if hasattr(self.read_attn, "last_weights"):
+                    self.captured_read_attn = self.read_attn.last_weights.mean(1).squeeze(1).detach()
             return read
-        scores, values = [], []
+        scores, values, read_weights = [], [], []
         for memory in states:
             read = self.read_attn(query, memory, memory, mem_mask).squeeze(1)
             values.append(read)
             scores.append(self.read_score(read))
+            if getattr(self, "capture_attention", False) and hasattr(self.read_attn, "last_weights"):
+                read_weights.append(self.read_attn.last_weights.mean(1).squeeze(1).detach())
         scores = th.cat(scores, dim=-1)
         index = th.arange(scores.shape[-1], device=scores.device)
         valid = index.unsqueeze(0) < depth.unsqueeze(-1)
@@ -637,6 +642,10 @@ class GlobalBranch(nn.Module):
         if capture_indices is not None:
             self.captured_reads = stacked.transpose(1, 2).index_select(0, capture_indices).detach().cpu()
             self.captured_alpha = alpha.index_select(0, capture_indices).detach().cpu()
+            if read_weights:
+                self.captured_read_attn = th.stack(read_weights, dim=1).index_select(0, capture_indices).detach().cpu()
+        elif read_weights:
+            self.captured_read_attn = th.stack(read_weights, dim=1).detach()
         return (stacked * alpha.unsqueeze(1)).sum(-1)
 
     def _maybe_checkpoint(self, fn, *tensors):
@@ -949,8 +958,45 @@ class EntityAgent(ALMAAgent):
             q, hidden = self._head(encoded, inputs)
         else:
             q, hidden = self._head(encoded, inputs, enemy_tokens=enemy_tokens)
+        if self._capture_limits is not None and hasattr(self._base, "encode_bundle"):
+            self._capture_host(inputs, q)
         agent_mask = inputs["entity_mask"][:, :, :self.args.n_agents]
         return q.masked_fill(agent_mask.unsqueeze(3), 0), hidden
+
+    def _capture_host(self, inputs, q):
+        """REFIL / no-cycle capture: observer-centred entity tokens as H0 only."""
+        _local, tokens, key_mask, dead, types, origin = self._base.encode_bundle(inputs)
+        bs, ts, na, n_ent = tokens.shape[:4]
+        dim = tokens.shape[-1]
+        n_act = q.shape[-1]
+        for t in range(ts):
+            alive = ~dead[:, t]
+            rows = self._capture_rows(alive)
+            if rows is None:
+                continue
+
+            def picked(tensor):
+                return tensor.index_select(0, rows).detach().cpu()
+
+            tok_t = tokens[:, t].reshape(bs * na, n_ent, dim)
+            km_t = key_mask[:, t].reshape(bs * na, n_ent)
+            observer_ids = (rows % na).detach().cpu()
+            source = origin[:, t].reshape(bs * na, n_ent)
+            self.last_capture.append({
+                "time_id": int(getattr(self, "_capture_time", 0)) + t,
+                "batch_ids": (rows // na).detach().cpu(),
+                "observer_ids": observer_ids,
+                "H": picked(tok_t).masked_fill(picked(km_t).unsqueeze(-1), 0)[:, None],
+                "u": None,
+                "alpha": None,
+                "read_attn": None,
+                "h_prev": None,
+                "q": picked(q[:, t].reshape(bs * na, n_act)),
+                "key_mask": picked(km_t),
+                "types": picked(types[:, t].reshape(bs * na, n_ent, 3)),
+                "origin": picked(source),
+                "enemy_ids": th.arange(n_ent - na, dtype=th.long),
+            })
 
     def _compute_global(self, inputs):
         local, tokens, key_mask, dead, types, origin = self._base.encode_bundle(inputs)
@@ -980,6 +1026,8 @@ class EntityAgent(ALMAAgent):
                 self.global_net.last_self_attn = []
                 if hasattr(self.global_net, "self_attn"):
                     self.global_net.self_attn.capture_attention = True
+                if hasattr(self.global_net, "read_attn"):
+                    self.global_net.read_attn.capture_attention = True
             n_obs = bs * ts * na
             live = ~dead.reshape(-1)
             idx = live.nonzero(as_tuple=False).flatten()
@@ -1044,6 +1092,7 @@ class EntityAgent(ALMAAgent):
                         "H": th.cat((h0[:, None], picked(stacked.transpose(0, 1))), dim=1),
                         "u": self.global_net.captured_reads,
                         "alpha": self.global_net.captured_alpha,
+                        "read_attn": getattr(self.global_net, "captured_read_attn", None),
                         "h_prev": picked(h_prev.reshape(bs * na, hidden_dim)),
                         "q": picked(q_t.reshape(bs * na, n_act)),
                         "key_mask": picked(km_t),

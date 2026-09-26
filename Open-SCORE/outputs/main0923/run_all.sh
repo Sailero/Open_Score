@@ -20,7 +20,7 @@ Usage: bash run_all.sh COMMAND
   start                    first launch: import main0921, acceptance, validate, then the pipeline (background)
   resume                   restart the pipeline after stop or any interruption (training resumes from resume.pt)
   stop                     every trainer saves resume.pt after its batch; evaluators finish the current episode
-  status [--once]          live panel (Ctrl+C closes the view only)
+  status [--once]          live in-place panel (Ctrl+C closes the view only)
   decide [--preview]       (re)compute decision/分支判定.md; --preview uses finished seeds and never triggers a branch
   select A|B|C [--force]   choose the main method (--force to override an existing choice)
   cut P0|P1|P2 [--now]     cancel not-yet-started tasks of a priority; --now also stops running ones

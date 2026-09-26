@@ -207,7 +207,11 @@ def _cost_prepare(policy, selection, stop_requested=None):
     import torch
     policy.reset()
     if getattr(policy.args, "global_branch", None) in ("cycle", "slot", "feedback"):
-        policy.set_eval_depth(1 if getattr(policy.args, "method", "") == "regir_r1" else 4)
+        depth = selection.get("depth")
+        if depth is None:
+            name = str(getattr(policy.args, "method", ""))
+            depth = 1 if name.startswith("regir_r1") or name.startswith("regir_r0") else 4
+        policy.set_eval_depth(int(depth))
     agent = policy.mac.agent
     if hasattr(agent, "disable_capture"):
         agent.disable_capture()
@@ -302,10 +306,11 @@ def evaluate_profile_timing(output, stop_requested=None, on_progress=None):
     import numpy as np
     import torch
     from open_score.algos import load_policy
-    from open_score.eval.experiment import COST_METHODS, SEEDS, checkpoint_info, run_directory
+    from open_score.eval.experiment import COST_METHODS, SEEDS, checkpoint_info, cost_depths, run_directory
     from open_score.utils.logging import iter_records
     output = Path(output)
-    warmup, repeats, total = 50, 200, len(COST_METHODS) * len(SEEDS) * 2
+    warmup, repeats = 50, 200
+    total = 0
     written, completed = 0, 0
     infos = {}
     try:
@@ -313,8 +318,12 @@ def evaluate_profile_timing(output, stop_requested=None, on_progress=None):
         # Resolve all required final artifacts before allocating a GPU policy.
         for method in COST_METHODS:
             for seed in SEEDS:
-                infos[method, seed] = checkpoint_info(run_directory(output, method, seed) / "final.pt",
-                                                     method=method, seed=seed, env="had")
+                path = run_directory(output, method, seed) / "final.pt"
+                if not path.exists():
+                    continue
+                infos[method, seed] = checkpoint_info(path, method=method, seed=seed, env="had")
+        if not infos:
+            raise FileNotFoundError("M4 has no measurable finals yet")
         selections = _cost_state_bank(output)
         resources = json.loads((output / "experiment.json").read_text(encoding="utf-8")).get("resources", {})
         physical_gpu = resources.get("measurement_gpu")
@@ -324,8 +333,9 @@ def evaluate_profile_timing(output, stop_requested=None, on_progress=None):
         return dict(status="stopped", completed=0, total=total, written=0)
     except (FileNotFoundError, ValueError) as error:
         return dict(status="blocked", completed=0, total=total, written=0, reason=str(error))
-    wanted = {("had", info["checkpoint_id"], (n, n, 2), "cost")
-              for info in infos.values() for n in (10, 50)}
+    wanted = {("had", info["checkpoint_id"], (n, n, 2), f"cost:R{depth}" if depth else "cost")
+              for (method, seed), info in infos.items()
+              for n in (10, 50) for depth in cost_depths(method)}
     done = set()
     for row in iter_records(output, "timing", run="train", env="had"):
         cfg = row.get("config")
@@ -337,8 +347,9 @@ def evaluate_profile_timing(output, stop_requested=None, on_progress=None):
                 and row.get("n_steps") == repeats
                 and all(row.get(k) is not None and math.isfinite(float(row[k])) for k in measures)):
             done.add(key)
+    total = len(wanted)
     completed = len(done)
-    if completed == total:
+    if total and completed == total:
         return dict(status="complete", completed=completed, total=total, written=0, reused=True)
     visible = os.environ.get("CUDA_VISIBLE_DEVICES")
     if visible is None or visible.strip() != str(physical_gpu):
@@ -355,8 +366,15 @@ def evaluate_profile_timing(output, stop_requested=None, on_progress=None):
         for method in COST_METHODS:
             for seed in SEEDS:
                 _cost_stop(stop_requested)
-                info = infos[method, seed]
-                pending = [s for s in selections if ("had", info["checkpoint_id"], s["config"], "cost") not in done]
+                info = infos.get((method, seed))
+                if info is None:
+                    continue
+                pending = []
+                for selection in selections:
+                    for depth in cost_depths(method):
+                        arm = f"cost:R{depth}" if depth else "cost"
+                        if ("had", info["checkpoint_id"], selection["config"], arm) not in done:
+                            pending.append(dict(selection, depth=depth, arm=arm))
                 if not pending:
                     continue
                 policy = load_policy(method, info["path"])
@@ -394,15 +412,15 @@ def evaluate_profile_timing(output, stop_requested=None, on_progress=None):
                                 if index >= warmup:
                                     elapsed.append(milliseconds)
                         median, p25, p75, p95 = map(float, np.percentile(elapsed, [50, 25, 75, 95]))
-                        row = dict(env="had", checkpoint_id=info["checkpoint_id"], arm="cost", config=config_dict(selection["config"]),
+                        row = dict(env="had", checkpoint_id=info["checkpoint_id"], arm=selection["arm"],
+                                   config=config_dict(selection["config"]),
                                    device="cuda:0", physical_gpu=physical_gpu,
-                                   cycle_depth=1 if method == "regir_r1" else 4 if method.startswith("regir") else None,
+                                   cycle_depth=selection.get("depth"),
                                    readout="learned", repeat_id=0, ms_per_step=median, n_steps=repeats,
                                    params=training_params, actor_params=actor_params, training_params=training_params,
                                    p25_ms=p25, p75_ms=p75, p95_ms=p95)
-                        # Progress carries the full conditions in the existing CSV;
-                        # the timing row is the last committed completion record.
-                        logger.progress(phase="timing", arm="cost", status="measured", checkpoint_id=info["checkpoint_id"],
+                        logger.progress(phase="timing", arm=selection["arm"], status="measured",
+                                        checkpoint_id=info["checkpoint_id"],
                                         config=row["config"], t_env=info["t_env"], measurement_contract=contract)
                         logger.timing([row])
                         written += 1

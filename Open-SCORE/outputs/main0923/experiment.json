@@ -974,6 +974,38 @@
     "speed_guard": {
       "after_hours": 2,
       "ratio": 0.8
+    },
+    "evaluation": {
+      "smacv2": {
+        "device": "auto",
+        "max_concurrent": 16,
+        "final_shards": 32,
+        "physical_gpus": [
+          0,
+          1
+        ],
+        "gpu_workers_per_device": 2,
+        "gpu_reserve_gib": 8,
+        "checkpoint_poll_seconds": 5,
+        "cpu_threads_per_worker": 1,
+        "policy_rng": "per_episode_seed_v1",
+        "updated_at": 1790432333.7145877
+      },
+      "had": {
+        "device": "auto",
+        "max_concurrent": 32,
+        "final_shards": 96,
+        "physical_gpus": [
+          0,
+          1
+        ],
+        "gpu_workers_per_device": 2,
+        "gpu_reserve_gib": 8,
+        "checkpoint_poll_seconds": 5,
+        "cpu_threads_per_worker": 1,
+        "policy_rng": "per_episode_seed_v1",
+        "updated_at": 1790432333.5100756
+      }
     }
   },
   "sources": {

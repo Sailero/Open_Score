@@ -1,0 +1,32 @@
+{
+  "stage": "trial",
+  "branch": null,
+  "decided_by": null,
+  "decided_at": null,
+  "cut": [],
+  "cut_now": [],
+  "intent_ready": true,
+  "abandoned": [],
+  "parallel_since": 1790190285.822635,
+  "smac_paused": true,
+  "restarts": {},
+  "errors": [],
+  "created_at": "2026-09-24T03:03:34+08:00",
+  "updated_at": "2026-09-26T22:23:13+08:00",
+  "user_events": [],
+  "facts": {
+    "trial_training_done": false,
+    "trial_training_done_without_b": false,
+    "core_complete": false,
+    "b_complete": true,
+    "b_failed": false,
+    "core_failed": []
+  },
+  "events": [
+    {
+      "at": "2026-09-24T05:05:47+08:00",
+      "event": "smac_paused",
+      "detail": "HAD trial speed 0.69x main0921 (< 0.8)"
+    }
+  ]
+}

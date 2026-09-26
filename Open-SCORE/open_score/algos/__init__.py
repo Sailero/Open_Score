@@ -700,6 +700,7 @@ def train(name, cfg):
                 intent_loss=getattr(learner_ref.get("learner"), "last_metrics", {}).get("intent_loss"),
                 intent_acc=getattr(learner_ref.get("learner"), "last_metrics", {}).get("intent_acc"),
                 latest_validation_D=state.get("latest_validation_D"),
+                latest_validation_win_rate=state.get("latest_validation_win_rate"),
                 estimate_ready=bool(observed_update)))
         return resource_latest
     started = time.monotonic()

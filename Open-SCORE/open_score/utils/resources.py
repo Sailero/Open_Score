@@ -277,7 +277,12 @@ def cpu_admit(env, kind, live, maximum):
     if len(live) >= maximum:
         return False
     kinds = [item["task"]["kind"] for item in live]
-    if kind != "final" and sum(k != "final" for k in kinds) >= 4:
+    diagnostic = {"coverage", "dynamics", "deep_rounds", "global_probe",
+                  "readout_attention", "intent_accuracy"}
+    if kind in diagnostic:
+        if sum(k in diagnostic for k in kinds) >= 8:
+            return False
+    elif kind != "final" and sum(k != "final" and k not in diagnostic for k in kinds) >= 4:
         return False
     # Reserve host memory for training and account for just-spawned evaluators
     # that have not loaded their model/environment yet. No synthetic benchmark.

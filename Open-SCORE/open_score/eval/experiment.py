@@ -59,7 +59,8 @@ BRANCH_MECHANISM = {
               deep_rounds=("regir_kv0_sg", "regir_sg", "regir_kv0_fixed4_sg", "regir_fixed4_sg"),
               global_probe=("regir_kv0_sg", "regir_sg", "regir_untied4_sg")),
     "B": dict(depth=("regir_kv0_intent_sg", "regir_kv0_sg"), intent_intervention=("regir_kv0_intent_sg",),
-              dynamics=("regir_kv0_intent_sg", "regir_kv0_sg"), smac_depth=("regir_kv0_intent_sg",)),
+              dynamics=("regir_kv0_intent_sg", "regir_kv0_sg"), smac_depth=("regir_kv0_intent_sg",),
+              intent_accuracy=("regir_kv0_intent_sg",)),
     "C": dict(readout_attention=("regir_r1_sg", "regir_r0_sg", "regir_kv0_sg"),
               global_probe=("regir_r1_sg", "regir_kv0_sg", "regir_sg")),
 }
@@ -84,6 +85,9 @@ INTENT_MODES = ("uniform", "shuffle", "oracle")
 COST_METHODS = ("refil", "refil_matched", "regir_r0_sg", "regir_r1_sg", "regir_kv0_sg",
                 "regir_kv0_intent_sg", "regir_sg", "regir_untied4_sg", "transfqmix")
 EVAL_PHASES = ("final", "gate_depth", "dup", "depth", "readout", "r1deploy", "intent_intervention")
+DIAGNOSTIC_KINDS = ("coverage", "dynamics", "deep_rounds", "global_probe",
+                    "readout_attention", "intent_accuracy")
+HAD_EVAL_KINDS = EVAL_PHASES + DIAGNOSTIC_KINDS + ("timing",)
 
 
 def is_profile(output):
@@ -504,9 +508,14 @@ def eval_matrix(env, branch=None):
         for method in IMPORTED_BASELINES:
             for seed in SEEDS:
                 add(method, seed, "dup", "common", "P1")
+        for method in COMMON_PROBES:
+            for seed in method_seeds(env, method):
+                add(method, seed, "coverage", "common", "P0")
     for b in LADDER:
         mechanism = BRANCH_MECHANISM[b]
-        kinds = (("depth", "readout", "r1deploy", "intent_intervention") if env == "had" else ("smac_depth",))
+        kinds = (("depth", "readout", "r1deploy", "intent_intervention",
+                  "dynamics", "deep_rounds", "global_probe", "readout_attention",
+                  "intent_accuracy") if env == "had" else ("smac_depth",))
         for kind in kinds:
             for method in mechanism.get(kind, ()):
                 if method not in methods(env):
@@ -529,6 +538,49 @@ def _segment_rank(segments):
             key = "M" if priority == "M" else f"{family}:{priority}"
             ranks.append(PRIORITY_ORDER.index(key))
     return min(ranks) if ranks else len(PRIORITY_ORDER)
+
+
+def cost_depths(method):
+    if method == "regir_kv0_sg":
+        return (4, 1)
+    if str(method).startswith("regir"):
+        return (test_depth(method) or 4,)
+    return (None,)
+
+
+def _timing_task(output):
+    from open_score.utils.logging import iter_records
+    expected, measurable = 0, []
+    for method in COST_METHODS:
+        for seed in SEEDS:
+            path = run_directory(output, method, seed) / "final.pt"
+            info = None
+            if path.exists():
+                try:
+                    info = checkpoint_info(path, method=method, seed=seed, env="had")
+                except (ValueError, OSError, KeyError):
+                    info = None
+            for n in (10, 50):
+                for depth in cost_depths(method):
+                    expected += 1
+                    if info:
+                        measurable.append((info["checkpoint_id"], n, depth))
+    done = {(row.get("checkpoint_id"), int((row.get("config") or {}).get("N_R", 0)),
+             row.get("cycle_depth"))
+            for row in iter_records(output, "timing", run="train", env="had")
+            if str(row.get("arm", "")).startswith("cost")}
+    completed = sum(1 for cell in measurable if cell in done)
+    if not measurable:
+        status, detail = "waiting", "waiting for cost finals"
+    elif completed >= expected:
+        status, detail = "complete", "cost arms"
+    elif completed >= len(measurable):
+        status, detail = "waiting", f"{completed}/{expected} waiting remaining finals"
+    else:
+        status, detail = "pending", f"{completed}/{expected}"
+    return dict(id="eval.timing.had.cost.s0", kind="timing", env="had", method="refil", seed=0,
+                segments={"common": "P0"}, rank=_segment_rank({"common": "P0"}),
+                status=status, completed=completed, total=expected, detail=detail)
 
 
 def scan(output, env=None, only=None, probe_collector_seed=0, index=None):
@@ -575,6 +627,19 @@ def scan(output, env=None, only=None, probe_collector_seed=0, index=None):
             identity = f"eval.{kind}.{domain}.{method}.s{seed}"
             base = dict(id=identity, kind=kind, env=domain, method=method, seed=seed,
                         segments=segments, rank=_segment_rank(segments))
+            if kind in DIAGNOSTIC_KINDS:
+                if not info:
+                    failed = (run_directory(root, method, seed, domain) / "task_failure.json").exists()
+                    tasks.append(dict(base, status="skipped" if failed else "waiting",
+                                      completed=0, total=1,
+                                      detail="train failed" if failed else "waiting for final"))
+                    continue
+                from .probes0923 import probe_complete
+                done = probe_complete(root, kind, method, seed, info["checkpoint_id"])
+                tasks.append(dict(base, status="complete" if done else "pending",
+                                  completed=int(done), total=1, detail="frozen final",
+                                  checkpoint=info["path"], checkpoint_id=info["checkpoint_id"]))
+                continue
             if not info:
                 probe = dict(env=domain, method=method, t_env=0, checkpoint="final@0", checkpoint_id="-")
                 tasks.append(dict(base, status="waiting", completed=0,
@@ -588,6 +653,8 @@ def scan(output, env=None, only=None, probe_collector_seed=0, index=None):
             tasks.append(dict(base, status=status, completed=len(jobs) - len(pending), total=len(jobs),
                               detail="reuse final arms first" if status == "waiting" else "frozen final",
                               checkpoint=info["path"], checkpoint_id=info["checkpoint_id"]))
+        if domain == "had" and (only is None or "timing" in only):
+            tasks.append(_timing_task(root))
     value = dict(profile=PROFILE, branch=branch, checkpoints=checkpoints, tasks=tasks,
                  scanned_at=time.time())
     if env is None:

@@ -291,11 +291,13 @@ def _random_policy(template, seed):
     return FrozenPolicyAdapter(mac, args, template.scheme, template.groups, template.preprocess, mixer=None)
 
 
-def extract_scene(policy, trajectory, stop_requested=None):
+def extract_scene(policy, trajectory, stop_requested=None, extras=False):
     from open_score.envs import DecisionState
     from open_score.envs.features import MAX_AGENTS
+    from open_score.eval.experiment import test_depth
     policy.reset()
-    policy.set_eval_depth(4)
+    depth = test_depth(getattr(policy.args, "method", ""))
+    policy.set_eval_depth(4 if depth is None else depth)
     agent = policy.mac.agent
     times = set(selected_times(trajectory["frames"]))
     features, labels, metadata = [], [], []
@@ -306,15 +308,36 @@ def extract_scene(policy, trajectory, stop_requested=None):
         state = DecisionState.from_dict(frame["state"])
         if index in times:
             agent.enable_capture(max_decisions=1, max_observers=2)
+            net = getattr(agent, "global_net", None)
+            if extras and net is not None:
+                net.capture_attention = True
+                if hasattr(net, "read_attn"):
+                    net.read_attn.capture_attention = True
+                if hasattr(net, "self_attn"):
+                    net.self_attn.capture_attention = True
         teacher_forced_act(policy, state, frame["actions"], frame["action_ids"])
         if index not in times:
             continue
         if len(agent.last_capture) != 1:
             raise ValueError("Real-decision capture missing from teacher-forced policy")
         capture = agent.last_capture[0]
+        if extras:
+            capture = dict(capture)
+            capture["actions"] = frame["actions"]
+            capture["action_ids"] = list(frame["action_ids"])
+            capture["state"] = state
+            net = getattr(agent, "global_net", None)
+            record = getattr(net, "last_intent", None) if net is not None else None
+            if record:
+                capture["intent"] = {key: record[key] for key in ("logits", "teammate", "origin", "depth")
+                                     if key in record}
         agent.disable_capture()
-        enemies = [i for i, e in enumerate(state.blue) if e.alive][:5]
+        if extras and getattr(agent, "global_net", None) is not None:
+            agent.global_net.capture_attention = False
         captures.append(capture)
+        if extras:
+            continue
+        enemies = [i for i, e in enumerate(state.blue) if e.alive][:5]
         for row, observer in enumerate(capture["observer_ids"].tolist()):
             origins = capture["origin"][row].numpy().astype(int)
             visible = np.zeros(len(origins), dtype=bool)
@@ -327,6 +350,8 @@ def extract_scene(policy, trajectory, stop_requested=None):
                 labels.append(label)
                 metadata.append((state.step, observer, enemy))
     agent.disable_capture()
+    if extras:
+        return dict(captures=captures, exclusions=dict(exclusions), selected_times=sorted(times))
     width = int(policy.args.global_embed_dim)
     return dict(X=np.asarray(features, dtype=np.float32).reshape(-1, 5, width),
                 y=np.asarray(labels, dtype=np.float64).reshape(-1, 3),

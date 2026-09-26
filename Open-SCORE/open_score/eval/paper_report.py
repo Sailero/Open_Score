@@ -569,11 +569,15 @@ def render_report(output, *, run="train"):
     import json
     from datetime import datetime
     from pathlib import Path
+    from .experiment import is_profile
     from .report0921 import Results
 
     if run != "train":
         raise ValueError("The paper edition uses the registered train run only")
     output = Path(output)
+    if is_profile(output):
+        from .report0923 import render_paper
+        return render_paper(output, run=run)
     metadata = json.loads((output / "experiment.json").read_text(encoding="utf-8"))
     if metadata.get("profile") != "main0921":
         raise ValueError("The paper edition is specific to the main0921 experiment")

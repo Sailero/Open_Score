@@ -102,7 +102,7 @@ def _worker(task, output, run, device, stop_event, results):
     # Each evaluator sees only its assigned physical GPU. CPU workers never
     # initialize CUDA, and the parent keeps both cards visible for admission.
     physical_gpu = task.get("physical_gpu")
-    if device == "cpu" or "assigned_jobs" in task:
+    if task.get("kind") != "timing" and (device == "cpu" or "assigned_jobs" in task):
         os.environ["CUDA_VISIBLE_DEVICES"] = "" if physical_gpu is None else str(physical_gpu)
     from open_score.eval.experiment import is_profile, run_directory
     from open_score.utils.resources import cpu_threads
@@ -144,6 +144,13 @@ def _worker(task, output, run, device, stop_event, results):
                         from open_score.eval.relationship_probe import evaluate_probe
                         result = evaluate_probe(output=output, seed=seed,
                             on_progress=on_progress, stop_requested=profile_stop_requested)
+                    elif profile and kind in ("coverage", "dynamics", "deep_rounds", "global_probe",
+                                              "readout_attention", "intent_accuracy"):
+                        from open_score.eval.probes0923 import evaluate_diagnostic
+                        result = evaluate_diagnostic(output=output, kind=kind, method=method,
+                            seed=seed, on_progress=on_progress, stop_requested=profile_stop_requested)
+                    elif profile and kind == "timing":
+                        result = run_profile_timing(Path(output), profile_stop_requested)
                     elif kind == "anchors":
                         from open_score.eval.anchors import run_anchors
                         result = run_anchors(output, run=run, stop_requested=stop_event.is_set,
@@ -323,7 +330,9 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
             # New final checkpoints take precedence over queued mechanism
             # work. Stable order preserves seeds; running episodes continue.
             priority = {"final": 0, "gate_depth": 1, "dup": 2, "depth": 3, "r1deploy": 4, "readout": 5,
-                        "intent_intervention": 6, "probe": 7, "timing": 8}
+                        "intent_intervention": 6, "coverage": 7, "dynamics": 7, "deep_rounds": 7,
+                        "global_probe": 7, "readout_attention": 7, "intent_accuracy": 7,
+                        "probe": 7, "timing": 8}
             ordered = sorted(waiting, key=lambda task: (task.get("rank", 0), priority.get(task["kind"], 9)))
             waiting.clear()
             waiting.extend(ordered)
@@ -345,6 +354,9 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
             task = waiting[selected_index]
             del waiting[selected_index]
             task_device = "cpu" if device == "auto" else device
+            if task["kind"] in ("coverage", "dynamics", "deep_rounds", "global_probe",
+                                "readout_attention", "intent_accuracy"):
+                task["force_cpu"] = True
             if device == "auto" and task["kind"] in EVAL_PHASES and not task.get("force_cpu"):
                 for gpu in sorted(gpu_snapshots, key=lambda g: -gpu_snapshots[g]["free"]):
                     row = gpu_snapshots[gpu]
@@ -635,7 +647,7 @@ def run_profile_timing(output, stop_requested):
 def profile_main(options, output):
     from open_score.eval.experiment import (initialize, atomic_json, scan, import_main0921, methods,
                                           checkpoint_info, run_directory, PROFILE, SOURCE_PROFILE,
-                                          EVAL_PHASES, ALL_SEEDS)
+                                          EVAL_PHASES, HAD_EVAL_KINDS, ALL_SEEDS)
     from open_score.utils.resources import queue_lock, cpu_threads, clear_previous_stop, configure_workspace
     initialize(output)
     workspace = configure_workspace()
@@ -662,7 +674,7 @@ def profile_main(options, output):
         imported = import_main0921(output, output.parent / SOURCE_PROFILE)
         print(f"Imported {len(imported)} final checkpoints from {SOURCE_PROFILE}")
         return
-    allowed = set(EVAL_PHASES) if options.env == "had" else {"final", "depth"}
+    allowed = set(HAD_EVAL_KINDS) if options.env == "had" else {"final", "depth"}
     only = ({k.strip() for k in options.only.split(",")} if options.only else set(allowed))
     if not only or not only <= allowed:
         raise SystemExit(f"Unsupported {PROFILE} {options.env} evaluation kinds: {sorted(only - allowed)}")

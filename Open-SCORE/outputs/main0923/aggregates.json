@@ -1,0 +1,1116 @@
+{
+  "profile": "main0923",
+  "created_at": "2026-09-26T22:20:20+08:00",
+  "branch": null,
+  "identity": "300 episodes, checkpoint_id, t_env, scene 9000–9299 / 110000–110299",
+  "iqm": "Agarwal 2021; 5-seed trim 1+1; 3-seed = mean",
+  "bootstrap": {
+    "reps": 10000,
+    "seed": 20260924
+  },
+  "had_groups": {
+    "refil": {
+      "ID": {
+        "iqm": 0.7154459351661243,
+        "lo": 0.4889055512043301,
+        "hi": 0.9513295985299056,
+        "per_seed": [
+          0.6856701141957626,
+          0.6890981434201942,
+          0.771569547882416
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 0.7154459351661243,
+        "t_half": 0.12081525994631702
+      },
+      "N-OOD": {
+        "iqm": 2.2093327435606986,
+        "lo": 1.7593444116755317,
+        "hi": 2.7948117709778146,
+        "per_seed": [
+          2.1894563442688684,
+          2.496216593422291,
+          1.9423252929909367
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 2.2093327435606986,
+        "t_half": 0.6892987391296772
+      },
+      "K-OOD": {
+        "iqm": 1.7961469568830217,
+        "lo": 1.3190085335439248,
+        "hi": 2.4098314929092397,
+        "per_seed": [
+          1.4665437941180666,
+          1.8559397274715252,
+          2.065957349059473
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 1.7961469568830215,
+        "t_half": 0.7555435897278724
+      },
+      "联合 OOD": {
+        "iqm": 3.3083710650761198,
+        "lo": 2.501845681667771,
+        "hi": 4.263234484261515,
+        "per_seed": [
+          3.003492715453585,
+          3.609625352181367,
+          3.3119951275934087
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 3.30837106507612,
+        "t_half": 0.7528988397293479
+      }
+    },
+    "refil_matched": {
+      "ID": {
+        "iqm": 0.9143682382235901,
+        "lo": 0.5538296024438122,
+        "hi": 1.2900513129238476,
+        "per_seed": [
+          0.8544550391492434,
+          0.7872988037669999,
+          1.1013508717545273
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 0.9143682382235901,
+        "t_half": 0.41081786636742024
+      },
+      "N-OOD": {
+        "iqm": 2.268590894640417,
+        "lo": 1.8273575942210958,
+        "hi": 2.734036629452275,
+        "per_seed": [
+          2.500192648151385,
+          1.913515763382449,
+          2.392064272387416
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 2.268590894640417,
+        "t_half": 0.7755989468856381
+      },
+      "K-OOD": {
+        "iqm": 2.4925028050746305,
+        "lo": 1.8307288566367805,
+        "hi": 3.138222209126727,
+        "per_seed": [
+          2.68978011222437,
+          2.1725323045416323,
+          2.6151959984578896
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 2.4925028050746305,
+        "t_half": 0.694566585265219
+      },
+      "联合 OOD": {
+        "iqm": 4.169510545931728,
+        "lo": 2.9975105039077063,
+        "hi": 5.7499557708404145,
+        "per_seed": [
+          4.994550236002686,
+          3.498105656352477,
+          4.015875745440021
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 4.169510545931728,
+        "t_half": 1.8878455117756587
+      }
+    },
+    "b2_qmix_atten": {
+      "ID": {
+        "iqm": 2.3177184191298754,
+        "lo": 1.0534278307161027,
+        "hi": 3.8707086464414666,
+        "per_seed": [
+          3.8707086464414675,
+          1.0534278307161027,
+          2.029018780232057
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 2.317718419129876,
+        "t_half": 3.553948101889774
+      },
+      "N-OOD": {
+        "iqm": 5.138533251256182,
+        "lo": 2.3201779597095933,
+        "hi": 8.322464427404434,
+        "per_seed": [
+          8.429301510583988,
+          2.2444472463863656,
+          4.741850996798192
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 5.138533251256182,
+        "t_half": 7.729271111079992
+      },
+      "K-OOD": {
+        "iqm": 5.008949839230407,
+        "lo": 2.772712545994939,
+        "hi": 7.637406755438492,
+        "per_seed": [
+          7.703345055702332,
+          2.7738362871142694,
+          4.549668174874619
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 5.008949839230407,
+        "t_half": 6.202001368168887
+      },
+      "联合 OOD": {
+        "iqm": 7.415386520896289,
+        "lo": 3.655774029792022,
+        "hi": 11.567489292573425,
+        "per_seed": [
+          11.493243602559506,
+          3.5632473528157513,
+          7.1896686073136085
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 7.415386520896289,
+        "t_half": 9.86156415579582
+      }
+    },
+    "dcg": {
+      "ID": {
+        "iqm": 2.02817794897752,
+        "lo": 1.3718837735018479,
+        "hi": 2.9066599463136646,
+        "per_seed": [
+          1.9181215655281147,
+          2.5097100985891267,
+          1.6567021828153186
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 2.02817794897752,
+        "t_half": 1.0856276719710443
+      },
+      "N-OOD": {
+        "iqm": 5.021315456825612,
+        "lo": 3.0819679183334583,
+        "hi": 8.170373231600058,
+        "per_seed": [
+          3.1090985737745265,
+          8.056036971861866,
+          3.8988108248404445
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 5.021315456825612,
+        "t_half": 6.601949354757761
+      },
+      "K-OOD": {
+        "iqm": 5.838552592745207,
+        "lo": 3.6554821975211707,
+        "hi": 8.728784027703803,
+        "per_seed": [
+          4.203099019755428,
+          7.952877782387855,
+          5.359680976092339
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 5.8385525927452075,
+        "t_half": 4.770061073641679
+      },
+      "联合 OOD": {
+        "iqm": 8.092278886539932,
+        "lo": 4.87469361556172,
+        "hi": 13.02001977132166,
+        "per_seed": [
+          5.4970181707548385,
+          12.587728738117184,
+          6.192089750747773
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 8.092278886539932,
+        "t_half": 9.709637047321346
+      }
+    },
+    "spectra": {
+      "ID": {
+        "iqm": 2.662210161105424,
+        "lo": 1.9504746569213254,
+        "hi": 3.494900524835201,
+        "per_seed": [
+          2.733481728347311,
+          2.5937766272138125,
+          2.659372127755149
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 2.662210161105424,
+        "t_half": 0.17363073560153267
+      },
+      "N-OOD": {
+        "iqm": 6.455109168516036,
+        "lo": 4.870548584206989,
+        "hi": 8.689277725095586,
+        "per_seed": [
+          5.2216335498771445,
+          7.980966741464752,
+          6.162727214206213
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 6.455109168516037,
+        "t_half": 3.484524789284888
+      },
+      "K-OOD": {
+        "iqm": 6.933007758961737,
+        "lo": 5.076440018719077,
+        "hi": 8.95200460723084,
+        "per_seed": [
+          6.766280190046594,
+          6.362070199298845,
+          7.670672887539773
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 6.933007758961737,
+        "t_half": 1.6644812884521332
+      },
+      "联合 OOD": {
+        "iqm": 11.183818101122109,
+        "lo": 8.234050632599411,
+        "hi": 14.756069056443216,
+        "per_seed": [
+          11.127693501957822,
+          10.863709488918698,
+          11.560051312489811
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 11.18381810112211,
+        "t_half": 0.8732917557973217
+      }
+    },
+    "alma": {
+      "ID": {
+        "iqm": 1.325973742269731,
+        "lo": 0.8436145297377967,
+        "hi": 1.8485521887280638,
+        "per_seed": [
+          1.5378664673260372,
+          1.1589394280030243,
+          1.2811153314801316
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 1.325973742269731,
+        "t_half": 0.48044554696985353
+      },
+      "N-OOD": {
+        "iqm": 3.6054235210031114,
+        "lo": 2.6831428976229432,
+        "hi": 4.740139901157083,
+        "per_seed": [
+          3.7403473289212124,
+          2.804990309342447,
+          4.270932924745676
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 3.605423521003112,
+        "t_half": 1.843792983410632
+      },
+      "K-OOD": {
+        "iqm": 3.0222228842872387,
+        "lo": 2.3141736578959162,
+        "hi": 3.836996847863141,
+        "per_seed": [
+          3.404469653005227,
+          2.737627748038335,
+          2.9245712518181537
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 3.0222228842872387,
+        "t_half": 0.8544907008440713
+      },
+      "联合 OOD": {
+        "iqm": 5.374941866206811,
+        "lo": 3.9205443382586345,
+        "hi": 7.189830044491039,
+        "per_seed": [
+          5.345474793429595,
+          4.354012446065293,
+          6.4253383591255435
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 5.374941866206811,
+        "t_half": 2.5735103091541207
+      }
+    },
+    "transfqmix": {
+      "ID": {
+        "iqm": 2.1567707805102683,
+        "lo": 1.3694245007003951,
+        "hi": 3.0478111451187098,
+        "per_seed": [
+          1.908779470108682,
+          2.376185418366191,
+          2.1853474530559325
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 2.1567707805102687,
+        "t_half": 0.583796409176374
+      },
+      "N-OOD": {
+        "iqm": 6.226223068797233,
+        "lo": 4.70012384667148,
+        "hi": 8.029588845920163,
+        "per_seed": [
+          6.532609790289172,
+          6.729935115739138,
+          5.416124300363389
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 6.226223068797233,
+        "t_half": 1.7599363278023636
+      },
+      "K-OOD": {
+        "iqm": 6.128298628434514,
+        "lo": 4.140275412942619,
+        "hi": 8.823349579599194,
+        "per_seed": [
+          4.699254751063312,
+          8.179775751473544,
+          5.505865382766686
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 6.128298628434514,
+        "t_half": 4.525683028921676
+      },
+      "联合 OOD": {
+        "iqm": 10.596637963636415,
+        "lo": 7.238076900135029,
+        "hi": 15.46958252549446,
+        "per_seed": [
+          8.69723987851821,
+          13.794536434053185,
+          9.298137578337847
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 10.596637963636415,
+        "t_half": 6.920089618406116
+      }
+    },
+    "regir_kv0_intent_sg": {
+      "ID": {
+        "iqm": 0.4606592533371828,
+        "lo": 0.27162084048483487,
+        "hi": 0.671706659088397,
+        "per_seed": [
+          0.5795628992977666,
+          0.40204974577938624,
+          0.3101370192124435,
+          0.613405028855942,
+          0.4003651149343954
+        ],
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "mean": 0.46110396161598677,
+        "t_half": 0.16093297156681058
+      },
+      "N-OOD": {
+        "iqm": 0.8172886122130935,
+        "lo": 0.6621305342789522,
+        "hi": 1.1732335868714947,
+        "per_seed": [
+          0.7826078558689625,
+          0.6181824679608768,
+          0.771787038186078,
+          1.3215784019089485,
+          0.8974709425842399
+        ],
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "mean": 0.8783253413018212,
+        "t_half": 0.3314489370324278
+      },
+      "K-OOD": {
+        "iqm": 1.2413542564674014,
+        "lo": 0.7722716171810987,
+        "hi": 2.050574244562795,
+        "per_seed": [
+          1.4504513336694154,
+          1.3614047141277432,
+          0.854676829351467,
+          2.0088010011394393,
+          0.9122067216050455
+        ],
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "mean": 1.317508119978622,
+        "t_half": 0.5810565263153861
+      },
+      "联合 OOD": {
+        "iqm": 1.491073184023863,
+        "lo": 1.1324296923818766,
+        "hi": 2.314187250808405,
+        "per_seed": [
+          1.4430642645027956,
+          1.51342500336626,
+          1.4961006327288853,
+          2.4839705056891788,
+          1.463693915976443
+        ],
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "mean": 1.6800508644527126,
+        "t_half": 0.5590459030329314
+      }
+    },
+    "regir_kv0_sg": {
+      "ID": null,
+      "N-OOD": null,
+      "K-OOD": null,
+      "联合 OOD": null
+    },
+    "regir_r1_sg": {
+      "ID": null,
+      "N-OOD": null,
+      "K-OOD": null,
+      "联合 OOD": null
+    },
+    "regir_r0_sg": {
+      "ID": null,
+      "N-OOD": null,
+      "K-OOD": null,
+      "联合 OOD": null
+    },
+    "regir_sg": {
+      "ID": null,
+      "N-OOD": null,
+      "K-OOD": null,
+      "联合 OOD": null
+    },
+    "regir_untied4_sg": {
+      "ID": null,
+      "N-OOD": null,
+      "K-OOD": null,
+      "联合 OOD": null
+    },
+    "regir_r1_nomem": {
+      "ID": null,
+      "N-OOD": null,
+      "K-OOD": null,
+      "联合 OOD": null
+    },
+    "regir_r1_norefil_sg": {
+      "ID": null,
+      "N-OOD": null,
+      "K-OOD": null,
+      "联合 OOD": null
+    },
+    "regir_r1_nocount_sg": {
+      "ID": null,
+      "N-OOD": null,
+      "K-OOD": null,
+      "联合 OOD": null
+    },
+    "regir_kv0_nomem": {
+      "ID": null,
+      "N-OOD": null,
+      "K-OOD": null,
+      "联合 OOD": null
+    },
+    "regir_kv0_norefil_sg": {
+      "ID": null,
+      "N-OOD": null,
+      "K-OOD": null,
+      "联合 OOD": null
+    },
+    "regir_kv0_fixed4_sg": {
+      "ID": null,
+      "N-OOD": null,
+      "K-OOD": null,
+      "联合 OOD": null
+    },
+    "regir_fixed4_sg": {
+      "ID": null,
+      "N-OOD": null,
+      "K-OOD": null,
+      "联合 OOD": null
+    },
+    "regir_kv0_nocount_sg": {
+      "ID": null,
+      "N-OOD": null,
+      "K-OOD": null,
+      "联合 OOD": null
+    },
+    "regir_kv0_intent_noaux_sg": {
+      "ID": null,
+      "N-OOD": null,
+      "K-OOD": null,
+      "联合 OOD": null
+    },
+    "regir_kv0_intent_nomem": {
+      "ID": null,
+      "N-OOD": null,
+      "K-OOD": null,
+      "联合 OOD": null
+    },
+    "regir_intent_sg": {
+      "ID": null,
+      "N-OOD": null,
+      "K-OOD": null,
+      "联合 OOD": null
+    },
+    "regir_kv0_intent_norefil_sg": {
+      "ID": null,
+      "N-OOD": null,
+      "K-OOD": null,
+      "联合 OOD": null
+    },
+    "rule_nv1": {
+      "ID": {
+        "iqm": 1.462408381432983,
+        "kind": "anchor"
+      },
+      "N-OOD": {
+        "iqm": 1.5447994897233799,
+        "kind": "anchor"
+      },
+      "K-OOD": {
+        "iqm": 3.2124689801305264,
+        "kind": "anchor"
+      },
+      "联合 OOD": {
+        "iqm": 3.0598876761069613,
+        "kind": "anchor"
+      }
+    }
+  },
+  "excluded": {},
+  "field_missing": {
+    "dup_pursuit_frac": 443400,
+    "return": 90000
+  },
+  "sources": {
+    "main0921": 324000,
+    "main0923": 44400
+  },
+  "conflicts": [],
+  "checkpoints": {
+    "had/refil/s0": "8437bce5209e4a92add0b18b10171e7b",
+    "had/refil/s1": "92d90971bb874c75bd1c4f77f9bfe268",
+    "had/refil/s2": "7ea826c2179f463885c7893dba9687af",
+    "had/refil_matched/s0": "986e65ea27a84ab0aab149048c9e097b",
+    "had/refil_matched/s1": "704a7ee2f9a1417693c1f81797e39c22",
+    "had/refil_matched/s2": "e33d205e725c4bfd88fbdb3159ca8828",
+    "had/b2_qmix_atten/s0": "7c6a03bb5b234b4d9cf78e82b49f14e0",
+    "had/b2_qmix_atten/s1": "b845741854d24b5fa23e86d2c1d9113d",
+    "had/b2_qmix_atten/s2": "0bee87e082924244a6ddf96016eac02f",
+    "had/dcg/s0": "f77b760225934887b4539f2a98e69d28",
+    "had/dcg/s1": "0a94180eb9624fa4be99e1aa60a36b9f",
+    "had/dcg/s2": "db7315cc100e406e815e7667e91bb694",
+    "had/spectra/s0": "53e7f877dd9548a784e6d7376b42b7e2",
+    "had/spectra/s1": "c3769d11d2bd4250838f8bdaa29cf3a2",
+    "had/spectra/s2": "84ab91a1215f4d83afa8921d9054905d",
+    "had/alma/s0": "b649c32be10f45dd9f58b56c9ee7541b",
+    "had/alma/s1": "bef1d569c3d1481eb943218335bc1a2d",
+    "had/alma/s2": "ec7ba92b0aff4edc84da0193569d67b7",
+    "had/transfqmix/s0": "ba6ad0aad4844160892a1bc20a57e682",
+    "had/transfqmix/s1": "55ae92a6386a4ba3919d33fb1966e070",
+    "had/transfqmix/s2": "0a9f5fd11b1f4f0daaccc0e617fc3290",
+    "had/regir_kv0_intent_sg/s0": "3643f38df64c4bec86fa44da07eb30df",
+    "had/regir_kv0_intent_sg/s1": "1101c6d199424c33bd05f19518992204",
+    "had/regir_kv0_intent_sg/s2": "2c80ab907fd94c66827cd18f6dde276e",
+    "had/regir_kv0_intent_sg/s3": "6849597fa38a4db2b02e58db08d8d66e",
+    "had/regir_kv0_intent_sg/s4": "69d39c88f64b41c09d65836f8928b8ed",
+    "had/regir_kv0_sg/s0": "b11572296b844c57a7f2b473c6a4ef70"
+  },
+  "integrity_ok": true,
+  "integrity": [
+    {
+      "method": "refil",
+      "group": "ID",
+      "expected": 0.715,
+      "observed": 0.7154459351661243,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "refil",
+      "group": "N-OOD",
+      "expected": 2.209,
+      "observed": 2.2093327435606986,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "refil",
+      "group": "K-OOD",
+      "expected": 1.796,
+      "observed": 1.7961469568830217,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "refil",
+      "group": "联合 OOD",
+      "expected": 3.308,
+      "observed": 3.3083710650761198,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "refil_matched",
+      "group": "ID",
+      "expected": 0.914,
+      "observed": 0.9143682382235901,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "refil_matched",
+      "group": "N-OOD",
+      "expected": 2.269,
+      "observed": 2.268590894640417,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "refil_matched",
+      "group": "K-OOD",
+      "expected": 2.493,
+      "observed": 2.4925028050746305,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "refil_matched",
+      "group": "联合 OOD",
+      "expected": 4.17,
+      "observed": 4.169510545931728,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "b2_qmix_atten",
+      "group": "ID",
+      "expected": 2.318,
+      "observed": 2.3177184191298754,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "b2_qmix_atten",
+      "group": "N-OOD",
+      "expected": 5.139,
+      "observed": 5.138533251256182,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "b2_qmix_atten",
+      "group": "K-OOD",
+      "expected": 5.009,
+      "observed": 5.008949839230407,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "b2_qmix_atten",
+      "group": "联合 OOD",
+      "expected": 7.415,
+      "observed": 7.415386520896289,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "dcg",
+      "group": "ID",
+      "expected": 2.028,
+      "observed": 2.02817794897752,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "dcg",
+      "group": "N-OOD",
+      "expected": 5.021,
+      "observed": 5.021315456825612,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "dcg",
+      "group": "K-OOD",
+      "expected": 5.839,
+      "observed": 5.838552592745207,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "dcg",
+      "group": "联合 OOD",
+      "expected": 8.092,
+      "observed": 8.092278886539932,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "spectra",
+      "group": "ID",
+      "expected": 2.662,
+      "observed": 2.662210161105424,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "spectra",
+      "group": "N-OOD",
+      "expected": 6.455,
+      "observed": 6.455109168516036,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "spectra",
+      "group": "K-OOD",
+      "expected": 6.933,
+      "observed": 6.933007758961737,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "spectra",
+      "group": "联合 OOD",
+      "expected": 11.184,
+      "observed": 11.183818101122109,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "alma",
+      "group": "ID",
+      "expected": 1.326,
+      "observed": 1.325973742269731,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "alma",
+      "group": "N-OOD",
+      "expected": 3.605,
+      "observed": 3.6054235210031114,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "alma",
+      "group": "K-OOD",
+      "expected": 3.022,
+      "observed": 3.0222228842872387,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "alma",
+      "group": "联合 OOD",
+      "expected": 5.375,
+      "observed": 5.374941866206811,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "transfqmix",
+      "group": "ID",
+      "expected": 2.157,
+      "observed": 2.1567707805102683,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "transfqmix",
+      "group": "N-OOD",
+      "expected": 6.226,
+      "observed": 6.226223068797233,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "transfqmix",
+      "group": "K-OOD",
+      "expected": 6.128,
+      "observed": 6.128298628434514,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "transfqmix",
+      "group": "联合 OOD",
+      "expected": 10.597,
+      "observed": 10.596637963636415,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "rule_nv1",
+      "group": "ID",
+      "expected": 1.462,
+      "observed": 1.462408381432983,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "rule_nv1",
+      "group": "N-OOD",
+      "expected": 1.545,
+      "observed": 1.5447994897233799,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "rule_nv1",
+      "group": "K-OOD",
+      "expected": 3.212,
+      "observed": 3.2124689801305264,
+      "match": true,
+      "pending": false
+    },
+    {
+      "method": "rule_nv1",
+      "group": "联合 OOD",
+      "expected": 3.06,
+      "observed": 3.0598876761069613,
+      "match": true,
+      "pending": false
+    }
+  ],
+  "probe_complete": {},
+  "costs": 0,
+  "coverage": {
+    "had/refil/s0": "24/24",
+    "had/refil/s1": "24/24",
+    "had/refil/s2": "24/24",
+    "had/refil_matched/s0": "24/24",
+    "had/refil_matched/s1": "24/24",
+    "had/refil_matched/s2": "24/24",
+    "had/b2_qmix_atten/s0": "24/24",
+    "had/b2_qmix_atten/s1": "24/24",
+    "had/b2_qmix_atten/s2": "24/24",
+    "had/dcg/s0": "24/24",
+    "had/dcg/s1": "24/24",
+    "had/dcg/s2": "24/24",
+    "had/spectra/s0": "24/24",
+    "had/spectra/s1": "24/24",
+    "had/spectra/s2": "24/24",
+    "had/alma/s0": "24/24",
+    "had/alma/s1": "24/24",
+    "had/alma/s2": "24/24",
+    "had/transfqmix/s0": "24/24",
+    "had/transfqmix/s1": "24/24",
+    "had/transfqmix/s2": "24/24",
+    "had/regir_kv0_intent_sg/s0": "24/24",
+    "had/regir_kv0_intent_sg/s1": "24/24",
+    "had/regir_kv0_intent_sg/s2": "24/24",
+    "had/regir_kv0_intent_sg/s3": "24/24",
+    "had/regir_kv0_intent_sg/s4": "24/24",
+    "had/regir_kv0_sg/s0": "24/24",
+    "had/regir_kv0_sg/s1": "0/24",
+    "had/regir_kv0_sg/s2": "0/24",
+    "had/regir_kv0_sg/s3": "0/24",
+    "had/regir_kv0_sg/s4": "0/24",
+    "had/regir_r1_sg/s0": "0/24",
+    "had/regir_r1_sg/s1": "0/24",
+    "had/regir_r1_sg/s2": "0/24",
+    "had/regir_r1_sg/s3": "0/24",
+    "had/regir_r1_sg/s4": "0/24",
+    "had/regir_r0_sg/s0": "0/24",
+    "had/regir_r0_sg/s1": "0/24",
+    "had/regir_r0_sg/s2": "0/24",
+    "had/regir_sg/s0": "0/24",
+    "had/regir_sg/s1": "0/24",
+    "had/regir_sg/s2": "0/24",
+    "had/regir_untied4_sg/s0": "0/24",
+    "had/regir_untied4_sg/s1": "0/24",
+    "had/regir_untied4_sg/s2": "0/24",
+    "had/regir_r1_nomem/s0": "0/24",
+    "had/regir_r1_nomem/s1": "0/24",
+    "had/regir_r1_nomem/s2": "0/24",
+    "had/regir_r1_norefil_sg/s0": "0/24",
+    "had/regir_r1_norefil_sg/s1": "0/24",
+    "had/regir_r1_norefil_sg/s2": "0/24",
+    "had/regir_r1_nocount_sg/s0": "0/24",
+    "had/regir_r1_nocount_sg/s1": "0/24",
+    "had/regir_r1_nocount_sg/s2": "0/24",
+    "had/regir_kv0_nomem/s0": "0/24",
+    "had/regir_kv0_nomem/s1": "0/24",
+    "had/regir_kv0_nomem/s2": "0/24",
+    "had/regir_kv0_norefil_sg/s0": "0/24",
+    "had/regir_kv0_norefil_sg/s1": "0/24",
+    "had/regir_kv0_norefil_sg/s2": "0/24",
+    "had/regir_kv0_fixed4_sg/s0": "0/24",
+    "had/regir_kv0_fixed4_sg/s1": "0/24",
+    "had/regir_kv0_fixed4_sg/s2": "0/24",
+    "had/regir_fixed4_sg/s0": "0/24",
+    "had/regir_fixed4_sg/s1": "0/24",
+    "had/regir_fixed4_sg/s2": "0/24",
+    "had/regir_kv0_nocount_sg/s0": "0/24",
+    "had/regir_kv0_nocount_sg/s1": "0/24",
+    "had/regir_kv0_nocount_sg/s2": "0/24",
+    "had/regir_kv0_intent_noaux_sg/s0": "0/24",
+    "had/regir_kv0_intent_noaux_sg/s1": "0/24",
+    "had/regir_kv0_intent_noaux_sg/s2": "0/24",
+    "had/regir_kv0_intent_nomem/s0": "0/24",
+    "had/regir_kv0_intent_nomem/s1": "0/24",
+    "had/regir_kv0_intent_nomem/s2": "0/24",
+    "had/regir_intent_sg/s0": "0/24",
+    "had/regir_intent_sg/s1": "0/24",
+    "had/regir_intent_sg/s2": "0/24",
+    "had/regir_kv0_intent_norefil_sg/s0": "0/24",
+    "had/regir_kv0_intent_norefil_sg/s1": "0/24",
+    "had/regir_kv0_intent_norefil_sg/s2": "0/24",
+    "smacv2/refil/s0": "0/8",
+    "smacv2/refil/s1": "0/8",
+    "smacv2/refil/s2": "0/8",
+    "smacv2/spectra/s0": "0/8",
+    "smacv2/spectra/s1": "0/8",
+    "smacv2/spectra/s2": "0/8",
+    "smacv2/transfqmix/s0": "0/8",
+    "smacv2/transfqmix/s1": "0/8",
+    "smacv2/transfqmix/s2": "0/8",
+    "smacv2/regir_r1_sg/s0": "0/8",
+    "smacv2/regir_r1_sg/s1": "0/8",
+    "smacv2/regir_r1_sg/s2": "0/8",
+    "smacv2/b2_qmix_atten/s0": "0/8",
+    "smacv2/b2_qmix_atten/s1": "0/8",
+    "smacv2/b2_qmix_atten/s2": "0/8",
+    "smacv2/regir_kv0_sg/s0": "0/8",
+    "smacv2/regir_kv0_sg/s1": "0/8",
+    "smacv2/regir_kv0_sg/s2": "0/8",
+    "smacv2/regir_sg/s0": "0/8",
+    "smacv2/regir_sg/s1": "0/8",
+    "smacv2/regir_sg/s2": "0/8",
+    "smacv2/regir_kv0_intent_sg/s0": "0/8",
+    "smacv2/regir_kv0_intent_sg/s1": "0/8",
+    "smacv2/regir_kv0_intent_sg/s2": "0/8"
+  }
+}

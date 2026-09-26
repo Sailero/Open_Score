@@ -2978,8 +2978,8 @@ def refresh_report(output=DEFAULT_OUTPUT, *, run=FORMAL_RUN):
             formal = run if run == FORMAL_RUN else FORMAL_RUN
             from .experiment import is_profile
             if is_profile(output):
-                # main0923 renders its report from the pipeline (report0923), not from workers.
-                return None
+                from .report0923 import render_report
+                return render_report(output, run=formal)
             if _is_probe_output(output):
                 return _refresh_probe_report(output, run=formal, report_stream=stream)
             if _is_main_output(output):
