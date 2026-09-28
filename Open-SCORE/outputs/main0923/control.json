@@ -1,0 +1,14 @@
+{
+  "cut": [],
+  "cut_now": [],
+  "abandoned": [],
+  "events": [
+    {
+      "at": "2026-09-27T21:38:27+08:00",
+      "event": "had_first",
+      "enabled": true
+    }
+  ],
+  "had_first": true,
+  "updated_at": "2026-09-27T21:38:27+08:00"
+}

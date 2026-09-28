@@ -1,7 +1,7 @@
 {
   "profile": "main0923",
-  "created_at": "2026-09-26T22:20:20+08:00",
-  "branch": null,
+  "created_at": "2026-09-28T16:12:28+08:00",
+  "branch": "A",
   "identity": "300 episodes, checkpoint_id, t_env, scene 9000–9299 / 110000–110299",
   "iqm": "Agarwal 2021; 5-seed trim 1+1; 3-seed = mean",
   "bootstrap": {
@@ -586,28 +586,316 @@
       }
     },
     "regir_kv0_sg": {
-      "ID": null,
-      "N-OOD": null,
-      "K-OOD": null,
-      "联合 OOD": null
+      "ID": {
+        "iqm": 0.39434992896618243,
+        "lo": 0.2548735560792809,
+        "hi": 0.6161637645945367,
+        "per_seed": [
+          0.43664874742260296,
+          0.35772695924170383,
+          0.3061647955309612,
+          0.3886740802342403,
+          0.5758299435376134
+        ],
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "mean": 0.41300890519342437,
+        "t_half": 0.127434707470263
+      },
+      "N-OOD": {
+        "iqm": 0.9079269077765791,
+        "lo": 0.5108011076611598,
+        "hi": 1.7926273647060709,
+        "per_seed": [
+          1.20829234143422,
+          0.6239901943170015,
+          0.42885628536723236,
+          2.0321866160255193,
+          0.8914981875785161
+        ],
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "mean": 1.0369647249444978,
+        "t_half": 0.7807006489584553
+      },
+      "K-OOD": {
+        "iqm": 1.1792103175724322,
+        "lo": 0.7446383913551452,
+        "hi": 1.545233270169092,
+        "per_seed": [
+          1.143477299191372,
+          1.1570348771623573,
+          0.7476923369126354,
+          1.2371187763635674,
+          1.2389147518144106
+        ],
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "mean": 1.1048476082888685,
+        "t_half": 0.25389320091236256
+      },
+      "联合 OOD": {
+        "iqm": 1.5289551907305858,
+        "lo": 0.9718366155877065,
+        "hi": 2.0713042688507786,
+        "per_seed": [
+          1.9740675763470419,
+          1.2388601470517764,
+          0.8096037747253451,
+          1.6624550874022086,
+          1.6855503377377725
+        ],
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "mean": 1.474107384652829,
+        "t_half": 0.5645986568737621
+      }
     },
     "regir_r1_sg": {
-      "ID": null,
-      "N-OOD": null,
-      "K-OOD": null,
-      "联合 OOD": null
+      "ID": {
+        "iqm": 0.617246089978576,
+        "lo": 0.3533780383348893,
+        "hi": 1.3122624146450392,
+        "per_seed": [
+          0.8367995976076259,
+          1.5249320164056945,
+          0.5632577448532878,
+          0.3889253721633963,
+          0.4516809274748143
+        ],
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "mean": 0.7531191317009638,
+        "t_half": 0.5764875526700451
+      },
+      "N-OOD": {
+        "iqm": 2.159347577303533,
+        "lo": 0.76733675887557,
+        "hi": 3.6707039636384864,
+        "per_seed": [
+          3.391428829270621,
+          3.42228898773829,
+          2.2222350871980905,
+          0.6873076217199126,
+          0.8643788154418875
+        ],
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "mean": 2.1175278682737604,
+        "t_half": 1.6369376604346335
+      },
+      "K-OOD": {
+        "iqm": 1.3656777965711424,
+        "lo": 0.9572574414499574,
+        "hi": 2.461277933550793,
+        "per_seed": [
+          1.6862603226855128,
+          2.9065323449254112,
+          1.2385178102979546,
+          0.9554787832633443,
+          1.1722552567299604
+        ],
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "mean": 1.5918089035804366,
+        "t_half": 0.970401262137331
+      },
+      "联合 OOD": {
+        "iqm": 2.569117795286218,
+        "lo": 1.2736285954744244,
+        "hi": 4.152393759048405,
+        "per_seed": [
+          3.3970185976226945,
+          4.317906390560799,
+          2.9018578249024776,
+          1.2703926522884463,
+          1.408476963333482
+        ],
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "mean": 2.6591304857415796,
+        "t_half": 1.624595273998488
+      }
     },
     "regir_r0_sg": {
-      "ID": null,
-      "N-OOD": null,
-      "K-OOD": null,
-      "联合 OOD": null
+      "ID": {
+        "iqm": 0.9921113454401347,
+        "lo": 0.5582703701233042,
+        "hi": 1.522531276130793,
+        "per_seed": [
+          1.2940037771563868,
+          1.0769660655211273,
+          0.6053641936428902
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 0.9921113454401348,
+        "t_half": 0.87460121856603
+      },
+      "N-OOD": {
+        "iqm": 2.6587801474758748,
+        "lo": 1.8331713258176485,
+        "hi": 3.6650075758855927,
+        "per_seed": [
+          3.5887278250244257,
+          2.470065774188816,
+          1.9175468432143816
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 2.6587801474758743,
+        "t_half": 2.115052244998957
+      },
+      "K-OOD": {
+        "iqm": 2.174350358346827,
+        "lo": 1.3196301889354591,
+        "hi": 3.052925897646363,
+        "per_seed": [
+          2.8789995194303963,
+          2.342654785108375,
+          1.30139677050171
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 2.1743503583468273,
+        "t_half": 1.9926630981840645
+      },
+      "联合 OOD": {
+        "iqm": 3.7653220723840897,
+        "lo": 2.2809235702098487,
+        "hi": 5.433932924307008,
+        "per_seed": [
+          5.19827641543794,
+          3.8016655376449204,
+          2.2960242640694086
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 3.7653220723840897,
+        "t_half": 3.6056448287232232
+      }
     },
     "regir_sg": {
-      "ID": null,
-      "N-OOD": null,
-      "K-OOD": null,
-      "联合 OOD": null
+      "ID": {
+        "iqm": 0.30500649914723155,
+        "lo": 0.17262637827249097,
+        "hi": 0.49344691117620537,
+        "per_seed": [
+          0.44502225574959275,
+          0.21021262685168463,
+          0.25978461484041726
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 0.30500649914723155,
+        "t_half": 0.30744809305605025
+      },
+      "N-OOD": {
+        "iqm": 0.7447453653079986,
+        "lo": 0.40656846477592806,
+        "hi": 1.31574129755953,
+        "per_seed": [
+          1.3652646482063917,
+          0.4368296407644328,
+          0.4321418069531715
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 0.7447453653079987,
+        "t_half": 1.334952191461301
+      },
+      "K-OOD": {
+        "iqm": 0.6953672914888237,
+        "lo": 0.42690073350998664,
+        "hi": 1.0208075568265935,
+        "per_seed": [
+          0.9507313154345767,
+          0.6933183657687348,
+          0.4420521932631598
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 0.6953672914888238,
+        "t_half": 0.6318298711932078
+      },
+      "联合 OOD": {
+        "iqm": 1.1304196603283199,
+        "lo": 0.6390239487074356,
+        "hi": 1.8263036362130316,
+        "per_seed": [
+          1.872307023303655,
+          0.8829187133894455,
+          0.6360332442918594
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 1.1304196603283199,
+        "t_half": 1.6252332215227137
+      }
     },
     "regir_untied4_sg": {
       "ID": null,
@@ -713,7 +1001,7 @@
   },
   "sources": {
     "main0921": 324000,
-    "main0923": 44400
+    "main0923": 260700
   },
   "conflicts": [],
   "checkpoints": {
@@ -743,7 +1031,23 @@
     "had/regir_kv0_intent_sg/s2": "2c80ab907fd94c66827cd18f6dde276e",
     "had/regir_kv0_intent_sg/s3": "6849597fa38a4db2b02e58db08d8d66e",
     "had/regir_kv0_intent_sg/s4": "69d39c88f64b41c09d65836f8928b8ed",
-    "had/regir_kv0_sg/s0": "b11572296b844c57a7f2b473c6a4ef70"
+    "had/regir_kv0_sg/s0": "b11572296b844c57a7f2b473c6a4ef70",
+    "had/regir_kv0_sg/s1": "908434267ac0480f97d79e50e2c7feb9",
+    "had/regir_kv0_sg/s2": "a4319df9e16e44ea95ab8d798a6a0bb3",
+    "had/regir_kv0_sg/s3": "f817f2229b0646a9ac7591f08453d737",
+    "had/regir_kv0_sg/s4": "76c727fc421846f7a9b6c0aa5e6be49e",
+    "had/regir_r1_sg/s0": "e39ccc11409c4d2e952921831e0c0ea5",
+    "had/regir_r1_sg/s1": "3545e383bd8946349fae565e468ff974",
+    "had/regir_r1_sg/s2": "24be2bc767ab4aca86f557118cbb56c3",
+    "had/regir_r1_sg/s3": "fc8fe20bbeb14c9cad1e43407f1ac007",
+    "had/regir_r1_sg/s4": "0e3e260515cf40b7af74ff2cbd72d446",
+    "had/regir_r0_sg/s0": "1be45dd1612a46cbbf76dabb3b5b2626",
+    "had/regir_r0_sg/s1": "74003bb35ef04467bbd5e9b09a1032a0",
+    "had/regir_r0_sg/s2": "f22ef358d1364be781a0d370ff8cda52",
+    "had/regir_sg/s0": "9b98aae5d6ca47729c6aa7485ac5e0a3",
+    "had/regir_sg/s1": "b13d80bc67074713a867206fc5c4d22d",
+    "had/regir_sg/s2": "a04d80d2f7f9416bb7b1a5347a64eb69",
+    "had/regir_kv0_nomem/s0": "c851a8c1803845eaa0aedb385feb07e1"
   },
   "integrity_ok": true,
   "integrity": [
@@ -1004,7 +1308,56 @@
       "pending": false
     }
   ],
-  "probe_complete": {},
+  "probe_complete": {
+    "coverage/regir_sg/s0": true,
+    "coverage/regir_sg/s1": true,
+    "coverage/regir_sg/s2": true,
+    "coverage/regir_r1_sg/s0": true,
+    "coverage/regir_r1_sg/s1": true,
+    "coverage/regir_r1_sg/s2": true,
+    "coverage/regir_r1_sg/s3": true,
+    "coverage/regir_r1_sg/s4": true,
+    "coverage/regir_r0_sg/s0": true,
+    "coverage/regir_r0_sg/s1": true,
+    "coverage/regir_r0_sg/s2": true,
+    "coverage/regir_kv0_intent_sg/s0": true,
+    "coverage/regir_kv0_intent_sg/s1": true,
+    "coverage/regir_kv0_intent_sg/s2": true,
+    "coverage/regir_kv0_intent_sg/s3": true,
+    "coverage/regir_kv0_intent_sg/s4": true,
+    "coverage/refil/s0": true,
+    "coverage/refil/s1": true,
+    "coverage/refil/s2": true,
+    "coverage/regir_kv0_sg/s0": true,
+    "coverage/regir_kv0_sg/s1": true,
+    "coverage/regir_kv0_sg/s2": true,
+    "coverage/regir_kv0_sg/s3": true,
+    "coverage/regir_kv0_sg/s4": true,
+    "dynamics/regir_sg/s0": true,
+    "dynamics/regir_sg/s1": true,
+    "dynamics/regir_sg/s2": true,
+    "dynamics/regir_kv0_sg/s0": true,
+    "dynamics/regir_kv0_sg/s1": true,
+    "dynamics/regir_kv0_sg/s2": true,
+    "dynamics/regir_kv0_sg/s3": true,
+    "dynamics/regir_kv0_sg/s4": true,
+    "deep_rounds/regir_sg/s0": true,
+    "deep_rounds/regir_sg/s1": true,
+    "deep_rounds/regir_sg/s2": true,
+    "deep_rounds/regir_kv0_sg/s0": true,
+    "deep_rounds/regir_kv0_sg/s1": true,
+    "deep_rounds/regir_kv0_sg/s2": true,
+    "deep_rounds/regir_kv0_sg/s3": true,
+    "deep_rounds/regir_kv0_sg/s4": true,
+    "global_probe/regir_sg/s0": true,
+    "global_probe/regir_sg/s1": true,
+    "global_probe/regir_sg/s2": true,
+    "global_probe/regir_kv0_sg/s0": true,
+    "global_probe/regir_kv0_sg/s1": true,
+    "global_probe/regir_kv0_sg/s2": true,
+    "global_probe/regir_kv0_sg/s3": true,
+    "global_probe/regir_kv0_sg/s4": true
+  },
   "costs": 0,
   "coverage": {
     "had/refil/s0": "24/24",
@@ -1034,21 +1387,21 @@
     "had/regir_kv0_intent_sg/s3": "24/24",
     "had/regir_kv0_intent_sg/s4": "24/24",
     "had/regir_kv0_sg/s0": "24/24",
-    "had/regir_kv0_sg/s1": "0/24",
-    "had/regir_kv0_sg/s2": "0/24",
-    "had/regir_kv0_sg/s3": "0/24",
-    "had/regir_kv0_sg/s4": "0/24",
-    "had/regir_r1_sg/s0": "0/24",
-    "had/regir_r1_sg/s1": "0/24",
-    "had/regir_r1_sg/s2": "0/24",
-    "had/regir_r1_sg/s3": "0/24",
-    "had/regir_r1_sg/s4": "0/24",
-    "had/regir_r0_sg/s0": "0/24",
-    "had/regir_r0_sg/s1": "0/24",
-    "had/regir_r0_sg/s2": "0/24",
-    "had/regir_sg/s0": "0/24",
-    "had/regir_sg/s1": "0/24",
-    "had/regir_sg/s2": "0/24",
+    "had/regir_kv0_sg/s1": "24/24",
+    "had/regir_kv0_sg/s2": "24/24",
+    "had/regir_kv0_sg/s3": "24/24",
+    "had/regir_kv0_sg/s4": "24/24",
+    "had/regir_r1_sg/s0": "24/24",
+    "had/regir_r1_sg/s1": "24/24",
+    "had/regir_r1_sg/s2": "24/24",
+    "had/regir_r1_sg/s3": "24/24",
+    "had/regir_r1_sg/s4": "24/24",
+    "had/regir_r0_sg/s0": "24/24",
+    "had/regir_r0_sg/s1": "24/24",
+    "had/regir_r0_sg/s2": "24/24",
+    "had/regir_sg/s0": "24/24",
+    "had/regir_sg/s1": "24/24",
+    "had/regir_sg/s2": "24/24",
     "had/regir_untied4_sg/s0": "0/24",
     "had/regir_untied4_sg/s1": "0/24",
     "had/regir_untied4_sg/s2": "0/24",
@@ -1061,7 +1414,7 @@
     "had/regir_r1_nocount_sg/s0": "0/24",
     "had/regir_r1_nocount_sg/s1": "0/24",
     "had/regir_r1_nocount_sg/s2": "0/24",
-    "had/regir_kv0_nomem/s0": "0/24",
+    "had/regir_kv0_nomem/s0": "24/24",
     "had/regir_kv0_nomem/s1": "0/24",
     "had/regir_kv0_nomem/s2": "0/24",
     "had/regir_kv0_norefil_sg/s0": "0/24",

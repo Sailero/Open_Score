@@ -733,7 +733,7 @@
         "regir_sg",
         "regir_kv0_intent_sg"
       ],
-      "budget": 2000000,
+      "budget": 5000000,
       "validation_configs": [
         [
           4,
@@ -756,7 +756,7 @@
           0
         ]
       ],
-      "validation_points": 50,
+      "validation_points": 125,
       "validation_episodes_per_config": 32,
       "final_configs": [
         [
@@ -952,9 +952,15 @@
       0,
       1
     ],
-    "had_gpu_per_card": 3,
+    "had_gpu_per_card": 4,
+    "had_gpu_per_card_by_device": {
+      "0": 2,
+      "1": 4
+    },
     "smac_gpu_per_card_trial": 1,
-    "smac_gpu_per_card": 2,
+    "smac_gpu_per_card": 4,
+    "continuous_fill": true,
+    "global_train_slots": 6,
     "gpu_reserve_gib": 8,
     "had_gpu_admission": {
       "reserve_gib": 8.0,
@@ -989,7 +995,7 @@
         "checkpoint_poll_seconds": 5,
         "cpu_threads_per_worker": 1,
         "policy_rng": "per_episode_seed_v1",
-        "updated_at": 1790432333.7145877
+        "updated_at": 1790516583.1618552
       },
       "had": {
         "device": "auto",
@@ -1004,7 +1010,56 @@
         "checkpoint_poll_seconds": 5,
         "cpu_threads_per_worker": 1,
         "policy_rng": "per_episode_seed_v1",
-        "updated_at": 1790432333.5100756
+        "updated_at": 1790528623.0765657
+      }
+    },
+    "measurement_gpu": 1,
+    "smac_gpu_per_card_by_device": {
+      "0": 2,
+      "1": 4
+    },
+    "gpu_adapt": {
+      "smacv2": {
+        "min_by_device": {
+          "0": 1,
+          "1": 2
+        },
+        "default_by_device": {
+          "0": 2,
+          "1": 2
+        },
+        "max_by_device": {
+          "0": 2,
+          "1": 4
+        },
+        "reserve_gib": 8.0,
+        "peak_multiplier": 1.25,
+        "scale_down_free_gib": 8.0,
+        "warmup_seconds": 180,
+        "fallback_peak_gib": 16.0,
+        "scale_up_step": 1,
+        "adapt_pause_seconds": 90
+      },
+      "had": {
+        "min_by_device": {
+          "0": 1,
+          "1": 2
+        },
+        "default_by_device": {
+          "0": 2,
+          "1": 2
+        },
+        "max_by_device": {
+          "0": 2,
+          "1": 4
+        },
+        "reserve_gib": 8.0,
+        "peak_multiplier": 1.25,
+        "scale_down_free_gib": 8.0,
+        "warmup_seconds": 180,
+        "fallback_peak_gib": 16.0,
+        "scale_up_step": 1,
+        "adapt_pause_seconds": 90
       }
     }
   },

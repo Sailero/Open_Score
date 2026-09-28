@@ -1,0 +1,39 @@
+{
+  "created_at": "2026-09-28T16:14:48.311635+08:00",
+  "profile": "main0923",
+  "whole_tree_bytes": 143892328779,
+  "snapshot_bytes": 208413917,
+  "n_files": 167,
+  "n_final_pt": 43,
+  "arr_weights": [
+    "regir_kv0_sg/train/seed_2/final.pt",
+    "regir_kv0_sg/train/seed_1/final.pt",
+    "regir_kv0_sg/train/seed_4/final.pt",
+    "regir_kv0_sg/train/seed_0/final.pt",
+    "regir_kv0_sg/train/seed_3/final.pt"
+  ],
+  "included": [
+    "reports (实验报告.md, 实验计划.md, decision/)",
+    "aggregates.json / inventory.json / experiment.json",
+    "figures png+pdf",
+    "probe csv+json (not trajectories/)",
+    "all completed HAD final.pt + sibling config.json"
+  ],
+  "excluded_too_large_for_git": [
+    "entire tree ~135GB",
+    "smacv2/ ~101GB (resume buffers)",
+    "resume.pt / resume.prev.pt (~0.5–10GB each)",
+    "episodes.csv ~617MB (GitHub file limit 100MB; gzip est ~117MB still over)",
+    "learning.csv ~210MB",
+    "progress.csv ~246MB",
+    "trajectories.csv ~671MB",
+    "probe/trajectories ~23MB diagnostic dumps",
+    "eval.part*.console.log and locks",
+    "in-progress best/resume (Untied4, NoMem s1/s2, NoREFIL, SMAC)"
+  ],
+  "analysis_on_another_machine": {
+    "tables_and_figures": "read 实验报告.md, figures/, aggregates.json, decision/分支判定.md",
+    "load_ARR": "regir_kv0_sg/train/seed_{0-4}/final.pt + config.json",
+    "cannot_rebuild_from_raw_episodes": "episodes.csv not in this snapshot; re-running report0923.py needs that file via rsync/disk"
+  }
+}
