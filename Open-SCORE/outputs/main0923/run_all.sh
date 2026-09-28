@@ -25,6 +25,7 @@ Usage: bash run_all.sh COMMAND
   select A|B|C [--force]   choose the main method (--force to override an existing choice)
   cut P0|P1|P2 [--now]     cancel not-yet-started tasks of a priority; --now also stops running ones
   retry METHOD SEED [--env smacv2]   clear a task's failure mark so it is queued again
+  had-first [on|off]       finish all HAD train+eval first; SMAC trains pause (default on)
   prepare                  only the start-time preparation (idempotent)
 EOF
   exit 2
@@ -223,6 +224,8 @@ case "$command" in
     "${PIPE[@]}" cut "$@" ;;
   retry)
     "${PIPE[@]}" retry "$@" ;;
+  had-first)
+    "${PIPE[@]}" had-first "$@" ;;
   _run)
     exec 9> "$OUT/run_all.lock"
     if ! flock -n 9; then

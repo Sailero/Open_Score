@@ -431,6 +431,26 @@
       "checkpoint": "final@1000000",
       "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_nomem/train/seed_0/final.pt",
       "source_profile": "main0923"
+    },
+    {
+      "env": "had",
+      "method": "regir_kv0_nomem",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "b894d5aefd9440cebba259638e5e40f4",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_nomem/train/seed_1/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "had",
+      "method": "regir_kv0_nomem",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "a796e01795b3412bad6303cc8d82db10",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_nomem/train/seed_2/final.pt",
+      "source_profile": "main0923"
     }
   ],
   "tasks": [
@@ -1325,10 +1345,10 @@
       },
       "rank": 2,
       "order": 34,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1000000,
       "total": 1000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.had.regir_kv0_nomem.s2",
@@ -1341,10 +1361,10 @@
       },
       "rank": 2,
       "order": 35,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1000000,
       "total": 1000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.had.regir_kv0_norefil_sg.s0",
@@ -2294,10 +2314,12 @@
         "branch:A": "P0"
       },
       "rank": 2,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 7200,
       "total": 7200,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_nomem/train/seed_1/final.pt",
+      "checkpoint_id": "b894d5aefd9440cebba259638e5e40f4"
     },
     {
       "id": "eval.final.had.regir_kv0_nomem.s2",
@@ -2309,10 +2331,12 @@
         "branch:A": "P0"
       },
       "rank": 2,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 7200,
       "total": 7200,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_nomem/train/seed_2/final.pt",
+      "checkpoint_id": "a796e01795b3412bad6303cc8d82db10"
     },
     {
       "id": "eval.final.had.regir_kv0_norefil_sg.s0",
@@ -6305,5 +6329,5 @@
       "detail": "waiting for final"
     }
   ],
-  "scanned_at": 1790583270.9720159
+  "scanned_at": 1790593466.6104372
 }

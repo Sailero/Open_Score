@@ -938,7 +938,8 @@ def _panel_branch_mechanism(results, ax, branch):
         _empty(ax, "pending coverage")
 
 
-def _draw_learning(ax, results, env, methods, *, store, title, ylabel, cfg=None):
+def _draw_learning(ax, results, env, methods, *, store, title, ylabel, cfg=None,
+                   ylim=None):
     expected = results._expected_validation[env]
     quota = len(expected) if cfg is None else sum(1 for item, _ in expected if item == cfg)
     shown = False
@@ -977,6 +978,8 @@ def _draw_learning(ax, results, env, methods, *, store, title, ylabel, cfg=None)
         ax.fill_between(xs, lo, hi, color=style[0], alpha=.18)
         shown = True
     ax.set(title=title, xlabel="steps (M)", ylabel=ylabel)
+    if ylim is not None:
+        ax.set_ylim(*ylim)
     ax.grid(alpha=.25)
     if shown:
         ax.legend(fontsize=6.5, ncol=2)
@@ -996,8 +999,8 @@ def _fig_learning(results, plt, directory):
         store=results.validation, title="HAD", ylabel="D ↓")
     _draw_learning(
         axes[1], results, "smacv2", _smac_learning_methods(),
-        store=results.validation_return, cfg=SMAC_LEARNING_CFG,
-        title=_smac_scenario(SMAC_LEARNING_CFG), ylabel="official return ↑")
+        store=results.validation, cfg=SMAC_LEARNING_CFG,
+        title=_smac_scenario(SMAC_LEARNING_CFG), ylabel="win rate ↑", ylim=(0, 1))
     _save_figure(fig, directory, "fig_learning", plt)
 
 
@@ -1009,8 +1012,8 @@ def _fig_learning_smac_appendix(results, plt, directory):
     for ax, cfg in zip(axes, extra):
         _draw_learning(
             ax, results, "smacv2", _smac_learning_methods(),
-            store=results.validation_return, cfg=cfg,
-            title=_smac_scenario(cfg), ylabel="official return ↑")
+            store=results.validation, cfg=cfg,
+            title=_smac_scenario(cfg), ylabel="win rate ↑", ylim=(0, 1))
     for ax in axes[len(extra):]:
         ax.axis("off")
     _save_figure(fig, directory, "fig_learning_smac_appendix", plt)
@@ -1220,9 +1223,8 @@ def render_markdown(results, *, paper=False):
         "fig_learning", "训练内验证",
         "训练中每隔一段步数会对四个验证场景各跑前向评估；正文只看 "
         f"`{_smac_scenario(SMAC_LEARNING_CFG)}`。"
-        "SMAC 纵轴是官方塑形奖励的回合累计（与训练 TD 的 `return` 相同）。"
+        "SMAC 纵轴是训练中验证胜率 `battle_won`，与正式指标相同。"
         "其余验证场景的同口径曲线见附录 B。"
-        "正式外推评估仍用 `battle_won` 胜率，不用这张图的回报。"
         "每个验证点：该场景 32 局齐了的种子算均值 ±1 标准差；1 个种子时带宽为 0。")
 
     lines += ["## 3. 成本 M4", "",
@@ -1272,7 +1274,7 @@ def render_markdown(results, *, paper=False):
     extra = "、".join(_smac_scenario(cfg) for cfg in X.SMAC_VALIDATION if cfg != SMAC_LEARNING_CFG)
     lines += _figure_lines(
         "fig_learning_smac_appendix", "训练内验证（其余场景）",
-        f"与正文同一套官方塑形回报、同一批训练中验证；此处为 {extra}。"
+        f"与正文同一套训练中验证胜率 `battle_won`；此处为 {extra}。"
         f"正文主看 `{_smac_scenario(SMAC_LEARNING_CFG)}`。正式外推评估仍用胜率，见下表。")
     lines += _table(["方法", *map(_label, X.SMAC_FINAL)], [
         [paper_name(method, branch),

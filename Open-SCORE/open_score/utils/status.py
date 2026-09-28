@@ -160,7 +160,7 @@ def _tasks(metadata, inventory):
                 final = checkpoints.get((env, method, seed))
                 tasks.setdefault(identity, dict(base, id=identity, kind="train",
                     status="complete" if final else "pending", completed=final.get("t_env", 0) if final else 0,
-                    total=config.get("budget", 1000000 if env == "had" else 2000000),
+                    total=config.get("budget", 1000000 if env == "had" else 5000000),
                     detail="已登记合格final" if final else "尚未登记训练完成"))
                 for kind in (("final", "depth", "readout") if env == "had" and method == "regir" else ("final",)):
                     identity = f"eval.{kind}.{env}.{method}.s{seed}"
@@ -740,7 +740,8 @@ def _gpu_lines(gpu_status, live, width, per_gpu=2):
         match = re.search(rf"GPU{device} [^:]+: 利用率([^%]+)% / 空闲([\d.]+)/([\d.]+)GiB", gpu_status or "")
         usage = (f"利用率{match[1]}%  显存{float(match[3]) - float(match[2]):.1f}/{float(match[3]):.1f}GiB"
                  if match else "利用率/显存待查询")
-        rows.append(f"GPU{device} {usage}  训练{count}/{per_gpu}")
+        cap = per_gpu.get(device, per_gpu.get(str(device), 2)) if isinstance(per_gpu, dict) else per_gpu
+        rows.append(f"GPU{device} {usage}  训练{count}/{cap}")
     combined = "  |  ".join(rows)
     return [combined] if _width(combined) <= width else rows
 
@@ -780,8 +781,14 @@ def render_status(output, *, gpu_status=None, cpu_status=None, now=None, details
                 groups.append(f"{label} {done}/{len(selected)}")
         lines.append(f"{name:<4}  " + "  ".join(groups))
     smac_active = any(t.get("env") == "smacv2" and t["kind"] == "train" for t in live)
-    cap_key = "smac_gpu_per_card_max" if smac_active else "gpu_per_card_max"
-    lines += _gpu_lines(gpu_status, live, width, int(metadata.get("resources", {}).get(cap_key, 2)))
+    resources = metadata.get("resources", {})
+    if smac_active:
+        gpu_cap = int(resources.get("smac_gpu_per_card_max", resources.get("smac_gpu_per_card", 2)))
+    else:
+        by_device = resources.get("had_gpu_per_card_by_device")
+        gpu_cap = ({int(key): int(value) for key, value in by_device.items()}
+                   if by_device else int(resources.get("had_gpu_per_card", resources.get("gpu_per_card_max", 3))))
+    lines += _gpu_lines(gpu_status, live, width, gpu_cap)
     cpu_tasks = sum(task["kind"] != "train" and task.get("physical_gpu") is None for task in live)
     lines.append(f"{cpu_status or _cpu_snapshot()}  评估{cpu_tasks}/4")
     lines.append("─" * min(width, 76))

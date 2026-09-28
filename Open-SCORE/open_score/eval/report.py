@@ -2978,8 +2978,10 @@ def refresh_report(output=DEFAULT_OUTPUT, *, run=FORMAL_RUN):
             formal = run if run == FORMAL_RUN else FORMAL_RUN
             from .experiment import is_profile
             if is_profile(output):
-                from .report0923 import render_report
-                return render_report(output, run=formal)
+                import importlib
+                from . import report0923
+                importlib.reload(report0923)
+                return report0923.render_report(output, run=formal)
             if _is_probe_output(output):
                 return _refresh_probe_report(output, run=formal, report_stream=stream)
             if _is_main_output(output):

@@ -1,6 +1,6 @@
 {
   "profile": "main0923",
-  "created_at": "2026-09-28T16:12:28+08:00",
+  "created_at": "2026-09-28T19:04:07+08:00",
   "branch": "A",
   "identity": "300 episodes, checkpoint_id, t_env, scene 9000–9299 / 110000–110299",
   "iqm": "Agarwal 2021; 5-seed trim 1+1; 3-seed = mean",
@@ -922,10 +922,74 @@
       "联合 OOD": null
     },
     "regir_kv0_nomem": {
-      "ID": null,
-      "N-OOD": null,
-      "K-OOD": null,
-      "联合 OOD": null
+      "ID": {
+        "iqm": 0.47137444542236145,
+        "lo": 0.2783588650915511,
+        "hi": 0.7066603614943562,
+        "per_seed": [
+          0.664874521398208,
+          0.3208255653848262,
+          0.42842324948405014
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 0.47137444542236145,
+        "t_half": 0.4372084134174004
+      },
+      "N-OOD": {
+        "iqm": 0.7697936497140939,
+        "lo": 0.4855056385916457,
+        "hi": 1.2013472064402444,
+        "per_seed": [
+          1.216507117118239,
+          0.47986019179500056,
+          0.6130136402290423
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 0.7697936497140939,
+        "t_half": 0.9751534769391752
+      },
+      "K-OOD": {
+        "iqm": 1.241840322003549,
+        "lo": 0.7601966194122576,
+        "hi": 1.8682262003241454,
+        "per_seed": [
+          1.7342389007365684,
+          1.086153265727667,
+          0.9051287995464116
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 1.241840322003549,
+        "t_half": 1.0829094965234696
+      },
+      "联合 OOD": {
+        "iqm": 1.3841305765573602,
+        "lo": 0.8736781492486877,
+        "hi": 1.9656418302524348,
+        "per_seed": [
+          1.944071021808013,
+          1.3188316183460926,
+          0.8894890895179748
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "mean": 1.3841305765573602,
+        "t_half": 1.3173748564315377
+      }
     },
     "regir_kv0_norefil_sg": {
       "ID": null,
@@ -1001,7 +1065,7 @@
   },
   "sources": {
     "main0921": 324000,
-    "main0923": 260700
+    "main0923": 275100
   },
   "conflicts": [],
   "checkpoints": {
@@ -1047,7 +1111,9 @@
     "had/regir_sg/s0": "9b98aae5d6ca47729c6aa7485ac5e0a3",
     "had/regir_sg/s1": "b13d80bc67074713a867206fc5c4d22d",
     "had/regir_sg/s2": "a04d80d2f7f9416bb7b1a5347a64eb69",
-    "had/regir_kv0_nomem/s0": "c851a8c1803845eaa0aedb385feb07e1"
+    "had/regir_kv0_nomem/s0": "c851a8c1803845eaa0aedb385feb07e1",
+    "had/regir_kv0_nomem/s1": "b894d5aefd9440cebba259638e5e40f4",
+    "had/regir_kv0_nomem/s2": "a796e01795b3412bad6303cc8d82db10"
   },
   "integrity_ok": true,
   "integrity": [
@@ -1415,8 +1481,8 @@
     "had/regir_r1_nocount_sg/s1": "0/24",
     "had/regir_r1_nocount_sg/s2": "0/24",
     "had/regir_kv0_nomem/s0": "24/24",
-    "had/regir_kv0_nomem/s1": "0/24",
-    "had/regir_kv0_nomem/s2": "0/24",
+    "had/regir_kv0_nomem/s1": "24/24",
+    "had/regir_kv0_nomem/s2": "24/24",
     "had/regir_kv0_norefil_sg/s0": "0/24",
     "had/regir_kv0_norefil_sg/s1": "0/24",
     "had/regir_kv0_norefil_sg/s2": "0/24",

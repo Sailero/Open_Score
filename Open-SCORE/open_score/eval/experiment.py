@@ -44,7 +44,7 @@ BRANCH = {
           "smacv2": [("regir_kv0_sg", "P2")]},
     "A": {"had": [("regir_kv0_nomem", "P0"), ("regir_kv0_norefil_sg", "P1"), ("regir_kv0_fixed4_sg", "P1"),
                   ("regir_fixed4_sg", "P2"), ("regir_kv0_nocount_sg", "P2")],
-          "smacv2": [("regir_kv0_sg", "P0"), ("regir_sg", "P2")]},
+          "smacv2": [("regir_kv0_sg", "P0"), ("regir_sg", "P0")]},
     "B": {"had": [("regir_kv0_intent_noaux_sg", "P0"), ("regir_kv0_intent_nomem", "P1"),
                   ("regir_intent_sg", "P2"), ("regir_kv0_intent_norefil_sg", "P2")],
           "smacv2": [("regir_kv0_intent_sg", "P0"), ("regir_kv0_sg", "P1")]},
@@ -127,12 +127,13 @@ def budget(env="had"):
     methods(env)
     if SMOKE:
         return 6_000 if env == "had" else 4_000
-    return 1_000_000 if env == "had" else 2_000_000
+    return 1_000_000 if env == "had" else 5_000_000
 
 
 def validation_point_count(env="had"):
     methods(env)
-    return 50
+    # 40k-step spacing: HAD 1M → 50 points; SMAC 5M → 125 points.
+    return 125 if env == "smacv2" else 50
 
 
 def test_depth(method):
@@ -229,8 +230,26 @@ def initialize(output):
                                 dup_pursuit=dict(distance=1500.0, angle_degrees=30.0),
                                 read1_equivalence_verified=False,
                                 timing_methods=COST_METHODS, timing_warmup=50, timing_repeats=200),
-                resources=dict(gpu_ids=[0, 1], had_gpu_per_card=3, smac_gpu_per_card_trial=1,
-                               smac_gpu_per_card=2, gpu_reserve_gib=8,
+                resources=dict(gpu_ids=[0, 1], had_gpu_per_card=4,
+                               had_gpu_per_card_by_device={0: 2, 1: 4},
+                               smac_gpu_per_card_trial=1,
+                               smac_gpu_per_card=4, smac_gpu_per_card_by_device={0: 2, 1: 4},
+                               continuous_fill=True, global_train_slots=6,
+                               gpu_adapt={"smacv2": dict(min_by_device={0: 1, 1: 2},
+                                                         default_by_device={0: 2, 1: 2},
+                                                         max_by_device={0: 2, 1: 4},
+                                                         reserve_gib=8.0, peak_multiplier=1.25,
+                                                         scale_down_free_gib=8.0, warmup_seconds=180,
+                                                         fallback_peak_gib=16.0, scale_up_step=1,
+                                                         adapt_pause_seconds=90),
+                                          "had": dict(min_by_device={0: 1, 1: 2},
+                                                      default_by_device={0: 2, 1: 2},
+                                                      max_by_device={0: 2, 1: 4},
+                                                      reserve_gib=8.0, peak_multiplier=1.25,
+                                                      scale_down_free_gib=8.0, warmup_seconds=180,
+                                                      fallback_peak_gib=16.0, scale_up_step=1,
+                                                      adapt_pause_seconds=90)},
+                               gpu_reserve_gib=8,
                                had_gpu_admission=dict(reserve_gib=8.0, peak_multiplier=1.25),
                                cuda_oom_auto_retries=3, cuda_oom_backoff_seconds=[60, 120, 240],
                                had_eval_max=32, smac_eval_max=16, diagnostics_max=12,
@@ -815,8 +834,10 @@ def validate_integration(output, env="had"):
     assert len(validation_jobs("had", 1, 0)) == 100
     assert len(validation_jobs("smacv2", 1, 0)) == 128
     assert validation_thresholds("had")[-1] == 1_000_000
-    assert validation_thresholds("smacv2")[-1] == 2_000_000
-    assert validation_point_count("smacv2") == validation_point_count("had") == 50
+    assert validation_thresholds("smacv2")[-1] == 5_000_000
+    assert validation_point_count("had") == 50
+    assert validation_point_count("smacv2") == 125
+    assert validation_thresholds("smacv2")[49] == 2_000_000
     assert manifest["gate"]["version"] == GATE["version"]
     for method in methods(env):
         args = load_config(method, dict(profile=PROFILE, output=str(root), env=env,

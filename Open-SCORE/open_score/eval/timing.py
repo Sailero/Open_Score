@@ -158,7 +158,11 @@ def _cost_state_bank(output):
     if complete.get("trajectories") != 500 or any(complete.get(k) != v for k, v in manifest.items()):
         raise ValueError("Probe completion marker does not match the frozen public state bank")
     for method in ("regir", "refil"):
-        info = checkpoint_info(run_directory(output, method, 0) / "final.pt", method=method, seed=0, env="had")
+        path = run_directory(output, method, 0) / "final.pt"
+        if not path.is_file():
+            # Imported no-weight rows still pin identity in the frozen probe manifest.
+            continue
+        info = checkpoint_info(path, method=method, seed=0, env="had")
         if manifest.get("behavior_checkpoint_ids", {}).get(method) != info["checkpoint_id"]:
             raise ValueError("M4 public trajectory behavior checkpoint identity is stale")
     selected = []

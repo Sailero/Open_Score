@@ -2,10 +2,13 @@
 
 `run` is the long-lived main loop started by run_all.sh. Every 60 s it scans the
 artifact inventory, advances the stage, runs the gate when its inputs are
-complete, and writes queue.{env}.json. Four scheduler processes (HAD/SMAC
-training, HAD/SMAC evaluation) read those queues; the loop restarts a crashed
-scheduler at most three times per hour. All other subcommands only read or
-edit small state files and return immediately.
+complete, and writes queue.{env}.json. Training stays at six concurrent jobs:
+already-running work is kept, then the next tasks in (rank, order) fill empty
+slots (trial, then common P0, then later segments). The one allowed idle is
+after trial, before a branch is selected: branch-only jobs wait. Four scheduler processes
+(HAD/SMAC training, HAD/SMAC evaluation) read those queues; the loop restarts
+a crashed scheduler at most three times per hour. All other subcommands only
+read or edit small state files and return immediately.
 """
 from __future__ import annotations
 
@@ -78,6 +81,8 @@ def merge_control(out, state):
     control = load_control(out)
     for key in ("cut", "cut_now", "abandoned"):
         state[key] = list(control.get(key, []))
+    if "had_first" in control:
+        state["had_first"] = bool(control["had_first"])
     state["user_events"] = control.get("events", [])[-20:]
 
 
@@ -140,10 +145,65 @@ def classify(out, inventory, state):
         core_failed=[t["id"] for t in rest(trial_train) if _exhausted(out, t)])
 
 
-def _segment_open(segment, facts, state, env):
+def _continuous_fill(resources=None):
+    """Keep six trainers filled from the priority queue, except while waiting to select a branch."""
+    resources = resources or {}
+    return bool(resources.get("continuous_fill", True))
+
+
+def _waiting_for_select(state):
+    """Trial is over (or the gate is up) and the user has not chosen A/B/C."""
+    return not state.get("branch") and state.get("stage") in ("gate",)
+
+
+def _global_train_slots(resources=None):
+    resources = resources or {}
+    if resources.get("global_train_slots"):
+        return max(1, int(resources["global_train_slots"]))
+    devices = resources.get("gpu_ids") or [0, 1]
+    per = int(resources.get("had_gpu_per_card", 3))
+    return max(1, per * len(devices))
+
+
+def _live_train_ids(out):
+    ids = set()
+    for env in ("had", "smacv2"):
+        for row in _scheduler(out, "train", env).get("live") or []:
+            identity = row.get("id")
+            if not identity and row.get("method") is not None and row.get("seed") is not None:
+                identity = f"train.{env}.{row['method']}.s{row['seed']}"
+            if identity:
+                ids.add(identity)
+    return ids
+
+
+def _select_train(candidates, live_ids, slots):
+    """Keep already-running jobs, then admit the next (rank, order) jobs up to `slots`.
+
+    Live jobs beyond the slot cap are dropped so the trainer pauses them. The
+    queue must stay inside the configured budget without a human watching.
+    """
+    ordered = list(candidates)
+    selected = [task for task in ordered if task["id"] in live_ids][:slots]
+    if len(selected) >= slots:
+        return selected
+    seen = {task["id"] for task in selected}
+    for task in ordered:
+        if task["id"] in seen:
+            continue
+        selected.append(task)
+        seen.add(task["id"])
+        if len(selected) >= slots:
+            break
+    return selected
+
+
+def _segment_open(segment, facts, state, env, *, continuous_fill=False):
     if segment == "trial":
         return True
     if segment == "common":
+        if continuous_fill:
+            return True
         return env == "smacv2" or facts["trial_training_done"]
     if segment.startswith("branch:"):
         return state.get("branch") == segment.split(":", 1)[1]
@@ -151,8 +211,8 @@ def _segment_open(segment, facts, state, env):
 
 
 def _prefetch(task, state):
-    branches = [s for s in task["segments"] if s.startswith("branch:")]
-    return state["stage"] == "gate" and state.get("branch") is None and len(branches) >= 2
+    """Do not start shared branch jobs while waiting for A/B/C; that idle is allowed."""
+    return False
 
 
 def _cut(task, state):
@@ -166,10 +226,12 @@ def plan(out, inventory, state, facts):
     """queue.{env}.json contents for both environments."""
     had_ok, smac_ok = _accepted(out)
     intent = X.CANDIDATES["B"]
-    queues = {}
+    resources = (X.read_json(out / "experiment.json") or {}).get("resources") or {}
+    continuous = _continuous_fill(resources)
+    trains = {env: [] for env in ("had", "smacv2")}
+    evals = {env: [] for env in ("had", "smacv2")}
     for env in ("had", "smacv2"):
         accepted = had_ok if env == "had" else smac_ok
-        train, evals = [], []
         for task in inventory["tasks"]:
             if task["env"] != env or "imported" in task["segments"]:
                 continue
@@ -177,7 +239,10 @@ def plan(out, inventory, state, facts):
                 continue
             if task["method"] == intent and env == "had" and not state["intent_ready"]:
                 continue
-            open_ = any(_segment_open(s, facts, state, env) for s in task["segments"]) or _prefetch(task, state)
+            open_ = any(_segment_open(s, facts, state, env, continuous_fill=continuous)
+                        for s in task["segments"])
+            if not open_ and not _waiting_for_select(state) and _prefetch(task, state):
+                open_ = True
             if not open_ or task["status"] in ("complete", "skipped"):
                 continue
             if _cut(task, state):
@@ -189,17 +254,56 @@ def plan(out, inventory, state, facts):
             if task["kind"] == "train":
                 if _exhausted(out, task):
                     continue
-                train.append(task)
+                trains[env].append(task)
             else:
-                evals.append(task["id"])
-        train.sort(key=lambda t: (t["rank"], t["order"]))
-        per_gpu = 3 if env == "had" else (2 if facts["trial_training_done"] else 1)
+                evals[env].append(task["id"])
+    hold_smac = bool(state.get("had_first")) and bool(trains["had"] or evals["had"])
+    smac_pause_ids = []
+    if hold_smac:
+        smac_pause_ids = sorted({t["id"] for t in trains["smacv2"]} |
+                                {i for i in _live_train_ids(out) if "smacv2" in i})
+    candidates = trains["had"] + ([] if hold_smac else trains["smacv2"])
+    candidates.sort(key=lambda t: (t["rank"], t["order"]))
+    live_ids = _live_train_ids(out)
+    if hold_smac:
+        live_ids = {i for i in live_ids if "smacv2" not in i}
+    if continuous:
+        selected = {t["id"] for t in _select_train(candidates, live_ids,
+                                                   _global_train_slots(resources))}
+        trains = {env: [t for t in candidates if t["env"] == env and t["id"] in selected]
+                  for env in trains}
+    queues = {}
+    for env in ("had", "smacv2"):
+        train = trains[env]
+        if env == "had":
+            by_device = resources.get("had_gpu_per_card_by_device")
+            if by_device:
+                per_gpu_by_device = {int(key): int(value) for key, value in by_device.items()}
+                per_gpu = max(per_gpu_by_device.values())
+            else:
+                per_gpu = 3
+                per_gpu_by_device = None
+        else:
+            by_device = resources.get("smac_gpu_per_card_by_device")
+            if by_device:
+                per_gpu_by_device = {int(key): int(value) for key, value in by_device.items()}
+                per_gpu = max(per_gpu_by_device.values())
+            else:
+                per_gpu = (int(resources.get("smac_gpu_per_card", 2)) if continuous
+                           else (2 if facts["trial_training_done"] else 1))
+                per_gpu_by_device = None
         pause = []
-        if env == "smacv2" and state.get("smac_paused") and not facts["trial_training_done"]:
+        if hold_smac and env == "smacv2":
+            pause = list(smac_pause_ids)
+            train = []
+        elif (not continuous and env == "smacv2" and state.get("smac_paused")
+                and not facts["trial_training_done"]):
             pause = [t["id"] for t in train]
             train = []
         queues[env] = dict(train=[dict(id=t["id"], method=t["method"], seed=t["seed"]) for t in train],
-                           eval=evals, per_gpu=per_gpu, pause=pause, closed=state["stage"] == "done")
+                           eval=evals[env], per_gpu=per_gpu, pause=pause, closed=state["stage"] == "done")
+        if per_gpu_by_device:
+            queues[env]["per_gpu_by_device"] = per_gpu_by_device
     return queues
 
 
@@ -223,6 +327,14 @@ def _scheduler(out, kind, env):
 
 
 def speed_guard(out, state, facts, manifest):
+    resources = (manifest or {}).get("resources") or {}
+    if _continuous_fill(resources):
+        if state.get("smac_paused"):
+            state["smac_paused"] = False
+            state.setdefault("events", []).append(dict(
+                at=_stamp(), event="smac_resumed",
+                detail="continuous fill: keep the configured trainer slots; next jobs admit as slots free"))
+        return
     if facts["trial_training_done"] or state.get("smac_paused"):
         return
     trial = {m for m, _ in X.TRIAL_ORDER}
@@ -290,10 +402,10 @@ def child_commands(out):
     train, evaluate = str(REPO / "Open-SCORE/scripts/train.py"), str(REPO / "Open-SCORE/scripts/eval.py")
     return {
         "train.had": ([PY, "-u", train, "--profile", X.PROFILE, "--stage", "train", "--env", "had",
-                       "--devices", "0,1", "--per-gpu", "3", "--queue", f"{out}/queue.had.json",
+                       "--devices", "0,1", "--per-gpu", "2", "--queue", f"{out}/queue.had.json",
                        "--output", out], base_env, f"{out}/train.had.console.log"),
         "train.smacv2": ([SMAC_PY, "-u", train, "--profile", X.PROFILE, "--stage", "train", "--env", "smacv2",
-                          "--devices", "0,1", "--per-gpu", "2", "--queue", f"{out}/queue.smacv2.json",
+                          "--devices", "0,1", "--per-gpu", "4", "--queue", f"{out}/queue.smacv2.json",
                           "--output", out], smac_env, f"{out}/train.smacv2.console.log"),
         "eval.had": ([PY, "-u", evaluate, "--profile", X.PROFILE, "--stage", "eval", "--env", "had",
                       "--device", "auto", "--devices", "0,1", "--gpu-workers-per-device", "2",
@@ -486,6 +598,18 @@ def cut(out, priority, now=False):
     control.setdefault("events", []).append(dict(at=_stamp(), event="cut", priority=priority, now=now))
     save_control(out, control)
     print(f"已取消 {priority} 中尚未开始的任务" + ("，并停止正在运行的" if now else ""))
+
+
+def set_had_first(out, enabled=True):
+    """Pause SMAC training while any HAD train/eval remains; resume SMAC when HAD empties."""
+    control = load_control(out)
+    control["had_first"] = bool(enabled)
+    control.setdefault("events", []).append(dict(at=_stamp(), event="had_first", enabled=bool(enabled)))
+    save_control(out, control)
+    if enabled:
+        print("HAD first: SMAC training pauses until HAD train+eval finish, then resumes from resume.pt")
+    else:
+        print("SMAC training is admitted again alongside HAD")
 
 
 def retry(out, method, seed, env="had"):
@@ -842,10 +966,11 @@ def _clock(when):
 
 
 def _slots(out, env):
+    from open_score.utils.resources import gpu_train_limit
     sched = _scheduler(out, "train", env)
-    per = sched.get("per_gpu") or (3 if env == "had" else 1)
+    per = sched.get("per_gpu_by_device") or sched.get("per_gpu") or (3 if env == "had" else 1)
     devices = sched.get("devices") or [0, 1]
-    return max(1, int(per) * max(1, len(devices)))
+    return max(1, gpu_train_limit(devices, per_gpu=per, env=env))
 
 
 def _live_index(jobs):
@@ -896,7 +1021,7 @@ def _eval_frac(tasks, pred):
 
 def _your_move(out, state, tasks, record, now):
     if (decision_dir(out) / "DECISION_REQUIRED").exists() and not record:
-        return True, "select A|B|C  ← decision/分支判定.md"
+        return True, "select A|B|C  ← 特有任务在等你；公共队列仍会接上"
     if state.get("gate_error"):
         return True, "gate error · decide 重试"
     failed = [t for t in tasks if t.get("kind") == "train"
@@ -1000,7 +1125,9 @@ def _stage_lines(out, state, tasks, jobs, record, now, width):
             f"训{_frac(*smac_common)}  评{_frac(*smac_common_eval)}")
     else:
         smac_note = eta_text(smac_eta)
-        if trial_eta and smac_eta and smac_eta > trial_eta:
+        if _continuous_fill((X.read_json(out / "experiment.json") or {}).get("resources") or {}):
+            smac_note += "；空槽按优先级续接，总训练保持6路"
+        elif trial_eta and smac_eta and smac_eta > trial_eta:
             smac_note += "；试训结束后每卡会升到2路"
         add("4", "▶" if live_smac or smac_common[0] else "·", "公共SMAC",
             "进行中" if live_smac or smac_common[0] else "排队中",
@@ -1022,8 +1149,8 @@ def _stage_lines(out, state, tasks, jobs, record, now, width):
         add("5", "!", "分支闸门", "还没到",
             f"自动选或要你选。{until}你每多等1小时，后面的特有实验就晚1小时。",
             paint=_YEL)
-    if trial_train_done and had_common[1]:
-        if had_common[0] == had_common[1]:
+    if had_common[0] or grouped.get("had_common"):
+        if had_common[1] and had_common[0] == had_common[1]:
             add("6", "✓", "公共HAD", "已完成", f"训{_frac(*had_common)}  评{_frac(*had_common_eval)}")
         else:
             add("6", "▶", "公共HAD", "进行中",
@@ -1031,8 +1158,9 @@ def _stage_lines(out, state, tasks, jobs, record, now, width):
                 "拦截任务上的未锚定循环和逐层独立对照。",
                 bucket="had_common")
     else:
-        add("6", "·", "公共HAD", "未开始",
-            "等第2段18个训练全部结束后自动开，不用你")
+        add("6", "·", "公共HAD", "排队中" if _continuous_fill(manifest.get("resources") or {}) else "未开始",
+            "空槽按优先级续接，排在未完成的试训和公共P0之后" if _continuous_fill(manifest.get("resources") or {})
+            else "等第2段18个训练全部结束后自动开，不用你")
     if branch:
         own = f"branch:{branch}"
         special_tr = _count(tasks, lambda t: t["kind"] == "train" and own in (t.get("segments") or {}))
@@ -1450,6 +1578,8 @@ def render_status(out, width=100, height=None):
     lines.append(f"{_RED if need_you else _DIM}你现在  {move}{_RST}")
     if state.get("gate_error"):
         lines.append(f"{_RED}gate  {state['gate_error'].get('error')}{_RST}")
+    if state.get("had_first"):
+        lines.append(f"{_YEL}HAD first: SMAC trains pause until the HAD queue is empty{_RST}")
     if state.get("smac_paused"):
         lines.append(f"{_YEL}SMAC paused (speed guard){_RST}")
     if state.get("cut"):
@@ -1585,7 +1715,7 @@ def status(out, once=False, interval=5):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("run", "status", "select", "cut", "retry", "decide"))
+    parser.add_argument("command", choices=("run", "status", "select", "cut", "retry", "decide", "had-first"))
     parser.add_argument("args", nargs="*")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--force", action="store_true")
@@ -1609,6 +1739,11 @@ def main():
         retry(out, options.args[0], options.args[1], env=options.env)
     elif options.command == "decide":
         decide(out, preview=options.preview)
+    elif options.command == "had-first":
+        flag = (options.args or ["on"])[0]
+        if flag not in ("on", "off"):
+            raise SystemExit("had-first on|off")
+        set_had_first(out, flag == "on")
 
 
 if __name__ == "__main__":

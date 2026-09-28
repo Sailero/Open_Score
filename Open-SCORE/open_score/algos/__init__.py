@@ -173,7 +173,7 @@ V5_OVERRIDES = {
 RESUME_MUTABLE = frozenset(("resume", "output", "device", "use_cuda",
                             "report_interval", "progress_interval", "resume_interval",
                             "implementation_revision", "concurrency",
-                            "entity_pad", "skip_final_eval"))
+                            "entity_pad", "skip_final_eval", "t_max"))
 # Keys added after some runs started; missing saved values equal these defaults.
 RESUME_DEFAULTS = {"reward_mode": "damage", "friendly_penalty": 1.0,
                    "count_ln": True, "global_branch": None, "global_slots": 4,

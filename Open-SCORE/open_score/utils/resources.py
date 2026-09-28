@@ -9,17 +9,163 @@ import subprocess
 import time
 
 
-GPU_PER_CARD_MAX = 3
+GPU_PER_CARD_MAX = 4
 
 
-def gpu_train_limit(devices=(0, 1), *, per_gpu=GPU_PER_CARD_MAX):
-    """Derive the queue limit from the explicitly permitted physical cards."""
+def _resources(output):
+    try:
+        return json.loads(Path(output, "experiment.json").read_text(encoding="utf-8"))["resources"]
+    except (OSError, ValueError, TypeError, KeyError):
+        return {}
+
+
+def experiment_device_caps(output, env):
+    """Configured per-card maxima. GPU0 defaults to 2; GPU1 may go to 4."""
+    key = "had_gpu_per_card_by_device" if env == "had" else "smac_gpu_per_card_by_device"
+    raw = _resources(output).get(key)
+    if not raw:
+        return None
+    try:
+        return {int(gpu): int(cap) for gpu, cap in raw.items()}
+    except (TypeError, ValueError):
+        return None
+
+
+# One packer for HAD and SMAC: GPU0 stays at 2, GPU1 may climb 2→4 from free memory.
+SHARED_GPU_ADAPT = dict(
+    min_by_device={0: 1, 1: 2}, default_by_device={0: 2, 1: 2}, max_by_device={0: 2, 1: 4},
+    reserve_gib=8.0, peak_multiplier=1.25, scale_down_free_gib=8.0, warmup_seconds=180,
+    fallback_peak_gib=16.0, scale_up_step=1, adapt_pause_seconds=90,
+)
+
+
+def adapt_policy(output, env):
+    """Min/default/max per card and memory headroom. HAD and SMAC share one policy."""
+    policy = json.loads(json.dumps(SHARED_GPU_ADAPT))
+    configured = experiment_device_caps(output, env)
+    if configured:
+        policy["max_by_device"] = {**policy["max_by_device"], **configured}
+    raw = (_resources(output).get("gpu_adapt") or {}).get(env) or {}
+    for key in ("reserve_gib", "peak_multiplier", "scale_down_free_gib", "fallback_peak_gib"):
+        if key in raw:
+            policy[key] = float(raw[key])
+    for key in ("warmup_seconds", "scale_up_step", "adapt_pause_seconds"):
+        if key in raw:
+            policy[key] = int(raw[key])
+    for key in ("min_by_device", "default_by_device", "max_by_device"):
+        if raw.get(key):
+            policy[key] = {int(gpu): int(cap) for gpu, cap in raw[key].items()}
+    return policy
+
+
+def _item_gpu(item):
+    if item.get("gpu") is not None:
+        return int(item["gpu"])
+    return int(item.get("options", {}).get("cuda_visible_devices", 0))
+
+
+def _item_resource(output, env, item):
+    from open_score.eval.experiment import run_directory
+    row = _resource(run_directory(output, item["method"], item["options"]["seed"], env) / "resource.json")
+    if row is None or row.get("pid") != item["child"].pid:
+        return None
+    return row
+
+
+def adaptive_caps(output, env, live, devices=(0, 1), memories=None):
+    """Choose a live per-card target from free memory, inside the configured band.
+
+    GPU0's setpoint is 2. GPU1 starts at 2 and may climb to 4, one slot at a
+    time, after the newest trainer on that card has finished warming. A card
+    below the free-memory floor sheds its newest trainer. Occupancy already
+    inside the band is held until memory pressure or spare headroom says otherwise.
+    experiment.json ``gpu_adapt`` is re-read on every call.
+    """
+    policy = adapt_policy(output, env)
+    devices = tuple(int(gpu) for gpu in devices)
+    if memories is None:
+        memories = {}
+        for gpu in devices:
+            try:
+                memories[int(gpu)] = gpu_memory(gpu)
+            except (OSError, ValueError, subprocess.SubprocessError):
+                continue
+    now = time.time()
+    caps = {}
+    for gpu in devices:
+        lo = max(1, int(policy["min_by_device"].get(gpu, 1)))
+        default = max(lo, int(policy["default_by_device"].get(gpu, lo)))
+        hi = min(GPU_PER_CARD_MAX, max(default, int(policy["max_by_device"].get(gpu, default))))
+        same = [item for item in live if _item_gpu(item) == gpu]
+        load = len(same)
+        memory = memories.get(gpu)
+        if memory is None:
+            caps[gpu] = min(hi, load or default)
+            continue
+        free = float(memory.get("free") or 0)
+        if free < policy["scale_down_free_gib"] and load > lo:
+            caps[gpu] = load - 1
+            continue
+        warming = any(now - float(item.get("started_at") or now) < policy["warmup_seconds"]
+                      for item in same)
+        if warming:
+            floor = default if load < default else load
+            caps[gpu] = min(hi, max(lo, floor))
+            continue
+        if load == 0:
+            caps[gpu] = min(hi, default)
+            continue
+        peaks = []
+        for item in same:
+            row = _item_resource(output, env, item)
+            if row:
+                peaks.append(float(row.get("cuda_peak_reserved_gib") or row.get("cuda_reserved_gib") or 0))
+        peak = max((value for value in peaks if value > 0), default=policy["fallback_peak_gib"])
+        need = policy["reserve_gib"] + policy["peak_multiplier"] * peak
+        extra = int(free // need) if need > 0 else 0
+        cap = min(hi, max(lo, load))
+        if extra >= 1 and cap < hi:
+            cap = min(hi, load + max(1, int(policy.get("scale_up_step", 1))))
+        caps[gpu] = cap
+    return caps
+
+
+def adapt_overflow(live, caps):
+    """Newest trainers on an over-capacity card, so scale-down can pause them."""
+    victims = []
+    for gpu, cap in caps.items():
+        same = [item for item in live if _item_gpu(item) == gpu]
+        same.sort(key=lambda item: float(item.get("started_at") or 0), reverse=True)
+        victims.extend(same[: max(0, len(same) - int(cap))])
+    return victims
+
+
+def resolve_per_gpu(output, env, per_gpu, live=None, memories=None, devices=(0, 1)):
+    """Live adaptive caps when the trainer pool is known, otherwise configured maxima."""
+    if live is not None:
+        return adaptive_caps(output, env, live, devices=devices, memories=memories)
+    return experiment_device_caps(output, env) or per_gpu
+
+
+def per_gpu_caps(per_gpu, devices=(0, 1), *, env="had"):
+    """Per-card trainer caps. `per_gpu` may be one integer or {gpu: cap}."""
     devices = tuple(int(gpu) for gpu in devices)
     if not devices or len(set(devices)) != len(devices) or not set(devices) <= {0, 1}:
         raise ValueError("requires distinct physical GPUs from 0,1")
-    if per_gpu not in range(1, GPU_PER_CARD_MAX + 1):
-        raise ValueError("allows one to three trainers per physical GPU")
-    return per_gpu * len(devices)
+    hard = GPU_PER_CARD_MAX
+    if isinstance(per_gpu, dict):
+        raw = {int(key): int(value) for key, value in per_gpu.items()}
+        caps = {gpu: raw.get(gpu, hard) for gpu in devices}
+    else:
+        caps = {gpu: int(per_gpu) for gpu in devices}
+    if any(caps[gpu] not in range(1, hard + 1) for gpu in devices):
+        raise ValueError(f"allows 1..{hard} trainers per physical GPU")
+    return caps
+
+
+def gpu_train_limit(devices=(0, 1), *, per_gpu=GPU_PER_CARD_MAX, env="had"):
+    """Derive the queue limit from the explicitly permitted physical cards."""
+    return sum(per_gpu_caps(per_gpu, devices, env=env).values())
 
 
 def cpu_threads():
@@ -68,9 +214,9 @@ def clear_previous_stop(path, requested_at):
 
 
 def gpu_memory(gpu):
-    """Only inspect the explicitly permitted physical device."""
-    if int(gpu) not in (0, 1):
-        raise ValueError("permits physical GPUs 0 and 1")
+    """Inspect one physical device. Official main0923 schedulers still only pass 0/1."""
+    if int(gpu) < 0:
+        raise ValueError("physical GPU id must be >= 0")
     result = subprocess.check_output([
         "nvidia-smi", f"--id={int(gpu)}", "--query-gpu=memory.free,memory.used,memory.total,utilization.gpu",
         "--format=csv,noheader,nounits"], text=True, timeout=5)
@@ -84,7 +230,7 @@ def queue_lock(output, kind, *, stop_requested=None):
     """OS-held locks survive stale files and release automatically on exit.
 
     GPU train/single/farm and cost measurement share one parent lease. A parent
-    may admit at most three HAD trainers per GPU (two SMAC); another command waits outside that lease.
+    may admit the configured trainers per GPU; another command waits outside that lease.
     CPU evaluation has one parent per experiment output.
     """
     import fcntl
@@ -181,9 +327,11 @@ def _source_peak(output, env, method):
 def gpu_admit(output, env, method, live, *, gpu=0, memory=None, minimum_peak=0., recovering=False,
               per_gpu=GPU_PER_CARD_MAX):
     from open_score.eval.experiment import run_directory, ALL_SEEDS
-    if per_gpu > (2 if env == "smacv2" else GPU_PER_CARD_MAX):
+    try:
+        caps = per_gpu_caps(per_gpu, env=env)
+    except ValueError:
         return False
-    if int(gpu) not in (0, 1) or len(live) >= gpu_train_limit(per_gpu=per_gpu):
+    if int(gpu) not in (0, 1) or len(live) >= gpu_train_limit(per_gpu=per_gpu, env=env):
         return False
     measurements = [_resource(run_directory(output, method, s, env) / "resource.json") for s in ALL_SEEDS]
     measurements = [r for r in measurements if r]
@@ -192,7 +340,7 @@ def gpu_admit(output, env, method, live, *, gpu=0, memory=None, minimum_peak=0.,
     if not peak:
         peak = _source_peak(output, env, method)
     same_gpu = [item for item in live if int(item["options"].get("cuda_visible_devices", "0")) == int(gpu)]
-    if len(same_gpu) >= per_gpu:
+    if len(same_gpu) >= caps[int(gpu)]:
         return False
     if recovering and same_gpu:
         return False
@@ -201,16 +349,21 @@ def gpu_admit(output, env, method, live, *, gpu=0, memory=None, minimum_peak=0.,
     try:
         observed_memory = memory if memory is not None else gpu_memory(gpu)
         free = observed_memory["free"]
-        if env == "smacv2" and live and observed_memory.get("utilization", 100) >= 90:
+        if (env == "smacv2" and live and observed_memory.get("utilization", 100) >= 90
+                and observed_memory.get("free", 0) < 24.0):
             return False
     except (OSError, ValueError, subprocess.SubprocessError):
         return False  # Unknown free memory is not permission to launch.
     if not peak:
         bootstrap = _bootstrap_peak(output, env, method)
         if bootstrap:
-            # An accepted architecture can fill the other idle card without
-            # waiting for all seeds of the current method to finish.
-            return not same_gpu and free >= 8.0 + 1.25 * bootstrap
+            need = 8.0 + 1.25 * bootstrap
+            if not same_gpu:
+                return free >= need
+            # Unmeasured SMAC can share a busy card only when remaining free
+            # memory is clearly above the scaled smoke peak. GPU0 currently
+            # hosts a 50+ GiB Ollama process and will fail this check.
+            return env == "smacv2" and free >= need + 16.0
         return not live and free >= 9.0  # First real run is measured alone, with >=8 GiB reserve.
     # The explicitly requested six-way HAD queue can use tighter headroom
     # for measured architectures. Unknown profiles and SMAC retain the original
@@ -228,11 +381,11 @@ def gpu_admit(output, env, method, live, *, gpu=0, memory=None, minimum_peak=0.,
     growth = 0.0
     for item in live:
         options = item["options"]
+        if int(options.get("cuda_visible_devices", "0")) != int(gpu):
+            continue
         row = _resource(run_directory(output, item["method"], options["seed"], env) / "resource.json")
         if row is None or row.get("pid") != item["child"].pid:
             return False
-        if int(options.get("cuda_visible_devices", "0")) != int(gpu):
-            continue
         observed = float(row.get("cuda_peak_reserved_gib") or row.get("cuda_reserved_gib") or 0)
         current = float(row.get("cuda_reserved_gib") or observed)
         growth += max(0.0, multiplier * observed - current)
@@ -243,7 +396,7 @@ def choose_gpu(output, env, method, live, devices=(0, 1), *, memories=None,
                minimum_peak=0., recovering=False, per_gpu=GPU_PER_CARD_MAX):
     """Choose the eligible card with most free memory, without a fixed priority."""
     devices = tuple(int(gpu) for gpu in devices)
-    if len(live) >= gpu_train_limit(devices, per_gpu=per_gpu):
+    if len(live) >= gpu_train_limit(devices, per_gpu=per_gpu, env=env):
         return None
     if memories is None:
         memories = {}

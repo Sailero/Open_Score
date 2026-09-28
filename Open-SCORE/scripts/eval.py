@@ -98,6 +98,16 @@ def _exclusive_job(method, run, seed, lock_dir=None):
     return _inner()
 
 
+def _live_trainers(output):
+    """True when a HAD/SMAC trainer is actually running, not just the scheduler."""
+    from open_score.eval.experiment import read_json
+    root = Path(output)
+    for env in ("had", "smacv2"):
+        if read_json(root / f"scheduler.train.{env}.json", {}).get("live"):
+            return True
+    return False
+
+
 def _worker(task, output, run, device, stop_event, results):
     # Each evaluator sees only its assigned physical GPU. CPU workers never
     # initialize CUDA, and the parent keeps both cards visible for admission.
@@ -353,6 +363,11 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
                 return
             task = waiting[selected_index]
             del waiting[selected_index]
+            if profile and task.get("kind") == "timing" and _live_trainers(output):
+                waiting.append(task)
+                retry_at[task["id"]] = time.monotonic() + 300
+                emit(f"{task['id']} deferred: trainers occupy the measurement GPU")
+                return
             task_device = "cpu" if device == "auto" else device
             if task["kind"] in ("coverage", "dynamics", "deep_rounds", "global_probe",
                                 "readout_attention", "intent_accuracy"):
@@ -588,6 +603,8 @@ def run_profile_timing(output, stop_requested):
         return dict(status="complete", completed=task["total"], total=task["total"], reused=True)
     if task["status"] == "waiting":
         return dict(status="blocked", reason="M4 needs all cost finals and the complete common state bank")
+    if _live_trainers(output):
+        return dict(status="blocked", reason="gpu training busy")
     selected = manifest["resources"].get("measurement_gpu")
     required_free, retries = 12., 0
     last_notice = 0.

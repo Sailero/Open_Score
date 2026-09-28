@@ -961,8 +961,16 @@ def run_queue(output, env, template, devices, queue_path, *, per_gpu_default):
     """
     from open_score.eval.experiment import (atomic_json, read_json, run_directory,
                                           checkpoint_info)
-    from open_score.utils.resources import choose_gpu, gpu_memory
+    from open_score.utils import resources as gpu_res
     output, queue_path = Path(output), Path(queue_path)
+
+    def resource_api():
+        """Re-read packer code so experiment.json / resources.py edits apply live."""
+        import importlib
+        try:
+            return importlib.reload(gpu_res)
+        except Exception:
+            return gpu_res
     context = get_context("spawn")
     stop_event, results = context.Event(), context.Queue()
     live, waiting, known = [], [], {}
@@ -1006,9 +1014,11 @@ def run_queue(output, env, template, devices, queue_path, *, per_gpu_default):
         saved_config = directory / "config.json"
         if saved_config.exists() and options["resume"]:
             saved = json.loads(saved_config.read_text(encoding="utf-8"))
-            for field in ("seed", "env", "batch_size_run", "t_max"):
+            for field in ("seed", "env", "batch_size_run"):
                 if saved[field] != options[field]:
                     raise ValueError(f"Resume configuration differs: {method}/{field}")
+            if int(saved["t_max"]) > int(options["t_max"]):
+                raise ValueError(f"Resume configuration differs: {method}/t_max")
         elif saved_config.exists() and not options["resume"]:
             raise RuntimeError(f"Recorded run has no recoverable checkpoint: {directory}")
         return options
@@ -1019,16 +1029,28 @@ def run_queue(output, env, template, devices, queue_path, *, per_gpu_default):
         if not isinstance(queue, dict):
             return
         closed = bool(queue.get("closed"))
-        per_gpu = int(queue.get("per_gpu", per_gpu_default))
+        api = resource_api()
+        memories = {}
+        for gpu in devices:
+            try:
+                memories[int(gpu)] = api.gpu_memory(gpu)
+            except Exception:
+                pass
+        per_gpu = api.adaptive_caps(output, env, live, devices=devices, memories=memories)
         paused = set(queue.get("pause", []))
         wanted = [(row["method"], int(row["seed"])) for row in queue.get("train", [])]
         wanted_ids = {f"train.{env}.{m}.s{s}" for m, s in wanted}
+        pause_for = max(30, int(api.adapt_policy(output, env).get("adapt_pause_seconds", 90)))
+        for item in api.adapt_overflow(live, per_gpu):
+            paused.add(item["id"])
+            not_before[item["id"]] = max(not_before.get(item["id"], 0), time.monotonic() + pause_for)
+            emit(f"adapt pause {item['id']} on GPU{item['gpu']}: cap {per_gpu}")
         for item in live:
             identity = item["id"]
             pause = run_directory(output, item["method"], item["options"]["seed"], env) / "pause.request"
             if identity in paused or identity not in wanted_ids:
                 if not pause.exists():
-                    pause.write_text("paused by pipeline\n", encoding="utf-8")
+                    pause.write_text("paused by adaptive scheduler\n", encoding="utf-8")
                     emit(f"pause {identity}: save resume and stop")
         waiting[:] = [row for row in waiting if row[2] in wanted_ids and row[2] not in paused]
         queued = {row[2] for row in waiting} | {item["id"] for item in live}
@@ -1051,10 +1073,11 @@ def run_queue(output, env, template, devices, queue_path, *, per_gpu_default):
         waiting.sort(key=lambda row: order.get(row[2], len(order)))
 
     def launch():
+        api = resource_api()
         memories = {}
         for gpu in devices:
             try:
-                memories[gpu] = gpu_memory(gpu)
+                memories[gpu] = api.gpu_memory(gpu)
             except Exception:
                 pass
         for item in live:
@@ -1065,12 +1088,13 @@ def run_queue(output, env, template, devices, queue_path, *, per_gpu_default):
             if (row.get("pid") == item["child"].pid and row.get("estimate_ready")
                     and row.get("safe_checkpoint_t_env", 0) > opts.get("_recovery_safe_t_env", 0)):
                 opts["_recovering"] = False
-        while waiting and not stop_event.is_set() and len(live) < per_gpu * len(devices):
+        while waiting and not stop_event.is_set() and len(live) < api.gpu_train_limit(
+                devices, per_gpu=per_gpu, env=env):
             picked = None
             for index, (method, options, identity) in enumerate(waiting):
                 if time.monotonic() < not_before.get(identity, 0):
                     continue
-                gpu = choose_gpu(output, env, method, live, devices, memories=memories,
+                gpu = api.choose_gpu(output, env, method, live, devices, memories=memories,
                                  minimum_peak=options.get("_minimum_peak", 0),
                                  recovering=options.get("_recovering", False), per_gpu=per_gpu)
                 if gpu is not None:
@@ -1090,7 +1114,7 @@ def run_queue(output, env, template, devices, queue_path, *, per_gpu_default):
             memories = {}
             for card in devices:
                 try:
-                    memories[card] = gpu_memory(card)
+                    memories[card] = api.gpu_memory(card)
                 except Exception:
                     pass
 
@@ -1151,10 +1175,26 @@ def run_queue(output, env, template, devices, queue_path, *, per_gpu_default):
                            "seed": opts["seed"], "pid": item["child"].pid, "physical_gpu": item["gpu"],
                            "total": opts["t_max"], "started_at": item["started_at"],
                            "elapsed_seconds": time.time() - item["started_at"]})
-        atomic_json(output / f"scheduler.train.{env}.json", dict(
-            kind="train", env=env, pid=os.getpid(), status=status, updated_at=time.time(),
-            per_gpu=per_gpu, devices=list(devices), live=active,
-            waiting=[dict(id=i, method=m, seed=o["seed"]) for m, o, i in waiting], closed=closed))
+        published = dict(kind="train", env=env, pid=os.getpid(), status=status, updated_at=time.time(),
+                         devices=list(devices), live=active,
+                         waiting=[dict(id=i, method=m, seed=o["seed"]) for m, o, i in waiting], closed=closed)
+        if isinstance(per_gpu, dict):
+            published["per_gpu"] = max(int(v) for v in per_gpu.values())
+            published["per_gpu_by_device"] = {str(k): int(v) for k, v in per_gpu.items()}
+        else:
+            published["per_gpu"] = int(per_gpu)
+        try:
+            api = resource_api()
+            published["adapt"] = {
+                "policy": {k: v for k, v in api.adapt_policy(output, env).items()
+                           if k in ("reserve_gib", "peak_multiplier", "scale_down_free_gib",
+                                    "warmup_seconds", "scale_up_step")},
+                "free_gib": {str(gpu): float((api.gpu_memory(gpu) or {}).get("free") or 0)
+                             for gpu in devices},
+            }
+        except Exception:
+            pass
+        atomic_json(output / f"scheduler.train.{env}.json", published)
 
     def request_stop(signum, frame):
         stop_event.set()
@@ -1749,7 +1789,7 @@ def profile_main(options, output):
     devices = tuple(_parse_devices(options.devices or "0,1") or ())
     if options.cpu or not devices or not set(devices) <= {0, 1}:
         raise SystemExit(f"{PROFILE} training uses physical --devices 0,1 (or an explicit subset)")
-    card_limit = 3 if options.env == "had" else 2
+    card_limit = 4
     if not any(a.startswith("--per-gpu") for a in sys.argv):
         options.per_gpu = card_limit
     if options.per_gpu not in range(1, card_limit + 1):
