@@ -557,6 +557,7 @@ def train(name, cfg):
     from runners.parallel_runner import ParallelRunner
     from open_score.models import build_mac
     from open_score.utils.logging import ExperimentLogger, read_records
+    from open_score.utils.resources import stop_requested as farm_stop_requested
     from open_score.eval.protocol import evaluation_thresholds, validation_jobs, validation_score, final_jobs, remaining_jobs
     from open_score.eval.report import refresh_report
 
@@ -846,7 +847,7 @@ def train(name, cfg):
             nonlocal last_progress, stop_requested, collection_steps_seen
             if transaction_phase == "collecting" and not evaluating:
                 collection_steps_seen = max(collection_steps_seen, int(in_flight))
-            if ((stop_event is not None and stop_event.is_set()) or (output / "stop.request").exists()
+            if ((stop_event is not None and stop_event.is_set()) or farm_stop_requested(output)
                     or (profile and (run_dir / "pause.request").exists())):
                 stop_requested = True
             now = time.monotonic()

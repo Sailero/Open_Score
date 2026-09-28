@@ -3,8 +3,9 @@
 `run` is the long-lived loop started by run_all.sh. Every 15 s it heartbeats,
 reaps stale claims, scans inventory and writes this host's queue.*.json.
 Training and evaluation schedulers read those per-host queues. `stop` writes
-a shared stop.request; this host exits after the current batch and releases
-its claims. There is no trial/gate/select.
+this host's `cluster/stop.{host}.request`; `stop all` also writes the shared
+`stop.request`. The host exits after the current batch and releases its claims.
+There is no trial/gate/select.
 """
 from __future__ import annotations
 
@@ -26,6 +27,7 @@ import unicodedata
 
 from . import cluster
 from . import experiment as X
+from open_score.utils.resources import stop_requested as farm_stop_requested
 
 STAGES = ("prepare", "run", "done")
 LOOP_SECONDS = 15
@@ -302,8 +304,10 @@ def child_commands(out):
     devices = ",".join(map(str, gpus)) if gpus else ""
     host = cluster.hostname()
     sc2 = cluster.sc2_path()
+    open_score_root = str(REPO / "Open-SCORE")
     base_env = dict(os.environ, OMP_NUM_THREADS="1", MKL_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1",
-                    NUMEXPR_NUM_THREADS="1", PYTHONPATH="", PYTHONDONTWRITEBYTECODE="1")
+                    NUMEXPR_NUM_THREADS="1", PYTHONPATH=open_score_root, PYTHONDONTWRITEBYTECODE="1",
+                    REGIR_ROOT=str(REPO), REGIR_HOST=host)
     if devices:
         base_env["CUDA_VISIBLE_DEVICES"] = devices
     smac_env = dict(base_env, PYTHONNOUSERSITE="1")
@@ -386,10 +390,10 @@ class Children:
             time.sleep(1)
 
 
-def request_stop(out):
-    from open_score.utils.resources import write_stop
-    write_stop(Path(out) / "stop.request", "Stop after the current complete sampling/learning batch.")
-    write_stop(Path(out) / "eval.stop.request", "Stop after the current complete evaluation episode.")
+def request_stop(out, *, everyone=False):
+    from open_score.utils.resources import write_host_stop
+    write_host_stop(out, "Stop after the current complete sampling/learning batch.", everyone=everyone)
+    write_host_stop(out, "Stop after the current complete evaluation episode.", eval=True, everyone=everyone)
 
 
 def run(out):
@@ -400,7 +404,8 @@ def run(out):
         state["stage"] = "run"
     state["host"] = cluster.hostname()
     state.pop("intent_ready", None)
-    for path in (out / "stop.request", out / "eval.stop.request"):
+    from open_score.utils.resources import stop_paths
+    for path in (*stop_paths(out), *stop_paths(out, eval=True)):
         path.unlink(missing_ok=True)
     save_state(out, state)
     stopping = {"flag": False}
@@ -471,6 +476,8 @@ def iteration(out, state, index, children, stopping, manifest):
     """One pass of the main loop; returns True when the experiment is finished."""
     merge_control(out, state)
     cluster.heartbeat(out, extra=dict(stage=state.get("stage"), stopping=stopping["flag"]))
+    if farm_stop_requested(out) or farm_stop_requested(out, eval=True):
+        stopping["flag"] = True
     if state.get("stage") in ("prepare", "trial", "gate", "branch"):
         state["stage"] = "run"
     inventory = X.scan(out, index=index)
@@ -1417,7 +1424,9 @@ def render_status(out, width=100, height=None):
     mode = "fixed"
     jobs = _live_jobs(out)
     now = datetime.now().astimezone()
-    stopping = any((out / name).exists() for name in ("stop.request", "eval.stop.request"))
+    workers = cluster.list_workers(out)
+    stopping = (farm_stop_requested(out) or farm_stop_requested(out, eval=True)
+                or any(w.get("alive") and w.get("stopping") for w in workers))
     if stopping:
         headline = "stopping"
     else:
@@ -1466,7 +1475,6 @@ def render_status(out, width=100, height=None):
     table, by_key = _progress_table(tasks, jobs)
     lines.extend(table)
 
-    workers = cluster.list_workers(out)
     if workers:
         lines.append("cluster  " + "  ".join(
             f"{w.get('host')}{'*' if w.get('alive') else '!'} {w.get('n_gpus', 0)}gpu "

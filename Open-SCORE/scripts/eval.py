@@ -22,6 +22,7 @@ os.environ.setdefault("MKL_NUM_THREADS", "1")
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 
 from open_score.utils.logging import DEFAULT_OUTPUT, FORMAL_RUN, parse_eval_console, read_tail
+from open_score.utils.resources import stop_requested
 
 
 def _enable_ansi():
@@ -127,7 +128,7 @@ def _worker(task, output, run, device, stop_event, results):
     def profile_stop_requested():
         # The parent may be drawing the report; workers still observe stop
         # directly at episode/transaction boundaries during that interval.
-        return stop_event.is_set() or (Path(output) / "eval.stop.request").exists()
+        return stop_event.is_set() or stop_requested(output, eval=True)
 
     def on_progress(progress):
         payload = dict(progress)
@@ -459,7 +460,7 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
         signal.signal(sig, request_stop)
     try:
         while not stop_event.is_set():
-            if (Path(output) / "eval.stop.request").exists():
+            if stop_requested(output, eval=True):
                 interrupted = True
                 stop_event.set()
                 break
@@ -667,7 +668,8 @@ def profile_main(options, output):
     from open_score.eval.experiment import (initialize, atomic_json, scan, import_main0921, methods,
                                           checkpoint_info, run_directory, PROFILE, SOURCE_PROFILE,
                                           EVAL_PHASES, HAD_EVAL_KINDS, ALL_SEEDS)
-    from open_score.utils.resources import queue_lock, cpu_threads, clear_previous_stop, configure_workspace
+    from open_score.utils.resources import (queue_lock, cpu_threads, clear_previous_stop,
+                                            configure_workspace, stop_paths, stop_requested)
     initialize(output)
     workspace = configure_workspace()
     from open_score.eval.cluster import sc2_path
@@ -677,9 +679,8 @@ def profile_main(options, output):
     requested_at = time.time()
     if not any(a.startswith("--max-concurrent") for a in sys.argv):
         options.max_concurrent = 4
-    stop_path = output / "eval.stop.request"
     def new_stop():
-        return stop_path.exists() and stop_path.stat().st_mtime > requested_at
+        return stop_requested(output, eval=True)
     if options.run != "train" or options.seed not in (None, *ALL_SEEDS):
         raise SystemExit(f"{PROFILE} fixes run=train and model seeds 0-2")
     if options.method is not None and options.method not in methods(options.env):
@@ -711,8 +712,9 @@ def profile_main(options, output):
         raise SystemExit("--device auto requires --final-shards greater than one")
     os.environ["CUDA_VISIBLE_DEVICES"] = "" if options.device == "cpu" else ",".join(map(str, devices))
     with queue_lock(output, f"cpu.{options.env}", stop_requested=new_stop):
-        if stop_path.exists() and stop_path.stat().st_mtime <= requested_at:
-            clear_previous_stop(stop_path, requested_at)
+        for path in stop_paths(output, eval=True):
+            if path.exists() and path.stat().st_mtime <= requested_at:
+                clear_previous_stop(path, requested_at)
         manifest = initialize(output)
         manifest["resources"].setdefault("evaluation", {})[options.env] = dict(
             device=options.device, max_concurrent=options.max_concurrent,
@@ -742,9 +744,9 @@ def main():
         output = DEFAULT_OUTPUT.parent / options.profile
     if options.stage == "stop":
         output.mkdir(parents=True, exist_ok=True)
-        from open_score.utils.resources import write_stop
-        write_stop(output / "eval.stop.request", "Stop after the current complete evaluation episode.")
-        print("eval.stop.request written; wait for current episode, do not kill", flush=True)
+        from open_score.utils.resources import write_host_stop
+        write_host_stop(output, "Stop after the current complete evaluation episode.", eval=True)
+        print("host eval stop written; wait for current episode, do not kill", flush=True)
         return
     from open_score.eval.experiment import is_profile
     if options.profile or is_profile(output):

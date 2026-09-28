@@ -48,7 +48,7 @@ failure.json
 scheduler.*.json
 queue.*.json
 # Clone-local environments and caches (created by scripts/setup_farm.sh)
-envs/
+/envs/
 !Open-SCORE/outputs/main0928/
 !Open-SCORE/outputs/main0928/run_all.sh
 !Open-SCORE/outputs/main0928/*.md
@@ -61,6 +61,9 @@ envs/
 # Generated download packs (rewritten on the farm; do not commit)
 Open-SCORE/outputs/main0928/*.zip
 Open-SCORE/outputs/main0928/*.zip.manifest.json
+Open-SCORE/outputs/main0928/cluster/
+**/stop.*.request
+**/eval.stop.*.request
 
 # Vendored simulators: keep source, drop local build trees
 third_party/**/build/

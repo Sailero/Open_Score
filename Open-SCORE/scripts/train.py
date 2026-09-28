@@ -25,6 +25,7 @@ from open_score.utils.logging import (
     DEFAULT_OUTPUT, FORMAL_RUN, live_console_jobs, parse_eval_console,
     parse_train_console, read_tail,
 )
+from open_score.utils.resources import stop_requested
 
 BASELINE_METHODS = METHODS[:3]
 MAIN_METHODS = ("dcg", "spectra")
@@ -833,7 +834,7 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
             return progressed
 
         while live or ((waiting_train or waiting_eval) and not stop_event.is_set()):
-            if (Path(output) / "stop.request").exists():
+            if stop_requested(output):
                 stop_event.set()
             while True:
                 try:
@@ -1207,7 +1208,7 @@ def run_queue(output, env, template, devices, queue_path, *, per_gpu_default):
         signal.signal(sig, request_stop)
     try:
         while True:
-            if (output / "stop.request").exists():
+            if stop_requested(output):
                 stop_event.set()
             now = time.monotonic()
             if not stop_event.is_set() and now - last_refill >= 20:
@@ -1647,7 +1648,7 @@ def run_farm(output, *, steps, batch_size_run, per_gpu=4, status_seconds=300, re
         print_board()
         last_status = time.monotonic()
         while live or (waiting and not stop_event.is_set()):
-            if (output / "stop.request").exists():
+            if stop_requested(output):
                 stop_event.set()
             while True:
                 try:
@@ -1818,12 +1819,13 @@ def profile_main(options, output):
         from open_score.eval.cluster import sc2_path
         base["env_args"] = {"sc2path": sc2_path()}
     requested_at = time.time()
-    stop_file = output / "stop.request"
+    from open_score.utils.resources import stop_paths, clear_previous_stop, stop_requested
     def new_stop():
-        return stop_file.exists() and stop_file.stat().st_mtime > requested_at
+        return stop_requested(output)
     with queue_lock(output, f"gpu.{options.env}", stop_requested=new_stop):
-        if stop_file.exists() and stop_file.stat().st_mtime <= requested_at:
-            clear_previous_stop(stop_file, requested_at)
+        for path in stop_paths(output):
+            if path.exists() and path.stat().st_mtime <= requested_at:
+                clear_previous_stop(path, requested_at)
         print(f"{PROFILE} {options.env}: queue={options.queue}, physical GPUs={devices}, "
               f"per GPU <= {options.per_gpu} (queue may lower/raise it)", flush=True)
         success = run_queue(output, options.env, base, devices, options.queue, per_gpu_default=options.per_gpu)
@@ -1844,9 +1846,9 @@ def main():
         output = PROBE_OUTPUT.resolve()
     if options.stage == "stop":
         output.mkdir(parents=True, exist_ok=True)
-        from open_score.utils.resources import write_stop
-        write_stop(output / "stop.request", "Stop after the current complete sampling/learning batch.")
-        print("stop.request written; wait for stopped + resume, do not kill", flush=True)
+        from open_score.utils.resources import write_host_stop
+        write_host_stop(output, "Stop after the current complete sampling/learning batch.")
+        print("host stop written; wait for stopped + resume, do not kill", flush=True)
         return
     from open_score.eval.experiment import is_profile
     if options.profile or is_profile(output):

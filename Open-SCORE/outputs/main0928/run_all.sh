@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # main0928 single entry point. Installed as $OUT/run_all.sh.
-# Multi-host: every machine sources envs/local.env and runs the same command
-# against the shared outputs/main0928 directory.
+# Multi-host: every machine sources envs/local.$HOST.env (or local.env) and runs
+# the same command against the shared outputs/main0928 directory.
 set -Eeuo pipefail
 OUT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 SCRIPT="$OUT/run_all.sh"
@@ -15,15 +15,18 @@ else
 fi
 [[ -n "$REPO" && -d "$REPO/Open-SCORE" ]] || { echo "Set REGIR_ROOT to the cloned ReGIR root." >&2; exit 1; }
 cd -- "$REPO"
-if [[ -f "$REPO/envs/local.env" ]]; then
+if [[ -f "$REPO/envs/local.${HOST}.env" ]]; then
+  # shellcheck disable=SC1091
+  source "$REPO/envs/local.${HOST}.env"
+elif [[ -f "$REPO/envs/local.env" ]]; then
   # shellcheck disable=SC1091
   source "$REPO/envs/local.env"
 fi
 PY=${PY:-python}
 SMAC_PY=${SMAC_PY:-$PY}
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
-export PYTHONPATH="" PYTHONDONTWRITEBYTECODE=1 REGIR_ROOT="$REPO"
-PIPE=(env PYTHONPATH="$REPO/Open-SCORE" "$PY" -m open_score.eval.pipeline --output "$OUT")
+export PYTHONPATH="$REPO/Open-SCORE" PYTHONDONTWRITEBYTECODE=1 REGIR_ROOT="$REPO" REGIR_HOST="$HOST"
+PIPE=(env PYTHONPATH="$REPO/Open-SCORE" REGIR_ROOT="$REPO" REGIR_HOST="$HOST" "$PY" -m open_score.eval.pipeline --output "$OUT")
 LOCK_DIR="$OUT/cluster/locks"
 mkdir -p "$LOCK_DIR"
 
@@ -32,12 +35,15 @@ usage() {
 Usage: bash run_all.sh COMMAND
   start                    unpack imported baselines, validate, then the pipeline (background)
   resume                   restart the pipeline after stop (training resumes from resume.pt)
-  stop                     every trainer saves resume.pt after its batch; this host releases claims
+  stop                     this host saves resume.pt after its batch and releases claims
+  stop all                 every host on the shared directory stops
   status [--once]          live in-place panel (any machine; Ctrl+C closes the view only)
   report                   rewrite 实验报告.md / figures from the current CSVs
   bundle                   pack main0928_analysis.zip + main0928_results.zip for scp
   retry METHOD SEED [--env smacv2]   clear a task's failure mark so it is queued again
   prepare                  only the start-time preparation (idempotent)
+
+See 远程操作说明.md in this directory after a remote clone.
 EOF
   exit 2
 }
@@ -46,12 +52,14 @@ command=${1:-}
 shift || true
 
 request_stop() {
-  "$PY" - "$OUT" <<'STOP'
+  local everyone=${1:-host}
+  PYTHONPATH="$REPO/Open-SCORE" "$PY" - "$OUT" "$everyone" <<'STOP'
 import sys
-from pathlib import Path
-for name, text in (("stop.request", "Stop after the current complete sampling/learning batch."),
-                   ("eval.stop.request", "Stop after the current complete evaluation episode.")):
-    Path(sys.argv[1], name).write_text(text + "\n", encoding="utf-8")
+from open_score.utils.resources import write_host_stop
+out, mode = sys.argv[1], sys.argv[2]
+everyone = mode == "all"
+write_host_stop(out, "Stop after the current complete sampling/learning batch.", everyone=everyone)
+write_host_stop(out, "Stop after the current complete evaluation episode.", eval=True, everyone=everyone)
 STOP
 }
 
@@ -90,7 +98,7 @@ stop_existing() {
     kill -TERM -- "$owner"
     flock 9
   fi
-  request_stop
+  request_stop host
 }
 
 prepare() {
@@ -145,8 +153,14 @@ case "$command" in
   stop)
     exec 8> "$LOCK_DIR/${HOST}.control.lock"
     flock -n 8 || { echo "Another main0928 control command is active on $HOST." >&2; exit 75; }
-    stop_existing
-    echo "main0928 stopped on $HOST; claims released after schedulers exit. Continue with: bash run_all.sh resume" ;;
+    if [[ "${1:-}" == "all" ]]; then
+      stop_existing
+      request_stop all
+      echo "main0928 stop-all: every host will save resume.pt and exit. Continue with: bash run_all.sh resume"
+    else
+      stop_existing
+      echo "main0928 stopped on $HOST only; other machines keep their claims. Continue with: bash run_all.sh resume"
+    fi ;;
   status)
     "${PIPE[@]}" status "$@" ;;
   report)

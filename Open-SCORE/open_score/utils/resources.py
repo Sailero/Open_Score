@@ -178,8 +178,9 @@ def cpu_threads():
 
 
 def configure_workspace():
-    """Keep this experiment's writable runtime/cache files in the user's workspace."""
-    workspace = Path(os.environ.get("SAILERON_ROOT") or Path(__file__).resolve().parents[3].parent.parent)
+    """Keep this experiment's writable runtime/cache files next to the clone."""
+    workspace = Path(os.environ.get("SAILERON_ROOT") or os.environ.get("REGIR_ROOT")
+                     or Path(__file__).resolve().parents[3])
     paths = {"TMPDIR": workspace / "tmp", "XDG_CACHE_HOME": workspace / ".cache",
              "CUDA_CACHE_PATH": workspace / ".cache/cuda",
              "TRITON_CACHE_DIR": workspace / ".cache/triton",
@@ -206,6 +207,34 @@ def _stop_guard(path):
 def write_stop(path, message):
     with _stop_guard(path) as target:
         target.write_text(message + "\n", encoding="utf-8")
+
+
+def host_id():
+    import socket
+    return os.environ.get("REGIR_HOST") or socket.gethostname().split(".")[0]
+
+
+def stop_paths(output, *, eval=False):
+    """Shared campaign stop plus this host's stop file."""
+    root = Path(output)
+    host = host_id()
+    cluster = root / "cluster"
+    if eval:
+        return (root / "eval.stop.request", cluster / f"eval.stop.{host}.request")
+    return (root / "stop.request", cluster / f"stop.{host}.request")
+
+
+def stop_requested(output, *, eval=False):
+    return any(path.exists() for path in stop_paths(output, eval=eval))
+
+
+def write_host_stop(output, message, *, eval=False, everyone=False):
+    """Default: stop only this machine. `everyone=True` also writes the shared file."""
+    shared, local = stop_paths(output, eval=eval)
+    write_stop(local, message)
+    if everyone:
+        write_stop(shared, message)
+    return local
 
 
 def clear_previous_stop(path, requested_at):
@@ -239,11 +268,11 @@ def queue_lock(output, kind, *, stop_requested=None):
     """
     import fcntl
     from open_score.eval.experiment import PROFILE
-    from open_score.eval.cluster import hostname
-    workspace = Path(os.environ.get("SAILERON_ROOT") or Path(__file__).resolve().parents[3].parent.parent)
+    workspace = Path(os.environ.get("SAILERON_ROOT") or os.environ.get("REGIR_ROOT")
+                     or Path(__file__).resolve().parents[3])
+    host = host_id()
     base, _, env = kind.partition(".")
     suffix = f".{env}" if env else ""
-    host = hostname()
     path = (workspace / f".cache/{PROFILE}.gpus{suffix}.{host}.lock"
             if base in ("gpu", "gpu0") else Path(output) / f".cpu-eval{suffix}.{host}.lock")
     path.parent.mkdir(parents=True, exist_ok=True)

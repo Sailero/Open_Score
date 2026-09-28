@@ -1,12 +1,12 @@
 # Open-SCORE (`remote_train` / main0928)
 
-当前实验版本为 **main0928**：无 count 的 Looped 战役，3 种子，HAD + SMACv2。协议与命令见 [实验计划](Open-SCORE/outputs/main0928/实验计划.md)。
+当前实验版本为 **main0928**：无 count 的 Looped 战役，3 种子，HAD + SMACv2。协议见 [实验计划](Open-SCORE/outputs/main0928/实验计划.md)。**远程机器拉取后要做什么（含复用已有 conda 环境 `sarc`）见 [远程操作说明](Open-SCORE/outputs/main0928/远程操作说明.md)。**
 
 ```bash
 git clone -b remote_train git@github.com:Sailero/Open_Score.git
 cd Open_Score
+conda activate sarc          # 已有相近环境时；没有则省略，脚本会新建
 bash scripts/setup_farm.sh
-source envs/local.env
 bash Open-SCORE/outputs/main0928/run_all.sh start
 ```
 

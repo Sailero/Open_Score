@@ -33,10 +33,11 @@ def repo_root():
 
 
 def saileron_root():
-    configured = os.environ.get("SAILERON_ROOT")
+    """Writable cache root. Defaults to the clone itself, not a guessed parent."""
+    configured = os.environ.get("SAILERON_ROOT") or os.environ.get("REGIR_ROOT")
     if configured:
         return Path(configured)
-    return repo_root().parent.parent
+    return repo_root()
 
 
 def python_bin(smac=False):
