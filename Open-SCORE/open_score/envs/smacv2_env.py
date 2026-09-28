@@ -157,7 +157,8 @@ class MixedScaleSMACAdapter:
         if sc2path is not None:
             os.environ["SC2PATH"] = str(Path(sc2path).expanduser().resolve())
         else:
-            os.environ.setdefault("SC2PATH", str(Path(__file__).resolve().parents[5] / "envs/StarCraftII"))
+            os.environ.setdefault("SC2PATH", os.environ.get("SC2PATH") or str(
+                Path(os.environ.get("REGIR_ROOT") or Path(__file__).resolve().parents[3]) / "envs/StarCraftII"))
         self.seed = int(seed)
         self.scale_rng = np.random.default_rng(np.random.SeedSequence([self.seed, 1709]))
         self.episode_rng = np.random.default_rng(np.random.SeedSequence([self.seed, 2719]))

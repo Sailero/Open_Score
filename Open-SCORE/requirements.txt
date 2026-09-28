@@ -1,2 +1,2 @@
-# Run from projects/ReGIR; use the existing sibling source checkout.
--e ../HADE
+# From the cloned repository root: pip install -e ../third_party/HADE
+-e ../third_party/HADE

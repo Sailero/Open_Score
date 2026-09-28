@@ -1,8 +1,17 @@
-# Open-SCORE
+# Open-SCORE (`remote_train` / main0928)
 
-当前实验版本为 **main0921**：固定三种子0/1/2，HAD与SMACv2共用现有训练框架。协议、运行命令和正文/附录安排见[实验计划](Open-SCORE/outputs/main0921/实验计划.md)，全部结果汇入唯一[实验报告](Open-SCORE/outputs/main0921/实验报告.md)。原 `outputs/main` 保留历史结果与恢复信息。训练允许GPU0/GPU1，按可用显存分配，HAD每卡最多3路、两卡最多6路，SMAC每卡最多2路、两卡最多4路，按实际资源准入；CPU终评与机制合计最多4个任务。
+当前实验版本为 **main0928**：无 count 的 Looped 战役，3 种子，HAD + SMACv2。协议与命令见 [实验计划](Open-SCORE/outputs/main0928/实验计划.md)。
 
-本机目录按用途组织：`/data3/dell/Saileron/projects/HADE` 与 `projects/SMACv2` 保存环境源码，`envs/saileron-smac` 保存独立Python运行环境，`envs/StarCraftII` 保存游戏运行文件。适配器并列位于 `Open-SCORE/open_score/envs/`；新缓存、临时文件均限制在该工作区。必须用计划中的绝对Python路径或 `conda run -p`，不要用可能指向历史副本的环境名称。
+```bash
+git clone -b remote_train git@github.com:Sailero/Open_Score.git
+cd Open_Score
+bash scripts/setup_farm.sh
+source envs/local.env
+bash Open-SCORE/outputs/main0928/run_all.sh start
+```
+
+HADE 与 SMACv2 源码在 `third_party/`。StarCraft II 4.10 由 `setup_farm.sh` 按暴雪 EULA 下载，不进 git。多机挂同一 `outputs/main0928` 后各跑同一条 `start`，任务自动抢占。
+
 
 main0921 的 HAD 正式矩阵登记 15 个学习方法，SMACv2 登记 6 个方法；方法定义、权重身份与已完成结果分别见[实验计划](Open-SCORE/outputs/main0921/实验计划.md)和[正式报告](Open-SCORE/outputs/main0921/实验报告.md)。viewer 仍可发现本机保留的历史兼容权重。`best.pt` 是训练内验证选优档案，`final.pt` 是达到预算的终评权重；文件存在不代表该运行的正式评估已经结束。
 
@@ -10,7 +19,7 @@ main0921 的 HAD 正式矩阵登记 15 个学习方法，SMACv2 登记 6 个方�
 
 ## 环境与安装
 
-HAD底层为独立仓库 [HADE](../HADE/README.md)，本仓库通过 `Open-SCORE/open_score/envs/had_wrapper.py` 访问其原生实现。本机依赖路径为 `/data3/dell/Saileron/projects/HADE`，当前协议为 `had-workbench-2.1.0` / `rebuild-calibrated-v3-r7-target-initialization`。历史 v7 使用 r2，不代表当前任务与规则的结果。覆盖规则评估在 `open_score.rules`；回放器为仓库根目录的 `viewer.py` 与 `viewer.html`。
+HAD底层为独立包，源码随仓库 vendoring 在 [third_party/HADE](third_party/HADE/README.md)，协议 `had-workbench-2.1.0`。本仓库通过 `Open-SCORE/open_score/envs/had_wrapper.py` 访问其原生实现，不再依赖 sibling `../HADE`。历史 v7 使用 r2，不代表当前任务与规则的结果。覆盖规则评估在 `open_score.rules`；回放器为仓库根目录的 `viewer.py` 与 `viewer.html`。
 
 跨规模实验使用扁平包 `Open-SCORE/open_score/`，通过仓库内可编辑安装运行。`open_score.envs.make_entity_env` 提供 damage 任务实体接口：当前训练池槽位上限为 10 红方、10 蓝方、3 目标，评估接口上限为 50 红方、50 蓝方、12 目标；每局训练规模独立采样，死亡和 padding 槽保留，模型动作编号为 0–8。仅逐步热路径绕开原生观测；reset 沿用 HAD 原生初始化。评估和规则锚点共享蓝方事件调度、物理过程、动作映射和诊断采集。
 

@@ -126,7 +126,13 @@ def append_records(output, stream_name, rows):
     for row in rows:
         writer.writerow([_encode(row.get(key)) for key in columns])
     path = Path(output) / f"{stream_name}.csv"
-    with _locked_file(path, create=True) as stream:
+    try:
+        from open_score.eval.cluster import nfs_lock
+        _extra = nfs_lock(path)
+    except Exception:
+        from contextlib import nullcontext
+        _extra = nullcontext()
+    with _extra, _locked_file(path, create=True) as stream:
         stream.seek(0, os.SEEK_END)
         if stream.tell() == 0:
             stream.write((",".join(columns) + "\n").encode("utf-8"))

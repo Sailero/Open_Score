@@ -1,0 +1,108 @@
+{
+  "train": [
+    {
+      "red_count": 8,
+      "blue_count": 8,
+      "opening_seed": 1555715881,
+      "opponent_seed": 1817830325,
+      "split": "train",
+      "distribution": "id",
+      "scenario_id": "train:id:5b968541cc2057a1b81a",
+      "protocol_id": "known-rule-mixed-v5.1",
+      "opponent": "reactive",
+      "max_steps": 50,
+      "command_interval": 5,
+      "target_positions": [
+        [
+          -2100.0,
+          -650.0,
+          100.0
+        ],
+        [
+          -2100.0,
+          650.0,
+          100.0
+        ]
+      ]
+    }
+  ],
+  "validation": [
+    {
+      "red_count": 8,
+      "blue_count": 8,
+      "opening_seed": 1522735580,
+      "opponent_seed": 1746532671,
+      "split": "validation",
+      "distribution": "id",
+      "scenario_id": "validation:id:3a213f8510c47c3ddf05",
+      "protocol_id": "known-rule-mixed-v5.1",
+      "opponent": "reactive",
+      "max_steps": 50,
+      "command_interval": 5,
+      "target_positions": [
+        [
+          -2100.0,
+          -650.0,
+          100.0
+        ],
+        [
+          -2100.0,
+          650.0,
+          100.0
+        ]
+      ]
+    }
+  ],
+  "test": [
+    {
+      "red_count": 8,
+      "blue_count": 8,
+      "opening_seed": 1611327347,
+      "opponent_seed": 2060074361,
+      "split": "test",
+      "distribution": "id",
+      "scenario_id": "test:id:51b0b5a0e1b1997fcca7",
+      "protocol_id": "known-rule-mixed-v5.1",
+      "opponent": "reactive",
+      "max_steps": 50,
+      "command_interval": 5,
+      "target_positions": [
+        [
+          -2100.0,
+          -650.0,
+          100.0
+        ],
+        [
+          -2100.0,
+          650.0,
+          100.0
+        ]
+      ]
+    },
+    {
+      "red_count": 16,
+      "blue_count": 8,
+      "opening_seed": 1242683703,
+      "opponent_seed": 1174449196,
+      "split": "test",
+      "distribution": "ood",
+      "scenario_id": "test:ood:aad698384113d85a0ad8",
+      "protocol_id": "known-rule-mixed-v5.1",
+      "opponent": "reactive",
+      "max_steps": 50,
+      "command_interval": 5,
+      "target_positions": [
+        [
+          -2100.0,
+          -650.0,
+          100.0
+        ],
+        [
+          -2100.0,
+          650.0,
+          100.0
+        ]
+      ]
+    }
+  ]
+}

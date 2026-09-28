@@ -619,7 +619,8 @@ def run_group(jobs, output, *, with_anchors=False, report_run=FORMAL_RUN, max_co
         pending = [dict(id=f"train.{domain}.{m}.s{o['seed']}", method=m, seed=o["seed"], kind="train",
                         status="resource_wait" if o.get("_retry_count") else "queued") for m, o in waiting_train]
         atomic_json(Path(output) / f"scheduler.train.{domain}.json", dict(
-            kind="train", env=domain, pid=os.getpid(), status=status, updated_at=time.time(),
+            kind="train", env=domain, host=__import__("socket").gethostname().split(".")[0],
+            pid=os.getpid(), status=status, updated_at=time.time(),
             max_concurrent=max_concurrent, total=len(original), completed=len(completed_ids),
             completed_ids=[f"train.{domain}.{m}.s{s}" for m, s in sorted(completed_ids)],
             waiting=pending, live=active, failures=[dict(error=f.get("error", "failed")) for f in failures]))
@@ -1194,7 +1195,9 @@ def run_queue(output, env, template, devices, queue_path, *, per_gpu_default):
             }
         except Exception:
             pass
-        atomic_json(output / f"scheduler.train.{env}.json", published)
+        from open_score.eval.cluster import hostname, scheduler_path
+        published["host"] = hostname()
+        atomic_json(scheduler_path(output, "train", env), published)
 
     def request_stop(signum, frame):
         stop_event.set()
@@ -1688,7 +1691,7 @@ def run_farm(output, *, steps, batch_size_run, per_gpu=4, status_seconds=300, re
 
 def parser():
     result = argparse.ArgumentParser(description=__doc__)
-    result.add_argument("--profile", choices=("main0923",))
+    result.add_argument("--profile", choices=("main0923", "main0928"))
     result.add_argument("--queue", type=Path, default=None, help="pipeline queue file (main0923)")
     result.add_argument("--stage", choices=("validate", "e0", "benchmark", "train", "single", "stop", "status", "farm"), required=True)
     result.add_argument("--method", choices=POLICY_METHODS)
@@ -1786,9 +1789,12 @@ def profile_main(options, output):
         raise SystemExit(f"{PROFILE} supports train (queue-driven), validate, status and stop")
     if options.env not in ("had", "smacv2"):
         raise SystemExit(f"{PROFILE} environments are had and smacv2")
-    devices = tuple(_parse_devices(options.devices or "0,1") or ())
-    if options.cpu or not devices or not set(devices) <= {0, 1}:
-        raise SystemExit(f"{PROFILE} training uses physical --devices 0,1 (or an explicit subset)")
+    from open_score.eval.cluster import discover_gpus, hostname, scheduler_path
+    devices = tuple(_parse_devices(options.devices) or ()) if options.devices else tuple(discover_gpus())
+    if options.cpu:
+        raise SystemExit(f"{PROFILE} training needs GPUs; this host has none")
+    if not devices:
+        raise SystemExit(f"{PROFILE} found no NVIDIA GPUs on {hostname()}")
     card_limit = 4
     if not any(a.startswith("--per-gpu") for a in sys.argv):
         options.per_gpu = card_limit
@@ -1809,7 +1815,8 @@ def profile_main(options, output):
                 skip_final_eval=True, reward_mode="damage", friendly_penalty=1.0,
                 concurrency=options.per_gpu * len(devices))
     if options.env == "smacv2":
-        base["env_args"] = {"sc2path": str(workspace / "envs/StarCraftII")}
+        from open_score.eval.cluster import sc2_path
+        base["env_args"] = {"sc2path": sc2_path()}
     requested_at = time.time()
     stop_file = output / "stop.request"
     def new_stop():

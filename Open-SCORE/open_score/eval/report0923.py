@@ -798,8 +798,9 @@ def _fig_mechanism(results, plt, directory, prefix, *, paper):
     branch = results.branch
     fig, axes = plt.subplots(2, 2, figsize=(11.4, 7.6), constrained_layout=True)
     ax = axes[0, 0]
-    space = [("R0", X.FOUNDATION), ("C", X.CANDIDATES["C"]), ("A", X.CANDIDATES["A"]),
-             ("B", X.CANDIDATES["B"]), ("Looped", "regir_sg"), ("Untied4", "regir_untied4_sg")]
+    space = [("R0", X.FOUNDATION), ("C", X.CANDIDATES.get("C")), ("A", X.CANDIDATES.get("A")),
+             ("B", X.CANDIDATES.get("B")), ("Looped", "regir_sg"), ("Untied4", "regir_untied4_sg")]
+    space = [(n, m) for n, m in space if m]
     shown = False
     for name, method in space:
         summary = results.iqm_summary("had", method, sum((HAD_GROUPS[g] for g in OOD_GROUPS), ()))

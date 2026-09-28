@@ -1,4 +1,4 @@
-"""Shared admission for the main09xx profiles on the user's two shared GPUs."""
+"""Shared admission for main09xx profiles. GPUs are discovered per host."""
 from __future__ import annotations
 
 from contextlib import contextmanager
@@ -31,9 +31,8 @@ def experiment_device_caps(output, env):
         return None
 
 
-# One packer for HAD and SMAC: GPU0 stays at 2, GPU1 may climb 2→4 from free memory.
 SHARED_GPU_ADAPT = dict(
-    min_by_device={0: 1, 1: 2}, default_by_device={0: 2, 1: 2}, max_by_device={0: 2, 1: 4},
+    min=1, default=3, max=4,
     reserve_gib=8.0, peak_multiplier=1.25, scale_down_free_gib=8.0, warmup_seconds=180,
     fallback_peak_gib=16.0, scale_up_step=1, adapt_pause_seconds=90,
 )
@@ -42,14 +41,19 @@ SHARED_GPU_ADAPT = dict(
 def adapt_policy(output, env):
     """Min/default/max per card and memory headroom. HAD and SMAC share one policy."""
     policy = json.loads(json.dumps(SHARED_GPU_ADAPT))
+    if env == "smacv2":
+        policy.update(min=1, default=1, max=2)
     configured = experiment_device_caps(output, env)
     if configured:
-        policy["max_by_device"] = {**policy["max_by_device"], **configured}
+        policy["max_by_device"] = {**policy.get("max_by_device", {}), **configured}
     raw = (_resources(output).get("gpu_adapt") or {}).get(env) or {}
     for key in ("reserve_gib", "peak_multiplier", "scale_down_free_gib", "fallback_peak_gib"):
         if key in raw:
             policy[key] = float(raw[key])
     for key in ("warmup_seconds", "scale_up_step", "adapt_pause_seconds"):
+        if key in raw:
+            policy[key] = int(raw[key])
+    for key in ("min", "default", "max"):
         if key in raw:
             policy[key] = int(raw[key])
     for key in ("min_by_device", "default_by_device", "max_by_device"):
@@ -93,9 +97,9 @@ def adaptive_caps(output, env, live, devices=(0, 1), memories=None):
     now = time.time()
     caps = {}
     for gpu in devices:
-        lo = max(1, int(policy["min_by_device"].get(gpu, 1)))
-        default = max(lo, int(policy["default_by_device"].get(gpu, lo)))
-        hi = min(GPU_PER_CARD_MAX, max(default, int(policy["max_by_device"].get(gpu, default))))
+        lo = max(1, int(policy.get("min_by_device", {}).get(gpu, policy.get("min", 1))))
+        default = max(lo, int(policy.get("default_by_device", {}).get(gpu, policy.get("default", lo))))
+        hi = min(GPU_PER_CARD_MAX, max(default, int(policy.get("max_by_device", {}).get(gpu, policy.get("max", default)))))
         same = [item for item in live if _item_gpu(item) == gpu]
         load = len(same)
         memory = memories.get(gpu)
@@ -150,8 +154,8 @@ def resolve_per_gpu(output, env, per_gpu, live=None, memories=None, devices=(0, 
 def per_gpu_caps(per_gpu, devices=(0, 1), *, env="had"):
     """Per-card trainer caps. `per_gpu` may be one integer or {gpu: cap}."""
     devices = tuple(int(gpu) for gpu in devices)
-    if not devices or len(set(devices)) != len(devices) or not set(devices) <= {0, 1}:
-        raise ValueError("requires distinct physical GPUs from 0,1")
+    if not devices or len(set(devices)) != len(devices) or any(gpu < 0 for gpu in devices):
+        raise ValueError("requires distinct physical GPU ids >= 0")
     hard = GPU_PER_CARD_MAX
     if isinstance(per_gpu, dict):
         raw = {int(key): int(value) for key, value in per_gpu.items()}
@@ -175,7 +179,7 @@ def cpu_threads():
 
 def configure_workspace():
     """Keep this experiment's writable runtime/cache files in the user's workspace."""
-    workspace = Path(__file__).resolve().parents[5]
+    workspace = Path(os.environ.get("SAILERON_ROOT") or Path(__file__).resolve().parents[3].parent.parent)
     paths = {"TMPDIR": workspace / "tmp", "XDG_CACHE_HOME": workspace / ".cache",
              "CUDA_CACHE_PATH": workspace / ".cache/cuda",
              "TRITON_CACHE_DIR": workspace / ".cache/triton",
@@ -235,11 +239,13 @@ def queue_lock(output, kind, *, stop_requested=None):
     """
     import fcntl
     from open_score.eval.experiment import PROFILE
-    workspace = Path(__file__).resolve().parents[5]
+    from open_score.eval.cluster import hostname
+    workspace = Path(os.environ.get("SAILERON_ROOT") or Path(__file__).resolve().parents[3].parent.parent)
     base, _, env = kind.partition(".")
     suffix = f".{env}" if env else ""
-    path = (workspace / f".cache/{PROFILE}.gpus{suffix}.lock"
-            if base in ("gpu", "gpu0") else Path(output) / f".cpu-eval{suffix}.lock")
+    host = hostname()
+    path = (workspace / f".cache/{PROFILE}.gpus{suffix}.{host}.lock"
+            if base in ("gpu", "gpu0") else Path(output) / f".cpu-eval{suffix}.{host}.lock")
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a+", encoding="utf-8") as handle:
         last_message = 0.0

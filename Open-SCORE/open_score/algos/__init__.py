@@ -27,6 +27,7 @@ V5_METHODS = ("refil_count",) + V5_GLOBAL_METHODS
 _CYCLE = {
     "imagine_group": "original",
     "count_cond": "phi2",
+    "skip_count_inject": True,
     "global_branch": "cycle",
     "global_slots": 4,
     "global_depths": [1, 2, 3, 4],
@@ -45,7 +46,8 @@ MAIN0923_METHODS = ("regir_r0", "regir_kv0_norefil", "regir_kv0_fixed4", "regir_
                     "regir_r0_sg", "regir_kv0_norefil_sg", "regir_kv0_fixed4_sg", "regir_kv0_nocount_sg",
                     "regir_kv0_intent_sg", "regir_kv0_intent_noaux_sg", "regir_kv0_intent_nomem",
                     "regir_intent_sg", "regir_kv0_intent_norefil_sg",
-                    "regir_r1_nomem", "regir_r1_norefil_sg", "regir_r1_nocount_sg")
+                    "regir_r1_nomem", "regir_r1_norefil_sg", "regir_r1_nocount_sg",
+                    "regir_count_sg", "regir_norefil_sg", "regir_last_sg", "regir_nomem")
 METHOD_ALIASES = {"refil_cycle": "regir", "regia": "regir"}
 _NOREFIL = {"lmbda": 0.0, "skip_refil_local": True, "agent": {"imagine": False}}
 _INTENT = {"rer_intent": True, "intent_aux_weight": 0.02}
@@ -58,7 +60,7 @@ MAIN_OVERRIDES = {
     "refil_cycle": dict(_CYCLE),
     "regir_norefil": {**_CYCLE, "lmbda": 0.0, "skip_refil_local": True,
                       "agent": {"imagine": False}},
-    "regir_nocount": {**_CYCLE, "skip_count_inject": True},
+    "regir_nocount": dict(_CYCLE),
     "regir_r1": {**_CYCLE, "global_depths": [1], "global_eval_depth": 1},
     "regir_last": {**_CYCLE, "read_last_round": True},
     "regir_fixed4": {**_CYCLE, "global_depths": [4]},
@@ -69,7 +71,7 @@ MAIN_OVERRIDES = {
                           "agent": {"imagine": False}},
     "regir_kv0_fixed4": {**_CYCLE, "rer_update": "kv0", "global_depths": [4]},
     "regir_kv0_nomem": {**_CYCLE, "rer_update": "kv0", "global_query_no_memory": True},
-    "regir_kv0_nocount": {**_CYCLE, "rer_update": "kv0", "skip_count_inject": True},
+    "regir_kv0_nocount": {**_CYCLE, "rer_update": "kv0"},
     "regir_prenorm": {**_CYCLE, "global_kv_prenorm": True},
     "transfqmix": {"mac": "transfqmix_mac", "learner": "transfqmix_learner",
                     "mixer": "transfqmix", "lr": .001, "weight_decay": 0,
@@ -85,7 +87,8 @@ MAIN_OVERRIDES = {
     "refil_matched": {"imagine_group": "original", "global_branch": None},
 }
 for _name in ("regir_r1", "regir_kv0", "regir", "regir_untied4", "regir_fixed4", "regir_r0",
-              "regir_kv0_norefil", "regir_kv0_fixed4", "regir_kv0_nocount"):
+              "regir_kv0_norefil", "regir_kv0_fixed4", "regir_kv0_nocount",
+              "regir_norefil", "regir_last"):
     MAIN_OVERRIDES[f"{_name}_sg"] = _sg(MAIN_OVERRIDES[_name])
 MAIN_OVERRIDES.update({
     "regir_kv0_intent_sg": _sg({**MAIN_OVERRIDES["regir_kv0"], **_INTENT}),
@@ -95,7 +98,9 @@ MAIN_OVERRIDES.update({
     "regir_kv0_intent_norefil_sg": _sg({**MAIN_OVERRIDES["regir_kv0"], **_INTENT, **_NOREFIL}),
     "regir_r1_nomem": {**MAIN_OVERRIDES["regir_r1"], "global_query_no_memory": True},
     "regir_r1_norefil_sg": _sg({**MAIN_OVERRIDES["regir_r1"], **_NOREFIL}),
-    "regir_r1_nocount_sg": _sg({**MAIN_OVERRIDES["regir_r1"], "skip_count_inject": True}),
+    "regir_r1_nocount_sg": _sg(MAIN_OVERRIDES["regir_r1"]),
+    "regir_nomem": {**MAIN_OVERRIDES["regir"], "global_query_no_memory": True},
+    "regir_count_sg": _sg({**MAIN_OVERRIDES["regir"], "skip_count_inject": False}),
 })
 POLICY_METHODS = METHODS + PROBE_METHODS + tuple(dict.fromkeys(
     (*V4_METHODS, *V5_METHODS, *MAIN_TRAIN_METHODS, *MAIN0923_METHODS, "refil_cycle", "alma_legacy",

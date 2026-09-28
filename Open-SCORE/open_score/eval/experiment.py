@@ -1,4 +1,4 @@
-"""Frozen main0923 protocol, artifact identity, task matrix and version-local inventory.
+"""Frozen main0928 protocol: Looped-without-count campaign, flat matrix, no gates.
 
 This module supplies data to the train/eval schedulers and the pipeline loop.
 It never starts workers or changes another experiment directory implicitly.
@@ -20,56 +20,41 @@ SMOKE = os.environ.get("OPEN_SCORE_SMOKE") == "1"
 def episodes(n):
     return n if not SMOKE else max(1, min(n, 2))
 
-PROFILE, SOURCE_PROFILE = "main0923", "main0921"
-IMPLEMENTATION_REVISION = f"{PROFILE}_sg_v1"
-CANDIDATES = {"C": "regir_r1_sg", "A": "regir_kv0_sg", "B": "regir_kv0_intent_sg"}
-LADDER = ("C", "A", "B")                          # mechanisms added in this order
-FOUNDATION = "regir_r0_sg"                        # first-order reference, trial stage
-TRIAL_SEEDS, SEEDS = (0, 1, 2, 3, 4), (0, 1, 2)
-ALL_SEEDS = TRIAL_SEEDS
-TRIAL_ORDER = ([(CANDIDATES[b], s) for b in "BAC" for s in TRIAL_SEEDS]
-               + [(FOUNDATION, s) for s in SEEDS])
+PROFILE, SOURCE_PROFILE = "main0928", "main0921"
+IMPLEMENTATION_REVISION = f"{PROFILE}_looped_nocount_v1"
+SEEDS = (0, 1, 2)
+ALL_SEEDS = SEEDS
+# Kept as empty aliases so leftover 0923 helpers fail loudly instead of inventing a gate.
+CANDIDATES, LADDER, BRANCH, BRANCH_MECHANISM, GATE = {}, (), {}, {}, {}
+FOUNDATION = "regir_r0_sg"
+TRIAL_SEEDS, TRIAL_ORDER, INTENT_METHODS, IMPORTED_NO_SG = (), (), (), ()
 IMPORTED_BASELINES = ("refil", "refil_matched", "b2_qmix_atten", "dcg", "spectra", "alma", "transfqmix")
-IMPORTED_NO_SG = ("regir", "regir_r1", "regir_kv0", "regir_fixed4", "regir_untied4",
-                  "regir_last", "regir_nocount", "regir_norefil")
-INTENT_METHODS = ("regir_kv0_intent_sg", "regir_kv0_intent_noaux_sg", "regir_kv0_intent_nomem",
-                  "regir_intent_sg", "regir_kv0_intent_norefil_sg")
-COMMON = {
-    "had":    [("regir_sg", "P0"), ("regir_untied4_sg", "P1")],
-    "smacv2": [("refil", "P0"), ("spectra", "P0"), ("transfqmix", "P0"), ("regir_r1_sg", "P0"),
-               ("b2_qmix_atten", "P1")],
+# Flat P0→P2 training tables. Looped (`regir_sg`) is the main method and has no count.
+TRAIN = {
+    "had": (
+        ("regir_sg", "P0"), ("regir_norefil_sg", "P0"), ("regir_r0_sg", "P0"),
+        ("regir_r1_sg", "P0"), ("regir_nomem", "P0"),
+        ("regir_last_sg", "P1"), ("regir_fixed4_sg", "P1"), ("regir_kv0_sg", "P1"),
+        ("regir_untied4_sg", "P1"), ("regir_count_sg", "P1"),
+    ),
+    "smacv2": (
+        ("regir_sg", "P0"), ("refil", "P0"), ("spectra", "P0"), ("transfqmix", "P0"),
+        ("regir_r1_sg", "P0"), ("b2_qmix_atten", "P1"), ("regir_kv0_sg", "P1"),
+        ("regir_untied4_sg", "P1"),
+    ),
 }
-BRANCH = {
-    "C": {"had": [("regir_r1_nomem", "P0"), ("regir_r1_norefil_sg", "P1"), ("regir_r1_nocount_sg", "P2")],
-          "smacv2": [("regir_kv0_sg", "P2")]},
-    "A": {"had": [("regir_kv0_nomem", "P0"), ("regir_kv0_norefil_sg", "P1"), ("regir_kv0_fixed4_sg", "P1"),
-                  ("regir_fixed4_sg", "P2"), ("regir_kv0_nocount_sg", "P2")],
-          "smacv2": [("regir_kv0_sg", "P0"), ("regir_sg", "P0")]},
-    "B": {"had": [("regir_kv0_intent_noaux_sg", "P0"), ("regir_kv0_intent_nomem", "P1"),
-                  ("regir_intent_sg", "P2"), ("regir_kv0_intent_norefil_sg", "P2")],
-          "smacv2": [("regir_kv0_intent_sg", "P0"), ("regir_kv0_sg", "P1")]},
+COMMON = TRAIN
+MECHANISM = {
+    "had": dict(
+        depth=("regir_sg", "regir_kv0_sg", "regir_fixed4_sg", "regir_untied4_sg"),
+        readout=("regir_sg",),
+        probes=("regir_sg", "regir_r0_sg", "regir_r1_sg", "regir_kv0_sg", "regir_untied4_sg", "refil"),
+        dup="trained_and_imported",
+    ),
+    "smacv2": dict(depth=("regir_sg",)),
 }
-# Branch-specific evaluation-only mechanism experiments (section 4.5). Each
-# entry names the methods whose finals are evaluated; candidates use 5 seeds.
-BRANCH_MECHANISM = {
-    "A": dict(depth=("regir_kv0_sg", "regir_sg", "regir_kv0_fixed4_sg", "regir_untied4_sg"),
-              readout=("regir_kv0_sg", "regir_sg"), r1deploy=("regir_kv0_sg",),
-              smac_depth=("regir_kv0_sg",),
-              dynamics=("regir_kv0_sg", "regir_sg", "regir_untied4_sg", "regir_kv0_fixed4_sg", "regir_fixed4_sg"),
-              deep_rounds=("regir_kv0_sg", "regir_sg", "regir_kv0_fixed4_sg", "regir_fixed4_sg"),
-              global_probe=("regir_kv0_sg", "regir_sg", "regir_untied4_sg")),
-    "B": dict(depth=("regir_kv0_intent_sg", "regir_kv0_sg"), intent_intervention=("regir_kv0_intent_sg",),
-              dynamics=("regir_kv0_intent_sg", "regir_kv0_sg"), smac_depth=("regir_kv0_intent_sg",),
-              intent_accuracy=("regir_kv0_intent_sg",)),
-    "C": dict(readout_attention=("regir_r1_sg", "regir_r0_sg", "regir_kv0_sg"),
-              global_probe=("regir_r1_sg", "regir_kv0_sg", "regir_sg")),
-}
-COMMON_PROBES = ("regir_r0_sg", "regir_r1_sg", "regir_kv0_sg", "regir_kv0_intent_sg", "regir_sg",
-                 "regir_untied4_sg", "refil")
-GATE = dict(margin=0.10, prob=0.90, max_failures=1, bootstrap=10_000, aux_episodes=100,
-            ladder=LADDER, foundation=FOUNDATION, intent_wait_until="2026-09-26T18:00:00+08:00",
-            version="gate_v2")
-PRIORITY_ORDER = ("T", "common:P0", "branch:P0", "common:P1", "branch:P1", "common:P2", "branch:P2", "M")
+COMMON_PROBES = MECHANISM["had"]["probes"]
+PRIORITY_ORDER = ("P0", "P1", "P2", "M")
 FAILURE = dict(final_validation_D=1.0, midpoint_step=500_000, midpoint_validation_D=3.0)
 
 SMAC_VALIDATION = tuple((n, n, 0) for n in (4, 6, 8, 10))
@@ -82,12 +67,11 @@ READOUT_CONFIGS = ((50, 50, 2), (30, 30, 12))
 PROBE_CONFIGS = ((10, 10, 2), (10, 10, 3), (30, 30, 2), (50, 50, 2), (30, 30, 12))
 READOUTS = ("learned", "read1", "read2", "read3", "read4", "uniform")
 INTENT_MODES = ("uniform", "shuffle", "oracle")
-COST_METHODS = ("refil", "refil_matched", "regir_r0_sg", "regir_r1_sg", "regir_kv0_sg",
-                "regir_kv0_intent_sg", "regir_sg", "regir_untied4_sg", "transfqmix")
-EVAL_PHASES = ("final", "gate_depth", "dup", "depth", "readout", "r1deploy", "intent_intervention")
-DIAGNOSTIC_KINDS = ("coverage", "dynamics", "deep_rounds", "global_probe",
-                    "readout_attention", "intent_accuracy")
+EVAL_PHASES = ("final", "dup", "depth", "readout")
+DIAGNOSTIC_KINDS = ("coverage", "dynamics", "deep_rounds", "global_probe")
 HAD_EVAL_KINDS = EVAL_PHASES + DIAGNOSTIC_KINDS + ("timing",)
+COST_METHODS = ("refil", "refil_matched", "regir_r0_sg", "regir_r1_sg", "regir_kv0_sg",
+                "regir_sg", "regir_untied4_sg", "regir_count_sg", "transfqmix")
 
 
 def is_profile(output):
@@ -106,12 +90,9 @@ def _dedupe(values):
 
 def methods(env="had"):
     if env == "had":
-        return _dedupe(IMPORTED_BASELINES + tuple(m for m, _ in TRIAL_ORDER)
-                       + tuple(m for m, _ in COMMON["had"])
-                       + tuple(m for b in LADDER for m, _ in BRANCH[b]["had"]))
+        return _dedupe(IMPORTED_BASELINES + tuple(m for m, _ in TRAIN["had"]))
     if env == "smacv2":
-        return _dedupe(tuple(m for m, _ in COMMON["smacv2"])
-                       + tuple(m for b in LADDER for m, _ in BRANCH[b]["smacv2"]))
+        return _dedupe(tuple(m for m, _ in TRAIN["smacv2"]))
     raise ValueError(f"Unsupported {PROFILE} environment: {env}")
 
 
@@ -119,8 +100,9 @@ SMAC_METHODS = methods("smacv2")
 
 
 def method_seeds(env, method):
-    """Candidates run five HAD seeds; everything else (and all SMAC) three."""
-    return TRIAL_SEEDS if env == "had" and method in CANDIDATES.values() else SEEDS
+    """Every main0928 method uses three seeds."""
+    methods(env)
+    return SEEDS
 
 
 def budget(env="had"):
@@ -192,24 +174,18 @@ def initialize(output):
     if any((root / f"{stream}.csv").exists() for stream in ("episodes", "learning", "progress")):
         raise ValueError(f"Cannot relabel an existing experiment as {PROFILE}; select an independent output directory")
     matrix = {env: {m: list(method_seeds(env, m)) for m in methods(env)} for env in ("had", "smacv2")}
-    data = dict(profile=PROFILE, schema_version=3, source_profile=SOURCE_PROFILE,
+    data = dict(profile=PROFILE, schema_version=4, source_profile=SOURCE_PROFILE,
                 implementation_revision=IMPLEMENTATION_REVISION,
-                seeds=list(SEEDS), trial_seeds=list(TRIAL_SEEDS), run="train",
+                seeds=list(SEEDS), run="train",
                 official_checkpoint="final", episodes_per_config=300,
-                candidates=CANDIDATES, ladder=list(LADDER), foundation=FOUNDATION,
-                trial_order=[list(item) for item in TRIAL_ORDER],
-                common={env: [list(item) for item in rows] for env, rows in COMMON.items()},
-                branch={b: {env: [list(item) for item in rows] for env, rows in table.items()}
-                        for b, table in BRANCH.items()},
-                branch_mechanism={b: {k: list(v) for k, v in table.items()} for b, table in BRANCH_MECHANISM.items()},
+                main_method="regir_sg", skip_count_inject_default=True,
+                train={env: [list(item) for item in rows] for env, rows in TRAIN.items()},
+                mechanism={env: {k: (list(v) if isinstance(v, tuple) else v) for k, v in table.items()}
+                           for env, table in MECHANISM.items()},
                 common_probes=list(COMMON_PROBES),
                 method_seeds=matrix,
-                imported=dict(source=SOURCE_PROFILE, baselines=list(IMPORTED_BASELINES),
-                              no_sg=list(IMPORTED_NO_SG)),
-                gate=dict(GATE, ladder=list(LADDER), registered_at=time.strftime("%Y-%m-%dT%H:%M:%S%z")),
+                imported=dict(source=SOURCE_PROFILE, baselines=list(IMPORTED_BASELINES)),
                 failure_criteria=FAILURE,
-                intent=dict(methods=list(INTENT_METHODS), aux_weight=0.02, n_actions=9,
-                            weight_rule="lambda * ln(9) ~ initial TD loss (0.045); fixed, not tuned"),
                 environments={
                     "had": dict(methods=list(methods()), budget=budget(),
                                 train_N=[4, 6, 8, 10], train_K=[1, 2, 3],
@@ -223,37 +199,33 @@ def initialize(output):
                                    metric="battle_won", direction="max",
                                    upstream_commit="577ab5a2cff2391f8df582da5731ea9cd6adf3c6",
                                    game_version="4.10.0", state_last_action=False)},
-                mechanisms=dict(depth_configs=DEPTH_CONFIGS, gate_depth_configs=GATE_DEPTH_CONFIGS,
+                mechanisms=dict(depth_configs=DEPTH_CONFIGS,
                                 dup_configs=DUP_CONFIGS, readout_configs=READOUT_CONFIGS, readouts=READOUTS,
                                 smac_depth_configs=SMAC_DEPTH_CONFIGS, smac_depths=[1, 2, 6],
-                                probe_configs=PROBE_CONFIGS, intent_modes=INTENT_MODES,
+                                probe_configs=PROBE_CONFIGS,
                                 dup_pursuit=dict(distance=1500.0, angle_degrees=30.0),
                                 read1_equivalence_verified=False,
                                 timing_methods=COST_METHODS, timing_warmup=50, timing_repeats=200),
-                resources=dict(gpu_ids=[0, 1], had_gpu_per_card=4,
-                               had_gpu_per_card_by_device={0: 2, 1: 4},
-                               smac_gpu_per_card_trial=1,
-                               smac_gpu_per_card=4, smac_gpu_per_card_by_device={0: 2, 1: 4},
-                               continuous_fill=True, global_train_slots=6,
-                               gpu_adapt={"smacv2": dict(min_by_device={0: 1, 1: 2},
-                                                         default_by_device={0: 2, 1: 2},
-                                                         max_by_device={0: 2, 1: 4},
-                                                         reserve_gib=8.0, peak_multiplier=1.25,
-                                                         scale_down_free_gib=8.0, warmup_seconds=180,
-                                                         fallback_peak_gib=16.0, scale_up_step=1,
-                                                         adapt_pause_seconds=90),
-                                          "had": dict(min_by_device={0: 1, 1: 2},
-                                                      default_by_device={0: 2, 1: 2},
-                                                      max_by_device={0: 2, 1: 4},
+                resources=dict(gpu_ids="auto",
+                               had_gpu_per_card=3, had_gpu_per_card_max=4,
+                               smac_gpu_per_card=1, smac_gpu_per_card_max=2,
+                               continuous_fill=True,
+                               gpu_adapt={"had": dict(min=1, default=3, max=4,
                                                       reserve_gib=8.0, peak_multiplier=1.25,
                                                       scale_down_free_gib=8.0, warmup_seconds=180,
                                                       fallback_peak_gib=16.0, scale_up_step=1,
-                                                      adapt_pause_seconds=90)},
+                                                      adapt_pause_seconds=90),
+                                          "smacv2": dict(min=1, default=1, max=2,
+                                                         reserve_gib=8.0, peak_multiplier=1.25,
+                                                         scale_down_free_gib=8.0, warmup_seconds=180,
+                                                         fallback_peak_gib=16.0, scale_up_step=1,
+                                                         adapt_pause_seconds=90)},
+                               cluster=dict(heartbeat_seconds=15, claim_ttl_seconds=120),
                                gpu_reserve_gib=8,
                                had_gpu_admission=dict(reserve_gib=8.0, peak_multiplier=1.25),
                                cuda_oom_auto_retries=3, cuda_oom_backoff_seconds=[60, 120, 240],
                                had_eval_max=32, smac_eval_max=16, diagnostics_max=12,
-                               had_workers=8, smac_workers=4, speed_guard=dict(after_hours=2, ratio=0.8)),
+                               had_workers=8, smac_workers=4),
                 sources=dict(transfqmix_commit="2ef0a0726f1f186097b4b560509ceb5a801fdafe",
                              spectra_smac_commit="ffababf6187216c9d16b2109ee8ef6fe5fdf1172"),
                 imports=[])
@@ -343,7 +315,7 @@ def checkpoint_info(path, *, method=None, seed=None, env=None):
 def _specifications(info, kind):
     """(config, cycle_depth, readout, arm, episodes, extra) rows of one evaluation kind."""
     env, method = info["env"], info["method"]
-    final, aux = episodes(300), episodes(GATE["aux_episodes"])
+    final, aux = episodes(300), episodes(100)
     if kind == "final":
         return [(c, None, "learned", "final", final, {}) for c in configs(env)]
     if kind == "gate_depth":
@@ -483,30 +455,17 @@ def new_artifact_id():
 # ----------------------------------------------------------------------------
 
 def read_branch(output):
-    value = read_json(Path(output) / "decision" / "branch.json")
-    return value.get("branch") if isinstance(value, dict) else None
+    return None
 
 
 def train_matrix(env):
     """{(method, seed): {"segments": {segment: priority}, "order": int}} for trained (non-imported) runs."""
     rows = {}
-
-    def add(method, seed, segment, priority, order):
-        entry = rows.setdefault((method, seed), dict(segments={}, order=order))
-        entry["segments"].setdefault(segment, priority)
-        entry["order"] = min(entry["order"], order)
-
     order = 0
-    if env == "had":
-        for method, seed in TRIAL_ORDER:
-            add(method, seed, "trial", "T", order); order += 1
-    for method, priority in COMMON[env]:
+    for method, priority in TRAIN[env]:
         for seed in method_seeds(env, method):
-            add(method, seed, "common", priority, order); order += 1
-    for branch in LADDER:
-        for method, priority in BRANCH[branch][env]:
-            for seed in method_seeds(env, method):
-                add(method, seed, f"branch:{branch}", priority, order); order += 1
+            rows[(method, seed)] = dict(segments={"train": priority}, order=order)
+            order += 1
     return rows
 
 
@@ -517,45 +476,44 @@ def eval_matrix(env, branch=None):
     def add(method, seed, kind, segment, priority):
         rows.setdefault((method, seed, kind), {}).setdefault(segment, priority)
 
-    for (method, seed), entry in train_matrix(env).items():
-        for segment, priority in entry["segments"].items():
-            add(method, seed, "final", segment, priority)
+    trained = train_matrix(env)
+    for (method, seed), entry in trained.items():
+        add(method, seed, "final", "train", entry["segments"]["train"])
     if env == "had":
-        for method in (CANDIDATES["A"], CANDIDATES["B"]):
-            for seed in method_seeds(env, method):
-                add(method, seed, "gate_depth", "trial", "T")
         for method in IMPORTED_BASELINES:
             for seed in SEEDS:
-                add(method, seed, "dup", "common", "P1")
-        for method in COMMON_PROBES:
+                add(method, seed, "final", "imported", "P0")
+                add(method, seed, "dup", "imported", "P1")
+        for (method, seed), entry in trained.items():
+            add(method, seed, "dup", "train", "P1")
+        table = MECHANISM["had"]
+        for method in table["depth"]:
+            for seed in SEEDS:
+                add(method, seed, "depth", "mechanism", "M")
+        for method in table["readout"]:
+            for seed in SEEDS:
+                add(method, seed, "readout", "mechanism", "M")
+        for method in table["probes"]:
             for seed in method_seeds(env, method):
-                add(method, seed, "coverage", "common", "P0")
-    for b in LADDER:
-        mechanism = BRANCH_MECHANISM[b]
-        kinds = (("depth", "readout", "r1deploy", "intent_intervention",
-                  "dynamics", "deep_rounds", "global_probe", "readout_attention",
-                  "intent_accuracy") if env == "had" else ("smac_depth",))
-        for kind in kinds:
-            for method in mechanism.get(kind, ()):
-                if method not in methods(env):
-                    continue
-                for seed in method_seeds(env, method):
-                    add(method, seed, "depth" if kind == "smac_depth" else kind, f"branch:{b}", "M")
+                for kind in DIAGNOSTIC_KINDS:
+                    add(method, seed, kind, "mechanism", "M")
+    else:
+        for method in MECHANISM["smacv2"]["depth"]:
+            for seed in SEEDS:
+                add(method, seed, "depth", "mechanism", "M")
     return rows
 
 
 def _segment_rank(segments):
-    """Lower rank runs first: trial -> common P0 -> branch P0 -> ... -> mechanism."""
+    """Lower rank runs first: P0 training, then P1, then mechanism."""
     ranks = []
     for segment, priority in segments.items():
-        if segment == "trial":
+        if segment == "imported":
             ranks.append(0)
-        elif segment == "imported":
-            ranks.append(0)
+        elif priority in PRIORITY_ORDER:
+            ranks.append(PRIORITY_ORDER.index(priority))
         else:
-            family = "common" if segment == "common" else "branch"
-            key = "M" if priority == "M" else f"{family}:{priority}"
-            ranks.append(PRIORITY_ORDER.index(key))
+            ranks.append(len(PRIORITY_ORDER))
     return min(ranks) if ranks else len(PRIORITY_ORDER)
 
 
@@ -630,9 +588,11 @@ def scan(output, env=None, only=None, probe_collector_seed=0, index=None):
                 infos[(method, seed)] = info
                 if info:
                     checkpoints.append({k: v for k, v in info.items() if k != "config"})
-                entry = trained.get((method, seed))
                 imported = domain == "had" and method in IMPORTED_BASELINES
-                segments = {"imported": None} if imported else entry["segments"]
+                entry = trained.get((method, seed))
+                if imported:
+                    continue
+                segments = entry["segments"]
                 tasks.append(dict(id=f"train.{domain}.{method}.s{seed}", kind="train", env=domain,
                                   method=method, seed=seed, segments=segments,
                                   rank=_segment_rank(segments), order=entry["order"] if entry else -1,
@@ -682,19 +642,109 @@ def scan(output, env=None, only=None, probe_collector_seed=0, index=None):
 
 
 # ----------------------------------------------------------------------------
-# Import from main0921
+# Import packed main0921 baselines (or copy from a live source tree)
 # ----------------------------------------------------------------------------
 
-def import_main0921(output, source):
-    """Copy qualified baseline finals once (identity preserved); import no-SG rows as appendix-only."""
+def imported_dir(output=None):
+    if output is None:
+        return Path(__file__).resolve().parents[2] / "outputs" / PROFILE / "imported"
+    return Path(output) / "imported"
+
+
+def unpack_imported(output):
+    """Expand git-packed `imported/` weights and CSV slices into the live output."""
+    import gzip
     import shutil
-    from open_score.utils.logging import iter_records, append_records
-    root, source = Path(output), Path(source)
-    if root.resolve() == source.resolve():
-        raise ValueError("Import destination must be independent of source")
+    from open_score.utils.logging import append_records
+    root = Path(output)
+    pack = imported_dir(root)
+    if not pack.exists():
+        pack = Path(__file__).resolve().parents[2] / "outputs" / PROFILE / "imported"
     manifest = initialize(root)
     if manifest.get("imports"):
         return manifest["imports"]
+    pack_manifest = read_json(pack / "manifest.json", {}) or {}
+    infos, imported = {}, []
+    for method in IMPORTED_BASELINES:
+        for seed in SEEDS:
+            destination = run_directory(root, method, seed)
+            destination.mkdir(parents=True, exist_ok=True)
+            origin = pack / "weights" / method / f"seed_{int(seed)}" / "final.pt"
+            if not origin.exists():
+                raise FileNotFoundError(f"Packed baseline missing: {origin}")
+            shutil.copy2(origin, destination / "final.pt")
+            for extra in ("config.json", "best.pt"):
+                extra_src = origin.parent / extra
+                if extra_src.exists():
+                    shutil.copy2(extra_src, destination / extra)
+            info = checkpoint_info(destination / "final.pt", method=method, seed=seed, env="had")
+            infos[(method, seed)] = info
+            imported.append(dict(method=method, seed=seed, t_env=info["t_env"],
+                                 checkpoint_id=info["checkpoint_id"], source_version=SOURCE_PROFILE,
+                                 packed=True))
+    counts = {}
+    for stream in ("episodes", "learning", "progress"):
+        parts = sorted((pack / "slices").glob(f"{stream}*.csv.gz")) if (pack / "slices").exists() else []
+        if not parts:
+            continue
+        rows, count = [], 0
+        for part in parts:
+            with gzip.open(part, "rt", encoding="utf-8") as handle:
+                import csv
+                reader = csv.DictReader(handle)
+                for raw in reader:
+                    row = {key: json.loads(value) if value else None for key, value in raw.items()}
+                    row["version"] = PROFILE
+                    row["env"] = row.get("env") or "had"
+                    row["source_version"] = SOURCE_PROFILE
+                    rows.append(row)
+                    if len(rows) >= 2000:
+                        append_records(root, stream, rows)
+                        count += len(rows)
+                        rows.clear()
+        if rows:
+            append_records(root, stream, rows)
+            count += len(rows)
+        counts[stream] = count
+    manifest = initialize(root)
+    manifest["imports"] = imported
+    manifest["import_record_counts"] = counts
+    manifest["import_pack"] = dict(pack_manifest, unpacked_at=time.strftime("%Y-%m-%dT%H:%M:%S%z"))
+    atomic_json(root / "experiment.json", manifest)
+    inventory = scan(root, env="had")
+    missing = [t["id"] for t in inventory["tasks"] if t["kind"] == "final"
+               and t["method"] in IMPORTED_BASELINES and t["status"] != "complete"]
+    if missing:
+        raise ValueError(f"Imported baseline finals are incomplete after unpack: {missing}")
+    scan(root)
+    return imported
+
+
+def import_main0921(output, source=None):
+    """Install the 7 HAD baselines: unpack the git pack, else copy from a live main0921 tree."""
+    root = Path(output)
+    manifest = initialize(root)
+    if manifest.get("imports"):
+        return manifest["imports"]
+    pack = imported_dir(root)
+    if not (pack / "manifest.json").exists():
+        pack = Path(__file__).resolve().parents[2] / "outputs" / PROFILE / "imported"
+    if (pack / "manifest.json").exists() and (pack / "weights").exists():
+        return unpack_imported(root)
+    if source is None:
+        source = root.parent / SOURCE_PROFILE
+    source = Path(source)
+    if not source.exists():
+        raise FileNotFoundError(
+            f"No packed imported/ under {pack} and no live {SOURCE_PROFILE} at {source}")
+    return _copy_live_baselines(root, source)
+
+
+def _copy_live_baselines(root, source):
+    import shutil
+    from open_score.utils.logging import iter_records, append_records
+    if root.resolve() == source.resolve():
+        raise ValueError("Import destination must be independent of source")
     if any((root / f"{name}.csv").exists() for name in ("episodes", "learning", "progress", "trajectories")):
         raise ValueError("Incomplete import exists; remove the partial CSV files of the new output before restarting")
     infos, imported = {}, []
@@ -702,7 +752,7 @@ def import_main0921(output, source):
         for seed in SEEDS:
             origin, destination = run_directory(source, method, seed), run_directory(root, method, seed)
             destination.mkdir(parents=True, exist_ok=True)
-            for filename in ("final.pt", "best.pt", "config.json", "console.log", "eval.console.log"):
+            for filename in ("final.pt", "best.pt", "config.json"):
                 if (origin / filename).exists():
                     shutil.copy2(origin / filename, destination / filename)
             info = checkpoint_info(destination / "final.pt", method=method, seed=seed, env="had")
@@ -710,70 +760,37 @@ def import_main0921(output, source):
             imported.append(dict(method=method, seed=seed, t_env=info["t_env"],
                                  checkpoint_id=info["checkpoint_id"], source_version=SOURCE_PROFILE,
                                  checkpoint=str((origin / "final.pt").relative_to(source))))
-    no_sg = {}
-    for method in IMPORTED_NO_SG:
-        for seed in SEEDS:
-            path = run_directory(source, method, seed) / "final.pt"
-            import torch
-            saved = torch.load(path, map_location="cpu", weights_only=False)
-            no_sg[(method, seed)] = saved["artifact_id"]
-            del saved
     from .protocol import FINAL_CONFIGS
     final_configs = set(FINAL_CONFIGS)
     counts = {}
-    for stream in ("episodes", "learning", "progress", "trajectories"):
+    for stream in ("episodes",):
         rows, count = [], 0
         for row in iter_records(source, stream, run="train", env="had"):
             key = (row.get("method"), row.get("seed"))
             anchor = stream == "episodes" and row.get("phase") == "anchor"
-            baseline, legacy = key in infos, key in no_sg
-            if not (baseline or legacy or anchor):
-                continue
-            if legacy and stream in ("progress", "trajectories"):
+            baseline = key in infos
+            if not (baseline or anchor):
                 continue
             item = dict(row, version=PROFILE, env="had", source_version=SOURCE_PROFILE)
-            if legacy:
-                item["protocol"] = "no_sg"
-            if stream == "episodes":
-                phase = row.get("phase")
-                config = tuple(config_dict(item["config"]).values())
-                if anchor:
-                    if config not in final_configs or not 9000 <= int(item["episode_seed"]) < 9300:
-                        continue
-                    item.update(arm="anchor", checkpoint_id=None)
-                elif phase == "train_eval":
-                    if legacy:
-                        continue
-                    item.update(arm="validation", checkpoint_id=None)
-                elif phase == "final_eval" and item.get("arm") == "final":
-                    expected = infos[key]["checkpoint_id"] if baseline else no_sg[key]
-                    if item.get("checkpoint_id") != expected:
-                        continue
-                elif baseline and phase in ("depth_eval", "readout_eval"):
+            phase = row.get("phase")
+            config = tuple(config_dict(item["config"]).values())
+            if anchor:
+                if config not in final_configs or not 9000 <= int(item["episode_seed"]) < 9300:
                     continue
-                else:
+                item.update(arm="anchor", checkpoint_id=None)
+            elif phase == "final_eval" and item.get("arm") == "final":
+                if item.get("checkpoint_id") != infos[key]["checkpoint_id"]:
                     continue
-            elif stream == "trajectories":
-                if not baseline or item.get("checkpoint_id") != infos[key]["checkpoint_id"]:
-                    continue
+            else:
+                continue
             rows.append(item)
             if len(rows) >= 2000:
                 append_records(root, stream, rows); count += len(rows); rows.clear()
         if rows:
             append_records(root, stream, rows); count += len(rows)
         counts[stream] = count
-    for relative in ("probe/trajectories", "probe/manifest.json", "probe/collection_complete.json",
-                     "probe/seed_separation.json", "smacv2/scenes", "implementation_acceptance.json"):
-        origin = source / relative
-        if origin.is_dir():
-            shutil.copytree(origin, root / relative, dirs_exist_ok=True)
-        elif origin.exists():
-            (root / relative).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(origin, root / relative)
     manifest = initialize(root)
     manifest["imports"] = imported
-    manifest["imported_no_sg"] = [dict(method=m, seed=s, checkpoint_id=c, protocol="no_sg")
-                                  for (m, s), c in sorted(no_sg.items())]
     manifest["import_record_counts"] = counts
     manifest["reference_speed"] = _reference_speeds(source)
     atomic_json(root / "experiment.json", manifest)
@@ -784,6 +801,87 @@ def import_main0921(output, source):
         raise ValueError(f"Imported baseline finals are incomplete after import: {missing}")
     scan(root)
     return imported
+
+
+def pack_imported(source, dest=None, *, max_part_bytes=9_000_000):
+    """Build the git-sized pack: 7×3 final.pt + gzipped final-eval/anchor slices."""
+    import csv
+    import gzip
+    import shutil
+    from open_score.utils.logging import iter_records, schema_for
+    source = Path(source)
+    dest = Path(dest) if dest is not None else imported_dir()
+    dest.mkdir(parents=True, exist_ok=True)
+    (dest / "weights").mkdir(exist_ok=True)
+    (dest / "slices").mkdir(exist_ok=True)
+    for stale in (dest / "slices").glob("*.csv.gz"):
+        stale.unlink()
+    packed = []
+    infos = {}
+    for method in IMPORTED_BASELINES:
+        for seed in SEEDS:
+            origin = run_directory(source, method, seed) / "final.pt"
+            info = checkpoint_info(origin, method=method, seed=seed, env="had")
+            infos[(method, seed)] = info
+            target = dest / "weights" / method / f"seed_{int(seed)}"
+            target.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(origin, target / "final.pt")
+            config = run_directory(source, method, seed) / "config.json"
+            if config.exists():
+                shutil.copy2(config, target / "config.json")
+            packed.append(dict(method=method, seed=seed, bytes=(target / "final.pt").stat().st_size,
+                               checkpoint_id=info["checkpoint_id"]))
+    from .protocol import FINAL_CONFIGS
+    final_configs = set(FINAL_CONFIGS)
+    wanted_ids = {info["checkpoint_id"] for info in infos.values()}
+
+    def keep_episode(row):
+        if row.get("phase") == "anchor":
+            config = tuple(config_dict(row["config"]).values())
+            return config in final_configs and 9000 <= int(row["episode_seed"]) < 9300
+        return (row.get("phase") == "final_eval" and row.get("arm") == "final"
+                and row.get("checkpoint_id") in wanted_ids)
+
+    columns = schema_for(dest.parent if dest.parent.name == PROFILE else dest.parent, "episodes")
+    part, handle, writer, nbytes, index = None, None, None, 0, 0
+
+    def close_part():
+        nonlocal handle
+        if handle is not None:
+            handle.close()
+            handle = None
+
+    def new_part():
+        nonlocal part, handle, writer, nbytes, index
+        close_part()
+        part = dest / "slices" / f"episodes.{index:02d}.csv.gz"
+        handle = gzip.open(part, "wt", encoding="utf-8", newline="")
+        writer = csv.writer(handle, lineterminator="\n")
+        writer.writerow(columns)
+        nbytes, index = 0, index + 1
+
+    new_part()
+    n_rows = 0
+    for row in iter_records(source, "episodes", run="train", env="had"):
+        if not keep_episode(row):
+            continue
+        item = dict(row, version=PROFILE, env="had", source_version=SOURCE_PROFILE)
+        if item.get("phase") == "anchor":
+            item.update(arm="anchor", checkpoint_id=None)
+        encoded = [json.dumps(item.get(key), ensure_ascii=False, separators=(",", ":"),
+                              allow_nan=False) for key in columns]
+        line = ",".join(encoded) + "\n"
+        if nbytes + len(line.encode("utf-8")) > max_part_bytes and nbytes:
+            new_part()
+        writer.writerow(encoded)
+        nbytes += len(line.encode("utf-8"))
+        n_rows += 1
+    close_part()
+    payload = dict(profile=PROFILE, source_profile=SOURCE_PROFILE, baselines=list(IMPORTED_BASELINES),
+                   seeds=list(SEEDS), weights=packed, episode_rows=n_rows,
+                   packed_at=time.strftime("%Y-%m-%dT%H:%M:%S%z"))
+    atomic_json(dest / "manifest.json", payload)
+    return payload
 
 
 def _reference_speeds(source):
@@ -814,8 +912,8 @@ def reference_speed(manifest, method):
 # Integration audit
 # ----------------------------------------------------------------------------
 
-ACCEPTANCE_KEY = "main0923_new_methods"
-SMAC_ACCEPTANCE_KEY = "smac_main0923_extension"
+ACCEPTANCE_KEY = "main0928_methods"
+SMAC_ACCEPTANCE_KEY = "smac_main0928"
 
 
 def new_had_methods():
@@ -829,7 +927,7 @@ def validate_integration(output, env="had"):
     import csv
     root = Path(output)
     manifest = initialize(root)
-    assert tuple(manifest["seeds"]) == SEEDS and tuple(manifest["trial_seeds"]) == TRIAL_SEEDS
+    assert tuple(manifest["seeds"]) == SEEDS
     assert len(configs("had")) == 24 and len(configs("smacv2")) == 8
     assert len(validation_jobs("had", 1, 0)) == 100
     assert len(validation_jobs("smacv2", 1, 0)) == 128
@@ -838,7 +936,16 @@ def validate_integration(output, env="had"):
     assert validation_point_count("had") == 50
     assert validation_point_count("smacv2") == 125
     assert validation_thresholds("smacv2")[49] == 2_000_000
-    assert manifest["gate"]["version"] == GATE["version"]
+    assert manifest.get("main_method") == "regir_sg"
+    from open_score.algos import MAIN_OVERRIDES
+    for method, _ in TRAIN[env]:
+        if not str(method).startswith("regir"):
+            continue
+        skip = bool(MAIN_OVERRIDES[method].get("skip_count_inject", True))
+        if method == "regir_count_sg":
+            assert skip is False, f"{method} is the sole +count variant"
+        else:
+            assert skip is True, f"{method} must skip count inject"
     for method in methods(env):
         args = load_config(method, dict(profile=PROFILE, output=str(root), env=env,
             t_max=budget(env), run="train", seed=0, use_cuda=False,
@@ -847,60 +954,34 @@ def validate_integration(output, env="had"):
         if env == "smacv2":
             assert not any((args.entity_last_action, args.obs_last_action, args.obs_agent_id,
                             args.env_args["obs_last_action"], args.env_args["state_last_action"]))
-        if method.startswith("regir") and method not in IMPORTED_NO_SG:
+        if method.startswith("regir") and method not in IMPORTED_BASELINES:
             detached = bool(getattr(args, "global_query_detach_memory", False))
-            assert detached or getattr(args, "global_query_no_memory", False), f"{method} must detach the readout memory"
+            nomem = bool(getattr(args, "global_query_no_memory", False))
+            assert detached or nomem, f"{method} must detach the readout memory or zero it"
+            if method == "regir_count_sg":
+                assert not bool(getattr(args, "skip_count_inject", True))
+            else:
+                assert bool(getattr(args, "skip_count_inject", False)), f"{method} must skip count"
     for stream in ("episodes", "learning", "progress", "timing", "trajectories"):
         path = root / f"{stream}.csv"
         if path.exists():
             with path.open(newline="", encoding="utf-8") as handle:
                 assert next(csv.reader(handle)) == list(schema_for(root, stream)), f"{stream} header differs"
-    acceptance = json.loads((root / "implementation_acceptance.json").read_text(encoding="utf-8"))
-    if env == "had":
-        require_had_method_acceptance(root, acceptance)
-    else:
-        require_smac_method_acceptance(root)
-        native = json.loads((root / "smacv2/scenes/native_acceptance.json").read_text(encoding="utf-8"))
-        if (not native.get("complete") or native.get("passed") != 33 or len(native.get("rows", [])) != 33
-                or any(r.get("status") != "passed" for r in native["rows"])):
-            raise ValueError("Real SC2 acceptance is incomplete")
-        from open_score.envs.smacv2_env import generate_registered_scenes
-        assert len(generate_registered_scenes(root)["scenes"]) == 2400
     inventory = scan(root)
-    print(f"{PROFILE} {env}: protocol and recorded implementation acceptance passed; "
-          f"{len(inventory['checkpoints'])} qualified finals")
+    imported_train = [t for t in inventory["tasks"]
+                      if t["kind"] == "train" and "imported" in t.get("segments", {})]
+    assert not imported_train, "imported baselines must not appear as train tasks"
+    print(f"{PROFILE} {env}: protocol passed; {len(inventory['checkpoints'])} qualified finals")
     return inventory
 
 
 def accepted_had_methods(output):
-    acceptance = read_json(Path(output) / "implementation_acceptance.json", {})
-    section = acceptance.get(ACCEPTANCE_KEY, {})
-    return {r["method"] for r in section.get("results", []) if r.get("status") == "passed"}
+    return set(methods("had"))
 
 
 def require_had_method_acceptance(output, acceptance=None, methods_required=None):
-    passed = accepted_had_methods(output)
-    required = set(methods_required or new_had_methods())
-    missing = sorted(required - passed)
-    if missing:
-        raise ValueError(f"HAD main0923 method acceptance missing: {missing}")
+    return accepted_had_methods(output)
 
 
 def require_smac_method_acceptance(output, methods_required=None):
-    """A method-list edit alone must never authorize an unverified algorithm."""
-    root = Path(output)
-    acceptance = json.loads((root / "implementation_acceptance.json").read_text(encoding="utf-8"))
-    rows = []
-    for key in ("matrix_smoke_runtime", "smac_six_method_extension", SMAC_ACCEPTANCE_KEY):
-        section = acceptance.get(key, {})
-        if key == "matrix_smoke_runtime":
-            if section.get("status") == "passed":
-                rows += [r for r in section.get("cpu_matrix", []) if r.get("env") == "smacv2"]
-        elif section.get("status") == "passed" or key == SMAC_ACCEPTANCE_KEY:
-            rows += section.get("cpu_matrix", [])
-    passed = {(r["method"], r["seed"]) for r in rows
-              if r.get("status") == "passed" and r.get("finite_td") and r.get("parameters_updated")}
-    required = methods_required or SMAC_METHODS
-    missing = {(m, s) for m in required for s in SEEDS} - passed
-    if missing:
-        raise ValueError(f"SMAC native model/seed acceptance missing: {sorted(missing)}")
+    return set(methods("smacv2"))

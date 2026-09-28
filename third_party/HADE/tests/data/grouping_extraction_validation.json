@@ -1,0 +1,124 @@
+{
+  "reference_version": "had-workbench-v1.0.0 (786d554)",
+  "method": "Load the pre-extraction code and extracted code in the same process; reset with the same seed, compare initial state and every macro action, resulting state, reward, done and info by exact dictionary equality until native completion.",
+  "complete_episodes_compared": 32,
+  "exact_equality_passed": true,
+  "rosters": [
+    [
+      4,
+      4
+    ],
+    [
+      8,
+      8
+    ],
+    [
+      16,
+      8
+    ],
+    [
+      32,
+      32
+    ]
+  ],
+  "policies": [
+    "rule",
+    "grand",
+    "static_rule",
+    "random"
+  ],
+  "opening_and_opponent_seeds": [
+    3,
+    72
+  ],
+  "policy_seed": "opening_seed + 1",
+  "settings": {
+    "opponent": "reactive",
+    "max_steps": 50,
+    "command_interval": 5,
+    "targets": [
+      [
+        -2100.0,
+        -650.0,
+        100.0
+      ],
+      [
+        -2100.0,
+        650.0,
+        100.0
+      ]
+    ]
+  },
+  "reference_comparison_dependencies": {
+    "numpy": "1.26.4",
+    "scipy": "1.15.3"
+  },
+  "native_acceleration_27_array_exact": true,
+  "source_files": {
+    "open_score/envs/had_stage1.py": "9e3c719a9c3f6dffe879d993101d4e2005c59b7049fca2fa96cee244ed85b00f",
+    "open_score/envs/had_stage3.py": "9afe106ffee464842ad33b32855620b679549f9b3068c723b228d6c74ded3042",
+    "open_score/grouping/domain.py": "a511060340c8b3717f56e419cb2b32270a56bdd06e99a66b4c215c6e33814a2a",
+    "open_score/grouping/environment.py": "f40cb243a27ec4c367c7647d6ce6f3f5515bfa83dfeacb1d2c5666dcea0091ea",
+    "open_score/grouping/opponents.py": "ecb0bac8e4f1419d11a6a6eca0d457409452ac84907ecdcd9d3d0ebc9a47c682",
+    "open_score/research_v4/environment.py": "5394e6cec6065e361235b3dd26ca059e5a1a82590c90ec660f17f2b9f8bb0375",
+    "open_score/research_v4/actions.py": "253a4a9ad181bc1cb3b0d9d8931d5ab2aa2992e88d050967630cc73e0b52aed0",
+    "open_score/research_v4/policies.py": "8af1fec174afb87a804969c64e9be31d99694b8257982257c1db572c5cf12174",
+    "open_score/research_v5/protocol.py": "963a39039dbfef6a06faf42765e2127893ccaadd6caac8cea83bf78f8a82c2b1"
+  },
+  "extracted_support": {
+    "python_files": 10,
+    "lines": 1722
+  },
+  "omitted_dependencies": [
+    "contracts",
+    "envs.had_stage1 (except acceleration primitives)",
+    "grouping.frozen",
+    "grouping.storage",
+    "grouping.baselines",
+    "research_v4 learned policies and search",
+    "research_v5 training quotas and orchestration"
+  ],
+  "standalone_environment": {
+    "torch_installed": false,
+    "optional_imports_after_reset_and_step": []
+  },
+  "golden_hash_format": "SHA256 of compact sorted-key JSON containing the initial state followed by every command/state/reward/done/info; floats rounded to 6 decimals.",
+  "golden_cases": [
+    {
+      "policy_name": "rule",
+      "roster": [
+        4,
+        4
+      ],
+      "seed": 3,
+      "sha256": "62e1496f74cf703fec27b8105c113c4abcfb6ad315f5714ae4951fc6cdb45af2"
+    },
+    {
+      "policy_name": "grand",
+      "roster": [
+        8,
+        8
+      ],
+      "seed": 72,
+      "sha256": "4d1b82f22cecf8d270e29736c51c185e0f8a3e6ffae354dc594e223d0e21e3d6"
+    },
+    {
+      "policy_name": "static_rule",
+      "roster": [
+        16,
+        8
+      ],
+      "seed": 3,
+      "sha256": "4c650fcdfb8f547b0a2acfdbcc3023654b7b5cc0d6ea2f329081bb27d2af5436"
+    },
+    {
+      "policy_name": "random",
+      "roster": [
+        32,
+        32
+      ],
+      "seed": 72,
+      "sha256": "2595ddde58b5006d922dddfbd870da840ec336a5e09b070b10a4913d024fc946"
+    }
+  ]
+}

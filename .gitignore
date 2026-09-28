@@ -47,4 +47,17 @@ resource_retry.json
 failure.json
 scheduler.*.json
 queue.*.json
-Open-SCORE/outputs/*/smacv2/scenes/manifest.json
+# Clone-local environments and caches (created by scripts/setup_farm.sh)
+envs/
+!Open-SCORE/outputs/main0928/
+!Open-SCORE/outputs/main0928/run_all.sh
+!Open-SCORE/outputs/main0928/*.md
+!Open-SCORE/outputs/main0928/imported/
+!Open-SCORE/outputs/main0928/imported/**
+!Open-SCORE/outputs/main0928/imported/**/*.pt
+!Open-SCORE/outputs/main0928/imported/**/*.csv.gz
+!Open-SCORE/outputs/main0928/imported/**/*.json
+
+# Vendored simulators: keep source, drop local build trees
+third_party/**/build/
+third_party/**/*.egg-info/

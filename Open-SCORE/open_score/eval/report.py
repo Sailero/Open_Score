@@ -2979,6 +2979,11 @@ def refresh_report(output=DEFAULT_OUTPUT, *, run=FORMAL_RUN):
             from .experiment import is_profile
             if is_profile(output):
                 import importlib
+                from .experiment import PROFILE
+                if PROFILE == "main0928":
+                    from . import report0928
+                    importlib.reload(report0928)
+                    return report0928.render_report(output, run=formal)
                 from . import report0923
                 importlib.reload(report0923)
                 return report0923.render_report(output, run=formal)

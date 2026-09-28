@@ -1,0 +1,208 @@
+#!/usr/bin/env bash
+# One-command bootstrap: micromamba prefixes, torch, vendored HADE/SMACv2, SC2 4.10.
+# Run from the cloned ReGIR repository root.
+set -Eeuo pipefail
+ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+cd -- "$ROOT"
+SAILERON_ROOT=${SAILERON_ROOT:-$(cd -- "$ROOT/../.." && pwd)}
+MAMBA_ROOT="$ROOT/envs/micromamba"
+HAD_PREFIX="$ROOT/envs/saileron"
+SMAC_PREFIX="$ROOT/envs/saileron-smac"
+SC2_DIR="$ROOT/envs/StarCraftII"
+LOCAL_ENV="$ROOT/envs/local.env"
+SC2_ZIP_URL=${SC2_ZIP_URL:-http://blzdistsc2-a.akamaihd.net/Linux/SC2.4.10.zip}
+MAPS_URL=${MAPS_URL:-https://github.com/oxwhirl/smacv2/releases/download/maps/SMAC_Maps.zip}
+
+log() { printf '[setup_farm] %s\n' "$*"; }
+
+need_cmd() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+install_micromamba() {
+  if [[ -x "$MAMBA_ROOT/bin/micromamba" ]]; then
+    return
+  fi
+  log "installing micromamba into $MAMBA_ROOT"
+  mkdir -p "$MAMBA_ROOT"
+  python3 - "$MAMBA_ROOT" <<'PY'
+import os, sys, urllib.request, tarfile, io
+root = sys.argv[1]
+url = "https://micro.mamba.pm/api/micromamba/linux-64/latest"
+data = urllib.request.urlopen(url, timeout=120).read()
+with tarfile.open(fileobj=io.BytesIO(data), mode="r:bz2") as archive:
+    member = archive.getmember("bin/micromamba")
+    archive.extract(member, path=root)
+os.chmod(os.path.join(root, "bin/micromamba"), 0o755)
+PY
+}
+
+mamba() {
+  "$MAMBA_ROOT/bin/micromamba" "$@"
+}
+
+create_prefix() {
+  local prefix=$1
+  if [[ -x "$prefix/bin/python" ]]; then
+    log "reuse $prefix"
+    return
+  fi
+  log "creating $prefix (python 3.10)"
+  mamba create -y -p "$prefix" python=3.10 pip
+}
+
+cuda_tag() {
+  if ! command -v nvidia-smi >/dev/null 2>&1; then
+    echo "cpu"
+    return
+  fi
+  local cuda
+  cuda=$(nvidia-smi | sed -n 's/.*CUDA Version: \([0-9.]*\).*/\1/p' | head -n1)
+  case "$cuda" in
+    12.4*|12.5*|12.6*|12.8*|13.*) echo "cu124" ;;
+    12.1*|12.2*|12.3*) echo "cu121" ;;
+    11.*) echo "cu118" ;;
+    *) echo "cu124" ;;
+  esac
+}
+
+install_torch() {
+  local prefix=$1 tag
+  tag=$(cuda_tag)
+  log "torch index $tag for $prefix"
+  if [[ "$tag" == "cpu" ]]; then
+    "$prefix/bin/python" -m pip install --upgrade torch --index-url https://download.pytorch.org/whl/cpu
+  else
+    "$prefix/bin/python" -m pip install --upgrade torch --index-url "https://download.pytorch.org/whl/$tag"
+  fi
+}
+
+install_had() {
+  log "HAD prefix: Open-SCORE + HADE"
+  "$HAD_PREFIX/bin/python" -m pip install -U pip setuptools wheel
+  install_torch "$HAD_PREFIX"
+  "$HAD_PREFIX/bin/python" -m pip install -e "$ROOT/third_party/HADE"
+  "$HAD_PREFIX/bin/python" -m pip install -e "$ROOT/Open-SCORE[training]"
+}
+
+install_smac() {
+  log "SMAC prefix: protobuf 3.20.3 + SMACv2 + PySC2"
+  "$SMAC_PREFIX/bin/python" -m pip install -U pip setuptools wheel
+  install_torch "$SMAC_PREFIX"
+  "$SMAC_PREFIX/bin/python" -m pip install 'protobuf==3.20.3'
+  "$SMAC_PREFIX/bin/python" -m pip install -e "$ROOT/third_party/HADE"
+  "$SMAC_PREFIX/bin/python" -m pip install -e "$ROOT/Open-SCORE[training]"
+  "$SMAC_PREFIX/bin/python" -m pip install -e "$ROOT/third_party/SMACv2"
+  "$SMAC_PREFIX/bin/python" -m pip install pysc2 || true
+}
+
+install_sc2() {
+  if [[ -n "${SC2PATH:-}" && -d "$SC2PATH/Versions" ]]; then
+    log "SC2 already at $SC2PATH"
+    SC2_DIR=$SC2PATH
+    return
+  fi
+  if [[ -d "$SC2_DIR/Versions" ]]; then
+    log "SC2 already at $SC2_DIR"
+    return
+  fi
+  if [[ "${SKIP_SC2:-}" == "1" ]]; then
+    log "SKIP_SC2=1: SMAC stays pending until StarCraft II is installed"
+    return
+  fi
+  log "downloading StarCraft II 4.10 (Blizzard EULA zip)"
+  mkdir -p "$ROOT/envs"
+  local zip="$ROOT/envs/SC2.4.10.zip"
+  if [[ ! -f "$zip" ]]; then
+    if ! command -v curl >/dev/null 2>&1; then
+      log "curl missing; skip SC2 download"
+      return
+    fi
+    curl -L --fail --retry 3 -o "$zip" "$SC2_ZIP_URL" || {
+      log "SC2 download failed; HAD still works. Retry later or set SC2PATH."
+      return
+    }
+  fi
+  log "unzipping SC2 (EULA password)"
+  local tmp="$ROOT/envs/.sc2_unpack"
+  rm -rf "$tmp"
+  mkdir -p "$tmp"
+  if command -v unzip >/dev/null 2>&1; then
+    unzip -P iagreetotheeula -q "$zip" -d "$tmp" || {
+      log "unzip failed; install unzip or unpack SC2 yourself"
+      return
+    }
+  else
+    log "unzip not installed; skip SC2 unpack"
+    return
+  fi
+  if [[ -d "$tmp/StarCraftII" ]]; then
+    mv "$tmp/StarCraftII" "$SC2_DIR"
+  else
+    mv "$tmp"/* "$SC2_DIR" 2>/dev/null || true
+  fi
+  rm -rf "$tmp"
+  mkdir -p "$SC2_DIR/Maps"
+  local maps_dir="$ROOT/third_party/SMACv2/smacv2/env/starcraft2/maps/SMAC_Maps"
+  if [[ ! -d "$SC2_DIR/Maps/SMAC_Maps" ]]; then
+    if [[ -d "$maps_dir" ]]; then
+      cp -a "$maps_dir" "$SC2_DIR/Maps/SMAC_Maps"
+    else
+      local maps="$ROOT/envs/SMAC_Maps.zip"
+      curl -L --fail --retry 3 -o "$maps" "$MAPS_URL" && unzip -q "$maps" -d "$SC2_DIR/Maps" || \
+        log "SMAC_Maps download failed; copy maps into $SC2_DIR/Maps/SMAC_Maps"
+    fi
+  fi
+}
+
+write_env() {
+  mkdir -p "$ROOT/envs"
+  cat > "$LOCAL_ENV" <<EOF
+# Generated by scripts/setup_farm.sh — sourced by run_all.sh
+export REGIR_ROOT="$ROOT"
+export SAILERON_ROOT="$SAILERON_ROOT"
+export PY="$HAD_PREFIX/bin/python"
+export SMAC_PY="$SMAC_PREFIX/bin/python"
+export SC2PATH="$SC2_DIR"
+export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
+export PYTHONPATH="" PYTHONDONTWRITEBYTECODE=1
+export TMPDIR="${SAILERON_ROOT}/tmp"
+export XDG_CACHE_HOME="${SAILERON_ROOT}/.cache"
+EOF
+  mkdir -p "$SAILERON_ROOT/tmp" "$SAILERON_ROOT/.cache"
+  log "wrote $LOCAL_ENV"
+}
+
+smoke() {
+  log "HAD smoke"
+  PYTHONPATH="" "$HAD_PREFIX/bin/python" - <<'PY'
+import had_env
+from open_score.envs.entity_env import HADEntityEnv
+env = HADEntityEnv(seed=0, config=(4, 4, 1))
+obs = env.reset()
+assert obs is not None
+env.close()
+print("HADEntityEnv ok", had_env.__file__)
+PY
+  if [[ -d "$SC2_DIR/Versions" ]]; then
+    log "SMAC smoke"
+    PYTHONNOUSERSITE=1 PYTHONPATH="" SC2PATH="$SC2_DIR" "$SMAC_PREFIX/bin/python" - <<'PY' || log "SMAC adapter smoke failed (SC2 maps?); HAD is still usable"
+from open_score.envs.smacv2_env import MixedScaleSMACAdapter
+print("MixedScaleSMACAdapter", MixedScaleSMACAdapter)
+PY
+  else
+    log "no SC2: skip SMAC smoke"
+  fi
+}
+
+install_micromamba
+create_prefix "$HAD_PREFIX"
+create_prefix "$SMAC_PREFIX"
+install_had
+install_smac
+install_sc2
+write_env
+smoke
+log "done. Next:"
+log "  source $LOCAL_ENV"
+log "  bash Open-SCORE/outputs/main0928/run_all.sh start"

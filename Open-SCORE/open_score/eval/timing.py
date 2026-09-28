@@ -331,8 +331,8 @@ def evaluate_profile_timing(output, stop_requested=None, on_progress=None):
         selections = _cost_state_bank(output)
         resources = json.loads((output / "experiment.json").read_text(encoding="utf-8")).get("resources", {})
         physical_gpu = resources.get("measurement_gpu")
-        if type(physical_gpu) is not int or physical_gpu not in (0, 1):
-            raise ValueError("M4 requires a fixed resources.measurement_gpu (0 or 1) registered by the caller")
+        if type(physical_gpu) is not int or physical_gpu < 0:
+            raise ValueError("M4 requires a registered resources.measurement_gpu >= 0")
     except _CostStopped:
         return dict(status="stopped", completed=0, total=total, written=0)
     except (FileNotFoundError, ValueError) as error:

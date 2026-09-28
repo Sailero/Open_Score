@@ -102,8 +102,8 @@ def _live_trainers(output):
     """True when a HAD/SMAC trainer is actually running, not just the scheduler."""
     from open_score.eval.experiment import read_json
     root = Path(output)
-    for env in ("had", "smacv2"):
-        if read_json(root / f"scheduler.train.{env}.json", {}).get("live"):
+    for path in root.glob("scheduler.train.*.json"):
+        if read_json(path, {}).get("live"):
             return True
     return False
 
@@ -445,8 +445,9 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
                    **live_status.get(item["task"]["id"], {}), "pid": item["child"].pid,
                    "kind": item["task"]["kind"]} for item in live]
         active_ids = {row.get("parent_id", row["id"]) for row in active}
-        atomic_json(Path(output) / f"scheduler.eval.{env}.json", dict(
-            kind="eval", env=env, pid=os.getpid(), status=status, updated_at=time.time(),
+        from open_score.eval.cluster import hostname, scheduler_path
+        atomic_json(scheduler_path(output, "eval", env), dict(
+            kind="eval", env=env, host=hostname(), pid=os.getpid(), status=status, updated_at=time.time(),
             max_concurrent=max_concurrent, device=device, devices=list(devices), final_shards=final_shards,
             gpu_workers_per_device=gpu_workers_per_device, total=len(selected),
             completed=sum(t["status"] == "complete" for t in selected), live=active,
@@ -570,7 +571,7 @@ def run_eval(output, *, max_concurrent=2, only=None, device="cpu", run=FORMAL_RU
 
 def parser():
     result = argparse.ArgumentParser(description=__doc__)
-    result.add_argument("--profile", choices=("main0923",))
+    result.add_argument("--profile", choices=("main0923", "main0928"))
     result.add_argument("--queue", type=Path, default=None, help="pipeline queue file (main0923)")
     result.add_argument("--env", choices=("had", "smacv2"), default="had")
     result.add_argument("--stage", choices=("inventory", "migrate", "eval", "stop"), default="eval")
@@ -583,7 +584,7 @@ def parser():
     result.add_argument("--device", default="cpu")
     result.add_argument("--resume", action="store_true")
     result.add_argument("--max-concurrent", type=int, choices=range(1, 257), default=2)
-    result.add_argument("--devices", default="0,1", help="permitted physical GPUs for --device auto")
+    result.add_argument("--devices", default="", help="physical GPUs for --device auto; empty = nvidia-smi -L")
     result.add_argument("--gpu-workers-per-device", type=int, choices=range(1, 5), default=2)
     result.add_argument("--final-shards", type=int, choices=range(1, 301), default=1,
                         help="stable episode partitions per final checkpoint")
@@ -610,7 +611,8 @@ def run_profile_timing(output, stop_requested):
     last_notice = 0.
     while not stop_requested():
         memories = {}
-        for gpu in ((selected,) if selected is not None else (0, 1)):
+        from open_score.eval.cluster import discover_gpus
+        for gpu in ((selected,) if selected is not None else (discover_gpus() or (0,))):
             try:
                 memories[gpu] = gpu_memory(gpu)
             except Exception:
@@ -668,8 +670,9 @@ def profile_main(options, output):
     from open_score.utils.resources import queue_lock, cpu_threads, clear_previous_stop, configure_workspace
     initialize(output)
     workspace = configure_workspace()
+    from open_score.eval.cluster import sc2_path
     if options.env == "smacv2":
-        os.environ["SC2PATH"] = str(workspace / "envs/StarCraftII")
+        os.environ["SC2PATH"] = sc2_path() or os.environ.get("SC2PATH", "")
     cpu_threads()
     requested_at = time.time()
     if not any(a.startswith("--max-concurrent") for a in sys.argv):
@@ -678,7 +681,7 @@ def profile_main(options, output):
     def new_stop():
         return stop_path.exists() and stop_path.stat().st_mtime > requested_at
     if options.run != "train" or options.seed not in (None, *ALL_SEEDS):
-        raise SystemExit(f"{PROFILE} fixes run=train and model seeds 0-4")
+        raise SystemExit(f"{PROFILE} fixes run=train and model seeds 0-2")
     if options.method is not None and options.method not in methods(options.env):
         raise SystemExit(f"--method must belong to the fixed {PROFILE} environment matrix")
     if options.stage == "inventory":
@@ -698,11 +701,12 @@ def profile_main(options, output):
     if options.device not in ("cpu", "auto"):
         raise SystemExit(f"{PROFILE} evaluation uses --device cpu or --device auto (CPU+GPU)")
     try:
-        devices = tuple(int(x) for x in options.devices.split(","))
+        from open_score.eval.cluster import discover_gpus
+        devices = tuple(int(x) for x in options.devices.split(",")) if options.devices.strip() else tuple(discover_gpus())
     except ValueError:
-        raise SystemExit("--devices must select physical GPU 0 and/or 1")
-    if not devices or len(set(devices)) != len(devices) or not set(devices) <= {0, 1}:
-        raise SystemExit("--devices must select distinct physical GPUs from 0,1")
+        raise SystemExit("--devices must be comma-separated GPU ids")
+    if options.device == "auto" and (not devices or len(set(devices)) != len(devices) or any(g < 0 for g in devices)):
+        raise SystemExit("--devices must select distinct physical GPUs")
     if options.device == "auto" and options.final_shards == 1:
         raise SystemExit("--device auto requires --final-shards greater than one")
     os.environ["CUDA_VISIBLE_DEVICES"] = "" if options.device == "cpu" else ",".join(map(str, devices))
