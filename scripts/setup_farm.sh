@@ -11,9 +11,10 @@ SAILERON_ROOT=${SAILERON_ROOT:-$ROOT}
 REUSE_ENV=${REUSE_ENV:-sarc}
 FRESH=${FRESH:-0}
 SKIP_SC2=${SKIP_SC2:-0}
+HOST=$(hostname -s 2>/dev/null || hostname)
 MAMBA_ROOT="$ROOT/envs/micromamba"
-HAD_PREFIX="$ROOT/envs/saileron"
-SMAC_PREFIX="$ROOT/envs/saileron-smac"
+HAD_PREFIX="$ROOT/envs/saileron.${HOST}"
+SMAC_PREFIX="$ROOT/envs/saileron-smac.${HOST}"
 SC2_DIR=${SC2PATH:-"$ROOT/envs/StarCraftII"}
 LOCAL_ENV="$ROOT/envs/local.env"
 SC2_ZIP_URL=${SC2_ZIP_URL:-http://blzdistsc2-a.akamaihd.net/Linux/SC2.4.10.zip}
@@ -217,6 +218,7 @@ install_smac() {
   "$SMAC_PYTHON" -m pip install -e "$ROOT/Open-SCORE[training]"
   "$SMAC_PYTHON" -m pip install -e "$ROOT/third_party/SMACv2"
   "$SMAC_PYTHON" -m pip install pysc2 || log "pysc2 pip failed; SMAC may stay pending until it is installed"
+  "$SMAC_PYTHON" -m pip install 'protobuf==3.20.3'
 }
 
 install_sc2() {
@@ -329,9 +331,17 @@ PY
 }
 
 resolve_had_python
-resolve_smac_python
+if [[ "$SKIP_SC2" == "1" ]]; then
+  SMAC_PYTHON=$HAD_PYTHON
+  SMAC_PREFIX=$HAD_PREFIX
+  log "SKIP_SC2=1: skip SMAC python packages"
+else
+  resolve_smac_python
+fi
 install_had
-install_smac
+if [[ "$SKIP_SC2" != "1" ]]; then
+  install_smac
+fi
 install_sc2
 write_env
 smoke

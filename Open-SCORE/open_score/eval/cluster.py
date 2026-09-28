@@ -59,7 +59,10 @@ def sc2_path():
 
 def smac_available():
     root = Path(sc2_path()) if sc2_path() else None
-    return bool(root and (root / "Versions").exists() and (root / "Maps").exists())
+    if not (root and (root / "Versions").exists()):
+        return False
+    maps = root / "Maps"
+    return maps.is_dir() and ((maps / "SMAC_Maps").is_dir() or any(maps.glob("*.SC2Map")))
 
 
 def discover_gpus():
@@ -317,11 +320,14 @@ def all_queues(out):
 
 
 @contextmanager
-def nfs_lock(path, *, timeout=30):
+def nfs_lock(path, *, timeout=30, stale_after=None):
     """Directory-based exclusive lock (mkdir is atomic on NFS; flock often is not)."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    lock = path.with_name(path.name + f".lockdir")
+    lock = path.with_name(path.name + ".lockdir")
+    stale_after = float(CLAIM_TTL_SECONDS if stale_after is None else stale_after)
+    if stale_after < timeout:
+        stale_after = float(timeout)
     deadline = time.monotonic() + timeout
     delay = 0.02
     while True:
@@ -333,7 +339,7 @@ def nfs_lock(path, *, timeout=30):
                 age = time.time() - lock.stat().st_mtime
             except OSError:
                 age = 0
-            if age > CLAIM_TTL_SECONDS:
+            if age > stale_after:
                 _rmtree(lock)
                 continue
             if time.monotonic() >= deadline:

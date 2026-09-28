@@ -684,6 +684,10 @@ def unpack_imported(output):
                                  packed=True))
     counts = {}
     for stream in ("episodes", "learning", "progress"):
+        existing = root / f"{stream}.csv"
+        if existing.exists() and existing.stat().st_size:
+            counts[stream] = "already-present"
+            continue
         parts = sorted((pack / "slices").glob(f"{stream}*.csv.gz")) if (pack / "slices").exists() else []
         if not parts:
             continue
@@ -722,7 +726,13 @@ def unpack_imported(output):
 
 def import_main0921(output, source=None):
     """Install the 7 HAD baselines: unpack the git pack, else copy from a live main0921 tree."""
-    root = Path(output)
+    from .cluster import nfs_lock
+    root = Path(output).resolve()
+    with nfs_lock(root / "cluster" / "import.lock", timeout=1800):
+        return _import_main0921_locked(root, source)
+
+
+def _import_main0921_locked(root, source=None):
     manifest = initialize(root)
     if manifest.get("imports"):
         return manifest["imports"]

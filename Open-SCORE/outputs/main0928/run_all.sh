@@ -26,6 +26,10 @@ PY=${PY:-python}
 SMAC_PY=${SMAC_PY:-$PY}
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
 export PYTHONPATH="$REPO/Open-SCORE" PYTHONDONTWRITEBYTECODE=1 REGIR_ROOT="$REPO" REGIR_HOST="$HOST"
+if ! PYTHONPATH="$REPO/Open-SCORE" "$PY" -c "import open_score, had_env" >/dev/null 2>&1; then
+  echo "Python at $PY cannot import open_score/had_env. From the clone root run: bash scripts/setup_farm.sh" >&2
+  exit 1
+fi
 PIPE=(env PYTHONPATH="$REPO/Open-SCORE" REGIR_ROOT="$REPO" REGIR_HOST="$HOST" "$PY" -m open_score.eval.pipeline --output "$OUT")
 LOCK_DIR="$OUT/cluster/locks"
 mkdir -p "$LOCK_DIR"
@@ -105,11 +109,12 @@ prepare() {
   echo '[prepare] unpack imported baselines (or copy from a live main0921 tree)'
   PYTHONPATH="$REPO/Open-SCORE" "$PY" Open-SCORE/scripts/eval.py --profile main0928 --stage migrate --output "$OUT"
   echo '[prepare] validate HAD protocol'
-  PYTHONPATH="$REPO/Open-SCORE" "$PY" Open-SCORE/scripts/train.py --profile main0928 --stage validate --env had --output "$OUT" || true
+  PYTHONPATH="$REPO/Open-SCORE" "$PY" Open-SCORE/scripts/train.py --profile main0928 --stage validate --env had --output "$OUT"
   if [[ -n "${SC2PATH:-}" && -d "${SC2PATH}/Versions" ]]; then
     echo '[prepare] validate SMAC protocol'
     PYTHONNOUSERSITE=1 PYTHONPATH="$REPO/Open-SCORE" "$SMAC_PY" Open-SCORE/scripts/train.py \
-      --profile main0928 --stage validate --env smacv2 --output "$OUT" || true
+      --profile main0928 --stage validate --env smacv2 --output "$OUT" || \
+      echo '[prepare] SMAC protocol check failed; HAD still starts, SMAC stays pending'
   else
     echo '[prepare] no SC2; SMAC tasks stay pending'
   fi
