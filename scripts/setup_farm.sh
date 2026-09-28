@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Bootstrap HAD/SMAC prefixes, vendored packages, and SC2 4.10.
 # Reuses an existing conda env when possible (default name: sarc).
+# Matches that env's torch wheel to the machine CUDA (13.2 -> cu132, Python 3.10 OK).
 # Each host writes envs/local.$HOST.env so a shared clone can keep per-machine Pythons.
 # Run from the cloned repository root.
 set -Eeuo pipefail
@@ -11,6 +12,8 @@ SAILERON_ROOT=${SAILERON_ROOT:-$ROOT}
 REUSE_ENV=${REUSE_ENV:-sarc}
 FRESH=${FRESH:-0}
 SKIP_SC2=${SKIP_SC2:-0}
+KEEP_TORCH=${KEEP_TORCH:-0}
+FORCE_TORCH=${FORCE_TORCH:-0}
 HOST=$(hostname -s 2>/dev/null || hostname)
 MAMBA_ROOT="$ROOT/envs/micromamba"
 HAD_PREFIX="$ROOT/envs/saileron.${HOST}"
@@ -21,7 +24,7 @@ SC2_ZIP_URL=${SC2_ZIP_URL:-http://blzdistsc2-a.akamaihd.net/Linux/SC2.4.10.zip}
 MAPS_URL=${MAPS_URL:-https://github.com/oxwhirl/smacv2/releases/download/maps/SMAC_Maps.zip}
 
 log() { printf '[setup_farm] %s\n' "$*"; }
-log "ROOT=$ROOT REUSE_ENV=$REUSE_ENV FRESH=$FRESH SAILERON_ROOT=$SAILERON_ROOT"
+log "ROOT=$ROOT REUSE_ENV=$REUSE_ENV FRESH=$FRESH SAILERON_ROOT=$SAILERON_ROOT KEEP_TORCH=$KEEP_TORCH"
 
 install_micromamba() {
   if [[ -x "$MAMBA_ROOT/bin/micromamba" ]]; then
@@ -85,6 +88,18 @@ prefix_of_python() {
   cd -- "$(dirname -- "$py")/.." && pwd
 }
 
+require_python() {
+  "$1" - <<'PY'
+import sys
+v = sys.version_info
+print(f"python {v.major}.{v.minor}.{v.micro}")
+if v < (3, 10):
+    raise SystemExit("need Python >= 3.10; CUDA 13.2 PyTorch wheels start at cp310")
+if (v.major, v.minor) == (3, 10):
+    print("Python 3.10 is supported (official torch+cu132 cp310 wheels)")
+PY
+}
+
 has_torch() {
   "$1" - <<'PY' >/dev/null 2>&1
 import torch
@@ -100,34 +115,114 @@ raise SystemExit(0 if str(getattr(p, "__version__", "")).startswith("3.20") else
 PY
 }
 
+driver_cuda() {
+  local cuda=""
+  if command -v nvidia-smi >/dev/null 2>&1; then
+    cuda=$(nvidia-smi 2>/dev/null | sed -n 's/.*CUDA Version: \([0-9.]*\).*/\1/p' | head -n1)
+  fi
+  if [[ -z "$cuda" ]] && command -v nvcc >/dev/null 2>&1; then
+    cuda=$(nvcc --version 2>/dev/null | sed -n 's/.*release \([0-9.]*\).*/\1/p' | head -n1)
+  fi
+  printf '%s\n' "$cuda"
+}
+
 cuda_tag() {
-  if ! command -v nvidia-smi >/dev/null 2>&1; then
-    echo "cpu"
+  if [[ -n "${TORCH_CUDA:-}" ]]; then
+    echo "$TORCH_CUDA"
     return
   fi
   local cuda
-  cuda=$(nvidia-smi | sed -n 's/.*CUDA Version: \([0-9.]*\).*/\1/p' | head -n1)
+  cuda=$(driver_cuda)
   case "$cuda" in
-    12.4*|12.5*|12.6*|12.8*|13.*) echo "cu124" ;;
+    13.2*|13.3*|13.4*|13.5*|13.6*) echo "cu132" ;;
+    13.0*|13.1*) echo "cu130" ;;
+    13.*) echo "cu132" ;;
+    12.8*|12.9*) echo "cu128" ;;
+    12.6*|12.7*) echo "cu126" ;;
+    12.4*|12.5*) echo "cu124" ;;
     12.1*|12.2*|12.3*) echo "cu121" ;;
+    12.*) echo "cu128" ;;
     11.*) echo "cu118" ;;
-    *) echo "cu124" ;;
+    "") echo "cpu" ;;
+    *) echo "cu132" ;;
   esac
 }
 
-install_torch() {
-  local py=$1 tag
-  if has_torch "$py"; then
-    log "reuse torch $($py -c 'import torch; print(torch.__version__)')"
-    return
-  fi
-  tag=$(cuda_tag)
-  log "installing torch ($tag) into $py"
+torch_fallbacks() {
+  case "$1" in
+    cu132) echo cu132 cu130 cu128 ;;
+    cu130) echo cu130 cu128 cu126 ;;
+    cu128) echo cu128 cu126 cu124 ;;
+    cu126) echo cu126 cu124 ;;
+    cu124) echo cu124 cu121 ;;
+    cu121) echo cu121 cu118 ;;
+    cu118) echo cu118 ;;
+    cpu) echo cpu ;;
+    *) echo "$1" cu132 cu130 cu128 ;;
+  esac
+}
+
+torch_matches_tag() {
+  local py=$1 tag=$2
+  "$py" - "$tag" <<'PY' >/dev/null 2>&1
+import sys
+tag = sys.argv[1]
+try:
+    import torch
+except Exception:
+    raise SystemExit(1)
+cuda = str(getattr(torch.version, "cuda", None) or "")
+want = {
+    "cpu": "",
+    "cu118": "11.8",
+    "cu121": "12.1",
+    "cu124": "12.4",
+    "cu126": "12.6",
+    "cu128": "12.8",
+    "cu130": "13.0",
+    "cu132": "13.2",
+}.get(tag)
+if want is None:
+    raise SystemExit(0 if tag in str(torch.__version__) else 1)
+if tag == "cpu":
+    raise SystemExit(0 if not cuda else 1)
+raise SystemExit(0 if cuda.startswith(want) else 1)
+PY
+}
+
+pip_install_torch() {
+  local py=$1 tag=$2
   if [[ "$tag" == "cpu" ]]; then
     "$py" -m pip install --upgrade torch --index-url https://download.pytorch.org/whl/cpu
   else
     "$py" -m pip install --upgrade torch --index-url "https://download.pytorch.org/whl/$tag"
   fi
+}
+
+install_torch() {
+  local py=$1 tag candidate
+  tag=$(cuda_tag)
+  if [[ "$FORCE_TORCH" != "1" && "$KEEP_TORCH" == "1" ]] && has_torch "$py"; then
+    log "KEEP_TORCH=1: leave $($py -c 'import torch; print(torch.__version__, torch.version.cuda)')"
+    return
+  fi
+  if [[ "$FORCE_TORCH" != "1" ]] && torch_matches_tag "$py" "$tag"; then
+    log "reuse torch $($py -c 'import torch; print(torch.__version__, "cuda="+str(torch.version.cuda))') for $tag"
+    return
+  fi
+  log "driver CUDA $(driver_cuda); installing torch for $tag into $py"
+  for candidate in $(torch_fallbacks "$tag"); do
+    log "pip torch from https://download.pytorch.org/whl/$candidate"
+    if pip_install_torch "$py" "$candidate"; then
+      if torch_matches_tag "$py" "$candidate" || has_torch "$py"; then
+        log "torch now $($py -c 'import torch; print(torch.__version__, "cuda="+str(torch.version.cuda), "gpu="+str(torch.cuda.is_available()))')"
+        return
+      fi
+    fi
+    log "wheel index $candidate failed; trying fallback"
+  done
+  log "FAILED to install a CUDA-matching torch ($tag) into $py"
+  return 1
 }
 
 create_fresh_prefix() {
@@ -205,6 +300,7 @@ install_had() {
   install_torch "$HAD_PYTHON"
   "$HAD_PYTHON" -m pip install -e "$ROOT/third_party/HADE"
   "$HAD_PYTHON" -m pip install -e "$ROOT/Open-SCORE[training]"
+  install_torch "$HAD_PYTHON"
 }
 
 install_smac() {
@@ -219,6 +315,7 @@ install_smac() {
   "$SMAC_PYTHON" -m pip install -e "$ROOT/third_party/SMACv2"
   "$SMAC_PYTHON" -m pip install pysc2 || log "pysc2 pip failed; SMAC may stay pending until it is installed"
   "$SMAC_PYTHON" -m pip install 'protobuf==3.20.3'
+  install_torch "$SMAC_PYTHON"
 }
 
 install_sc2() {
@@ -312,7 +409,11 @@ smoke() {
   log "HAD smoke"
   PYTHONPATH="$ROOT/Open-SCORE" "$HAD_PYTHON" - <<'PY'
 import had_env
+import torch
 from open_score.envs.entity_env import HADEntityEnv
+print("torch", torch.__version__, "cuda", torch.version.cuda, "gpu", torch.cuda.is_available())
+if torch.cuda.is_available():
+    print("cuda device", torch.cuda.get_device_name(0))
 env = HADEntityEnv(seed=0, config=(4, 4, 1))
 obs = env.reset()
 assert obs is not None
@@ -331,6 +432,7 @@ PY
 }
 
 resolve_had_python
+require_python "$HAD_PYTHON"
 if [[ "$SKIP_SC2" == "1" ]]; then
   SMAC_PYTHON=$HAD_PYTHON
   SMAC_PREFIX=$HAD_PREFIX

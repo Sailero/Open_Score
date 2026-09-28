@@ -6,7 +6,7 @@
 git clone -b remote_train git@github.com:Sailero/Open_Score.git
 cd Open_Score
 conda activate sarc          # 已有相近环境时；没有则省略，脚本会新建
-bash scripts/setup_farm.sh
+bash scripts/setup_farm.sh   # 按本机 CUDA（含 13.2）自动对齐 torch；Python 3.10 可用
 bash Open-SCORE/outputs/main0928/run_all.sh start
 ```
 
