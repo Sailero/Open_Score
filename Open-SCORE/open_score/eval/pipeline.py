@@ -417,6 +417,7 @@ def run(out):
     print(f"{_stamp()} pipeline {X.PROFILE}: stage={state['stage']} host={cluster.hostname()} "
           f"gpus={cluster.discover_gpus()}", flush=True)
     consecutive = 0
+    pack_on_exit = False
     try:
         while not stopping["flag"]:
             try:
@@ -435,6 +436,7 @@ def run(out):
                     raise
                 finished = False
             if finished:
+                pack_on_exit = True
                 break
             for _ in range(LOOP_SECONDS):
                 if stopping["flag"]:
@@ -451,6 +453,16 @@ def run(out):
         host = cluster.hostname()
         for claim in cluster.owned_claims(out, host):
             cluster.release_claim(out, claim["task_id"], host=host)
+        if pack_on_exit and state.get("stage") == "done":
+            from .bundle import finish_campaign
+            print(f"{_stamp()} writing live report and download zips", flush=True)
+            try:
+                state["bundle"] = finish_campaign(out)
+                state["last_report_at"] = _now()
+            except Exception as error:
+                state["errors"] = (state.get("errors", []) + [
+                    dict(at=_stamp(), error=f"bundle: {type(error).__name__}: {error}")])[-20:]
+                print(f"{_stamp()} campaign pack failed: {error}", flush=True)
         save_state(out, state)
     return 0
 
@@ -469,6 +481,11 @@ def iteration(out, state, index, children, stopping, manifest):
         state["stage"] = "done"
         queues = plan(out, inventory, state, facts)
         print(f"{_stamp()} all runnable tasks complete; queues closed", flush=True)
+    now = _now()
+    if now - float(state.get("last_report_at") or 0) >= 180:
+        from open_score.eval.report import refresh_report_async
+        refresh_report_async(out)
+        state["last_report_at"] = now
     state["facts"] = facts
     write_queues(out, queues)
     save_state(out, state)
@@ -893,7 +910,10 @@ def _your_move(out, state, tasks, record, now):
         extra = " --env smacv2" if row.get("env") == "smacv2" else ""
         return True, f"retry {row['method']} {row['seed']}{extra}  ({len(failed)} failed)"
     if state.get("stage") == "done":
-        return True, "pipeline done · 出报告"
+        packed = Path(out) / f"{X.PROFILE}_results.zip"
+        if packed.exists():
+            return True, f"pipeline done · scp {packed.name} ({packed.stat().st_size / 1e6:.0f}MB)"
+        return True, "pipeline done · 出报告并打包 zip"
     gpus = cluster.discover_gpus()
     if not gpus:
         return False, "idle · 本机无 GPU，可 status；训练在有卡的机器上"
@@ -1431,6 +1451,18 @@ def render_status(out, width=100, height=None):
     smac_tr = _count(tasks, lambda t: t["kind"] == "train" and t["env"] == "smacv2")
     lines.append(f"now   {nxt}  ·  HAD P0 训{_frac(*p0)}  SMAC 训{_frac(*smac_tr)}"
                  + ("" if cluster.smac_available() else "  ·  无 SC2"))
+    report = out / "实验报告.md"
+    if report.exists():
+        stamp = datetime.fromtimestamp(report.stat().st_mtime).astimezone().strftime("%m-%d %H:%M")
+        lines.append(f"report  {report.name}  {stamp}  ·  bash run_all.sh report")
+    packed = out / f"{X.PROFILE}_results.zip"
+    analysis = out / f"{X.PROFILE}_analysis.zip"
+    if packed.exists() or analysis.exists():
+        bits = []
+        for path in (analysis, packed):
+            if path.exists():
+                bits.append(f"{path.name} {path.stat().st_size / 1e6:.0f}MB")
+        lines.append("bundle  " + "  ·  ".join(bits))
     table, by_key = _progress_table(tasks, jobs)
     lines.extend(table)
 
@@ -1556,7 +1588,8 @@ def status(out, once=False, interval=5):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("run", "status", "select", "cut", "retry", "decide", "had-first"))
+    parser.add_argument("command", choices=("run", "status", "select", "cut", "retry", "decide",
+                                            "had-first", "report", "bundle"))
     parser.add_argument("args", nargs="*")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--force", action="store_true")
@@ -1585,6 +1618,13 @@ def main():
         if flag not in ("on", "off"):
             raise SystemExit("had-first on|off")
         set_had_first(out, flag == "on")
+    elif options.command == "report":
+        from .bundle import refresh_live_report
+        print(refresh_live_report(out))
+    elif options.command == "bundle":
+        from .bundle import finish_campaign
+        payload = finish_campaign(out)
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

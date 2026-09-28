@@ -58,6 +58,10 @@ envs/
 !Open-SCORE/outputs/main0928/imported/**/*.csv.gz
 !Open-SCORE/outputs/main0928/imported/**/*.json
 
+# Generated download packs (rewritten on the farm; do not commit)
+Open-SCORE/outputs/main0928/*.zip
+Open-SCORE/outputs/main0928/*.zip.manifest.json
+
 # Vendored simulators: keep source, drop local build trees
 third_party/**/build/
 third_party/**/*.egg-info/

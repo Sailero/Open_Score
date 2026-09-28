@@ -34,6 +34,8 @@ Usage: bash run_all.sh COMMAND
   resume                   restart the pipeline after stop (training resumes from resume.pt)
   stop                     every trainer saves resume.pt after its batch; this host releases claims
   status [--once]          live in-place panel (any machine; Ctrl+C closes the view only)
+  report                   rewrite 实验报告.md / figures from the current CSVs
+  bundle                   pack main0928_analysis.zip + main0928_results.zip for scp
   retry METHOD SEED [--env smacv2]   clear a task's failure mark so it is queued again
   prepare                  only the start-time preparation (idempotent)
 EOF
@@ -147,6 +149,10 @@ case "$command" in
     echo "main0928 stopped on $HOST; claims released after schedulers exit. Continue with: bash run_all.sh resume" ;;
   status)
     "${PIPE[@]}" status "$@" ;;
+  report)
+    "${PIPE[@]}" report ;;
+  bundle)
+    "${PIPE[@]}" bundle ;;
   retry)
     "${PIPE[@]}" retry "$@" ;;
   _run)

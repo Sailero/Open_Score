@@ -12,6 +12,8 @@ bash Open-SCORE/outputs/main0928/run_all.sh start
 
 HADE 与 SMACv2 源码在 `third_party/`。StarCraft II 4.10 由 `setup_farm.sh` 按暴雪 EULA 下载，不进 git。多机挂同一 `outputs/main0928` 后各跑同一条 `start`，任务自动抢占。
 
+训练中看进度：`bash Open-SCORE/outputs/main0928/run_all.sh status`。看表：同目录 `实验报告.md`（也可 `run_all.sh report` 立刻重画）。全部完成后自动写出 `main0928_analysis.zip`（报告/图/CSV）和 `main0928_results.zip`（再加 `final.pt`），用 `scp` 拉走。训练中也可 `run_all.sh bundle` 打当前快照。
+
 
 main0921 的 HAD 正式矩阵登记 15 个学习方法，SMACv2 登记 6 个方法；方法定义、权重身份与已完成结果分别见[实验计划](Open-SCORE/outputs/main0921/实验计划.md)和[正式报告](Open-SCORE/outputs/main0921/实验报告.md)。viewer 仍可发现本机保留的历史兼容权重。`best.pt` 是训练内验证选优档案，`final.pt` 是达到预算的终评权重；文件存在不代表该运行的正式评估已经结束。
 
