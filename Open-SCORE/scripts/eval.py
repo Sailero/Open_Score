@@ -103,7 +103,8 @@ def _live_trainers(output):
     from open_score.eval.experiment import read_json
     root = Path(output)
     for env in ("had", "smacv2"):
-        if read_json(root / f"scheduler.train.{env}.json", {}).get("live"):
+        from open_score.utils.resources import merge_train_scheduler
+        if merge_train_scheduler(root, env).get("live"):
             return True
     return False
 

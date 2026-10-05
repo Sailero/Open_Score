@@ -323,6 +323,9 @@ def write_queues(out, queues):
 # ----------------------------------------------------------------------------
 
 def _scheduler(out, kind, env):
+    if kind == "train":
+        from open_score.utils.resources import merge_train_scheduler
+        return merge_train_scheduler(out, env) or {}
     return X.read_json(Path(out) / f"scheduler.{kind}.{env}.json", {}) or {}
 
 
@@ -402,7 +405,7 @@ def child_commands(out):
     train, evaluate = str(REPO / "Open-SCORE/scripts/train.py"), str(REPO / "Open-SCORE/scripts/eval.py")
     return {
         "train.had": ([PY, "-u", train, "--profile", X.PROFILE, "--stage", "train", "--env", "had",
-                       "--devices", "0,1", "--per-gpu", "2", "--queue", f"{out}/queue.had.json",
+                       "--devices", "0,1", "--per-gpu", "3", "--queue", f"{out}/queue.had.json",
                        "--output", out], base_env, f"{out}/train.had.console.log"),
         "train.smacv2": ([SMAC_PY, "-u", train, "--profile", X.PROFILE, "--stage", "train", "--env", "smacv2",
                           "--devices", "0,1", "--per-gpu", "4", "--queue", f"{out}/queue.smacv2.json",
@@ -1547,6 +1550,18 @@ def _progress_table(tasks, jobs):
     return lines, by_key
 
 
+def _compact_progress(table):
+    """Drop finished category rows so live trainers stay on screen."""
+    if len(table) <= 3:
+        return table
+    kept = [table[0]]
+    for line in table[1:-1]:
+        if _DIM not in line:
+            kept.append(line)
+    kept.append(table[-1])
+    return kept if len(kept) >= 2 else table
+
+
 def render_status(out, width=100, height=None):
     out = Path(out)
     state = load_state(out)
@@ -1600,6 +1615,8 @@ def render_status(out, width=100, height=None):
         _slots(out, "had"), manifest.get("reference_speed") or {})
     lines.append(f"now   {nxt}  ·  trial ETA {_short_eta(trial_eta) if trial_eta else '—'}")
     table, by_key = _progress_table(tasks, jobs)
+    if height is not None and len(table) > 6:
+        table = _compact_progress(table)
     lines.extend(table)
 
     train_jobs = [j for j in jobs if _is_train_job(j)]
@@ -1670,10 +1687,10 @@ def render_status(out, width=100, height=None):
         slots = height - extra
         if slots >= 1:
             count = task_end - task_start
-            shown = lines[task_start:task_start + slots]
-            lines = lines[:task_start] + shown + lines[task_end:]
+            shown_rows = lines[task_start:task_start + slots]
+            lines = lines[:task_start] + shown_rows + lines[task_end:]
             if count > slots:
-                lines.insert(task_start + len(shown), f"  … {count - slots} more")
+                lines.insert(task_start + len(shown_rows), f"  … {count - slots} more")
         else:
             lines = lines[: height - 1] + ["窗口过矮"]
     return "\n".join(_fit(line, width) for line in lines)

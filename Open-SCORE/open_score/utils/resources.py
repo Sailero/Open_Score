@@ -20,7 +20,7 @@ def _resources(output):
 
 
 def experiment_device_caps(output, env):
-    """Configured per-card maxima. GPU0 defaults to 2; GPU1 may go to 4."""
+    """Configured per-card maxima. GPU0 defaults to 3; GPU1 may go to 4."""
     key = "had_gpu_per_card_by_device" if env == "had" else "smac_gpu_per_card_by_device"
     raw = _resources(output).get(key)
     if not raw:
@@ -31,9 +31,101 @@ def experiment_device_caps(output, env):
         return None
 
 
-# One packer for HAD and SMAC: GPU0 stays at 2, GPU1 may climb 2→4 from free memory.
+def gpu0_shared_cap(output):
+    """HAD + SMAC together on GPU0, regardless of which scheduler owns the job."""
+    try:
+        cap = int(_resources(output).get("gpu0_total_trainers", 3))
+    except (TypeError, ValueError):
+        cap = 3
+    return max(1, min(GPU_PER_CARD_MAX, cap))
+
+
+def train_scheduler_rows(output, env):
+    """All train-scheduler shards for one env (legacy file plus per-device parents)."""
+    root = Path(output)
+    paths = [root / f"scheduler.train.{env}.json"]
+    paths.extend(sorted(root.glob(f"scheduler.train.{env}.d*.json")))
+    rows = []
+    seen = set()
+    for path in paths:
+        key = str(path.resolve()) if path.exists() else str(path)
+        if key in seen:
+            continue
+        seen.add(key)
+        try:
+            row = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError):
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
+    return rows
+
+
+def merge_train_scheduler(output, env):
+    """Combine live trainers from every parent that is packing this environment."""
+    rows = train_scheduler_rows(output, env)
+    if not rows:
+        return {}
+    live, waiting, devices, by_device = {}, {}, [], {}
+    for row in rows:
+        for item in row.get("live") or []:
+            try:
+                pid = item.get("pid")
+                if pid and not Path(f"/proc/{int(pid)}").exists():
+                    continue
+            except (TypeError, ValueError, OSError):
+                continue
+            ident = item.get("id") or f"train.{env}.{item.get('method')}.s{item.get('seed')}"
+            live[ident] = item
+        for item in row.get("waiting") or []:
+            ident = item.get("id")
+            if ident:
+                waiting[ident] = item
+        for gpu in row.get("devices") or []:
+            if gpu not in devices:
+                devices.append(gpu)
+        for gpu, cap in (row.get("per_gpu_by_device") or {}).items():
+            try:
+                by_device[str(int(gpu))] = int(cap)
+            except (TypeError, ValueError):
+                continue
+    newest = max(rows, key=lambda row: float(row.get("updated_at") or 0))
+    merged = dict(newest)
+    merged["live"] = list(live.values())
+    merged["waiting"] = [item for ident, item in waiting.items() if ident not in live]
+    merged["devices"] = devices or list(newest.get("devices") or [])
+    if by_device:
+        merged["per_gpu_by_device"] = by_device
+        merged["per_gpu"] = max(by_device.values())
+    return merged
+
+
+def sibling_load(output, env, gpu):
+    """Alive trainers from the other environment already sitting on this card."""
+    other = "smacv2" if env == "had" else "had"
+    row = merge_train_scheduler(output, other)
+    if not row:
+        return 0
+    count = 0
+    for item in row.get("live") or []:
+        placed = item.get("physical_gpu", item.get("gpu"))
+        try:
+            if int(placed) != int(gpu):
+                continue
+        except (TypeError, ValueError):
+            continue
+        pid = item.get("pid")
+        try:
+            if pid and Path(f"/proc/{int(pid)}").exists():
+                count += 1
+        except (TypeError, ValueError, OSError):
+            continue
+    return count
+
+
+# One packer for HAD and SMAC: both cards default to 3; GPU1 may climb to 4.
 SHARED_GPU_ADAPT = dict(
-    min_by_device={0: 1, 1: 2}, default_by_device={0: 2, 1: 2}, max_by_device={0: 2, 1: 4},
+    min_by_device={0: 1, 1: 2}, default_by_device={0: 3, 1: 3}, max_by_device={0: 3, 1: 4},
     reserve_gib=8.0, peak_multiplier=1.25, scale_down_free_gib=8.0, warmup_seconds=180,
     fallback_peak_gib=16.0, scale_up_step=1, adapt_pause_seconds=90,
 )
@@ -75,7 +167,7 @@ def _item_resource(output, env, item):
 def adaptive_caps(output, env, live, devices=(0, 1), memories=None):
     """Choose a live per-card target from free memory, inside the configured band.
 
-    GPU0's setpoint is 2. GPU1 starts at 2 and may climb to 4, one slot at a
+    GPU0's setpoint is 3. GPU1 starts at 2 and may climb to 4, one slot at a
     time, after the newest trainer on that card has finished warming. A card
     below the free-memory floor sheds its newest trainer. Occupancy already
     inside the band is held until memory pressure or spare headroom says otherwise.
@@ -98,6 +190,14 @@ def adaptive_caps(output, env, live, devices=(0, 1), memories=None):
         hi = min(GPU_PER_CARD_MAX, max(default, int(policy["max_by_device"].get(gpu, default))))
         same = [item for item in live if _item_gpu(item) == gpu]
         load = len(same)
+        if gpu == 0:
+            room = gpu0_shared_cap(output) - sibling_load(output, env, gpu)
+            if room <= 0:
+                caps[gpu] = 0 if load == 0 else load
+                continue
+            hi = min(hi, room)
+            default = min(default, hi)
+            lo = min(lo, hi)
         memory = memories.get(gpu)
         if memory is None:
             caps[gpu] = min(hi, load or default)
@@ -158,8 +258,8 @@ def per_gpu_caps(per_gpu, devices=(0, 1), *, env="had"):
         caps = {gpu: raw.get(gpu, hard) for gpu in devices}
     else:
         caps = {gpu: int(per_gpu) for gpu in devices}
-    if any(caps[gpu] not in range(1, hard + 1) for gpu in devices):
-        raise ValueError(f"allows 1..{hard} trainers per physical GPU")
+    if any(caps[gpu] not in range(0, hard + 1) for gpu in devices):
+        raise ValueError(f"allows 0..{hard} trainers per physical GPU")
     return caps
 
 
@@ -331,7 +431,11 @@ def gpu_admit(output, env, method, live, *, gpu=0, memory=None, minimum_peak=0.,
         caps = per_gpu_caps(per_gpu, env=env)
     except ValueError:
         return False
-    if int(gpu) not in (0, 1) or len(live) >= gpu_train_limit(per_gpu=per_gpu, env=env):
+    if int(gpu) not in (0, 1) or len(live) >= gpu_train_limit(devices=(int(gpu),), per_gpu=per_gpu, env=env):
+        return False
+    same_gpu = [item for item in live if int(item["options"].get("cuda_visible_devices", "0")) == int(gpu)]
+    occupied = len(same_gpu) + (sibling_load(output, env, gpu) if int(gpu) == 0 else 0)
+    if int(gpu) == 0 and occupied >= gpu0_shared_cap(output):
         return False
     measurements = [_resource(run_directory(output, method, s, env) / "resource.json") for s in ALL_SEEDS]
     measurements = [r for r in measurements if r]
@@ -339,7 +443,6 @@ def gpu_admit(output, env, method, live, *, gpu=0, memory=None, minimum_peak=0.,
                 for r in measurements), default=0.0))
     if not peak:
         peak = _source_peak(output, env, method)
-    same_gpu = [item for item in live if int(item["options"].get("cuda_visible_devices", "0")) == int(gpu)]
     if len(same_gpu) >= caps[int(gpu)]:
         return False
     if recovering and same_gpu:
@@ -358,25 +461,27 @@ def gpu_admit(output, env, method, live, *, gpu=0, memory=None, minimum_peak=0.,
         bootstrap = _bootstrap_peak(output, env, method)
         if bootstrap:
             need = 8.0 + 1.25 * bootstrap
-            if not same_gpu:
+            if occupied == 0:
                 return free >= need
             # Unmeasured SMAC can share a busy card only when remaining free
             # memory is clearly above the scaled smoke peak. GPU0 currently
             # hosts a 50+ GiB Ollama process and will fail this check.
             return env == "smacv2" and free >= need + 16.0
-        return not live and free >= 9.0  # First real run is measured alone, with >=8 GiB reserve.
-    # The explicitly requested six-way HAD queue can use tighter headroom
-    # for measured architectures. Unknown profiles and SMAC retain the original
-    # admission rules; allocation failures still use transactional OOM recovery.
+        return occupied == 0 and free >= 9.0  # First real run is measured alone, with >=8 GiB reserve.
+    # nvidia-smi free already subtracts each live process's current reservation.
+    # Extra headroom is only for the incoming job (peak × multiplier + reserve)
+    # and for memory a live process has previously reached but later released.
     reserve, multiplier = 8.0, 1.25
-    if env == "had":
-        try:
-            policy = json.loads((Path(output) / "experiment.json").read_text())["resources"].get("had_gpu_admission", {})
+    key = "had_gpu_admission" if env == "had" else "smac_gpu_admission"
+    try:
+        policy = _resources(output).get(key) or {}
+        if policy:
             reserve = float(policy.get("reserve_gib", reserve))
             multiplier = float(policy.get("peak_multiplier", multiplier))
-            if not (6.0 <= reserve <= 32.0 and 1.10 <= multiplier <= 2.0):
-                return False
-        except (OSError, ValueError, TypeError, KeyError):
+        if env == "had" and not (6.0 <= reserve <= 32.0 and 1.10 <= multiplier <= 2.0):
+            return False
+    except (OSError, ValueError, TypeError, KeyError):
+        if env == "had":
             return False
     growth = 0.0
     for item in live:
@@ -388,7 +493,7 @@ def gpu_admit(output, env, method, live, *, gpu=0, memory=None, minimum_peak=0.,
             return False
         observed = float(row.get("cuda_peak_reserved_gib") or row.get("cuda_reserved_gib") or 0)
         current = float(row.get("cuda_reserved_gib") or observed)
-        growth += max(0.0, multiplier * observed - current)
+        growth += max(0.0, observed - current)
     return free >= reserve + multiplier * peak + growth
 
 

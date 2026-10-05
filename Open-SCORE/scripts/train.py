@@ -338,6 +338,32 @@ def _exclusive_job(method, run, seed, lock_dir=None):
         os.close(fd)
 
 
+def _job_is_busy(output, env, method, seed, run="train"):
+    """True when another trainer already holds this run's exclusive job lock or PID."""
+    from open_score.eval.experiment import run_directory
+    directory = run_directory(output, method, seed, env, run)
+    try:
+        row = json.loads((directory / "resource.json").read_text(encoding="utf-8"))
+        pid = row.get("pid")
+        if pid and row.get("status") == "running" and Path(f"/proc/{int(pid)}").exists():
+            return True
+    except (OSError, ValueError, TypeError):
+        pass
+    path = directory / f".job.{method}.{run}.{int(seed)}.lock"
+    if not path.exists():
+        return False
+    import fcntl
+    fd = os.open(path, os.O_RDWR)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        return False
+    except BlockingIOError:
+        return True
+    finally:
+        os.close(fd)
+
+
 def _flag(command, name):
     parts = (command or "").split()
     token = f"--{name}"
@@ -1058,6 +1084,8 @@ def run_queue(output, env, template, devices, queue_path, *, per_gpu_default):
             identity = f"train.{env}.{method}.s{seed}"
             if identity in queued or identity in paused or finished(method, seed):
                 continue
+            if _job_is_busy(output, env, method, seed):
+                continue
             if failure_count(method, seed) > TASK_RETRIES:
                 continue
             (run_directory(output, method, seed, env) / "pause.request").unlink(missing_ok=True)
@@ -1194,7 +1222,10 @@ def run_queue(output, env, template, devices, queue_path, *, per_gpu_default):
             }
         except Exception:
             pass
-        atomic_json(output / f"scheduler.train.{env}.json", published)
+        shard = output / f"scheduler.train.{env}.d{'-'.join(str(gpu) for gpu in devices)}.json"
+        atomic_json(shard, published)
+        if list(devices) in ([0], [0, 1]):
+            atomic_json(output / f"scheduler.train.{env}.json", published)
 
     def request_stop(signum, frame):
         stop_event.set()
@@ -1814,7 +1845,7 @@ def profile_main(options, output):
     stop_file = output / "stop.request"
     def new_stop():
         return stop_file.exists() and stop_file.stat().st_mtime > requested_at
-    with queue_lock(output, f"gpu.{options.env}", stop_requested=new_stop):
+    with queue_lock(output, f"gpu.{options.env}.d{'-'.join(map(str, devices))}", stop_requested=new_stop):
         if stop_file.exists() and stop_file.stat().st_mtime <= requested_at:
             clear_previous_stop(stop_file, requested_at)
         print(f"{PROFILE} {options.env}: queue={options.queue}, physical GPUs={devices}, "
