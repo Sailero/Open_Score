@@ -424,6 +424,36 @@
     },
     {
       "env": "had",
+      "method": "regir_untied4_sg",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "0dfd9f4beffe41c1a5c1f5f82c34e1b8",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_untied4_sg/train/seed_0/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "had",
+      "method": "regir_untied4_sg",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "b72dcb511f9d41d1a99406d29804a4f9",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_untied4_sg/train/seed_1/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "had",
+      "method": "regir_untied4_sg",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "33a073af9f194d3f81644025e5c39111",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_untied4_sg/train/seed_2/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "had",
       "method": "regir_kv0_nomem",
       "seed": 0,
       "t_env": 1000000,
@@ -450,6 +480,186 @@
       "checkpoint_id": "a796e01795b3412bad6303cc8d82db10",
       "checkpoint": "final@1000000",
       "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_nomem/train/seed_2/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "had",
+      "method": "regir_kv0_norefil_sg",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "fe10d7173f864647999e25327717535f",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_norefil_sg/train/seed_0/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "had",
+      "method": "regir_kv0_norefil_sg",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "d7e21d8b7b1d40749c93d1c6faf7c6c1",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_norefil_sg/train/seed_1/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "had",
+      "method": "regir_kv0_norefil_sg",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "6e26b7bb22c84a318e49d9337f2cdb03",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_norefil_sg/train/seed_2/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "had",
+      "method": "regir_kv0_fixed4_sg",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "4a4793f06e7d41339431f0afac0ef99f",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_fixed4_sg/train/seed_0/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "had",
+      "method": "regir_kv0_fixed4_sg",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "663519c5f8b44ff3b280dcb9881463a5",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_fixed4_sg/train/seed_1/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "had",
+      "method": "regir_kv0_fixed4_sg",
+      "seed": 2,
+      "t_env": 1000003,
+      "checkpoint_id": "7378e26b06654b22a38800c0f265d800",
+      "checkpoint": "final@1000003",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_fixed4_sg/train/seed_2/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "had",
+      "method": "regir_fixed4_sg",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "8eeaefbbdad74626bb2a7ef43f6ca920",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_fixed4_sg/train/seed_0/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "had",
+      "method": "regir_fixed4_sg",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "a994886e563340ef8d99ba18ea4be43d",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_fixed4_sg/train/seed_1/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "had",
+      "method": "regir_fixed4_sg",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "e4c87c009b2645e284a723ee743c0210",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_fixed4_sg/train/seed_2/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "had",
+      "method": "regir_kv0_nocount_sg",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "6833eb8b6dde4c7e8c3ca5f6b597a7c4",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_nocount_sg/train/seed_0/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "had",
+      "method": "regir_kv0_nocount_sg",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "0af81b73b97644cda72ed95b8412fc3f",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_nocount_sg/train/seed_1/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "had",
+      "method": "regir_kv0_nocount_sg",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "c73bb2714fa0487cb4b3082166a144d4",
+      "checkpoint": "final@1000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_nocount_sg/train/seed_2/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "smacv2",
+      "method": "refil",
+      "seed": 0,
+      "t_env": 5000000,
+      "checkpoint_id": "2903cf441a014f94aed4837b1703caea",
+      "checkpoint": "final@5000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/smacv2/refil/train/seed_0/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "smacv2",
+      "method": "refil",
+      "seed": 1,
+      "t_env": 5000000,
+      "checkpoint_id": "fad9a6c6573144d2959fbff234045403",
+      "checkpoint": "final@5000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/smacv2/refil/train/seed_1/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "smacv2",
+      "method": "refil",
+      "seed": 2,
+      "t_env": 5000000,
+      "checkpoint_id": "82a40b848df54d85bf182fa129e52e3f",
+      "checkpoint": "final@5000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/smacv2/refil/train/seed_2/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "smacv2",
+      "method": "spectra",
+      "seed": 0,
+      "t_env": 5000000,
+      "checkpoint_id": "415ce92a401f42c58ce8f91806b4e2d7",
+      "checkpoint": "final@5000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/smacv2/spectra/train/seed_0/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "smacv2",
+      "method": "spectra",
+      "seed": 1,
+      "t_env": 5000000,
+      "checkpoint_id": "67e0acf1c7e64ca7b802d58c09a434a1",
+      "checkpoint": "final@5000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/smacv2/spectra/train/seed_1/final.pt",
+      "source_profile": "main0923"
+    },
+    {
+      "env": "smacv2",
+      "method": "spectra",
+      "seed": 2,
+      "t_env": 5000000,
+      "checkpoint_id": "3153540c0a404a4da0f964efcddf8e54",
+      "checkpoint": "final@5000000",
+      "path": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/smacv2/spectra/train/seed_2/final.pt",
       "source_profile": "main0923"
     }
   ],
@@ -1137,10 +1347,10 @@
       },
       "rank": 3,
       "order": 21,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1000000,
       "total": 1000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.had.regir_untied4_sg.s1",
@@ -1153,10 +1363,10 @@
       },
       "rank": 3,
       "order": 22,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1000000,
       "total": 1000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.had.regir_untied4_sg.s2",
@@ -1169,10 +1379,10 @@
       },
       "rank": 3,
       "order": 23,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1000000,
       "total": 1000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.had.regir_r1_nomem.s0",
@@ -1377,10 +1587,10 @@
       },
       "rank": 4,
       "order": 36,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1000000,
       "total": 1000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.had.regir_kv0_norefil_sg.s1",
@@ -1393,10 +1603,10 @@
       },
       "rank": 4,
       "order": 37,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1000000,
       "total": 1000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.had.regir_kv0_norefil_sg.s2",
@@ -1409,10 +1619,10 @@
       },
       "rank": 4,
       "order": 38,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1000000,
       "total": 1000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.had.regir_kv0_fixed4_sg.s0",
@@ -1425,10 +1635,10 @@
       },
       "rank": 4,
       "order": 39,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1000000,
       "total": 1000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.had.regir_kv0_fixed4_sg.s1",
@@ -1441,10 +1651,10 @@
       },
       "rank": 4,
       "order": 40,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1000000,
       "total": 1000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.had.regir_kv0_fixed4_sg.s2",
@@ -1457,10 +1667,10 @@
       },
       "rank": 4,
       "order": 41,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1000003,
       "total": 1000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.had.regir_fixed4_sg.s0",
@@ -1473,10 +1683,10 @@
       },
       "rank": 6,
       "order": 42,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1000000,
       "total": 1000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.had.regir_fixed4_sg.s1",
@@ -1489,10 +1699,10 @@
       },
       "rank": 6,
       "order": 43,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1000000,
       "total": 1000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.had.regir_fixed4_sg.s2",
@@ -1505,10 +1715,10 @@
       },
       "rank": 6,
       "order": 44,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1000000,
       "total": 1000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.had.regir_kv0_nocount_sg.s0",
@@ -1521,10 +1731,10 @@
       },
       "rank": 6,
       "order": 45,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1000000,
       "total": 1000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.had.regir_kv0_nocount_sg.s1",
@@ -1537,10 +1747,10 @@
       },
       "rank": 6,
       "order": 46,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1000000,
       "total": 1000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.had.regir_kv0_nocount_sg.s2",
@@ -1553,10 +1763,10 @@
       },
       "rank": 6,
       "order": 47,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1000000,
       "total": 1000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.had.regir_kv0_intent_noaux_sg.s0",
@@ -2117,10 +2327,12 @@
         "common": "P1"
       },
       "rank": 3,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 7200,
       "total": 7200,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_untied4_sg/train/seed_0/final.pt",
+      "checkpoint_id": "0dfd9f4beffe41c1a5c1f5f82c34e1b8"
     },
     {
       "id": "eval.final.had.regir_untied4_sg.s1",
@@ -2132,10 +2344,12 @@
         "common": "P1"
       },
       "rank": 3,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 7200,
       "total": 7200,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_untied4_sg/train/seed_1/final.pt",
+      "checkpoint_id": "b72dcb511f9d41d1a99406d29804a4f9"
     },
     {
       "id": "eval.final.had.regir_untied4_sg.s2",
@@ -2147,10 +2361,12 @@
         "common": "P1"
       },
       "rank": 3,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 7200,
       "total": 7200,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_untied4_sg/train/seed_2/final.pt",
+      "checkpoint_id": "33a073af9f194d3f81644025e5c39111"
     },
     {
       "id": "eval.final.had.regir_r1_nomem.s0",
@@ -2348,10 +2564,12 @@
         "branch:A": "P1"
       },
       "rank": 4,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 7200,
       "total": 7200,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_norefil_sg/train/seed_0/final.pt",
+      "checkpoint_id": "fe10d7173f864647999e25327717535f"
     },
     {
       "id": "eval.final.had.regir_kv0_norefil_sg.s1",
@@ -2363,10 +2581,12 @@
         "branch:A": "P1"
       },
       "rank": 4,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 7200,
       "total": 7200,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_norefil_sg/train/seed_1/final.pt",
+      "checkpoint_id": "d7e21d8b7b1d40749c93d1c6faf7c6c1"
     },
     {
       "id": "eval.final.had.regir_kv0_norefil_sg.s2",
@@ -2378,10 +2598,12 @@
         "branch:A": "P1"
       },
       "rank": 4,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 7200,
       "total": 7200,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_norefil_sg/train/seed_2/final.pt",
+      "checkpoint_id": "6e26b7bb22c84a318e49d9337f2cdb03"
     },
     {
       "id": "eval.final.had.regir_kv0_fixed4_sg.s0",
@@ -2393,10 +2615,12 @@
         "branch:A": "P1"
       },
       "rank": 4,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 7200,
       "total": 7200,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_fixed4_sg/train/seed_0/final.pt",
+      "checkpoint_id": "4a4793f06e7d41339431f0afac0ef99f"
     },
     {
       "id": "eval.final.had.regir_kv0_fixed4_sg.s1",
@@ -2408,10 +2632,12 @@
         "branch:A": "P1"
       },
       "rank": 4,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 7200,
       "total": 7200,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_fixed4_sg/train/seed_1/final.pt",
+      "checkpoint_id": "663519c5f8b44ff3b280dcb9881463a5"
     },
     {
       "id": "eval.final.had.regir_kv0_fixed4_sg.s2",
@@ -2423,10 +2649,12 @@
         "branch:A": "P1"
       },
       "rank": 4,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 7200,
       "total": 7200,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_fixed4_sg/train/seed_2/final.pt",
+      "checkpoint_id": "7378e26b06654b22a38800c0f265d800"
     },
     {
       "id": "eval.final.had.regir_fixed4_sg.s0",
@@ -2438,10 +2666,12 @@
         "branch:A": "P2"
       },
       "rank": 6,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 7200,
       "total": 7200,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_fixed4_sg/train/seed_0/final.pt",
+      "checkpoint_id": "8eeaefbbdad74626bb2a7ef43f6ca920"
     },
     {
       "id": "eval.final.had.regir_fixed4_sg.s1",
@@ -2453,10 +2683,12 @@
         "branch:A": "P2"
       },
       "rank": 6,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 7200,
       "total": 7200,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_fixed4_sg/train/seed_1/final.pt",
+      "checkpoint_id": "a994886e563340ef8d99ba18ea4be43d"
     },
     {
       "id": "eval.final.had.regir_fixed4_sg.s2",
@@ -2468,10 +2700,12 @@
         "branch:A": "P2"
       },
       "rank": 6,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 7200,
       "total": 7200,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_fixed4_sg/train/seed_2/final.pt",
+      "checkpoint_id": "e4c87c009b2645e284a723ee743c0210"
     },
     {
       "id": "eval.final.had.regir_kv0_nocount_sg.s0",
@@ -2483,10 +2717,12 @@
         "branch:A": "P2"
       },
       "rank": 6,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 7200,
       "total": 7200,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_nocount_sg/train/seed_0/final.pt",
+      "checkpoint_id": "6833eb8b6dde4c7e8c3ca5f6b597a7c4"
     },
     {
       "id": "eval.final.had.regir_kv0_nocount_sg.s1",
@@ -2498,10 +2734,12 @@
         "branch:A": "P2"
       },
       "rank": 6,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 7200,
       "total": 7200,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_nocount_sg/train/seed_1/final.pt",
+      "checkpoint_id": "0af81b73b97644cda72ed95b8412fc3f"
     },
     {
       "id": "eval.final.had.regir_kv0_nocount_sg.s2",
@@ -2513,10 +2751,12 @@
         "branch:A": "P2"
       },
       "rank": 6,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 7200,
       "total": 7200,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_nocount_sg/train/seed_2/final.pt",
+      "checkpoint_id": "c73bb2714fa0487cb4b3082166a144d4"
     },
     {
       "id": "eval.final.had.regir_kv0_intent_noaux_sg.s0",
@@ -3592,10 +3832,12 @@
         "common": "P0"
       },
       "rank": 1,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_untied4_sg/train/seed_0/final.pt",
+      "checkpoint_id": "0dfd9f4beffe41c1a5c1f5f82c34e1b8"
     },
     {
       "id": "eval.coverage.had.regir_untied4_sg.s1",
@@ -3607,10 +3849,12 @@
         "common": "P0"
       },
       "rank": 1,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_untied4_sg/train/seed_1/final.pt",
+      "checkpoint_id": "b72dcb511f9d41d1a99406d29804a4f9"
     },
     {
       "id": "eval.coverage.had.regir_untied4_sg.s2",
@@ -3622,10 +3866,12 @@
         "common": "P0"
       },
       "rank": 1,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_untied4_sg/train/seed_2/final.pt",
+      "checkpoint_id": "33a073af9f194d3f81644025e5c39111"
     },
     {
       "id": "eval.coverage.had.refil.s0",
@@ -4279,10 +4525,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 5400,
       "total": 5400,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_fixed4_sg/train/seed_0/final.pt",
+      "checkpoint_id": "4a4793f06e7d41339431f0afac0ef99f"
     },
     {
       "id": "eval.depth.had.regir_kv0_fixed4_sg.s1",
@@ -4294,10 +4542,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 5400,
       "total": 5400,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_fixed4_sg/train/seed_1/final.pt",
+      "checkpoint_id": "663519c5f8b44ff3b280dcb9881463a5"
     },
     {
       "id": "eval.depth.had.regir_kv0_fixed4_sg.s2",
@@ -4309,10 +4559,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 5400,
       "total": 5400,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_fixed4_sg/train/seed_2/final.pt",
+      "checkpoint_id": "7378e26b06654b22a38800c0f265d800"
     },
     {
       "id": "eval.depth.had.regir_untied4_sg.s0",
@@ -4324,10 +4576,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 3600,
       "total": 3600,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_untied4_sg/train/seed_0/final.pt",
+      "checkpoint_id": "0dfd9f4beffe41c1a5c1f5f82c34e1b8"
     },
     {
       "id": "eval.depth.had.regir_untied4_sg.s1",
@@ -4339,10 +4593,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 3600,
       "total": 3600,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_untied4_sg/train/seed_1/final.pt",
+      "checkpoint_id": "b72dcb511f9d41d1a99406d29804a4f9"
     },
     {
       "id": "eval.depth.had.regir_untied4_sg.s2",
@@ -4354,10 +4610,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 3600,
       "total": 3600,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_untied4_sg/train/seed_2/final.pt",
+      "checkpoint_id": "33a073af9f194d3f81644025e5c39111"
     },
     {
       "id": "eval.readout.had.regir_kv0_sg.s0",
@@ -4731,10 +4989,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_untied4_sg/train/seed_0/final.pt",
+      "checkpoint_id": "0dfd9f4beffe41c1a5c1f5f82c34e1b8"
     },
     {
       "id": "eval.dynamics.had.regir_untied4_sg.s1",
@@ -4746,10 +5006,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_untied4_sg/train/seed_1/final.pt",
+      "checkpoint_id": "b72dcb511f9d41d1a99406d29804a4f9"
     },
     {
       "id": "eval.dynamics.had.regir_untied4_sg.s2",
@@ -4761,10 +5023,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_untied4_sg/train/seed_2/final.pt",
+      "checkpoint_id": "33a073af9f194d3f81644025e5c39111"
     },
     {
       "id": "eval.dynamics.had.regir_kv0_fixed4_sg.s0",
@@ -4776,10 +5040,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_fixed4_sg/train/seed_0/final.pt",
+      "checkpoint_id": "4a4793f06e7d41339431f0afac0ef99f"
     },
     {
       "id": "eval.dynamics.had.regir_kv0_fixed4_sg.s1",
@@ -4791,10 +5057,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_fixed4_sg/train/seed_1/final.pt",
+      "checkpoint_id": "663519c5f8b44ff3b280dcb9881463a5"
     },
     {
       "id": "eval.dynamics.had.regir_kv0_fixed4_sg.s2",
@@ -4806,10 +5074,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_fixed4_sg/train/seed_2/final.pt",
+      "checkpoint_id": "7378e26b06654b22a38800c0f265d800"
     },
     {
       "id": "eval.dynamics.had.regir_fixed4_sg.s0",
@@ -4821,10 +5091,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_fixed4_sg/train/seed_0/final.pt",
+      "checkpoint_id": "8eeaefbbdad74626bb2a7ef43f6ca920"
     },
     {
       "id": "eval.dynamics.had.regir_fixed4_sg.s1",
@@ -4836,10 +5108,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_fixed4_sg/train/seed_1/final.pt",
+      "checkpoint_id": "a994886e563340ef8d99ba18ea4be43d"
     },
     {
       "id": "eval.dynamics.had.regir_fixed4_sg.s2",
@@ -4851,10 +5125,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_fixed4_sg/train/seed_2/final.pt",
+      "checkpoint_id": "e4c87c009b2645e284a723ee743c0210"
     },
     {
       "id": "eval.deep_rounds.had.regir_kv0_sg.s0",
@@ -5002,10 +5278,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_fixed4_sg/train/seed_0/final.pt",
+      "checkpoint_id": "4a4793f06e7d41339431f0afac0ef99f"
     },
     {
       "id": "eval.deep_rounds.had.regir_kv0_fixed4_sg.s1",
@@ -5017,10 +5295,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_fixed4_sg/train/seed_1/final.pt",
+      "checkpoint_id": "663519c5f8b44ff3b280dcb9881463a5"
     },
     {
       "id": "eval.deep_rounds.had.regir_kv0_fixed4_sg.s2",
@@ -5032,10 +5312,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_kv0_fixed4_sg/train/seed_2/final.pt",
+      "checkpoint_id": "7378e26b06654b22a38800c0f265d800"
     },
     {
       "id": "eval.deep_rounds.had.regir_fixed4_sg.s0",
@@ -5047,10 +5329,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_fixed4_sg/train/seed_0/final.pt",
+      "checkpoint_id": "8eeaefbbdad74626bb2a7ef43f6ca920"
     },
     {
       "id": "eval.deep_rounds.had.regir_fixed4_sg.s1",
@@ -5062,10 +5346,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_fixed4_sg/train/seed_1/final.pt",
+      "checkpoint_id": "a994886e563340ef8d99ba18ea4be43d"
     },
     {
       "id": "eval.deep_rounds.had.regir_fixed4_sg.s2",
@@ -5077,10 +5363,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_fixed4_sg/train/seed_2/final.pt",
+      "checkpoint_id": "e4c87c009b2645e284a723ee743c0210"
     },
     {
       "id": "eval.global_probe.had.regir_untied4_sg.s0",
@@ -5092,10 +5380,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_untied4_sg/train/seed_0/final.pt",
+      "checkpoint_id": "0dfd9f4beffe41c1a5c1f5f82c34e1b8"
     },
     {
       "id": "eval.global_probe.had.regir_untied4_sg.s1",
@@ -5107,10 +5397,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_untied4_sg/train/seed_1/final.pt",
+      "checkpoint_id": "b72dcb511f9d41d1a99406d29804a4f9"
     },
     {
       "id": "eval.global_probe.had.regir_untied4_sg.s2",
@@ -5122,10 +5414,12 @@
         "branch:A": "M"
       },
       "rank": 7,
-      "status": "waiting",
-      "completed": 0,
+      "status": "complete",
+      "completed": 1,
       "total": 1,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/regir_untied4_sg/train/seed_2/final.pt",
+      "checkpoint_id": "33a073af9f194d3f81644025e5c39111"
     },
     {
       "id": "eval.depth.had.regir_kv0_intent_sg.s0",
@@ -5477,10 +5771,10 @@
         "common": "P0"
       },
       "rank": 1,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 60,
       "total": 60,
-      "detail": "0/60"
+      "detail": "cost arms"
     },
     {
       "id": "train.smacv2.refil.s0",
@@ -5493,10 +5787,10 @@
       },
       "rank": 1,
       "order": 0,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 5000000,
       "total": 5000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.smacv2.refil.s1",
@@ -5509,10 +5803,10 @@
       },
       "rank": 1,
       "order": 1,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 5000000,
       "total": 5000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.smacv2.refil.s2",
@@ -5525,10 +5819,10 @@
       },
       "rank": 1,
       "order": 2,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 5000000,
       "total": 5000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.smacv2.spectra.s0",
@@ -5541,10 +5835,10 @@
       },
       "rank": 1,
       "order": 3,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 5000000,
       "total": 5000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.smacv2.spectra.s1",
@@ -5557,10 +5851,10 @@
       },
       "rank": 1,
       "order": 4,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 5000000,
       "total": 5000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.smacv2.spectra.s2",
@@ -5573,10 +5867,10 @@
       },
       "rank": 1,
       "order": 5,
-      "status": "pending",
-      "completed": 0,
+      "status": "complete",
+      "completed": 5000000,
       "total": 5000000,
-      "detail": "final checkpoint not yet available"
+      "detail": "qualified final"
     },
     {
       "id": "train.smacv2.transfqmix.s0",
@@ -5783,9 +6077,9 @@
       "method": "regir_sg",
       "seed": 0,
       "segments": {
-        "branch:A": "P2"
+        "branch:A": "P0"
       },
-      "rank": 6,
+      "rank": 2,
       "order": 21,
       "status": "pending",
       "completed": 0,
@@ -5799,9 +6093,9 @@
       "method": "regir_sg",
       "seed": 1,
       "segments": {
-        "branch:A": "P2"
+        "branch:A": "P0"
       },
-      "rank": 6,
+      "rank": 2,
       "order": 22,
       "status": "pending",
       "completed": 0,
@@ -5815,9 +6109,9 @@
       "method": "regir_sg",
       "seed": 2,
       "segments": {
-        "branch:A": "P2"
+        "branch:A": "P0"
       },
-      "rank": 6,
+      "rank": 2,
       "order": 23,
       "status": "pending",
       "completed": 0,
@@ -5882,10 +6176,12 @@
         "common": "P0"
       },
       "rank": 1,
-      "status": "waiting",
+      "status": "pending",
       "completed": 0,
       "total": 2400,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/smacv2/refil/train/seed_0/final.pt",
+      "checkpoint_id": "2903cf441a014f94aed4837b1703caea"
     },
     {
       "id": "eval.final.smacv2.refil.s1",
@@ -5897,10 +6193,12 @@
         "common": "P0"
       },
       "rank": 1,
-      "status": "waiting",
+      "status": "pending",
       "completed": 0,
       "total": 2400,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/smacv2/refil/train/seed_1/final.pt",
+      "checkpoint_id": "fad9a6c6573144d2959fbff234045403"
     },
     {
       "id": "eval.final.smacv2.refil.s2",
@@ -5912,10 +6210,12 @@
         "common": "P0"
       },
       "rank": 1,
-      "status": "waiting",
+      "status": "pending",
       "completed": 0,
       "total": 2400,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/smacv2/refil/train/seed_2/final.pt",
+      "checkpoint_id": "82a40b848df54d85bf182fa129e52e3f"
     },
     {
       "id": "eval.final.smacv2.spectra.s0",
@@ -5927,10 +6227,12 @@
         "common": "P0"
       },
       "rank": 1,
-      "status": "waiting",
+      "status": "pending",
       "completed": 0,
       "total": 2400,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/smacv2/spectra/train/seed_0/final.pt",
+      "checkpoint_id": "415ce92a401f42c58ce8f91806b4e2d7"
     },
     {
       "id": "eval.final.smacv2.spectra.s1",
@@ -5942,10 +6244,12 @@
         "common": "P0"
       },
       "rank": 1,
-      "status": "waiting",
+      "status": "pending",
       "completed": 0,
       "total": 2400,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/smacv2/spectra/train/seed_1/final.pt",
+      "checkpoint_id": "67e0acf1c7e64ca7b802d58c09a434a1"
     },
     {
       "id": "eval.final.smacv2.spectra.s2",
@@ -5957,10 +6261,12 @@
         "common": "P0"
       },
       "rank": 1,
-      "status": "waiting",
+      "status": "pending",
       "completed": 0,
       "total": 2400,
-      "detail": "waiting for final"
+      "detail": "frozen final",
+      "checkpoint": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923/smacv2/spectra/train/seed_2/final.pt",
+      "checkpoint_id": "3153540c0a404a4da0f964efcddf8e54"
     },
     {
       "id": "eval.final.smacv2.transfqmix.s0",
@@ -6155,9 +6461,9 @@
       "method": "regir_sg",
       "seed": 0,
       "segments": {
-        "branch:A": "P2"
+        "branch:A": "P0"
       },
-      "rank": 6,
+      "rank": 2,
       "status": "waiting",
       "completed": 0,
       "total": 2400,
@@ -6170,9 +6476,9 @@
       "method": "regir_sg",
       "seed": 1,
       "segments": {
-        "branch:A": "P2"
+        "branch:A": "P0"
       },
-      "rank": 6,
+      "rank": 2,
       "status": "waiting",
       "completed": 0,
       "total": 2400,
@@ -6185,9 +6491,9 @@
       "method": "regir_sg",
       "seed": 2,
       "segments": {
-        "branch:A": "P2"
+        "branch:A": "P0"
       },
-      "rank": 6,
+      "rank": 2,
       "status": "waiting",
       "completed": 0,
       "total": 2400,
@@ -6329,5 +6635,5 @@
       "detail": "waiting for final"
     }
   ],
-  "scanned_at": 1790593466.6104372
+  "scanned_at": 1791130390.276181
 }

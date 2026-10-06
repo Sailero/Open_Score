@@ -954,13 +954,14 @@
     ],
     "had_gpu_per_card": 4,
     "had_gpu_per_card_by_device": {
-      "0": 2,
+      "0": 3,
       "1": 4
     },
     "smac_gpu_per_card_trial": 1,
     "smac_gpu_per_card": 4,
     "continuous_fill": true,
     "global_train_slots": 6,
+    "gpu0_total_trainers": 3,
     "gpu_reserve_gib": 8,
     "had_gpu_admission": {
       "reserve_gib": 8.0,
@@ -995,27 +996,26 @@
         "checkpoint_poll_seconds": 5,
         "cpu_threads_per_worker": 1,
         "policy_rng": "per_episode_seed_v1",
-        "updated_at": 1790516583.1618552
+        "updated_at": 1791277549.1116726
       },
       "had": {
         "device": "auto",
         "max_concurrent": 32,
         "final_shards": 96,
         "physical_gpus": [
-          0,
-          1
+          0
         ],
         "gpu_workers_per_device": 2,
         "gpu_reserve_gib": 8,
         "checkpoint_poll_seconds": 5,
         "cpu_threads_per_worker": 1,
         "policy_rng": "per_episode_seed_v1",
-        "updated_at": 1790528623.0765657
+        "updated_at": 1790679189.8147442
       }
     },
     "measurement_gpu": 1,
     "smac_gpu_per_card_by_device": {
-      "0": 2,
+      "0": 3,
       "1": 4
     },
     "gpu_adapt": {
@@ -1025,11 +1025,11 @@
           "1": 2
         },
         "default_by_device": {
-          "0": 2,
-          "1": 2
+          "0": 3,
+          "1": 3
         },
         "max_by_device": {
-          "0": 2,
+          "0": 3,
           "1": 4
         },
         "reserve_gib": 8.0,
@@ -1046,11 +1046,11 @@
           "1": 2
         },
         "default_by_device": {
-          "0": 2,
-          "1": 2
+          "0": 3,
+          "1": 3
         },
         "max_by_device": {
-          "0": 2,
+          "0": 3,
           "1": 4
         },
         "reserve_gib": 8.0,

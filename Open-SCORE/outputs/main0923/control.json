@@ -7,8 +7,13 @@
       "at": "2026-09-27T21:38:27+08:00",
       "event": "had_first",
       "enabled": true
+    },
+    {
+      "at": "2026-10-01T01:24:00+08:00",
+      "event": "had_first",
+      "enabled": false
     }
   ],
-  "had_first": true,
-  "updated_at": "2026-09-27T21:38:27+08:00"
+  "had_first": false,
+  "updated_at": "2026-10-01T01:24:00+08:00"
 }
