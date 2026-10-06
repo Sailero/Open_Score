@@ -215,13 +215,9 @@ def adaptive_caps(output, env, live, devices=(0, 1), memories=None):
         if load == 0:
             caps[gpu] = min(hi, default)
             continue
-        peaks = []
-        for item in same:
-            row = _item_resource(output, env, item)
-            if row:
-                peaks.append(float(row.get("cuda_peak_reserved_gib") or row.get("cuda_reserved_gib") or 0))
-        peak = max((value for value in peaks if value > 0), default=policy["fallback_peak_gib"])
-        need = policy["reserve_gib"] + policy["peak_multiplier"] * peak
+        # Extra slots are for the next job, not a clone of the occupant.
+        pack_peak = float(policy.get("pack_peak_gib") or 8.0)
+        need = policy["reserve_gib"] + policy["peak_multiplier"] * pack_peak
         extra = int(free // need) if need > 0 else 0
         cap = min(hi, max(lo, load))
         if extra >= 1 and cap < hi:
@@ -490,7 +486,8 @@ def gpu_admit(output, env, method, live, *, gpu=0, memory=None, minimum_peak=0.,
             continue
         row = _resource(run_directory(output, item["method"], options["seed"], env) / "resource.json")
         if row is None or row.get("pid") != item["child"].pid:
-            return False
+            growth += 8.0
+            continue
         observed = float(row.get("cuda_peak_reserved_gib") or row.get("cuda_reserved_gib") or 0)
         current = float(row.get("cuda_reserved_gib") or observed)
         growth += max(0.0, observed - current)

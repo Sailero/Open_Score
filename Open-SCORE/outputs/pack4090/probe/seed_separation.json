@@ -1,0 +1,10 @@
+{
+  "scanned": [
+    "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main/episodes.csv",
+    "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main/trajectories.csv",
+    "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0921/episodes.csv",
+    "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0921/trajectories.csv"
+  ],
+  "recorded_unique_seeds": 400,
+  "collisions": []
+}

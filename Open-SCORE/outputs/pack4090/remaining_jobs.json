@@ -1,0 +1,514 @@
+{
+  "created_at": "2026-09-27 18:48:55",
+  "source": "/data3/dell/Saileron/projects/ReGIR/Open-SCORE/outputs/main0923",
+  "branch": "A",
+  "skip": "trial",
+  "resume": false,
+  "trains": [
+    {
+      "id": "train.smacv2.refil.s0",
+      "env": "smacv2",
+      "method": "refil",
+      "seed": 0,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 0,
+      "order": 0,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.smacv2.refil.s1",
+      "env": "smacv2",
+      "method": "refil",
+      "seed": 1,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 0,
+      "order": 1,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.smacv2.refil.s2",
+      "env": "smacv2",
+      "method": "refil",
+      "seed": 2,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 0,
+      "order": 2,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.smacv2.spectra.s0",
+      "env": "smacv2",
+      "method": "spectra",
+      "seed": 0,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 0,
+      "order": 3,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.smacv2.spectra.s1",
+      "env": "smacv2",
+      "method": "spectra",
+      "seed": 1,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 0,
+      "order": 4,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.smacv2.spectra.s2",
+      "env": "smacv2",
+      "method": "spectra",
+      "seed": 2,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 0,
+      "order": 5,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.smacv2.transfqmix.s0",
+      "env": "smacv2",
+      "method": "transfqmix",
+      "seed": 0,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 0,
+      "order": 6,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.smacv2.transfqmix.s1",
+      "env": "smacv2",
+      "method": "transfqmix",
+      "seed": 1,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 0,
+      "order": 7,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.smacv2.transfqmix.s2",
+      "env": "smacv2",
+      "method": "transfqmix",
+      "seed": 2,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 0,
+      "order": 8,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.smacv2.regir_r1_sg.s0",
+      "env": "smacv2",
+      "method": "regir_r1_sg",
+      "seed": 0,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 0,
+      "order": 9,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.smacv2.regir_r1_sg.s1",
+      "env": "smacv2",
+      "method": "regir_r1_sg",
+      "seed": 1,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 0,
+      "order": 10,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.smacv2.regir_r1_sg.s2",
+      "env": "smacv2",
+      "method": "regir_r1_sg",
+      "seed": 2,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 0,
+      "order": 11,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.had.regir_sg.s0",
+      "env": "had",
+      "method": "regir_sg",
+      "seed": 0,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 0,
+      "order": 18,
+      "t_max": 1000000
+    },
+    {
+      "id": "train.had.regir_sg.s1",
+      "env": "had",
+      "method": "regir_sg",
+      "seed": 1,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 0,
+      "order": 19,
+      "t_max": 1000000
+    },
+    {
+      "id": "train.had.regir_sg.s2",
+      "env": "had",
+      "method": "regir_sg",
+      "seed": 2,
+      "segments": {
+        "common": "P0"
+      },
+      "rank": 0,
+      "order": 20,
+      "t_max": 1000000
+    },
+    {
+      "id": "train.smacv2.regir_kv0_sg.s0",
+      "env": "smacv2",
+      "method": "regir_kv0_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "P0"
+      },
+      "rank": 1,
+      "order": 15,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.smacv2.regir_kv0_sg.s1",
+      "env": "smacv2",
+      "method": "regir_kv0_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "P0"
+      },
+      "rank": 1,
+      "order": 16,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.smacv2.regir_kv0_sg.s2",
+      "env": "smacv2",
+      "method": "regir_kv0_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "P0"
+      },
+      "rank": 1,
+      "order": 17,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.had.regir_kv0_nomem.s0",
+      "env": "had",
+      "method": "regir_kv0_nomem",
+      "seed": 0,
+      "segments": {
+        "branch:A": "P0"
+      },
+      "rank": 1,
+      "order": 33,
+      "t_max": 1000000
+    },
+    {
+      "id": "train.had.regir_kv0_nomem.s1",
+      "env": "had",
+      "method": "regir_kv0_nomem",
+      "seed": 1,
+      "segments": {
+        "branch:A": "P0"
+      },
+      "rank": 1,
+      "order": 34,
+      "t_max": 1000000
+    },
+    {
+      "id": "train.had.regir_kv0_nomem.s2",
+      "env": "had",
+      "method": "regir_kv0_nomem",
+      "seed": 2,
+      "segments": {
+        "branch:A": "P0"
+      },
+      "rank": 1,
+      "order": 35,
+      "t_max": 1000000
+    },
+    {
+      "id": "train.smacv2.b2_qmix_atten.s0",
+      "env": "smacv2",
+      "method": "b2_qmix_atten",
+      "seed": 0,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 2,
+      "order": 12,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.smacv2.b2_qmix_atten.s1",
+      "env": "smacv2",
+      "method": "b2_qmix_atten",
+      "seed": 1,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 2,
+      "order": 13,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.smacv2.b2_qmix_atten.s2",
+      "env": "smacv2",
+      "method": "b2_qmix_atten",
+      "seed": 2,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 2,
+      "order": 14,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.had.regir_untied4_sg.s0",
+      "env": "had",
+      "method": "regir_untied4_sg",
+      "seed": 0,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 2,
+      "order": 21,
+      "t_max": 1000000
+    },
+    {
+      "id": "train.had.regir_untied4_sg.s1",
+      "env": "had",
+      "method": "regir_untied4_sg",
+      "seed": 1,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 2,
+      "order": 22,
+      "t_max": 1000000
+    },
+    {
+      "id": "train.had.regir_untied4_sg.s2",
+      "env": "had",
+      "method": "regir_untied4_sg",
+      "seed": 2,
+      "segments": {
+        "common": "P1"
+      },
+      "rank": 2,
+      "order": 23,
+      "t_max": 1000000
+    },
+    {
+      "id": "train.had.regir_kv0_norefil_sg.s0",
+      "env": "had",
+      "method": "regir_kv0_norefil_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "P1"
+      },
+      "rank": 3,
+      "order": 36,
+      "t_max": 1000000
+    },
+    {
+      "id": "train.had.regir_kv0_norefil_sg.s1",
+      "env": "had",
+      "method": "regir_kv0_norefil_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "P1"
+      },
+      "rank": 3,
+      "order": 37,
+      "t_max": 1000000
+    },
+    {
+      "id": "train.had.regir_kv0_norefil_sg.s2",
+      "env": "had",
+      "method": "regir_kv0_norefil_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "P1"
+      },
+      "rank": 3,
+      "order": 38,
+      "t_max": 1000000
+    },
+    {
+      "id": "train.had.regir_kv0_fixed4_sg.s0",
+      "env": "had",
+      "method": "regir_kv0_fixed4_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "P1"
+      },
+      "rank": 3,
+      "order": 39,
+      "t_max": 1000000
+    },
+    {
+      "id": "train.had.regir_kv0_fixed4_sg.s1",
+      "env": "had",
+      "method": "regir_kv0_fixed4_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "P1"
+      },
+      "rank": 3,
+      "order": 40,
+      "t_max": 1000000
+    },
+    {
+      "id": "train.had.regir_kv0_fixed4_sg.s2",
+      "env": "had",
+      "method": "regir_kv0_fixed4_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "P1"
+      },
+      "rank": 3,
+      "order": 41,
+      "t_max": 1000000
+    },
+    {
+      "id": "train.smacv2.regir_sg.s0",
+      "env": "smacv2",
+      "method": "regir_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 5,
+      "order": 21,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.smacv2.regir_sg.s1",
+      "env": "smacv2",
+      "method": "regir_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 5,
+      "order": 22,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.smacv2.regir_sg.s2",
+      "env": "smacv2",
+      "method": "regir_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 5,
+      "order": 23,
+      "t_max": 2000000
+    },
+    {
+      "id": "train.had.regir_fixed4_sg.s0",
+      "env": "had",
+      "method": "regir_fixed4_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 5,
+      "order": 42,
+      "t_max": 1000000
+    },
+    {
+      "id": "train.had.regir_fixed4_sg.s1",
+      "env": "had",
+      "method": "regir_fixed4_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 5,
+      "order": 43,
+      "t_max": 1000000
+    },
+    {
+      "id": "train.had.regir_fixed4_sg.s2",
+      "env": "had",
+      "method": "regir_fixed4_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 5,
+      "order": 44,
+      "t_max": 1000000
+    },
+    {
+      "id": "train.had.regir_kv0_nocount_sg.s0",
+      "env": "had",
+      "method": "regir_kv0_nocount_sg",
+      "seed": 0,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 5,
+      "order": 45,
+      "t_max": 1000000
+    },
+    {
+      "id": "train.had.regir_kv0_nocount_sg.s1",
+      "env": "had",
+      "method": "regir_kv0_nocount_sg",
+      "seed": 1,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 5,
+      "order": 46,
+      "t_max": 1000000
+    },
+    {
+      "id": "train.had.regir_kv0_nocount_sg.s2",
+      "env": "had",
+      "method": "regir_kv0_nocount_sg",
+      "seed": 2,
+      "segments": {
+        "branch:A": "P2"
+      },
+      "rank": 5,
+      "order": 47,
+      "t_max": 1000000
+    }
+  ],
+  "note": "Do not copy remaining train directories or any resume.pt. Do not start official run_all.sh on this pack; use farm4090.py."
+}

@@ -1,0 +1,4790 @@
+{
+  "protocol": "smacv2-protoss-mixed-v1",
+  "smacv2_commit": "577ab5a2cff2391f8df582da5731ea9cd6adf3c6",
+  "sc2_version": "4.10.0",
+  "policy": "uniform_legal_native",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "actor_schema": "self/ally/enemy roles + own11 + ally9 + enemy9",
+  "state_schema": "ally/enemy/reserved roles + ally8 + enemy7",
+  "rows": [
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 4,
+        "N_B": 4,
+        "K": 0
+      },
+      "episode_seed": 0,
+      "scenario_seed": 0,
+      "engine_seed": 0,
+      "episode_return": 4.045977011494253,
+      "return": 4.045977011494253,
+      "ep_len": 47,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker"
+          ],
+          "enemy_team": [
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              26.907826069005317,
+              5.092173930994683
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 0,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.874290028004907
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 4,
+        "N_B": 4,
+        "K": 0
+      },
+      "episode_seed": 1,
+      "scenario_seed": 1,
+      "engine_seed": 1,
+      "episode_return": 4.438953488372093,
+      "return": 4.438953488372093,
+      "ep_len": 57,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot"
+          ],
+          "enemy_team": [
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 1,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.823001392069273
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 4,
+        "N_B": 4,
+        "K": 0
+      },
+      "episode_seed": 2,
+      "scenario_seed": 2,
+      "engine_seed": 2,
+      "episode_return": 4.285714285714285,
+      "return": 4.285714285714285,
+      "ep_len": 53,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot"
+          ],
+          "enemy_team": [
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              9.501431759843738,
+              7.335601551284661
+            ],
+            [
+              12.49661893992813,
+              18.350145823460274
+            ],
+            [
+              13.804589961382652,
+              26.139738874595277
+            ],
+            [
+              2.5734888288897464,
+              31.239874178436228
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              22.49856824015626,
+              7.335601551284661
+            ],
+            [
+              19.50338106007187,
+              18.350145823460274
+            ],
+            [
+              18.195410038617347,
+              26.139738874595277
+            ],
+            [
+              29.426511171110253,
+              31.239874178436228
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 2,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.827293009962887
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 6,
+        "N_B": 6,
+        "K": 0
+      },
+      "episode_seed": 0,
+      "scenario_seed": 0,
+      "engine_seed": 0,
+      "episode_return": 5.3235294117647065,
+      "return": 5.3235294117647065,
+      "ep_len": 48,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker"
+          ],
+          "enemy_team": [
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              26.907826069005317,
+              5.092173930994683
+            ],
+            [
+              26.907826069005317,
+              5.092173930994683
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 0,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.91514511895366
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 6,
+        "N_B": 6,
+        "K": 0
+      },
+      "episode_seed": 1,
+      "scenario_seed": 1,
+      "engine_seed": 1,
+      "episode_return": 5.7645833333333325,
+      "return": 5.7645833333333325,
+      "ep_len": 51,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "zealot",
+            "stalker",
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot"
+          ],
+          "enemy_team": [
+            "zealot",
+            "stalker",
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 1,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.914463825989515
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 6,
+        "N_B": 6,
+        "K": 0
+      },
+      "episode_seed": 2,
+      "scenario_seed": 2,
+      "engine_seed": 2,
+      "episode_return": 4.9396551724137945,
+      "return": 4.9396551724137945,
+      "ep_len": 55,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot"
+          ],
+          "enemy_team": [
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              9.501431759843738,
+              7.335601551284661
+            ],
+            [
+              12.49661893992813,
+              18.350145823460274
+            ],
+            [
+              13.804589961382652,
+              26.139738874595277
+            ],
+            [
+              2.5734888288897464,
+              31.239874178436228
+            ],
+            [
+              0.19642708544980403,
+              31.3502353633715
+            ],
+            [
+              8.75614037985518,
+              4.315253213310424
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              22.49856824015626,
+              7.335601551284661
+            ],
+            [
+              19.50338106007187,
+              18.350145823460274
+            ],
+            [
+              18.195410038617347,
+              26.139738874595277
+            ],
+            [
+              29.426511171110253,
+              31.239874178436228
+            ],
+            [
+              31.803572914550195,
+              31.3502353633715
+            ],
+            [
+              23.243859620144818,
+              4.315253213310424
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 2,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.825189067982137
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 8,
+        "N_B": 8,
+        "K": 0
+      },
+      "episode_seed": 0,
+      "scenario_seed": 0,
+      "engine_seed": 0,
+      "episode_return": 3.2072368421052633,
+      "return": 3.2072368421052633,
+      "ep_len": 46,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker"
+          ],
+          "enemy_team": [
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              26.907826069005317,
+              5.092173930994683
+            ],
+            [
+              26.907826069005317,
+              5.092173930994683
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 0,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.855845186975785
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 8,
+        "N_B": 8,
+        "K": 0
+      },
+      "episode_seed": 1,
+      "scenario_seed": 1,
+      "engine_seed": 1,
+      "episode_return": 2.9358552631578947,
+      "return": 2.9358552631578947,
+      "ep_len": 53,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot"
+          ],
+          "enemy_team": [
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 1,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.85663494002074
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 8,
+        "N_B": 8,
+        "K": 0
+      },
+      "episode_seed": 2,
+      "scenario_seed": 2,
+      "engine_seed": 2,
+      "episode_return": 3.824324324324325,
+      "return": 3.824324324324325,
+      "ep_len": 52,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot"
+          ],
+          "enemy_team": [
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              9.501431759843738,
+              7.335601551284661
+            ],
+            [
+              12.49661893992813,
+              18.350145823460274
+            ],
+            [
+              13.804589961382652,
+              26.139738874595277
+            ],
+            [
+              2.5734888288897464,
+              31.239874178436228
+            ],
+            [
+              0.19642708544980403,
+              31.3502353633715
+            ],
+            [
+              8.75614037985518,
+              4.315253213310424
+            ],
+            [
+              10.713078495832004,
+              16.562432324189974
+            ],
+            [
+              12.288215082928529,
+              7.441777566259741
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              22.49856824015626,
+              7.335601551284661
+            ],
+            [
+              19.50338106007187,
+              18.350145823460274
+            ],
+            [
+              18.195410038617347,
+              26.139738874595277
+            ],
+            [
+              29.426511171110253,
+              31.239874178436228
+            ],
+            [
+              31.803572914550195,
+              31.3502353633715
+            ],
+            [
+              23.243859620144818,
+              4.315253213310424
+            ],
+            [
+              21.286921504167996,
+              16.562432324189974
+            ],
+            [
+              19.71178491707147,
+              7.441777566259741
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 2,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.9001050350489095
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 10,
+        "N_B": 10,
+        "K": 0
+      },
+      "episode_seed": 0,
+      "scenario_seed": 0,
+      "engine_seed": 0,
+      "episode_return": 4.569892473118278,
+      "return": 4.569892473118278,
+      "ep_len": 49,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker"
+          ],
+          "enemy_team": [
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              29.391296750111096,
+              29.391296750111096
+            ],
+            [
+              26.907826069005317,
+              5.092173930994683
+            ],
+            [
+              26.907826069005317,
+              5.092173930994683
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 0,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.975242953049019
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 10,
+        "N_B": 10,
+        "K": 0
+      },
+      "episode_seed": 1,
+      "scenario_seed": 1,
+      "engine_seed": 1,
+      "episode_return": 4.12972972972973,
+      "return": 4.12972972972973,
+      "ep_len": 54,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot"
+          ],
+          "enemy_team": [
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              0.9815007626073966,
+              0.9815007626073966
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 1,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.910483640967868
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 10,
+        "N_B": 10,
+        "K": 0
+      },
+      "episode_seed": 2,
+      "scenario_seed": 2,
+      "engine_seed": 2,
+      "episode_return": 3.589552238805969,
+      "return": 3.589552238805969,
+      "ep_len": 59,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "zealot",
+            "colossus",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot"
+          ],
+          "enemy_team": [
+            "zealot",
+            "colossus",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              9.501431759843738,
+              7.335601551284661
+            ],
+            [
+              12.49661893992813,
+              18.350145823460274
+            ],
+            [
+              13.804589961382652,
+              26.139738874595277
+            ],
+            [
+              2.5734888288897464,
+              31.239874178436228
+            ],
+            [
+              0.19642708544980403,
+              31.3502353633715
+            ],
+            [
+              8.75614037985518,
+              4.315253213310424
+            ],
+            [
+              10.713078495832004,
+              16.562432324189974
+            ],
+            [
+              12.288215082928529,
+              7.441777566259741
+            ],
+            [
+              5.749779027826778,
+              10.148770338961725
+            ],
+            [
+              7.745055787697773,
+              1.4162563038364127
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              22.49856824015626,
+              7.335601551284661
+            ],
+            [
+              19.50338106007187,
+              18.350145823460274
+            ],
+            [
+              18.195410038617347,
+              26.139738874595277
+            ],
+            [
+              29.426511171110253,
+              31.239874178436228
+            ],
+            [
+              31.803572914550195,
+              31.3502353633715
+            ],
+            [
+              23.243859620144818,
+              4.315253213310424
+            ],
+            [
+              21.286921504167996,
+              16.562432324189974
+            ],
+            [
+              19.71178491707147,
+              7.441777566259741
+            ],
+            [
+              26.25022097217322,
+              10.148770338961725
+            ],
+            [
+              24.254944212302227,
+              1.4162563038364127
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 2,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.961005536024459
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 5,
+        "N_B": 5,
+        "K": 0
+      },
+      "episode_seed": 0,
+      "scenario_seed": 0,
+      "engine_seed": 0,
+      "episode_return": 4.640776699029125,
+      "return": 4.640776699029125,
+      "ep_len": 51,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker"
+          ],
+          "enemy_team": [
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              26.907826069005317,
+              5.092173930994683
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 0,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.933111693011597
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 5,
+        "N_B": 5,
+        "K": 0
+      },
+      "episode_seed": 1,
+      "scenario_seed": 1,
+      "engine_seed": 1,
+      "episode_return": 3.3834951456310676,
+      "return": 3.3834951456310676,
+      "ep_len": 50,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "zealot",
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot"
+          ],
+          "enemy_team": [
+            "zealot",
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 1,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.824014054960571
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 5,
+        "N_B": 5,
+        "K": 0
+      },
+      "episode_seed": 2,
+      "scenario_seed": 2,
+      "engine_seed": 2,
+      "episode_return": 3.7475,
+      "return": 3.7475,
+      "ep_len": 56,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot"
+          ],
+          "enemy_team": [
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              9.501431759843738,
+              7.335601551284661
+            ],
+            [
+              12.49661893992813,
+              18.350145823460274
+            ],
+            [
+              13.804589961382652,
+              26.139738874595277
+            ],
+            [
+              2.5734888288897464,
+              31.239874178436228
+            ],
+            [
+              0.19642708544980403,
+              31.3502353633715
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              22.49856824015626,
+              7.335601551284661
+            ],
+            [
+              19.50338106007187,
+              18.350145823460274
+            ],
+            [
+              18.195410038617347,
+              26.139738874595277
+            ],
+            [
+              29.426511171110253,
+              31.239874178436228
+            ],
+            [
+              31.803572914550195,
+              31.3502353633715
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 2,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.864643166074529
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 12,
+        "N_B": 12,
+        "K": 0
+      },
+      "episode_seed": 0,
+      "scenario_seed": 0,
+      "engine_seed": 0,
+      "episode_return": 5.318493150684931,
+      "return": 5.318493150684931,
+      "ep_len": 52,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "stalker"
+          ],
+          "enemy_team": [
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "stalker"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              29.391296750111096,
+              29.391296750111096
+            ],
+            [
+              26.907826069005317,
+              5.092173930994683
+            ],
+            [
+              26.907826069005317,
+              5.092173930994683
+            ],
+            [
+              26.907826069005317,
+              5.092173930994683
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 0,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 5.0225692769745365
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 12,
+        "N_B": 12,
+        "K": 0
+      },
+      "episode_seed": 1,
+      "scenario_seed": 1,
+      "engine_seed": 1,
+      "episode_return": 5.880801687763713,
+      "return": 5.880801687763713,
+      "ep_len": 68,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "colossus",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot"
+          ],
+          "enemy_team": [
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "colossus",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              0.9815007626073966,
+              0.9815007626073966
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 1,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 5.0138054239796475
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 12,
+        "N_B": 12,
+        "K": 0
+      },
+      "episode_seed": 2,
+      "scenario_seed": 2,
+      "engine_seed": 2,
+      "episode_return": 3.6581196581196584,
+      "return": 3.6581196581196584,
+      "ep_len": 62,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "colossus",
+            "stalker",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot"
+          ],
+          "enemy_team": [
+            "colossus",
+            "stalker",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              9.501431759843738,
+              7.335601551284661
+            ],
+            [
+              12.49661893992813,
+              18.350145823460274
+            ],
+            [
+              13.804589961382652,
+              26.139738874595277
+            ],
+            [
+              2.5734888288897464,
+              31.239874178436228
+            ],
+            [
+              0.19642708544980403,
+              31.3502353633715
+            ],
+            [
+              8.75614037985518,
+              4.315253213310424
+            ],
+            [
+              10.713078495832004,
+              16.562432324189974
+            ],
+            [
+              12.288215082928529,
+              7.441777566259741
+            ],
+            [
+              5.749779027826778,
+              10.148770338961725
+            ],
+            [
+              7.745055787697773,
+              1.4162563038364127
+            ],
+            [
+              5.4766818048758585,
+              6.487054655921515
+            ],
+            [
+              6.589301188507023,
+              11.447027666222983
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              22.49856824015626,
+              7.335601551284661
+            ],
+            [
+              19.50338106007187,
+              18.350145823460274
+            ],
+            [
+              18.195410038617347,
+              26.139738874595277
+            ],
+            [
+              29.426511171110253,
+              31.239874178436228
+            ],
+            [
+              31.803572914550195,
+              31.3502353633715
+            ],
+            [
+              23.243859620144818,
+              4.315253213310424
+            ],
+            [
+              21.286921504167996,
+              16.562432324189974
+            ],
+            [
+              19.71178491707147,
+              7.441777566259741
+            ],
+            [
+              26.25022097217322,
+              10.148770338961725
+            ],
+            [
+              24.254944212302227,
+              1.4162563038364127
+            ],
+            [
+              26.52331819512414,
+              6.487054655921515
+            ],
+            [
+              25.410698811492978,
+              11.447027666222983
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 2,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 5.006487961974926
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 15,
+        "N_B": 15,
+        "K": 0
+      },
+      "episode_seed": 0,
+      "scenario_seed": 0,
+      "engine_seed": 0,
+      "episode_return": 6.604868913857679,
+      "return": 6.604868913857679,
+      "ep_len": 51,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot"
+          ],
+          "enemy_team": [
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              29.391296750111096,
+              29.391296750111096
+            ],
+            [
+              29.391296750111096,
+              29.391296750111096
+            ],
+            [
+              26.907826069005317,
+              5.092173930994683
+            ],
+            [
+              26.907826069005317,
+              5.092173930994683
+            ],
+            [
+              26.907826069005317,
+              5.092173930994683
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 0,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 5.061422319966368
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 15,
+        "N_B": 15,
+        "K": 0
+      },
+      "episode_seed": 1,
+      "scenario_seed": 1,
+      "engine_seed": 1,
+      "episode_return": 5.874999999999998,
+      "return": 5.874999999999998,
+      "ep_len": 55,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "stalker",
+            "colossus",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot"
+          ],
+          "enemy_team": [
+            "stalker",
+            "colossus",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              0.9815007626073966,
+              0.9815007626073966
+            ],
+            [
+              0.9815007626073966,
+              0.9815007626073966
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 1,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 5.089030478033237
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 15,
+        "N_B": 15,
+        "K": 0
+      },
+      "episode_seed": 2,
+      "scenario_seed": 2,
+      "engine_seed": 2,
+      "episode_return": 5.61619718309859,
+      "return": 5.61619718309859,
+      "ep_len": 57,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "colossus",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot"
+          ],
+          "enemy_team": [
+            "colossus",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              9.501431759843738,
+              7.335601551284661
+            ],
+            [
+              12.49661893992813,
+              18.350145823460274
+            ],
+            [
+              13.804589961382652,
+              26.139738874595277
+            ],
+            [
+              2.5734888288897464,
+              31.239874178436228
+            ],
+            [
+              0.19642708544980403,
+              31.3502353633715
+            ],
+            [
+              8.75614037985518,
+              4.315253213310424
+            ],
+            [
+              10.713078495832004,
+              16.562432324189974
+            ],
+            [
+              12.288215082928529,
+              7.441777566259741
+            ],
+            [
+              5.749779027826778,
+              10.148770338961725
+            ],
+            [
+              7.745055787697773,
+              1.4162563038364127
+            ],
+            [
+              5.4766818048758585,
+              6.487054655921515
+            ],
+            [
+              6.589301188507023,
+              11.447027666222983
+            ],
+            [
+              6.407311067133664,
+              0.07175015832600806
+            ],
+            [
+              8.659554666084814,
+              9.545538424871044
+            ],
+            [
+              7.624374618795867,
+              6.241007609982628
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              22.49856824015626,
+              7.335601551284661
+            ],
+            [
+              19.50338106007187,
+              18.350145823460274
+            ],
+            [
+              18.195410038617347,
+              26.139738874595277
+            ],
+            [
+              29.426511171110253,
+              31.239874178436228
+            ],
+            [
+              31.803572914550195,
+              31.3502353633715
+            ],
+            [
+              23.243859620144818,
+              4.315253213310424
+            ],
+            [
+              21.286921504167996,
+              16.562432324189974
+            ],
+            [
+              19.71178491707147,
+              7.441777566259741
+            ],
+            [
+              26.25022097217322,
+              10.148770338961725
+            ],
+            [
+              24.254944212302227,
+              1.4162563038364127
+            ],
+            [
+              26.52331819512414,
+              6.487054655921515
+            ],
+            [
+              25.410698811492978,
+              11.447027666222983
+            ],
+            [
+              25.592688932866338,
+              0.07175015832600806
+            ],
+            [
+              23.340445333915184,
+              9.545538424871044
+            ],
+            [
+              24.37562538120413,
+              6.241007609982628
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 2,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 5.053876149002463
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 20,
+        "N_B": 20,
+        "K": 0
+      },
+      "episode_seed": 0,
+      "scenario_seed": 0,
+      "engine_seed": 0,
+      "episode_return": 6.323275862068966,
+      "return": 6.323275862068966,
+      "ep_len": 54,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot"
+          ],
+          "enemy_team": [
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              6.157502108373131,
+              25.84249789162687
+            ],
+            [
+              29.391296750111096,
+              29.391296750111096
+            ],
+            [
+              29.391296750111096,
+              29.391296750111096
+            ],
+            [
+              26.907826069005317,
+              5.092173930994683
+            ],
+            [
+              26.907826069005317,
+              5.092173930994683
+            ],
+            [
+              26.907826069005317,
+              5.092173930994683
+            ],
+            [
+              26.907826069005317,
+              5.092173930994683
+            ],
+            [
+              26.907826069005317,
+              5.092173930994683
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ],
+            [
+              5.7201511559755405,
+              5.7201511559755405
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 0,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 5.174120116978884
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 20,
+        "N_B": 20,
+        "K": 0
+      },
+      "episode_seed": 1,
+      "scenario_seed": 1,
+      "engine_seed": 1,
+      "episode_return": 7.027439024390246,
+      "return": 7.027439024390246,
+      "ep_len": 58,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "zealot",
+            "stalker",
+            "colossus",
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot",
+            "colossus",
+            "zealot",
+            "colossus",
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker",
+            "stalker"
+          ],
+          "enemy_team": [
+            "zealot",
+            "stalker",
+            "colossus",
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot",
+            "colossus",
+            "zealot",
+            "colossus",
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker",
+            "stalker"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              25.988160641012826,
+              25.988160641012826
+            ],
+            [
+              0.9815007626073966,
+              0.9815007626073966
+            ],
+            [
+              0.9815007626073966,
+              0.9815007626073966
+            ],
+            [
+              0.9815007626073966,
+              0.9815007626073966
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ],
+            [
+              30.73155108899442,
+              1.2684489110055814
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 1,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 5.203162217978388
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 20,
+        "N_B": 20,
+        "K": 0
+      },
+      "episode_seed": 2,
+      "scenario_seed": 2,
+      "engine_seed": 2,
+      "episode_return": 6.608527131782948,
+      "return": 6.608527131782948,
+      "ep_len": 58,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "zealot",
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot",
+            "colossus",
+            "zealot",
+            "zealot",
+            "zealot",
+            "colossus",
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot"
+          ],
+          "enemy_team": [
+            "zealot",
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot",
+            "colossus",
+            "zealot",
+            "zealot",
+            "zealot",
+            "colossus",
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              9.501431759843738,
+              7.335601551284661
+            ],
+            [
+              12.49661893992813,
+              18.350145823460274
+            ],
+            [
+              13.804589961382652,
+              26.139738874595277
+            ],
+            [
+              2.5734888288897464,
+              31.239874178436228
+            ],
+            [
+              0.19642708544980403,
+              31.3502353633715
+            ],
+            [
+              8.75614037985518,
+              4.315253213310424
+            ],
+            [
+              10.713078495832004,
+              16.562432324189974
+            ],
+            [
+              12.288215082928529,
+              7.441777566259741
+            ],
+            [
+              5.749779027826778,
+              10.148770338961725
+            ],
+            [
+              7.745055787697773,
+              1.4162563038364127
+            ],
+            [
+              5.4766818048758585,
+              6.487054655921515
+            ],
+            [
+              6.589301188507023,
+              11.447027666222983
+            ],
+            [
+              6.407311067133664,
+              0.07175015832600806
+            ],
+            [
+              8.659554666084814,
+              9.545538424871044
+            ],
+            [
+              7.624374618795867,
+              6.241007609982628
+            ],
+            [
+              10.189237938499215,
+              12.143355274960655
+            ],
+            [
+              8.486765606197453,
+              17.302903345173895
+            ],
+            [
+              12.266027605670416,
+              5.817572671657359
+            ],
+            [
+              3.568134283018703,
+              16.373472423834937
+            ],
+            [
+              0.08061435171438369,
+              9.168742025096332
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              22.49856824015626,
+              7.335601551284661
+            ],
+            [
+              19.50338106007187,
+              18.350145823460274
+            ],
+            [
+              18.195410038617347,
+              26.139738874595277
+            ],
+            [
+              29.426511171110253,
+              31.239874178436228
+            ],
+            [
+              31.803572914550195,
+              31.3502353633715
+            ],
+            [
+              23.243859620144818,
+              4.315253213310424
+            ],
+            [
+              21.286921504167996,
+              16.562432324189974
+            ],
+            [
+              19.71178491707147,
+              7.441777566259741
+            ],
+            [
+              26.25022097217322,
+              10.148770338961725
+            ],
+            [
+              24.254944212302227,
+              1.4162563038364127
+            ],
+            [
+              26.52331819512414,
+              6.487054655921515
+            ],
+            [
+              25.410698811492978,
+              11.447027666222983
+            ],
+            [
+              25.592688932866338,
+              0.07175015832600806
+            ],
+            [
+              23.340445333915184,
+              9.545538424871044
+            ],
+            [
+              24.37562538120413,
+              6.241007609982628
+            ],
+            [
+              21.810762061500785,
+              12.143355274960655
+            ],
+            [
+              23.51323439380255,
+              17.302903345173895
+            ],
+            [
+              19.733972394329584,
+              5.817572671657359
+            ],
+            [
+              28.431865716981296,
+              16.373472423834937
+            ],
+            [
+              31.919385648285616,
+              9.168742025096332
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 2,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 5.196831697016023
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 10,
+        "N_B": 11,
+        "K": 0
+      },
+      "episode_seed": 0,
+      "scenario_seed": 0,
+      "engine_seed": 0,
+      "episode_return": 8.295267489711934,
+      "return": 8.295267489711934,
+      "ep_len": 63,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "colossus",
+            "colossus",
+            "zealot",
+            "stalker",
+            "stalker"
+          ],
+          "enemy_team": [
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "colossus",
+            "colossus",
+            "zealot",
+            "stalker",
+            "stalker",
+            "stalker"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 0,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 5.023558398941532
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 10,
+        "N_B": 11,
+        "K": 0
+      },
+      "episode_seed": 1,
+      "scenario_seed": 1,
+      "engine_seed": 1,
+      "episode_return": 7.928082191780822,
+      "return": 7.928082191780822,
+      "ep_len": 57,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "colossus",
+            "zealot"
+          ],
+          "enemy_team": [
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "colossus",
+            "zealot",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 1,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.964622554020025
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 10,
+        "N_B": 11,
+        "K": 0
+      },
+      "episode_seed": 2,
+      "scenario_seed": 2,
+      "engine_seed": 2,
+      "episode_return": 3.088669950738916,
+      "return": 3.088669950738916,
+      "ep_len": 50,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot"
+          ],
+          "enemy_team": [
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              11.277797755286825,
+              5.626111950213108
+            ],
+            [
+              2.653811287606081,
+              25.918621596528073
+            ],
+            [
+              13.20215206941112,
+              29.266643860601015
+            ],
+            [
+              4.08249250166151,
+              12.940938627800772
+            ],
+            [
+              1.8682976149684656,
+              2.294037367900671
+            ],
+            [
+              1.249572999180606,
+              9.54331497236171
+            ],
+            [
+              13.21942378179967,
+              15.630544511138837
+            ],
+            [
+              13.333347551504403,
+              11.532644986423541
+            ],
+            [
+              5.014691943908064,
+              21.197922841638583
+            ],
+            [
+              8.591611681841478,
+              24.664416062493093
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              20.722202244713174,
+              5.626111950213108
+            ],
+            [
+              29.346188712393918,
+              25.918621596528073
+            ],
+            [
+              18.79784793058888,
+              29.266643860601015
+            ],
+            [
+              27.91750749833849,
+              12.940938627800772
+            ],
+            [
+              30.131702385031534,
+              2.294037367900671
+            ],
+            [
+              30.750427000819393,
+              9.54331497236171
+            ],
+            [
+              18.78057621820033,
+              15.630544511138837
+            ],
+            [
+              18.666652448495597,
+              11.532644986423541
+            ],
+            [
+              26.985308056091938,
+              21.197922841638583
+            ],
+            [
+              23.408388318158522,
+              24.664416062493093
+            ],
+            [
+              26.13486054383332,
+              7.335601551284661
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 2,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.9185019850265235
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 10,
+        "N_B": 12,
+        "K": 0
+      },
+      "episode_seed": 0,
+      "scenario_seed": 0,
+      "engine_seed": 0,
+      "episode_return": 3.8384615384615386,
+      "return": 3.8384615384615386,
+      "ep_len": 62,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "colossus",
+            "colossus",
+            "zealot",
+            "stalker",
+            "stalker"
+          ],
+          "enemy_team": [
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "colossus",
+            "colossus",
+            "zealot",
+            "stalker",
+            "stalker",
+            "stalker",
+            "stalker"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 0,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.990219013066962
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 10,
+        "N_B": 12,
+        "K": 0
+      },
+      "episode_seed": 1,
+      "scenario_seed": 1,
+      "engine_seed": 1,
+      "episode_return": 6.170212765957447,
+      "return": 6.170212765957447,
+      "ep_len": 57,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "colossus",
+            "zealot"
+          ],
+          "enemy_team": [
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "colossus",
+            "zealot",
+            "zealot",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 1,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.963429538998753
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 10,
+        "N_B": 12,
+        "K": 0
+      },
+      "episode_seed": 2,
+      "scenario_seed": 2,
+      "engine_seed": 2,
+      "episode_return": 2.409090909090909,
+      "return": 2.409090909090909,
+      "ep_len": 52,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot"
+          ],
+          "enemy_team": [
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              11.277797755286825,
+              5.626111950213108
+            ],
+            [
+              2.653811287606081,
+              25.918621596528073
+            ],
+            [
+              13.20215206941112,
+              29.266643860601015
+            ],
+            [
+              4.08249250166151,
+              12.940938627800772
+            ],
+            [
+              1.8682976149684656,
+              2.294037367900671
+            ],
+            [
+              1.249572999180606,
+              9.54331497236171
+            ],
+            [
+              13.21942378179967,
+              15.630544511138837
+            ],
+            [
+              13.333347551504403,
+              11.532644986423541
+            ],
+            [
+              5.014691943908064,
+              21.197922841638583
+            ],
+            [
+              8.591611681841478,
+              24.664416062493093
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              20.722202244713174,
+              5.626111950213108
+            ],
+            [
+              29.346188712393918,
+              25.918621596528073
+            ],
+            [
+              18.79784793058888,
+              29.266643860601015
+            ],
+            [
+              27.91750749833849,
+              12.940938627800772
+            ],
+            [
+              30.131702385031534,
+              2.294037367900671
+            ],
+            [
+              30.750427000819393,
+              9.54331497236171
+            ],
+            [
+              18.78057621820033,
+              15.630544511138837
+            ],
+            [
+              18.666652448495597,
+              11.532644986423541
+            ],
+            [
+              26.985308056091938,
+              21.197922841638583
+            ],
+            [
+              23.408388318158522,
+              24.664416062493093
+            ],
+            [
+              26.13486054383332,
+              7.335601551284661
+            ],
+            [
+              29.32972686925667,
+              18.350145823460274
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 2,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 5.175166662083939
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 10,
+        "N_B": 15,
+        "K": 0
+      },
+      "episode_seed": 0,
+      "scenario_seed": 0,
+      "engine_seed": 0,
+      "episode_return": 3.163871951219512,
+      "return": 3.163871951219512,
+      "ep_len": 49,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "colossus",
+            "colossus",
+            "zealot",
+            "stalker",
+            "stalker"
+          ],
+          "enemy_team": [
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "colossus",
+            "colossus",
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "colossus",
+            "stalker",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ],
+            [
+              28.972794921849783,
+              3.027205078150218
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 0,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 5.084861685987562
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 10,
+        "N_B": 15,
+        "K": 0
+      },
+      "episode_seed": 1,
+      "scenario_seed": 1,
+      "engine_seed": 1,
+      "episode_return": 2.7298245614035093,
+      "return": 2.7298245614035093,
+      "ep_len": 54,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "colossus",
+            "zealot"
+          ],
+          "enemy_team": [
+            "zealot",
+            "stalker",
+            "zealot",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "colossus",
+            "zealot",
+            "stalker",
+            "stalker",
+            "zealot",
+            "zealot",
+            "zealot"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ],
+            [
+              16.0,
+              16.0
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ],
+            [
+              8.687582689310803,
+              8.687582689310803
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 1,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.981358565040864
+    },
+    {
+      "environment": "smacv2",
+      "config": {
+        "N_R": 10,
+        "N_B": 15,
+        "K": 0
+      },
+      "episode_seed": 2,
+      "scenario_seed": 2,
+      "engine_seed": 2,
+      "episode_return": 2.1237024221453287,
+      "return": 2.1237024221453287,
+      "ep_len": 43,
+      "battle_won": false,
+      "timeout": false,
+      "terminated_naturally": true,
+      "reset_config": {
+        "team_gen": {
+          "ally_team": [
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot"
+          ],
+          "enemy_team": [
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "stalker",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "stalker",
+            "zealot",
+            "colossus"
+          ],
+          "id": 0
+        },
+        "ally_start_positions": {
+          "item": [
+            [
+              11.277797755286825,
+              5.626111950213108
+            ],
+            [
+              2.653811287606081,
+              25.918621596528073
+            ],
+            [
+              13.20215206941112,
+              29.266643860601015
+            ],
+            [
+              4.08249250166151,
+              12.940938627800772
+            ],
+            [
+              1.8682976149684656,
+              2.294037367900671
+            ],
+            [
+              1.249572999180606,
+              9.54331497236171
+            ],
+            [
+              13.21942378179967,
+              15.630544511138837
+            ],
+            [
+              13.333347551504403,
+              11.532644986423541
+            ],
+            [
+              5.014691943908064,
+              21.197922841638583
+            ],
+            [
+              8.591611681841478,
+              24.664416062493093
+            ]
+          ],
+          "id": 0
+        },
+        "enemy_start_positions": {
+          "item": [
+            [
+              20.722202244713174,
+              5.626111950213108
+            ],
+            [
+              29.346188712393918,
+              25.918621596528073
+            ],
+            [
+              18.79784793058888,
+              29.266643860601015
+            ],
+            [
+              27.91750749833849,
+              12.940938627800772
+            ],
+            [
+              30.131702385031534,
+              2.294037367900671
+            ],
+            [
+              30.750427000819393,
+              9.54331497236171
+            ],
+            [
+              18.78057621820033,
+              15.630544511138837
+            ],
+            [
+              18.666652448495597,
+              11.532644986423541
+            ],
+            [
+              26.985308056091938,
+              21.197922841638583
+            ],
+            [
+              23.408388318158522,
+              24.664416062493093
+            ],
+            [
+              26.13486054383332,
+              7.335601551284661
+            ],
+            [
+              29.32972686925667,
+              18.350145823460274
+            ],
+            [
+              30.724895958808162,
+              26.139738874595277
+            ],
+            [
+              18.74505475081573,
+              31.239874178436228
+            ],
+            [
+              16.20952222447979,
+              31.3502353633715
+            ]
+          ],
+          "id": 0
+        }
+      },
+      "status": "passed",
+      "seed": 2,
+      "attempts": 1,
+      "errors": [],
+      "elapsed_seconds": 4.926604227977805
+    }
+  ],
+  "complete": true,
+  "passed": 33
+}

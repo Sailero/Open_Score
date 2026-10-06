@@ -1125,9 +1125,10 @@ def run_queue(output, env, template, devices, queue_path, *, per_gpu_default):
                 gpu = api.choose_gpu(output, env, method, live, devices, memories=memories,
                                  minimum_peak=options.get("_minimum_peak", 0),
                                  recovering=options.get("_recovering", False), per_gpu=per_gpu)
-                if gpu is not None:
-                    picked = (index, gpu)
-                break  # Keep queue order: never let a later job overtake the head.
+                if gpu is None:
+                    continue  # Head may be too large; pack a later job into leftover memory.
+                picked = (index, gpu)
+                break
             if picked is None:
                 return
             index, gpu = picked

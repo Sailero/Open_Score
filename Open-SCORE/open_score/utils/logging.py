@@ -120,23 +120,22 @@ def append_records(output, stream_name, rows):
     rows = list(rows)
     if not rows:
         return 0
-    columns = schema_for(output, stream_name)
-    payload = io.StringIO(newline="")
-    writer = csv.writer(payload, lineterminator="\n")
-    for row in rows:
-        writer.writerow([_encode(row.get(key)) for key in columns])
     path = Path(output) / f"{stream_name}.csv"
     with _locked_file(path, create=True) as stream:
         stream.seek(0, os.SEEK_END)
         if stream.tell() == 0:
+            columns = list(schema_for(output, stream_name))
             stream.write((",".join(columns) + "\n").encode("utf-8"))
         else:
             stream.seek(0)
-            if stream.readline().decode("utf-8").rstrip("\r\n").split(",") != list(columns):
-                raise ValueError(f"CSV schema differs from the frozen schema: {path}")
+            columns = stream.readline().decode("utf-8").rstrip("\r\n").split(",")
             stream.seek(-1, os.SEEK_END)
             if stream.read(1) != b"\n":
                 raise RuntimeError(f"Incomplete record at {path}; preserve it before resuming")
+        payload = io.StringIO(newline="")
+        writer = csv.writer(payload, lineterminator="\n")
+        for row in rows:
+            writer.writerow([_encode(row.get(key)) for key in columns])
         stream.seek(0, os.SEEK_END)
         stream.write(payload.getvalue().encode("utf-8"))
         stream.flush()

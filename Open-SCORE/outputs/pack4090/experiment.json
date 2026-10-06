@@ -1,0 +1,1349 @@
+{
+  "profile": "main0923",
+  "schema_version": 3,
+  "source_profile": "main0921",
+  "implementation_revision": "main0923_sg_v1",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "trial_seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "run": "train",
+  "official_checkpoint": "final",
+  "episodes_per_config": 300,
+  "candidates": {
+    "C": "regir_r1_sg",
+    "A": "regir_kv0_sg",
+    "B": "regir_kv0_intent_sg"
+  },
+  "ladder": [
+    "C",
+    "A",
+    "B"
+  ],
+  "foundation": "regir_r0_sg",
+  "trial_order": [
+    [
+      "regir_kv0_intent_sg",
+      0
+    ],
+    [
+      "regir_kv0_intent_sg",
+      1
+    ],
+    [
+      "regir_kv0_intent_sg",
+      2
+    ],
+    [
+      "regir_kv0_intent_sg",
+      3
+    ],
+    [
+      "regir_kv0_intent_sg",
+      4
+    ],
+    [
+      "regir_kv0_sg",
+      0
+    ],
+    [
+      "regir_kv0_sg",
+      1
+    ],
+    [
+      "regir_kv0_sg",
+      2
+    ],
+    [
+      "regir_kv0_sg",
+      3
+    ],
+    [
+      "regir_kv0_sg",
+      4
+    ],
+    [
+      "regir_r1_sg",
+      0
+    ],
+    [
+      "regir_r1_sg",
+      1
+    ],
+    [
+      "regir_r1_sg",
+      2
+    ],
+    [
+      "regir_r1_sg",
+      3
+    ],
+    [
+      "regir_r1_sg",
+      4
+    ],
+    [
+      "regir_r0_sg",
+      0
+    ],
+    [
+      "regir_r0_sg",
+      1
+    ],
+    [
+      "regir_r0_sg",
+      2
+    ]
+  ],
+  "common": {
+    "had": [
+      [
+        "regir_sg",
+        "P0"
+      ],
+      [
+        "regir_untied4_sg",
+        "P1"
+      ]
+    ],
+    "smacv2": [
+      [
+        "refil",
+        "P0"
+      ],
+      [
+        "spectra",
+        "P0"
+      ],
+      [
+        "transfqmix",
+        "P0"
+      ],
+      [
+        "regir_r1_sg",
+        "P0"
+      ],
+      [
+        "b2_qmix_atten",
+        "P1"
+      ]
+    ]
+  },
+  "branch": {
+    "C": {
+      "had": [
+        [
+          "regir_r1_nomem",
+          "P0"
+        ],
+        [
+          "regir_r1_norefil_sg",
+          "P1"
+        ],
+        [
+          "regir_r1_nocount_sg",
+          "P2"
+        ]
+      ],
+      "smacv2": [
+        [
+          "regir_kv0_sg",
+          "P2"
+        ]
+      ]
+    },
+    "A": {
+      "had": [
+        [
+          "regir_kv0_nomem",
+          "P0"
+        ],
+        [
+          "regir_kv0_norefil_sg",
+          "P1"
+        ],
+        [
+          "regir_kv0_fixed4_sg",
+          "P1"
+        ],
+        [
+          "regir_fixed4_sg",
+          "P2"
+        ],
+        [
+          "regir_kv0_nocount_sg",
+          "P2"
+        ]
+      ],
+      "smacv2": [
+        [
+          "regir_kv0_sg",
+          "P0"
+        ],
+        [
+          "regir_sg",
+          "P2"
+        ]
+      ]
+    },
+    "B": {
+      "had": [
+        [
+          "regir_kv0_intent_noaux_sg",
+          "P0"
+        ],
+        [
+          "regir_kv0_intent_nomem",
+          "P1"
+        ],
+        [
+          "regir_intent_sg",
+          "P2"
+        ],
+        [
+          "regir_kv0_intent_norefil_sg",
+          "P2"
+        ]
+      ],
+      "smacv2": [
+        [
+          "regir_kv0_intent_sg",
+          "P0"
+        ],
+        [
+          "regir_kv0_sg",
+          "P1"
+        ]
+      ]
+    }
+  },
+  "branch_mechanism": {
+    "A": {
+      "depth": [
+        "regir_kv0_sg",
+        "regir_sg",
+        "regir_kv0_fixed4_sg",
+        "regir_untied4_sg"
+      ],
+      "readout": [
+        "regir_kv0_sg",
+        "regir_sg"
+      ],
+      "r1deploy": [
+        "regir_kv0_sg"
+      ],
+      "smac_depth": [
+        "regir_kv0_sg"
+      ],
+      "dynamics": [
+        "regir_kv0_sg",
+        "regir_sg",
+        "regir_untied4_sg",
+        "regir_kv0_fixed4_sg",
+        "regir_fixed4_sg"
+      ],
+      "deep_rounds": [
+        "regir_kv0_sg",
+        "regir_sg",
+        "regir_kv0_fixed4_sg",
+        "regir_fixed4_sg"
+      ],
+      "global_probe": [
+        "regir_kv0_sg",
+        "regir_sg",
+        "regir_untied4_sg"
+      ]
+    },
+    "B": {
+      "depth": [
+        "regir_kv0_intent_sg",
+        "regir_kv0_sg"
+      ],
+      "intent_intervention": [
+        "regir_kv0_intent_sg"
+      ],
+      "dynamics": [
+        "regir_kv0_intent_sg",
+        "regir_kv0_sg"
+      ],
+      "smac_depth": [
+        "regir_kv0_intent_sg"
+      ]
+    },
+    "C": {
+      "readout_attention": [
+        "regir_r1_sg",
+        "regir_r0_sg",
+        "regir_kv0_sg"
+      ],
+      "global_probe": [
+        "regir_r1_sg",
+        "regir_kv0_sg",
+        "regir_sg"
+      ]
+    }
+  },
+  "common_probes": [
+    "regir_r0_sg",
+    "regir_r1_sg",
+    "regir_kv0_sg",
+    "regir_kv0_intent_sg",
+    "regir_sg",
+    "regir_untied4_sg",
+    "refil"
+  ],
+  "method_seeds": {
+    "had": {
+      "refil": [
+        0,
+        1,
+        2
+      ],
+      "refil_matched": [
+        0,
+        1,
+        2
+      ],
+      "b2_qmix_atten": [
+        0,
+        1,
+        2
+      ],
+      "dcg": [
+        0,
+        1,
+        2
+      ],
+      "spectra": [
+        0,
+        1,
+        2
+      ],
+      "alma": [
+        0,
+        1,
+        2
+      ],
+      "transfqmix": [
+        0,
+        1,
+        2
+      ],
+      "regir_kv0_intent_sg": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "regir_kv0_sg": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "regir_r1_sg": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "regir_r0_sg": [
+        0,
+        1,
+        2
+      ],
+      "regir_sg": [
+        0,
+        1,
+        2
+      ],
+      "regir_untied4_sg": [
+        0,
+        1,
+        2
+      ],
+      "regir_r1_nomem": [
+        0,
+        1,
+        2
+      ],
+      "regir_r1_norefil_sg": [
+        0,
+        1,
+        2
+      ],
+      "regir_r1_nocount_sg": [
+        0,
+        1,
+        2
+      ],
+      "regir_kv0_nomem": [
+        0,
+        1,
+        2
+      ],
+      "regir_kv0_norefil_sg": [
+        0,
+        1,
+        2
+      ],
+      "regir_kv0_fixed4_sg": [
+        0,
+        1,
+        2
+      ],
+      "regir_fixed4_sg": [
+        0,
+        1,
+        2
+      ],
+      "regir_kv0_nocount_sg": [
+        0,
+        1,
+        2
+      ],
+      "regir_kv0_intent_noaux_sg": [
+        0,
+        1,
+        2
+      ],
+      "regir_kv0_intent_nomem": [
+        0,
+        1,
+        2
+      ],
+      "regir_intent_sg": [
+        0,
+        1,
+        2
+      ],
+      "regir_kv0_intent_norefil_sg": [
+        0,
+        1,
+        2
+      ]
+    },
+    "smacv2": {
+      "refil": [
+        0,
+        1,
+        2
+      ],
+      "spectra": [
+        0,
+        1,
+        2
+      ],
+      "transfqmix": [
+        0,
+        1,
+        2
+      ],
+      "regir_r1_sg": [
+        0,
+        1,
+        2
+      ],
+      "b2_qmix_atten": [
+        0,
+        1,
+        2
+      ],
+      "regir_kv0_sg": [
+        0,
+        1,
+        2
+      ],
+      "regir_sg": [
+        0,
+        1,
+        2
+      ],
+      "regir_kv0_intent_sg": [
+        0,
+        1,
+        2
+      ]
+    }
+  },
+  "imported": {
+    "source": "main0921",
+    "baselines": [
+      "refil",
+      "refil_matched",
+      "b2_qmix_atten",
+      "dcg",
+      "spectra",
+      "alma",
+      "transfqmix"
+    ],
+    "no_sg": [
+      "regir",
+      "regir_r1",
+      "regir_kv0",
+      "regir_fixed4",
+      "regir_untied4",
+      "regir_last",
+      "regir_nocount",
+      "regir_norefil"
+    ]
+  },
+  "gate": {
+    "margin": 0.1,
+    "prob": 0.9,
+    "max_failures": 1,
+    "bootstrap": 10000,
+    "aux_episodes": 100,
+    "ladder": [
+      "C",
+      "A",
+      "B"
+    ],
+    "foundation": "regir_r0_sg",
+    "intent_wait_until": "2026-09-26T18:00:00+08:00",
+    "version": "gate_v2",
+    "registered_at": "2026-09-24T02:50:58+0800"
+  },
+  "failure_criteria": {
+    "final_validation_D": 1.0,
+    "midpoint_step": 500000,
+    "midpoint_validation_D": 3.0
+  },
+  "intent": {
+    "methods": [
+      "regir_kv0_intent_sg",
+      "regir_kv0_intent_noaux_sg",
+      "regir_kv0_intent_nomem",
+      "regir_intent_sg",
+      "regir_kv0_intent_norefil_sg"
+    ],
+    "aux_weight": 0.02,
+    "n_actions": 9,
+    "weight_rule": "lambda * ln(9) ~ initial TD loss (0.045); fixed, not tuned"
+  },
+  "environments": {
+    "had": {
+      "methods": [
+        "refil",
+        "refil_matched",
+        "b2_qmix_atten",
+        "dcg",
+        "spectra",
+        "alma",
+        "transfqmix",
+        "regir_kv0_intent_sg",
+        "regir_kv0_sg",
+        "regir_r1_sg",
+        "regir_r0_sg",
+        "regir_sg",
+        "regir_untied4_sg",
+        "regir_r1_nomem",
+        "regir_r1_norefil_sg",
+        "regir_r1_nocount_sg",
+        "regir_kv0_nomem",
+        "regir_kv0_norefil_sg",
+        "regir_kv0_fixed4_sg",
+        "regir_fixed4_sg",
+        "regir_kv0_nocount_sg",
+        "regir_kv0_intent_noaux_sg",
+        "regir_kv0_intent_nomem",
+        "regir_intent_sg",
+        "regir_kv0_intent_norefil_sg"
+      ],
+      "budget": 1000000,
+      "train_N": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "train_K": [
+        1,
+        2,
+        3
+      ],
+      "validation_configs": [
+        [
+          4,
+          4,
+          2
+        ],
+        [
+          6,
+          6,
+          2
+        ],
+        [
+          8,
+          8,
+          2
+        ],
+        [
+          10,
+          10,
+          3
+        ]
+      ],
+      "validation_points": 50,
+      "validation_episodes_per_config": 25,
+      "final_configs": [
+        [
+          4,
+          4,
+          2
+        ],
+        [
+          6,
+          6,
+          2
+        ],
+        [
+          8,
+          8,
+          2
+        ],
+        [
+          10,
+          10,
+          3
+        ],
+        [
+          5,
+          5,
+          2
+        ],
+        [
+          10,
+          10,
+          2
+        ],
+        [
+          15,
+          15,
+          2
+        ],
+        [
+          20,
+          20,
+          2
+        ],
+        [
+          25,
+          25,
+          2
+        ],
+        [
+          30,
+          30,
+          2
+        ],
+        [
+          40,
+          40,
+          2
+        ],
+        [
+          50,
+          50,
+          2
+        ],
+        [
+          10,
+          10,
+          4
+        ],
+        [
+          10,
+          10,
+          6
+        ],
+        [
+          15,
+          15,
+          4
+        ],
+        [
+          15,
+          15,
+          6
+        ],
+        [
+          20,
+          20,
+          4
+        ],
+        [
+          20,
+          20,
+          6
+        ],
+        [
+          30,
+          30,
+          4
+        ],
+        [
+          30,
+          30,
+          6
+        ],
+        [
+          10,
+          10,
+          9
+        ],
+        [
+          10,
+          10,
+          12
+        ],
+        [
+          30,
+          30,
+          9
+        ],
+        [
+          30,
+          30,
+          12
+        ]
+      ],
+      "metric": "D",
+      "direction": "min"
+    },
+    "smacv2": {
+      "methods": [
+        "refil",
+        "spectra",
+        "transfqmix",
+        "regir_r1_sg",
+        "b2_qmix_atten",
+        "regir_kv0_sg",
+        "regir_sg",
+        "regir_kv0_intent_sg"
+      ],
+      "budget": 2000000,
+      "validation_configs": [
+        [
+          4,
+          4,
+          0
+        ],
+        [
+          6,
+          6,
+          0
+        ],
+        [
+          8,
+          8,
+          0
+        ],
+        [
+          10,
+          10,
+          0
+        ]
+      ],
+      "validation_points": 50,
+      "validation_episodes_per_config": 32,
+      "final_configs": [
+        [
+          5,
+          5,
+          0
+        ],
+        [
+          10,
+          10,
+          0
+        ],
+        [
+          12,
+          12,
+          0
+        ],
+        [
+          15,
+          15,
+          0
+        ],
+        [
+          20,
+          20,
+          0
+        ],
+        [
+          10,
+          11,
+          0
+        ],
+        [
+          10,
+          12,
+          0
+        ],
+        [
+          10,
+          15,
+          0
+        ]
+      ],
+      "metric": "battle_won",
+      "direction": "max",
+      "upstream_commit": "577ab5a2cff2391f8df582da5731ea9cd6adf3c6",
+      "game_version": "4.10.0",
+      "state_last_action": false
+    }
+  },
+  "mechanisms": {
+    "depth_configs": [
+      [
+        10,
+        10,
+        2
+      ],
+      [
+        30,
+        30,
+        2
+      ],
+      [
+        50,
+        50,
+        2
+      ]
+    ],
+    "gate_depth_configs": [
+      [
+        10,
+        10,
+        2
+      ],
+      [
+        50,
+        50,
+        2
+      ]
+    ],
+    "dup_configs": [
+      [
+        10,
+        10,
+        2
+      ],
+      [
+        30,
+        30,
+        2
+      ],
+      [
+        50,
+        50,
+        2
+      ]
+    ],
+    "readout_configs": [
+      [
+        50,
+        50,
+        2
+      ],
+      [
+        30,
+        30,
+        12
+      ]
+    ],
+    "readouts": [
+      "learned",
+      "read1",
+      "read2",
+      "read3",
+      "read4",
+      "uniform"
+    ],
+    "smac_depth_configs": [
+      [
+        10,
+        10,
+        0
+      ],
+      [
+        15,
+        15,
+        0
+      ],
+      [
+        20,
+        20,
+        0
+      ]
+    ],
+    "smac_depths": [
+      1,
+      2,
+      6
+    ],
+    "probe_configs": [
+      [
+        10,
+        10,
+        2
+      ],
+      [
+        10,
+        10,
+        3
+      ],
+      [
+        30,
+        30,
+        2
+      ],
+      [
+        50,
+        50,
+        2
+      ],
+      [
+        30,
+        30,
+        12
+      ]
+    ],
+    "intent_modes": [
+      "uniform",
+      "shuffle",
+      "oracle"
+    ],
+    "dup_pursuit": {
+      "distance": 1500.0,
+      "angle_degrees": 30.0
+    },
+    "read1_equivalence_verified": false,
+    "timing_methods": [
+      "refil",
+      "refil_matched",
+      "regir_r0_sg",
+      "regir_r1_sg",
+      "regir_kv0_sg",
+      "regir_kv0_intent_sg",
+      "regir_sg",
+      "regir_untied4_sg",
+      "transfqmix"
+    ],
+    "timing_warmup": 50,
+    "timing_repeats": 200
+  },
+  "resources": {
+    "gpu_ids": [
+      0,
+      1
+    ],
+    "had_gpu_per_card": 3,
+    "had_gpu_per_card_by_device": {
+      "0": 3,
+      "1": 3
+    },
+    "smac_gpu_per_card_trial": 1,
+    "smac_gpu_per_card": 2,
+    "continuous_fill": true,
+    "global_train_slots": 6,
+    "gpu_reserve_gib": 8,
+    "had_gpu_admission": {
+      "reserve_gib": 8.0,
+      "peak_multiplier": 1.25
+    },
+    "cuda_oom_auto_retries": 3,
+    "cuda_oom_backoff_seconds": [
+      60,
+      120,
+      240
+    ],
+    "had_eval_max": 32,
+    "smac_eval_max": 16,
+    "diagnostics_max": 12,
+    "had_workers": 8,
+    "smac_workers": 4,
+    "speed_guard": {
+      "after_hours": 2,
+      "ratio": 0.8
+    },
+    "evaluation": {
+      "smacv2": {
+        "device": "auto",
+        "max_concurrent": 16,
+        "final_shards": 32,
+        "physical_gpus": [
+          0,
+          1
+        ],
+        "gpu_workers_per_device": 2,
+        "gpu_reserve_gib": 8,
+        "checkpoint_poll_seconds": 5,
+        "cpu_threads_per_worker": 1,
+        "policy_rng": "per_episode_seed_v1",
+        "updated_at": 1790485009.153483
+      },
+      "had": {
+        "device": "auto",
+        "max_concurrent": 32,
+        "final_shards": 96,
+        "physical_gpus": [
+          0,
+          1
+        ],
+        "gpu_workers_per_device": 2,
+        "gpu_reserve_gib": 8,
+        "checkpoint_poll_seconds": 5,
+        "cpu_threads_per_worker": 1,
+        "policy_rng": "per_episode_seed_v1",
+        "updated_at": 1790485009.148616
+      }
+    },
+    "measurement_gpu": 1
+  },
+  "sources": {
+    "transfqmix_commit": "2ef0a0726f1f186097b4b560509ceb5a801fdafe",
+    "spectra_smac_commit": "ffababf6187216c9d16b2109ee8ef6fe5fdf1172"
+  },
+  "imports": [
+    {
+      "method": "refil",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "8437bce5209e4a92add0b18b10171e7b",
+      "source_version": "main0921",
+      "checkpoint": "refil/train/seed_0/final.pt"
+    },
+    {
+      "method": "refil",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "92d90971bb874c75bd1c4f77f9bfe268",
+      "source_version": "main0921",
+      "checkpoint": "refil/train/seed_1/final.pt"
+    },
+    {
+      "method": "refil",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "7ea826c2179f463885c7893dba9687af",
+      "source_version": "main0921",
+      "checkpoint": "refil/train/seed_2/final.pt"
+    },
+    {
+      "method": "refil_matched",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "986e65ea27a84ab0aab149048c9e097b",
+      "source_version": "main0921",
+      "checkpoint": "refil_matched/train/seed_0/final.pt"
+    },
+    {
+      "method": "refil_matched",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "704a7ee2f9a1417693c1f81797e39c22",
+      "source_version": "main0921",
+      "checkpoint": "refil_matched/train/seed_1/final.pt"
+    },
+    {
+      "method": "refil_matched",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "e33d205e725c4bfd88fbdb3159ca8828",
+      "source_version": "main0921",
+      "checkpoint": "refil_matched/train/seed_2/final.pt"
+    },
+    {
+      "method": "b2_qmix_atten",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "7c6a03bb5b234b4d9cf78e82b49f14e0",
+      "source_version": "main0921",
+      "checkpoint": "b2_qmix_atten/train/seed_0/final.pt"
+    },
+    {
+      "method": "b2_qmix_atten",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "b845741854d24b5fa23e86d2c1d9113d",
+      "source_version": "main0921",
+      "checkpoint": "b2_qmix_atten/train/seed_1/final.pt"
+    },
+    {
+      "method": "b2_qmix_atten",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "0bee87e082924244a6ddf96016eac02f",
+      "source_version": "main0921",
+      "checkpoint": "b2_qmix_atten/train/seed_2/final.pt"
+    },
+    {
+      "method": "dcg",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "f77b760225934887b4539f2a98e69d28",
+      "source_version": "main0921",
+      "checkpoint": "dcg/train/seed_0/final.pt"
+    },
+    {
+      "method": "dcg",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "0a94180eb9624fa4be99e1aa60a36b9f",
+      "source_version": "main0921",
+      "checkpoint": "dcg/train/seed_1/final.pt"
+    },
+    {
+      "method": "dcg",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "db7315cc100e406e815e7667e91bb694",
+      "source_version": "main0921",
+      "checkpoint": "dcg/train/seed_2/final.pt"
+    },
+    {
+      "method": "spectra",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "53e7f877dd9548a784e6d7376b42b7e2",
+      "source_version": "main0921",
+      "checkpoint": "spectra/train/seed_0/final.pt"
+    },
+    {
+      "method": "spectra",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "c3769d11d2bd4250838f8bdaa29cf3a2",
+      "source_version": "main0921",
+      "checkpoint": "spectra/train/seed_1/final.pt"
+    },
+    {
+      "method": "spectra",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "84ab91a1215f4d83afa8921d9054905d",
+      "source_version": "main0921",
+      "checkpoint": "spectra/train/seed_2/final.pt"
+    },
+    {
+      "method": "alma",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "b649c32be10f45dd9f58b56c9ee7541b",
+      "source_version": "main0921",
+      "checkpoint": "alma/train/seed_0/final.pt"
+    },
+    {
+      "method": "alma",
+      "seed": 1,
+      "t_env": 1000007,
+      "checkpoint_id": "bef1d569c3d1481eb943218335bc1a2d",
+      "source_version": "main0921",
+      "checkpoint": "alma/train/seed_1/final.pt"
+    },
+    {
+      "method": "alma",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "ec7ba92b0aff4edc84da0193569d67b7",
+      "source_version": "main0921",
+      "checkpoint": "alma/train/seed_2/final.pt"
+    },
+    {
+      "method": "transfqmix",
+      "seed": 0,
+      "t_env": 1000000,
+      "checkpoint_id": "ba6ad0aad4844160892a1bc20a57e682",
+      "source_version": "main0921",
+      "checkpoint": "transfqmix/train/seed_0/final.pt"
+    },
+    {
+      "method": "transfqmix",
+      "seed": 1,
+      "t_env": 1000000,
+      "checkpoint_id": "55ae92a6386a4ba3919d33fb1966e070",
+      "source_version": "main0921",
+      "checkpoint": "transfqmix/train/seed_1/final.pt"
+    },
+    {
+      "method": "transfqmix",
+      "seed": 2,
+      "t_env": 1000000,
+      "checkpoint_id": "0a9f5fd11b1f4f0daaccc0e617fc3290",
+      "source_version": "main0921",
+      "checkpoint": "transfqmix/train/seed_2/final.pt"
+    }
+  ],
+  "imported_no_sg": [
+    {
+      "method": "regir",
+      "seed": 0,
+      "checkpoint_id": "b817b949ab93410bbf190bcea9ca4483",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir",
+      "seed": 1,
+      "checkpoint_id": "e7aef562b6434239996cd7ecaf56f548",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir",
+      "seed": 2,
+      "checkpoint_id": "92c7fda6d9af429bbdb7760ee0142e49",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_fixed4",
+      "seed": 0,
+      "checkpoint_id": "9e8b05421826487ca356c54b4d8dc797",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_fixed4",
+      "seed": 1,
+      "checkpoint_id": "56e50104675b448088a994772b6ffce5",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_fixed4",
+      "seed": 2,
+      "checkpoint_id": "e74ef4ccd90640c8954b388581a42862",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_kv0",
+      "seed": 0,
+      "checkpoint_id": "5a7c5dd6668f4cb6b11b806092ed08cb",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_kv0",
+      "seed": 1,
+      "checkpoint_id": "c1d17e4761824e00801e4572f021c88b",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_kv0",
+      "seed": 2,
+      "checkpoint_id": "8043231425e64b7db2f23acb92f7d76a",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_last",
+      "seed": 0,
+      "checkpoint_id": "b034f55b35434ef5970b3fe380a2e6a6",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_last",
+      "seed": 1,
+      "checkpoint_id": "efa9dff6d1484916ace22e0f2eaf2216",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_last",
+      "seed": 2,
+      "checkpoint_id": "eb844bcfdda34e7fa8491fe826fc02ed",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_nocount",
+      "seed": 0,
+      "checkpoint_id": "e3863ff9866d4bd4b9a4227e31df424d",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_nocount",
+      "seed": 1,
+      "checkpoint_id": "4343f851504a4f7f94fabf5ee84e5e03",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_nocount",
+      "seed": 2,
+      "checkpoint_id": "ca257488e04b41cbb0dea7edb8f773a0",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_norefil",
+      "seed": 0,
+      "checkpoint_id": "052590256058427fa26d4d6261edee25",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_norefil",
+      "seed": 1,
+      "checkpoint_id": "27722a2879f74c2693a92b693643aa22",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_norefil",
+      "seed": 2,
+      "checkpoint_id": "71455d3e1b704e38a85a01e5b76e98ef",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_r1",
+      "seed": 0,
+      "checkpoint_id": "555c636f09e0495b83e2b07aafec5201",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_r1",
+      "seed": 1,
+      "checkpoint_id": "c2919c87489c4c329e3aa71171d25d85",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_r1",
+      "seed": 2,
+      "checkpoint_id": "950f7af3c197442d8c5e68f204f8adae",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_untied4",
+      "seed": 0,
+      "checkpoint_id": "e4ca7acccec84de583f08866abe3fa74",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_untied4",
+      "seed": 1,
+      "checkpoint_id": "e5739f6da8834b82b97b9e14e9e85521",
+      "protocol": "no_sg"
+    },
+    {
+      "method": "regir_untied4",
+      "seed": 2,
+      "checkpoint_id": "25196aa73a624c77ba5167f86745d17a",
+      "protocol": "no_sg"
+    }
+  ],
+  "import_record_counts": {
+    "episodes": 443400,
+    "learning": 137475,
+    "progress": 333624,
+    "trajectories": 1008
+  },
+  "reference_speed": {
+    "regir_kv0": 24.04174287762567,
+    "regir_untied4": 13.942775484110806,
+    "regir_fixed4": 15.332916729328213
+  }
+}
