@@ -45,7 +45,10 @@ SCHEMAS = {
 def schema_for(output, stream_name):
     from open_score.eval.experiment import is_profile
     columns = SCHEMAS[stream_name]
-    if not is_profile(output):
+    root = Path(output)
+    if root.name in ("had", "mpe", "smacv2") and (root.parent / "experiment.json").exists():
+        root = root.parent
+    if not is_profile(root) and not (root / "had").is_dir():
         return columns
     extra = ("env", "checkpoint_id", "arm", "cycle_depth", "readout")
     if stream_name == "episodes":
@@ -120,6 +123,13 @@ def append_records(output, stream_name, rows):
     rows = list(rows)
     if not rows:
         return 0
+    if (Path(output) / "had").is_dir():
+        from open_score.eval.experiment import environment_directory
+        grouped = {}
+        for row in rows:
+            grouped.setdefault(row.get("env") or "had", []).append(row)
+        return sum(append_records(environment_directory(output, env), stream_name, values)
+                   for env, values in grouped.items())
     path = Path(output) / f"{stream_name}.csv"
     with _locked_file(path, create=True) as stream:
         stream.seek(0, os.SEEK_END)
@@ -173,9 +183,26 @@ def _read_csv_bytes(path):
     return raw[:newline + 1] if newline >= 0 else b""
 
 
+def record_paths(output, stream_name, env=None):
+    """Locate a legacy shared CSV or the version's separate environment CSVs."""
+    root = Path(output)
+    legacy = root / f"{stream_name}.csv"
+    if legacy.exists():
+        return [legacy]
+    if env is not None:
+        from open_score.eval.experiment import environment_directory
+        path = environment_directory(root, env) / f"{stream_name}.csv"
+        return [path] if path.exists() else []
+    return sorted(root.glob(f"*/{stream_name}.csv"))
+
+
 def iter_records(output, stream_name, *, run=None, method=None, seed=None, env=None):
     """Stream complete JSON-in-CSV rows, filtering before retaining history."""
-    path = Path(output) / f"{stream_name}.csv"
+    for path in record_paths(output, stream_name, env):
+        yield from _iter_record_file(path, run=run, method=method, seed=seed, env=env)
+
+
+def _iter_record_file(path, *, run=None, method=None, seed=None, env=None):
     if not path.exists():
         return
     with path.open(encoding="utf-8", newline="") as stream:
@@ -206,7 +233,7 @@ def read_records(output, stream_name, *, run=None, method=None, seed=None, env=N
 def read_latest(output, stream_name, *, run=None, method=None, seed=None, keys=None, env=None):
     """Last row per (method, run, seed). Does not retain history."""
     from open_score.eval.experiment import is_profile
-    if is_profile(output):
+    if is_profile(output) or (Path(output) / "had").is_dir():
         latest = {}
         for row in iter_records(output, stream_name, run=run, method=method, seed=seed, env=env):
             identity = (row.get("method"), row.get("run"), row.get("seed"))
@@ -354,6 +381,8 @@ def live_console_jobs(output, max_age=180):
     for pattern, kind, filename in (
         ("*/*/seed_*/console.log", "train", "console.log"),
         ("*/*/seed_*/eval.console.log", "eval", "eval.console.log"),
+        ("*/*/*/seed_*/console.log", "train", "console.log"),
+        ("*/*/*/seed_*/eval.console.log", "eval", "eval.console.log"),
     ):
         for path in root.glob(pattern):
             try:
@@ -375,14 +404,17 @@ def live_console_jobs(output, max_age=180):
 class ExperimentLogger:
     def __init__(self, output=DEFAULT_OUTPUT, method="shared", seed=0, run=FORMAL_RUN, env="had"):
         self.output, self.method, self.seed, self.run = Path(output), str(method), int(seed), str(run)
-        from open_score.eval.experiment import is_profile
-        self.profile = is_profile(output)
+        from open_score.eval.experiment import PROFILE, is_profile
+        self.profile = is_profile(output) or (self.output / "had").is_dir()
+        self.version = PROFILE if self.profile else VERSION
+        metadata = self.output / "experiment.json"
+        if self.profile and metadata.exists():
+            self.version = json.loads(metadata.read_text(encoding="utf-8")).get("profile", self.version)
         self.env = env
         self._trajectory_keys = None
 
     def _row(self, data):
-        from open_score.eval.experiment import PROFILE
-        row = dict(version=PROFILE if self.profile else VERSION, run=self.run, method=self.method, seed=self.seed,
+        row = dict(version=self.version, run=self.run, method=self.method, seed=self.seed,
                    recorded_at=datetime.now(timezone.utc).isoformat(timespec="seconds"))
         if self.profile:
             row["env"] = self.env

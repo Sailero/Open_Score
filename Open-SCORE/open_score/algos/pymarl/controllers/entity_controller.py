@@ -137,6 +137,17 @@ class EntityMAC(BasicMAC):
                 imagine_inps['observer_entities'] = rets['observer_entities'].repeat(2, 1, 1, 1, 1)
         if imagine_inps is not None:
             imagine_inps['avail_actions'] = rets['avail_actions'].repeat(2, 1, 1, 1)
+        if getattr(self.args, 'leaf_loop_core', None):
+            if 'loop_depth' not in batch.scheme:
+                raise ValueError('Loop candidates require recorded agent-step depths')
+            depth = batch['loop_depth'][:, t]
+            if depth.shape != (bs, t.stop - t.start, self.n_agents, 1):
+                raise ValueError('loop_depth must have shape [B,T,A,1]')
+            rets['loop_depth'] = depth.clamp_min(1).long()
+            rets['loop_filled'] = batch['filled'][:, t].bool()
+            if imagine_inps is not None:
+                imagine_inps['loop_depth'] = rets['loop_depth'].repeat(2, 1, 1, 1)
+                imagine_inps['loop_filled'] = rets['loop_filled'].repeat(2, 1, 1)
         if self.args.multi_task:
             rets['entity2task_mask'] = batch['entity2task_mask'][:, t]
             rets['task_mask'] = batch['task_mask'][:, t]

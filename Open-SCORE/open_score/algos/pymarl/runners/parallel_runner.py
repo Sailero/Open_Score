@@ -267,18 +267,30 @@ class ParallelRunner:
             summary['q_i_mean'] = float(np.mean(qs['q_i'])) if qs['q_i'] else None
         self.last_episode_rows, self.last_trajectories = summaries, trajectories
         self.env_steps_this_run = physical_steps
+        if getattr(self.args, 'leaf_loop_core', None):
+            # Earlier-finishing environments have their own final time index.
+            # Record bootstrap exits without a second action/GRU commit.
+            for rank in range(count):
+                filled = batch['filled'][rank, :, 0].nonzero(as_tuple=False).flatten()
+                if filled.numel():
+                    self.mac.prepare_loop_depth(batch, int(filled[-1]), bs=[rank], test_mode=test_mode)
         return batch[:, :t + 1], summaries
 
     def state_dict(self):
         for conn in self.parent_conns:
             conn.send(('get_rng_state', None))
-        return {'t_env': self.t_env, 'episode_counts': self.episode_counts,
+        state = {'t_env': self.t_env, 'episode_counts': self.episode_counts,
                 'seed_rngs': [rng.bit_generator.state for rng in self.seed_rngs],
                 'env_rngs': [self._recv(i) for i in range(self.batch_size)]}
+        if getattr(self.args, 'leaf_loop_core', None):
+            state['loop_depth_rng'] = self.mac.loop_depth_rng_state()
+        return state
 
     def load_state_dict(self, state):
         self.t_env = state['t_env']
         self.episode_counts = list(state['episode_counts'])
+        if getattr(self.args, 'leaf_loop_core', None):
+            self.mac.load_loop_depth_rng_state(state.get('loop_depth_rng'))
         for rng, saved in zip(self.seed_rngs, state['seed_rngs']):
             rng.bit_generator.state = saved
         for conn, saved in zip(self.parent_conns, state['env_rngs']):

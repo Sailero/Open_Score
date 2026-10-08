@@ -152,11 +152,16 @@ def max_depth(method):
     return 4 if MAIN_OVERRIDES.get(method, {}).get("rer_update") == "untied4" else 6
 
 
-def run_directory(output, method, seed, env="had", run="train"):
+def environment_directory(output, env="had"):
+    """Resolve environment artifacts in both archived flat and environment layouts."""
     root = Path(output)
-    if env != "had":
-        root /= env
-    return root / method / run / f"seed_{int(seed)}"
+    if root.name == env and (root.parent / "experiment.json").exists():
+        return root
+    return root / env if env != "had" or (root / "had").is_dir() else root
+
+
+def run_directory(output, method, seed, env="had", run="train"):
+    return environment_directory(output, env) / method / run / f"seed_{int(seed)}"
 
 
 def atomic_json(path, value):

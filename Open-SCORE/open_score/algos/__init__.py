@@ -97,9 +97,54 @@ MAIN_OVERRIDES.update({
     "regir_r1_norefil_sg": _sg({**MAIN_OVERRIDES["regir_r1"], **_NOREFIL}),
     "regir_r1_nocount_sg": _sg({**MAIN_OVERRIDES["regir_r1"], "skip_count_inject": True}),
 })
+# Cloud-only research configurations; the original main0928 matrix is unchanged.
+_NOMEM = {**_CYCLE, "skip_count_inject": True,
+          "global_query_detach_memory": True, "global_query_no_memory": True}
+_REFINE = {**_NOMEM, "rer_stable_cycle": True,
+           "rer_input_fusion": True, "read_last_round": True}
+REFINEMENT_OVERRIDES = {
+    "regir_nomem_r0": {**_NOMEM, "global_depths": [1], "global_eval_depth": 1, "global_read_h0": True},
+    "regir_nomem_r1": {**_NOMEM, "global_depths": [1], "global_eval_depth": 1},
+    "regir_nomem_fixed4": {**_NOMEM, "global_depths": [4]},
+    "regir_nomem_last": {**_NOMEM, "read_last_round": True},
+    "regir_nomem_static": {**_NOMEM, "rer_readout": "static"},
+    "regir_nomem_scorenorm": {**_NOMEM, "rer_score_normalize": True},
+    "regir_refine_nomem": dict(_REFINE),
+    "regir_refine_r1_nomem": {**_REFINE, "global_depths": [1], "global_eval_depth": 1},
+    "regir_refine_noinput_nomem": {**_REFINE, "rer_input_fusion": False},
+    "regir_refine_fixedinput_nomem": {**_REFINE, "rer_input_fixed_gate": 0.25},
+    "regir_refine_mix_nomem": {**_REFINE, "read_last_round": False},
+    "regir_refine_fixed4_nomem": {**_REFINE, "global_depths": [4]},
+    "regir_refine_untied4_nomem": {**_REFINE, "global_depths": [4], "rer_update": "untied4"},
+    # A controlled Set-style stack, not a claim to reproduce the full Set Transformer.
+    "regir_set2_nomem": {**_NOMEM, "global_depths": [2], "global_eval_depth": 2,
+                          "rer_update": "untied", "rer_untied_depth": 2,
+                          "rer_stable_cycle": True, "read_last_round": True},
+}
+MAIN_OVERRIDES.update(REFINEMENT_OVERRIDES)
+# Five new loop cores share the retained host, temporal head and training pool.
+# Keep this declaration literal: leaf1009 reads it without importing HAD.
+LOOP_CANDIDATE_OVERRIDES = {
+    "regir_loop_nomem": {**_NOMEM, "leaf_loop_core": "query_feedback", "rer_stable_cycle": True,
+        "read_last_round": True, "rnn_hidden_dim": 64, "global_embed_dim": 64,
+        "global_n_heads": 4, "global_ffn_mult": 2, "global_slots": 4},
+    "regir_bidirectional_nomem": {**_NOMEM, "leaf_loop_core": "bidirectional", "rer_stable_cycle": True,
+        "read_last_round": True, "rnn_hidden_dim": 64, "global_embed_dim": 64,
+        "global_n_heads": 4, "global_ffn_mult": 2, "global_slots": 4},
+    "regir_requery_nomem": {**_NOMEM, "leaf_loop_core": "requery", "rer_stable_cycle": True,
+        "read_last_round": True, "rnn_hidden_dim": 64, "global_embed_dim": 64,
+        "global_n_heads": 4, "global_ffn_mult": 2, "global_slots": 4},
+    "regir_entitygru_nomem": {**_NOMEM, "leaf_loop_core": "entity_gru", "rer_stable_cycle": True,
+        "read_last_round": True, "rnn_hidden_dim": 64, "global_embed_dim": 64,
+        "global_n_heads": 4, "global_ffn_mult": 2, "global_slots": 4},
+    "regir_slotgru_nomem": {**_NOMEM, "leaf_loop_core": "slot_gru", "rer_stable_cycle": True,
+        "read_last_round": True, "rnn_hidden_dim": 64, "global_embed_dim": 64,
+        "global_n_heads": 4, "global_ffn_mult": 2, "global_slots": 4},
+}
+MAIN_OVERRIDES.update(LOOP_CANDIDATE_OVERRIDES)
 POLICY_METHODS = METHODS + PROBE_METHODS + tuple(dict.fromkeys(
     (*V4_METHODS, *V5_METHODS, *MAIN_TRAIN_METHODS, *MAIN0923_METHODS, "refil_cycle", "alma_legacy",
-     "refil_count_ln")))
+     "refil_count_ln", *REFINEMENT_OVERRIDES, *LOOP_CANDIDATE_OVERRIDES)))
 V4_OVERRIDES = {
     "refil_local_mild": {
         "imagine_group": "mixed_distance",
@@ -349,7 +394,7 @@ def make_runtime_env(args_dict, rank=0):
     return NativeEntityEnv(args_dict["env"], **env_args)
 
 
-def make_scheme(env_info, multi_task=False):
+def make_scheme(env_info, multi_task=False, loop_depth=False):
     import torch as th
     from components.transforms import OneHot
     na, ne, nf, nu = (int(env_info[key]) for key in ("n_agents", "n_entities", "entity_shape", "n_actions"))
@@ -369,6 +414,8 @@ def make_scheme(env_info, multi_task=False):
         "t_added": {"vshape": (1,), "dtype": th.long, "episode_const": True},
     }
     actor_width = env_info.get("actor_entity_shape", env_info.get("observer_entity_shape"))
+    if loop_depth:
+        scheme["loop_depth"] = {"vshape": (1,), "group": "agents", "dtype": th.long}
     if actor_width is not None:
         scheme["observer_entities"] = {"vshape": (na, ne, int(actor_width))}
     if multi_task:
@@ -556,7 +603,7 @@ def train(name, cfg):
     from open_score.eval.report import refresh_report
 
     def refresh_report_safe():
-        if profile:
+        if profile or getattr(args, "external_report", False):
             return
         try:
             refresh_report(output)
@@ -581,7 +628,8 @@ def train(name, cfg):
     if int(args.t_max) <= 0:
         raise ValueError("t_max must be an explicitly selected positive physical-step budget")
     output = Path(args.output)
-    run_dir = (experiment.run_directory(output, name, args.seed, env=args.env, run=args.run) if profile
+    version_layout = profile or getattr(args, "external_report", False)
+    run_dir = (experiment.run_directory(output, name, args.seed, env=args.env, run=args.run) if version_layout
                else output / name / args.run / f"seed_{args.seed}")
     if any(path.exists() for path in resume_files(run_dir)) and not args.resume:
         raise FileExistsError(f"Existing run: {run_dir}; use --resume to continue it")
@@ -756,7 +804,8 @@ def train(name, cfg):
                 loaded_from = committed
             safe_checkpoint_path = loaded_from
             safe_checkpoint_t_env = saved_t_env = int(saved["progress"]["t_env"])
-        scheme, groups, preprocess = make_scheme(env_info, multi_task=args.multi_task)
+        scheme, groups, preprocess = make_scheme(env_info, multi_task=args.multi_task,
+                                                loop_depth=bool(getattr(args, "leaf_loop_core", None)))
         # ALMA controllers expect the base feature dimension as a scalar.
         model_scheme = copy.deepcopy(scheme)
         model_scheme["entities"]["vshape"] = args.entity_shape
@@ -1199,7 +1248,8 @@ def load_policy(name, checkpoint):
     for key in ("n_agents", "n_entities", "entity_shape", "state_shape", "obs_shape", "n_tasks"):
         if key in env_info:
             setattr(args, key, env_info[key])
-    scheme, groups, preprocess = make_scheme(env_info, multi_task=getattr(args, "multi_task", False))
+    scheme, groups, preprocess = make_scheme(env_info, multi_task=getattr(args, "multi_task", False),
+                                            loop_depth=bool(getattr(args, "leaf_loop_core", None)))
     model_scheme = copy.deepcopy(scheme)
     model_scheme["entities"]["vshape"] = args.entity_shape
     model_scheme["actions_onehot"] = {"vshape": (args.n_actions,), "group": "agents"}

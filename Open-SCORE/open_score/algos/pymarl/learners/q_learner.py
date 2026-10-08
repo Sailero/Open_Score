@@ -377,7 +377,10 @@ class QLearner:
             batch_mult += 2
 
         branch = getattr(self.args, "global_branch", None)
-        if branch in ("cycle", "slot", "feedback"):
+        if getattr(self.args, "leaf_loop_core", None):
+            if "loop_depth" not in batch.scheme:
+                raise ValueError("Loop candidates must train on recorded agent-step depths")
+        elif branch in ("cycle", "slot", "feedback"):
             choices = [int(value) for value in getattr(self.args, "global_depths", (1, 2, 3, 4))]
             depth = choices[int(th.randint(len(choices), (1,)).item())]
             self.mac.set_global_depth(depth)

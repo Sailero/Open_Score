@@ -270,9 +270,78 @@ class FrozenPolicyAdapter:
 
     def set_eval_depth(self, depth):
         depth = int(depth)
+        if getattr(self.args, "leaf_loop_core", None):
+            self.set_loop_execution("fixed", depth=depth)
         self.args.global_eval_depth = depth
         if hasattr(self.mac, "set_global_depth"):
             self.mac.set_global_depth(depth)
+
+    def set_loop_execution(self, mode, depth=4, threshold=None, probabilities=None):
+        if not getattr(self.args, "leaf_loop_core", None):
+            raise ValueError("Loop execution is available only for the five loop candidates")
+        if mode not in ("fixed", "adaptive", "random"):
+            raise ValueError("Loop execution mode must be fixed, adaptive or random")
+        depth = int(depth)
+        if not 1 <= depth <= 4:
+            raise ValueError("Loop execution depth must be in 1..4")
+        if threshold is not None and not np.isfinite(float(threshold)):
+            raise ValueError("Loop threshold must be finite")
+        execution = dict(mode=mode, depth=depth)
+        if threshold is not None:
+            execution["threshold"] = float(threshold)
+        if probabilities is not None:
+            values = np.asarray(probabilities, dtype=np.float64)
+            if values.shape != (4,) or not np.isfinite(values).all() or (values < 0).any() or values.sum() <= 0:
+                raise ValueError("Loop probabilities require four finite nonnegative entries with positive sum")
+            execution["probabilities"] = (values / values.sum()).tolist()
+        self.mac.agent.loop_execution = execution
+
+    def set_loop_seed(self, seed):
+        import torch as th
+        if not getattr(self.args, "leaf_loop_core", None):
+            raise ValueError("Loop seeds are available only for loop candidates")
+        self.mac.agent.loop_generator = th.Generator(device="cpu").manual_seed(int(seed))
+
+    def set_decision_depths(self, depths):
+        import torch as th
+        if not getattr(self.args, "leaf_loop_core", None):
+            raise ValueError("Decision depths are available only for loop candidates")
+        values = th.as_tensor(depths, device=self.device)
+        if values.ndim == 1:
+            values = values.unsqueeze(0)
+        if values.shape != (1, int(self.args.n_agents)):
+            raise ValueError("Decision depths must have shape [A] or [1,A] for the padded agent roster")
+        if values.dtype == th.bool or values.is_complex() or (values.is_floating_point() and not bool((values == values.round()).all())):
+            raise ValueError("Decision depths must be integers")
+        if not bool(((values >= 1) & (values <= 4)).all()):
+            raise ValueError("Decision depths must be in 1..4")
+        self.mac.agent.loop_depth_override = values.long().clone()
+
+    def get_loop_stats(self):
+        return copy.deepcopy(self._loop_stats)
+
+    def _record_loop_stats(self):
+        stats = getattr(self.mac.agent, "last_loop_stats", None)
+        if not stats:
+            return
+        # Per-decision selections are an observation, not an additive counter.
+        # The runner reads them directly from agent.last_loop_stats.
+        stats = {key: value for key, value in stats.items() if key != "selected_depths"}
+        def merge(previous, value):
+            if isinstance(value, dict):
+                previous = {} if previous is None else previous
+                return {**previous, **{key: merge(previous.get(key), item) for key, item in value.items()}}
+            if isinstance(value, (list, tuple)):
+                previous = [0] * len(value) if previous is None else previous
+                if len(previous) != len(value):
+                    raise ValueError("Loop statistic vector length changed within an episode")
+                return [merge(old, item) for old, item in zip(previous, value)]
+            if isinstance(value, (int, float, np.number)):
+                if isinstance(value, np.number):
+                    value = value.item()
+                return (0 if previous is None else previous) + value
+            return copy.deepcopy(value)
+        self._loop_stats = merge(self._loop_stats, stats)
 
     def reset(self):
         from components.episode_buffer import EpisodeBatch
@@ -281,6 +350,9 @@ class FrozenPolicyAdapter:
         self.mac.init_hidden(batch_size=1)
         self.last_step, self.last_result = -1, None
         self.q_tot, self.q_i = [], []
+        self._loop_stats = {}
+        if getattr(self.args, "leaf_loop_core", None):
+            self.mac.agent.loop_depth_override = None
         self.intent_stats = dict(count={}, correct={}, nll={}, label_hist=[0] * 9)
         self.roster = None
         self._alloc_hold = 0
@@ -347,6 +419,7 @@ class FrozenPolicyAdapter:
                 branch.intent_oracle_actions = first.reshape(1, -1).long()
                 branch.intent_override = "oracle"
             actions = self.mac.select_actions(self.batch, t_ep=step, t_env=0, test_mode=True)
+            self._record_loop_stats()
             if oracle:
                 branch.intent_oracle_actions = None
             if branch is not None and getattr(branch, "intent", False):

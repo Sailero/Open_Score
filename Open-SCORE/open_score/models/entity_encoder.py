@@ -423,6 +423,29 @@ class _MHA(nn.Module):
         out = th.matmul(weights, value).transpose(1, 2).contiguous().view(batch, n_q, dim)
         return self.out(out)
 
+    def project_kv(self, memory):
+        """Cache immutable K/V for the fixed-context LEAF cores."""
+        batch, length, _ = memory.shape
+        key = self.key(memory).view(batch, length, self.n_heads, self.head_dim).transpose(1, 2)
+        value = self.value(memory).view(batch, length, self.n_heads, self.head_dim).transpose(1, 2)
+        return key, value
+
+    def read_cached(self, query, key, value, mask=None):
+        batch, length, dim = query.shape
+        projected = self.query(query).view(batch, length, self.n_heads, self.head_dim).transpose(1, 2)
+        logits = th.matmul(projected, key.transpose(-2, -1)) / self.scale
+        if mask is not None:
+            hide = mask[:, None, None, :]
+            empty = hide.all(-1, keepdim=True)
+            logits = logits.masked_fill(hide, float("-inf")).masked_fill(empty, 0)
+        weights = th.softmax(logits, -1)
+        if mask is not None:
+            weights = weights.masked_fill(hide | empty, 0)
+        if getattr(self, "capture_attention", False):
+            self.last_weights = weights.detach()
+        result = th.matmul(weights, value).transpose(1, 2).contiguous().view(batch, length, dim)
+        return self.out(result)
+
 
 class CardinalityMHA(nn.Module):
     def __init__(self, dim, n_heads):
@@ -525,20 +548,57 @@ class GlobalBranch(nn.Module):
                 self.pref_proj = nn.Linear(int(args.n_actions), dim)
                 self.pref_logits = nn.Linear(dim, int(args.n_actions))
         self.rer_update = getattr(args, "rer_update", "tied")
-        if self.rer_update not in ("tied", "untied4", "kv0"):
-            raise ValueError("rer_update must be tied, untied4 or kv0")
+        self.loop_core = getattr(args, "leaf_loop_core", None)
+        if self.loop_core not in (None, "query_feedback", "bidirectional", "requery", "entity_gru", "slot_gru"):
+            raise ValueError(f"Unknown leaf_loop_core {self.loop_core!r}")
+        if self.loop_core is not None and kind != "cycle":
+            raise ValueError("leaf_loop_core requires global_branch=cycle")
+        self.stable_cycle = bool(getattr(args, "rer_stable_cycle", False) or self.loop_core)
+        self.input_fusion = bool(getattr(args, "rer_input_fusion", False) and not self.loop_core)
+        if (self.stable_cycle or self.input_fusion) and kind != "cycle":
+            raise ValueError("Stable/input-conditioned updates require global_branch=cycle")
+        if self.stable_cycle:
+            self.norm_attn_residual = nn.LayerNorm(dim)
+            self.norm_ffn_residual = nn.LayerNorm(dim)
+        if self.input_fusion:
+            self.fixed_input_gate = getattr(args, "rer_input_fixed_gate", None)
+            if self.fixed_input_gate is not None:
+                self.fixed_input_gate = float(self.fixed_input_gate)
+                if not 0 <= self.fixed_input_gate <= 1:
+                    raise ValueError("rer_input_fixed_gate must be between zero and one")
+            # Preserve the initialization of the host, reader and mixer.
+            with th.random.fork_rng(devices=[]):
+                self.input_norm = nn.LayerNorm(dim)
+                self.input_gate = nn.Linear(2 * dim, dim)
+            nn.init.zeros_(self.input_gate.weight)
+            # Begin with the 25% input anchor used in the offline diagnostic.
+            nn.init.constant_(self.input_gate.bias, -1.0986122886681098)
+        if getattr(args, "rer_readout", "learned") == "static":
+            rounds = max(int(getattr(args, "global_eval_depth", 4)),
+                         *[int(r) for r in getattr(args, "global_depths", [1, 2, 3, 4])])
+            self.round_logits = nn.Parameter(th.zeros(rounds))
+        if self.rer_update not in ("tied", "untied", "untied4", "kv0"):
+            raise ValueError("rer_update must be tied, untied, untied4 or kv0")
         if self.rer_update != "tied" and kind != "cycle":
             raise ValueError("RER update interventions require global_branch=cycle")
-        if self.rer_update == "untied4":
-            # The existing block is round one. Deepcopy adds three independent
+        if self.rer_update in ("untied", "untied4"):
+            # The existing block is round one. Deepcopy adds the remaining independent
             # blocks without drawing randomness or changing any shared module.
             names = ("self_attn", "norm_attn", "norm_ffn", "ffn", "count_to_token")
+            self.untied_depth = (4 if self.rer_update == "untied4" else
+                                int(getattr(args, "rer_untied_depth", 2)))
+            if self.untied_depth < 1:
+                raise ValueError("rer_untied_depth must be positive")
+            if self.stable_cycle:
+                names += ("norm_attn_residual", "norm_ffn_residual")
+            if self.input_fusion:
+                names += ("input_norm", "input_gate")
             self.untied_blocks = nn.ModuleList([
                 nn.ModuleDict({name: deepcopy(getattr(self, name)) for name in names})
-                for _ in range(3)])
+                for _ in range(self.untied_depth - 1)])
         self.intent = bool(getattr(args, "rer_intent", False))
         if self.intent:
-            if kind != "cycle" or self.rer_update == "untied4":
+            if kind != "cycle" or self.rer_update in ("untied", "untied4"):
                 raise ValueError("rer_intent requires a shared-parameter cycle branch")
             n_actions = intent_classes(args)
             # Drawn from a forked RNG so every other module (and the mixer
@@ -547,6 +607,31 @@ class GlobalBranch(nn.Module):
                 self.intent_head = nn.Linear(dim, n_actions)
                 self.intent_embed = nn.Linear(n_actions, dim, bias=False)
             nn.init.zeros_(self.intent_embed.weight)
+        if self.loop_core is not None:
+            # New parameters exist only for new methods. A fork also keeps the
+            # original host/mixer RNG stream independent of the chosen core.
+            with th.random.fork_rng(devices=[]):
+                self.loop_query_norm = nn.LayerNorm(dim)
+                if self.loop_core in ("query_feedback", "bidirectional", "requery"):
+                    self.loop_feedback = nn.Linear(dim, dim)
+                    self.loop_gate = nn.Linear(2 * dim, dim)
+                    nn.init.zeros_(self.loop_gate.weight)
+                    nn.init.zeros_(self.loop_gate.bias)
+                elif self.loop_core == "entity_gru":
+                    self.loop_message_norm = nn.LayerNorm(dim)
+                    self.loop_entity_gru = nn.GRUCell(2 * dim, dim)
+                elif self.loop_core == "slot_gru":
+                    if self.n_slots != 4:
+                        raise ValueError("main1009 slot_gru uses exactly four slots")
+                    self.loop_seeds = nn.Parameter(th.randn(1, 4, dim) * 0.02)
+                    self.loop_slot_own = nn.Linear(dim, dim)
+                    self.loop_slot_norm = nn.LayerNorm(dim)
+                    self.loop_slot_query = nn.Linear(dim, dim, bias=False)
+                    self.loop_slot_key = nn.Linear(dim, dim, bias=False)
+                    self.loop_slot_value = nn.Linear(dim, dim, bias=False)
+                    self.loop_slot_gru = nn.GRUCell(dim, dim)
+                    self.loop_slot_ffn = nn.Sequential(nn.Linear(dim, dim * ffn_mult), nn.ReLU(),
+                                                       nn.Linear(dim * ffn_mult, dim))
         self.intent_override = None
         self.intent_oracle_actions = None
         self.last_intent = None
@@ -594,9 +679,9 @@ class GlobalBranch(nn.Module):
     def _jk(self, states, query, mem_mask, depth):
         self.captured_read_attn = None
         mode = self.readout_override or getattr(self.args, "rer_readout", "learned")
-        if mode not in ("learned", "read1", "read2", "read3", "read4", "uniform"):
+        if mode not in ("learned", "static", "read1", "read2", "read3", "read4", "uniform"):
             raise ValueError(f"Unknown RER readout {mode!r}")
-        if mode != "learned" and self.training:
+        if mode not in ("learned", "static") and self.training:
             raise ValueError("RER readout overrides are evaluation-only")
         capture_indices = getattr(self, "_capture_read_indices", None)
         if getattr(self.args, "read_last_round", False) and mode == "learned" and capture_indices is None:
@@ -615,10 +700,16 @@ class GlobalBranch(nn.Module):
         for memory in states:
             read = self.read_attn(query, memory, memory, mem_mask).squeeze(1)
             values.append(read)
-            scores.append(self.read_score(read))
+            score_input = (F.normalize(read, dim=-1) * read.shape[-1] ** 0.5
+                           if getattr(self.args, "rer_score_normalize", False) else read)
+            scores.append(self.read_score(score_input))
             if getattr(self, "capture_attention", False) and hasattr(self.read_attn, "last_weights"):
                 read_weights.append(self.read_attn.last_weights.mean(1).squeeze(1).detach())
         scores = th.cat(scores, dim=-1)
+        if mode == "static":
+            if not hasattr(self, "round_logits") or len(states) > self.round_logits.numel():
+                raise ValueError("Static fusion supports only its trained round positions")
+            scores = self.round_logits[:len(states)].unsqueeze(0).expand_as(scores)
         index = th.arange(scores.shape[-1], device=scores.device)
         valid = index.unsqueeze(0) < depth.unsqueeze(-1)
         scores = scores.masked_fill(~valid, float("-inf"))
@@ -626,7 +717,7 @@ class GlobalBranch(nn.Module):
         scores = scores.masked_fill(empty, 0)
         alpha = th.softmax(scores, dim=-1)
         alpha = alpha.masked_fill(~valid, 0)
-        if mode != "learned":
+        if mode not in ("learned", "static"):
             if len(states) != 4 or not bool((depth == 4).all()):
                 raise ValueError("RER readout interventions require all four rounds")
             alpha = th.zeros_like(alpha)
@@ -667,22 +758,34 @@ class GlobalBranch(nn.Module):
         return th.cat(parts, 0)
 
     def _cycle_round(self, tokens, mask, count, initial=None, round_id=0, kv_extra=None):
-        block = self.untied_blocks[round_id - 1] if self.rer_update == "untied4" and round_id else None
+        block = self.untied_blocks[round_id - 1] if self.rer_update in ("untied", "untied4") and round_id else None
         def layer(name):
             return getattr(self, name) if block is None else block[name]
+        if self.input_fusion:
+            if initial is None:
+                raise ValueError("Input-conditioned cycles require the initial entity set")
+            gate = self.fixed_input_gate
+            if gate is None:
+                gate = th.sigmoid(layer("input_gate")(th.cat(
+                    (layer("input_norm")(initial), layer("input_norm")(tokens)), dim=-1)))
+            tokens = (1 - gate) * tokens + gate * initial
         injected = layer("norm_attn")(tokens)
         if not getattr(self.args, "skip_count_inject", False):
             injected = injected + layer("count_to_token")(count).unsqueeze(1)
         memory = initial if self.rer_update == "kv0" and initial is not None else tokens
         if kv_extra is not None:
             memory = memory + kv_extra
-        if getattr(self.args, "global_kv_prenorm", False):
+        if self.stable_cycle or getattr(self.args, "global_kv_prenorm", False):
             memory = layer("norm_attn")(memory).masked_fill(mask.unsqueeze(-1), 0)
         attn = layer("self_attn")
         tokens = tokens + attn(injected, memory, memory, mask)
+        if self.stable_cycle:
+            tokens = layer("norm_attn_residual")(tokens)
         if getattr(self, "capture_attention", False) and hasattr(attn, "last_weights"):
             self.last_self_attn.append(attn.last_weights.mean(1).detach())
         tokens = tokens + layer("ffn")(layer("norm_ffn")(tokens))
+        if self.stable_cycle:
+            tokens = layer("norm_ffn_residual")(tokens)
         return tokens.masked_fill(mask.unsqueeze(-1), 0)
 
     def _slot_round(self, slots, tokens, mask, count):
@@ -734,8 +837,8 @@ class GlobalBranch(nn.Module):
     def build_memories(self, tokens, key_mask, types, depth_t, origin=None, pack=None):
         count = self.allowed_count(key_mask, types)
         n_rounds = max(int(depth_t.max().item()), 1)
-        if self.rer_update == "untied4" and n_rounds > 4:
-            raise ValueError("untied4 supports at most four rounds")
+        if self.rer_update in ("untied", "untied4") and n_rounds > self.untied_depth:
+            raise ValueError(f"Untied updates support at most {self.untied_depth} rounds")
         states = []
         if self.kind == "slot":
             memory = self.init_slots.expand(tokens.shape[0], -1, -1)
@@ -822,6 +925,137 @@ class GlobalBranch(nn.Module):
         context = self.card_mix(th.cat((read, count), dim=-1))
         return local + self.fuse(context)
 
+    @staticmethod
+    def _loop_add(stats, **costs):
+        if stats is not None:
+            for name, value in costs.items():
+                stats[name] += int(value)
+
+    def _loop_attn_cost(self, stats, rows, queries, keys, *, cached=False):
+        dim = int(self.args.global_embed_dim) if hasattr(self.args, "global_embed_dim") else 64
+        # Counts actual dense matrix MACs, including masked/padded positions;
+        # elementwise, normalization and softmax work is deliberately excluded.
+        macs = rows * ((2 * queries + (0 if cached else 2 * keys)) * dim * dim
+                       + 2 * queries * keys * dim)
+        self._loop_add(stats, attention_entries=rows * queries * keys * self.self_attn.n_heads,
+                       macs=macs)
+
+    def _loop_context(self, memory, mask, query=None):
+        normalized = self.norm_attn(memory).masked_fill(mask.unsqueeze(-1), 0)
+        keys, key_mask = normalized, mask
+        if query is not None:
+            # A private workspace token, not an entity or another observer.
+            keys = th.cat((keys, self.loop_query_norm(query).unsqueeze(1)), 1)
+            key_mask = th.cat((mask, mask.new_zeros(mask.shape[0], 1)), 1)
+        updated = self.norm_attn_residual(memory + self.self_attn(normalized, keys, keys, key_mask))
+        updated = self.norm_ffn_residual(updated + self.ffn(self.norm_ffn(updated)))
+        return updated.masked_fill(mask.unsqueeze(-1), 0)
+
+    def _loop_context_cost(self, stats, rows, entities, *, query=False):
+        self._loop_attn_cost(stats, rows, entities, entities + int(query))
+        dim = self.fuse.in_features
+        self._loop_add(stats, entity_rounds=rows,
+                       macs=rows * entities * (dim * self.ffn[0].out_features
+                                               + self.ffn[0].out_features * dim))
+
+    def loop_initialize(self, initial, mask, b0, stats=None):
+        """One independent workspace per observer and physical timestep."""
+        initial = initial.masked_fill(mask.unsqueeze(-1), 0)
+        work = {"initial": initial, "mask": mask, "b0": b0,
+                "query": b0, "memory": initial}
+        rows, entities, dim = initial.shape
+        if self.loop_core in ("requery", "slot_gru"):
+            context = self._map_chunks(self._loop_context, initial, mask)
+            self._loop_context_cost(stats, rows, entities)
+            work["memory"] = context
+            if self.loop_core == "requery":
+                work["key"], work["value"] = self.read_attn.project_kv(context)
+            else:
+                normalized = self.norm_attn(context)
+                work["key"] = self.loop_slot_key(normalized)
+                work["value"] = self.loop_slot_value(normalized)
+                work["slots"] = self.loop_seeds.expand(rows, -1, -1) + self.loop_slot_own(b0).unsqueeze(1)
+                self._loop_add(stats, macs=rows * dim * dim)
+            self._loop_add(stats, macs=rows * entities * 2 * dim * dim)
+        return work
+
+    def _loop_entity_step(self, previous, initial, mask):
+        normalized = self.norm_attn(previous).masked_fill(mask.unsqueeze(-1), 0)
+        messages = self.self_attn(normalized, normalized, normalized, mask)
+        inputs = th.cat((self.norm_attn(initial), self.loop_message_norm(messages)), -1)
+        rows, entities, dim = previous.shape
+        updated = self.loop_entity_gru(inputs.reshape(-1, 2 * dim), previous.reshape(-1, dim))
+        updated = self.norm_attn_residual(updated.reshape(rows, entities, dim))
+        updated = self.norm_ffn_residual(updated + self.ffn(self.norm_ffn(updated)))
+        return updated.masked_fill(mask.unsqueeze(-1), 0)
+
+    def _loop_slot_step(self, slots, key, value, mask):
+        query = self.loop_slot_query(self.loop_slot_norm(slots))
+        logits = th.bmm(query, key.transpose(1, 2)) / query.shape[-1] ** 0.5
+        # Slots compete for each entity, then each slot takes a weighted mean
+        # over entities. Padding contributes neither numerator nor denominator.
+        weights = th.softmax(logits, dim=1).masked_fill(mask.unsqueeze(1), 0)
+        weights = weights / weights.sum(-1, keepdim=True).clamp_min(1e-8)
+        updates = th.bmm(weights, value)
+        rows, n_slots, dim = slots.shape
+        updated = self.loop_slot_gru(updates.reshape(-1, dim), slots.reshape(-1, dim))
+        updated = updated.reshape(rows, n_slots, dim)
+        updated = updated + self.loop_slot_ffn(self.loop_slot_norm(updated))
+        return updated.masked_fill(mask.all(-1)[:, None, None], 0)
+
+    def loop_round(self, work, stats=None):
+        """Perform one spatial iteration and read, without temporal mutation."""
+        memory, mask = work["memory"], work["mask"]
+        rows, entities, dim = memory.shape
+        core = self.loop_core
+        if core in ("query_feedback", "bidirectional"):
+            anchored = 0.75 * memory + 0.25 * work["initial"]
+            if core == "bidirectional":
+                memory = self._map_chunks(self._loop_context, anchored, mask, work["query"])
+            else:
+                memory = self._map_chunks(self._loop_context, anchored, mask)
+            self._loop_context_cost(stats, rows, entities, query=core == "bidirectional")
+            work["memory"] = memory
+        elif core == "entity_gru":
+            memory = self._map_chunks(self._loop_entity_step, memory, work["initial"], mask)
+            work["memory"] = memory
+            self._loop_context_cost(stats, rows, entities)
+            self._loop_add(stats, macs=rows * entities * 9 * dim * dim)
+        elif core == "slot_gru":
+            slots = self._map_chunks(self._loop_slot_step, work["slots"], work["key"], work["value"], mask)
+            work["slots"] = slots
+            self._loop_add(stats, slot_rounds=rows,
+                           attention_entries=rows * self.n_slots * entities,
+                           macs=rows * (self.n_slots * dim * dim + 2 * self.n_slots * entities * dim
+                                       + 6 * self.n_slots * dim * dim
+                                       + 2 * self.n_slots * dim * self.loop_slot_ffn[0].out_features))
+            memory = slots
+            mask = mask.all(-1).unsqueeze(-1).expand(-1, self.n_slots)
+        query = self.loop_query_norm(work["query"]).unsqueeze(1)
+        if core == "requery":
+            read = self._map_chunks(self.read_attn.read_cached, query, work["key"], work["value"], mask)
+        else:
+            read = self._map_chunks(self.read_attn, query, memory, memory, mask)
+        self._loop_attn_cost(stats, rows, 1, memory.shape[1], cached=core == "requery")
+        self._loop_add(stats, read_calls=rows)
+        return read.squeeze(1)
+
+    def _loop_update_query(self, b0, previous, read):
+        candidate = b0 + self.loop_feedback(self.loop_query_norm(read))
+        gate = th.sigmoid(self.loop_gate(th.cat((self.loop_query_norm(previous),
+                                                self.loop_query_norm(candidate)), -1)))
+        return (1 - gate) * previous + gate * candidate
+
+    def loop_continue(self, work, read, stats=None):
+        if self.loop_core in ("query_feedback", "bidirectional", "requery"):
+            work["query"] = self._map_chunks(self._loop_update_query, work["b0"], work["query"], read)
+            dim = self.fuse.in_features
+            self._loop_add(stats, query_updates=read.shape[0], macs=read.shape[0] * 3 * dim * dim)
+
+    @staticmethod
+    def loop_compact(work, keep):
+        return {name: tensor.index_select(0, keep) for name, tensor in work.items()}
+
 
 class EntityAgent(ALMAAgent):
     def __init__(self, input_shape, args):
@@ -885,6 +1119,10 @@ class EntityAgent(ALMAAgent):
         self.capture_attention = False
         self.last_capture = []
         self._capture_limits = None
+        self.loop_execution = None
+        self.loop_depth_override = None
+        self.loop_generator = None
+        self.last_loop_stats = {}
 
     def enable_capture(self, max_decisions=1, max_observers=4):
         """Capture a bounded set of real evaluation decisions, detached on CPU."""
@@ -998,7 +1236,355 @@ class EntityAgent(ALMAAgent):
                 "enemy_ids": th.arange(n_ent - na, dtype=th.long),
             })
 
+    def _loop_depths(self, inputs, shape, device, evaluation):
+        bs, ts, na = shape
+        execution = self.loop_execution if evaluation else None
+        execution = {} if execution is None else execution
+        mode = execution.get("mode", "fixed")
+        if mode not in ("fixed", "adaptive", "random"):
+            raise ValueError("loop execution mode must be fixed, adaptive or random")
+        override = self.loop_depth_override
+        if override is not None:
+            if ts != 1 or not isinstance(override, th.Tensor) or override.shape != (bs, na):
+                raise ValueError("loop_depth_override must be a tensor [batch,agents] for one decision")
+            if override.dtype != th.int64:
+                raise ValueError("loop_depth_override must be int64")
+            depth = override.to(device).unsqueeze(1)
+            mode = "fixed"
+            self.loop_depth_override = None
+        elif mode == "random":
+            probabilities = th.as_tensor(execution.get("probabilities", ()), dtype=th.float64, device="cpu")
+            if (probabilities.shape != (4,) or not bool(th.isfinite(probabilities).all())
+                    or bool((probabilities < 0).any()) or float(probabilities.sum()) <= 0):
+                raise ValueError("random loop probabilities need four finite nonnegative values with positive sum")
+            if self.loop_generator is None:
+                self.loop_generator = th.Generator(device="cpu").manual_seed(int(getattr(self.args, "seed", 0)))
+            depth = (th.multinomial(probabilities, bs * ts * na, replacement=True,
+                                    generator=self.loop_generator) + 1).to(device).reshape(bs, ts, na)
+        elif evaluation:
+            depth = th.full((bs, ts, na), int(execution.get("depth", getattr(self.args, "global_eval_depth", 4))),
+                            device=device, dtype=th.int64)
+        elif "loop_depth" in inputs:
+            saved = inputs["loop_depth"]
+            if saved.shape != (bs, ts, na, 1) or saved.dtype != th.int64:
+                raise ValueError("loop_depth must be int64 [batch,time,agents,1]")
+            depth = saved[..., 0].to(device)
+        else:
+            # Retain direct tensor/offline callers; learner replay must supply
+            # its recorded per-decision schedule through loop_depth.
+            depth = self.global_net.expand_depth(getattr(self, "cycle_depth", 4), bs, ts, na, device)
+            depth = depth.reshape(bs, ts, na)
+        if bool(((depth < 1) | (depth > 4)).any()):
+            raise ValueError("main1009 loop depth must be between one and four")
+        if mode == "adaptive":
+            threshold = float(execution.get("threshold", -1))
+            if not 0 <= threshold < float("inf"):
+                raise ValueError("adaptive loop threshold must be finite and nonnegative")
+        return mode, depth, execution
+
+    def _loop_shared_cost(self, stats, inputs, live, entities):
+        if stats is None:
+            return
+        rows = int(live.sum().item())
+        total = int(live.numel())
+        encoded_rows = rows if getattr(self.args, "encoder_skip_dead", True) else total
+        dim = int(self.args.attn_embed_dim)
+        hidden = int(self.args.rnn_hidden_dim)
+        feature = self._base.fc1.in_features
+        self.global_net._loop_add(stats, decisions=rows,
+                                 macs=encoded_rows * entities * feature * dim)
+        if not getattr(self.args, "skip_refil_local", False):
+            # REFIL in_trans computes Q/K/V for all padded entities, although
+            # encode_bundle asks the attention layer for only the own query.
+            self.global_net._loop_add(stats,
+                attention_entries=encoded_rows * entities * self._base.attn.n_heads,
+                macs=encoded_rows * (3 * entities * dim * dim + 2 * entities * dim + dim * dim))
+        self.global_net._loop_add(stats, macs=encoded_rows * dim * hidden)
+        global_dim = self.global_net.fuse.in_features
+        if isinstance(self.global_net.token_proj, nn.Linear):
+            # Projection is applied to the full encoded bundle, including
+            # zero padded observer rows, not just the compact workspaces.
+            self.global_net._loop_add(stats, macs=total * entities * dim * global_dim + rows * dim * global_dim)
+        # Independent own token + no-memory query projection.
+        self.global_net._loop_add(stats, macs=rows * (feature * dim + (global_dim + hidden) * global_dim))
+        if hasattr(self, "task_cond") and "task_embeds" in inputs:
+            self.global_net._loop_add(stats, macs=total * self.task_cond.in_features * self.task_cond.out_features)
+
+    def _loop_temporal_cost(self, stats, rows, enemies=0):
+        if stats is None:
+            return
+        hidden = int(self.args.rnn_hidden_dim)
+        macs = rows * 6 * hidden * hidden
+        if self._head.enemy_head:
+            first, last = self._head.fc_attack[0], self._head.fc_attack[2]
+            macs += rows * (hidden * 6 + enemies * (first.in_features * first.out_features
+                                                    + last.in_features * last.out_features))
+        else:
+            macs += rows * hidden * self._head.fc_out.out_features
+        self.global_net._loop_add(stats, temporal_previews=rows, macs=macs)
+
+    def _loop_spatial_fixed(self, initial, mask, b0, depths, stats):
+        if self.training and th.is_grad_enabled():
+            # Checkpoint the complete per-observer loop, not only its layers:
+            # otherwise the compacted copies of every previous workspace stay
+            # alive until backward across the full B*T*A replay batch.
+            chunk = int(getattr(self.args, "encoder_chunk_size", 1024))
+            if chunk < 1:
+                raise ValueError("encoder_chunk_size must be positive")
+            parts = []
+            for start in range(0, initial.shape[0], chunk):
+                sl = slice(start, start + chunk)
+                parts.append(checkpoint(self._loop_spatial_fixed_chunk,
+                    initial[sl], mask[sl], b0[sl], depths[sl], None,
+                    use_reentrant=False))
+            return th.cat(parts, 0)
+        return self._loop_spatial_fixed_chunk(initial, mask, b0, depths, stats)
+
+    def _loop_spatial_fixed_chunk(self, initial, mask, b0, depths, stats):
+        rows, entities, dim = initial.shape
+        result = initial.new_zeros(rows, dim)
+        ids = th.arange(rows, device=initial.device)
+        work = self.global_net.loop_initialize(initial, mask, b0, stats)
+        for round_id in range(1, 5):
+            read = self.global_net.loop_round(work, stats)
+            done = depths.index_select(0, ids) == round_id
+            picked = done.nonzero(as_tuple=False).flatten()
+            result = result.index_copy(0, ids.index_select(0, picked), read.index_select(0, picked))
+            if stats is not None:
+                self.global_net._loop_add(stats, **{f"depth_{round_id}": picked.numel()})
+            keep = (~done).nonzero(as_tuple=False).flatten()
+            if keep.numel() == 0:
+                break
+            work = self.global_net.loop_compact(work, keep)
+            read = read.index_select(0, keep)
+            self.global_net.loop_continue(work, read, stats)
+            ids = ids.index_select(0, keep)
+        return result
+
+    @staticmethod
+    def _loop_stable(q, previous_q, hidden, previous_hidden, legal, threshold):
+        count = legal.sum(-1, keepdim=True)
+        def normalized(values):
+            values = values.masked_fill(~legal, 0)
+            centered = (values - values.sum(-1, keepdim=True) / count.clamp_min(1)).masked_fill(~legal, 0)
+            norm = centered.norm(dim=-1)
+            return centered / norm.clamp_min(1e-6).unsqueeze(-1), norm
+        current, current_norm = normalized(q)
+        previous, previous_norm = normalized(previous_q)
+        masked = q.masked_fill(~legal, float("-inf"))
+        old_masked = previous_q.masked_fill(~legal, float("-inf"))
+        top = masked.topk(min(2, q.shape[-1]), dim=-1).values
+        old_top = old_masked.topk(min(2, q.shape[-1]), dim=-1).values
+        if top.shape[-1] < 2:
+            return legal.new_zeros(q.shape[0])
+        not_tied = ((top[:, 0] - top[:, 1] > 1e-6)
+                    & (old_top[:, 0] - old_top[:, 1] > 1e-6))
+        q_change = (current - previous).norm(dim=-1)
+        h_change = (hidden - previous_hidden).norm(dim=-1) / previous_hidden.norm(dim=-1).clamp_min(1e-6)
+        return ((count[:, 0] > 1) & (current_norm > 1e-6) & (previous_norm > 1e-6)
+                & not_tied & (masked.argmax(-1) == old_masked.argmax(-1))
+                & (th.maximum(q_change, h_change) <= threshold))
+
+    def _loop_execute_online(self, initial, mask, b0, local, alive, h_prev, legal,
+                             depth, mode, execution, enemy_tokens, stats):
+        bs, na, hidden_dim = local.shape
+        n_act = int(self.args.n_actions) if enemy_tokens is None else 6 + enemy_tokens.shape[-2]
+        ids = alive.reshape(-1).nonzero(as_tuple=False).flatten()
+        chosen_q = local.new_zeros(bs * na, n_act)
+        chosen_h = local.new_zeros(bs * na, hidden_dim)
+        chosen_read = initial.new_zeros(bs * na, initial.shape[-1])
+        chosen_depth = th.zeros(bs * na, device=initial.device, dtype=th.int64)
+        if ids.numel() == 0:
+            return (chosen_q.reshape(bs, na, n_act), chosen_h.reshape(bs, na, hidden_dim),
+                    chosen_read, chosen_depth)
+        work = self.global_net.loop_initialize(initial.index_select(0, ids), mask.index_select(0, ids),
+                                               b0.index_select(0, ids), stats)
+        flat_local, flat_h = local.reshape(-1, hidden_dim), h_prev.reshape(-1, hidden_dim)
+        legal = legal.reshape(bs * na, n_act).bool()
+        depths = depth.reshape(-1)
+        previous_q = previous_hidden = None
+        for round_id in range(1, 5):
+            read = self.global_net.loop_round(work, stats)
+            fused = flat_local.index_select(0, ids) + self.global_net.fuse(read)
+            n_active = ids.numel()
+            enemies = None if enemy_tokens is None else enemy_tokens.reshape(
+                bs * na, *enemy_tokens.shape[-2:]).index_select(0, ids).unsqueeze(1)
+            q, candidate_h = self._head.step(fused.unsqueeze(1), flat_h.index_select(0, ids).unsqueeze(1),
+                                            alive.new_ones(n_active, 1), enemies)
+            q, candidate_h = q[:, 0], candidate_h[:, 0]
+            self._loop_temporal_cost(stats, n_active, 0 if enemies is None else enemies.shape[-2])
+            self.global_net._loop_add(stats, macs=n_active * self.global_net.fuse.in_features * hidden_dim)
+            if mode == "adaptive":
+                done = th.zeros(n_active, dtype=th.bool, device=q.device)
+                if round_id >= 2:
+                    done = self._loop_stable(q, previous_q, candidate_h, previous_hidden,
+                                             legal.index_select(0, ids), float(execution["threshold"]))
+                if round_id == 4:
+                    done = th.ones_like(done)
+            else:
+                done = depths.index_select(0, ids) == round_id
+            picked = done.nonzero(as_tuple=False).flatten()
+            destination = ids.index_select(0, picked)
+            chosen_q = chosen_q.index_copy(0, destination, q.index_select(0, picked))
+            chosen_h = chosen_h.index_copy(0, destination, candidate_h.index_select(0, picked))
+            chosen_read = chosen_read.index_copy(0, destination, read.index_select(0, picked))
+            chosen_depth = chosen_depth.index_fill(0, destination, round_id)
+            self.global_net._loop_add(stats, **{f"depth_{round_id}": picked.numel()})
+            keep = (~done).nonzero(as_tuple=False).flatten()
+            if keep.numel() == 0:
+                break
+            previous_q, previous_hidden = q.index_select(0, keep), candidate_h.index_select(0, keep)
+            work = self.global_net.loop_compact(work, keep)
+            self.global_net.loop_continue(work, read.index_select(0, keep), stats)
+            ids = ids.index_select(0, keep)
+        return chosen_q.reshape(bs, na, n_act), chosen_h.reshape(bs, na, hidden_dim), chosen_read, chosen_depth
+
+    def _capture_loop_exit(self, tokens, mask, types, origin, alive, h_prev, q, read, depth, t):
+        rows = self._capture_rows(alive)
+        if rows is None:
+            return
+        def picked(tensor):
+            return tensor.index_select(0, rows).detach().cpu()
+        na = alive.shape[-1]
+        self.last_capture.append({
+            "capture_kind": "selected_loop_exit", "loop_core": self.global_net.loop_core,
+            "time_id": int(getattr(self, "_capture_time", 0)) + t,
+            "batch_ids": (rows // na).detach().cpu(), "observer_ids": (rows % na).detach().cpu(),
+            "H": picked(tokens).masked_fill(picked(mask).unsqueeze(-1), 0).unsqueeze(1),
+            "u": None, "alpha": None, "read_attn": None,
+            "selected_u": picked(read), "selected_depth": picked(depth),
+            "h_prev": picked(h_prev.reshape(-1, h_prev.shape[-1])),
+            "q": picked(q.reshape(-1, q.shape[-1])), "key_mask": picked(mask),
+            "types": picked(types), "origin": picked(origin),
+            "enemy_ids": th.arange(tokens.shape[1] - na, dtype=th.long),
+        })
+
+    def _compute_loop(self, inputs):
+        if "loop_filled" in inputs:
+            filled = inputs["loop_filled"]
+            if filled.shape != (*inputs["entities"].shape[:2], 1) or filled.dtype != th.bool:
+                raise ValueError("loop_filled must be bool [batch,time,1]")
+            inputs = dict(inputs)
+            inputs["entity_mask"] = inputs["entity_mask"] | ~filled
+            inputs["obs_mask"] = inputs["obs_mask"] | ~filled.unsqueeze(-1)
+        local, initial_tokens, key_mask, dead, types, origin = self._base.encode_bundle(inputs)
+        enemy_tokens = initial_tokens[..., self.args.n_agents:, :] if self._head.enemy_head else None
+        if hasattr(self, "task_cond") and "task_embeds" in inputs:
+            local = local + self.task_cond(inputs["task_embeds"][:, :, :self.args.n_agents])
+        if self.use_copa:
+            local = local + inputs["coach_z"]
+        tokens = self.global_net.project(initial_tokens)
+        bs, ts, na, hidden_dim = local.shape
+        n_obs, entities, dim = bs * ts * na, tokens.shape[-2], tokens.shape[-1]
+        # Runtime MAC attributes survive ALMA's concatenation of imagined
+        # tensor inputs. Target agents use eval() during learning, so module
+        # training mode alone must never replace recorded replay depths.
+        evaluation = bool(getattr(self, "loop_test_mode", inputs.get("loop_test_mode", not self.training)))
+        mode, depths, execution = self._loop_depths(inputs, (bs, ts, na), tokens.device, evaluation)
+        stats = ({name: 0 for name in ("decisions", "depth_1", "depth_2", "depth_3", "depth_4",
+                  "attention_entries", "read_calls", "temporal_previews", "entity_rounds", "slot_rounds",
+                  "query_updates", "temporal_commits", "macs")} if evaluation else None)
+        live = ~dead.reshape(-1)
+        self._loop_shared_cost(stats, inputs, live, entities)
+        self.global_net._loop_add(stats, temporal_commits=int(live.sum().item()) if stats is not None else 0)
+        # REFIL may hide self as a KEY in an imagined cross-group branch.
+        # Its private query still uses the original own physical features.
+        if "observer_entities" in inputs:
+            own_ids = th.arange(na, device=tokens.device)
+            own = inputs["observer_entities"][:, :, own_ids, own_ids]
+        else:
+            own = inputs["entities"][:, :, :na]
+        active = live.nonzero(as_tuple=False).flatten()
+        b0 = tokens.new_zeros(n_obs, dim)
+        if active.numel():
+            own_encoded = F.relu(self._base.fc1(own.reshape(n_obs, -1).index_select(0, active)))
+            own_encoded = self.global_net.project(own_encoded)
+            no_history = own_encoded.new_zeros(active.numel(), hidden_dim)
+            query = self.global_net.query_proj(th.cat((own_encoded, no_history), -1))
+            b0 = b0.index_copy(0, active, query)
+        h = inputs.get("hidden_state")
+        if h is None:
+            h = local.new_zeros(bs, na, hidden_dim)
+        if h.shape[0] != bs:
+            if bs % h.shape[0]:
+                raise ValueError("loop hidden-state batch cannot expand to imagined inputs")
+            h = h.repeat(bs // h.shape[0], 1, 1)
+        self.global_net.last_intent = None
+        if mode in ("fixed", "random"):
+            read = tokens.new_zeros(n_obs, dim)
+            if active.numel():
+                selected = self._loop_spatial_fixed(tokens.reshape(n_obs, entities, dim).index_select(0, active),
+                    key_mask.reshape(n_obs, entities).index_select(0, active), b0.index_select(0, active),
+                    depths.reshape(-1).index_select(0, active), stats)
+                read = read.index_copy(0, active, selected)
+            residual = local.new_zeros(n_obs, hidden_dim)
+            if active.numel():
+                residual = residual.index_copy(0, active, self.global_net.fuse(read.index_select(0, active)))
+            fused = local + residual.reshape(bs, ts, na, hidden_dim)
+            h_prev = h
+            n_act = int(self.args.n_actions) if enemy_tokens is None else 6 + enemy_tokens.shape[-2]
+            outputs = []
+            for t in range(ts):
+                ids = (~dead[:, t]).reshape(-1).nonzero(as_tuple=False).flatten()
+                q_t = local.new_zeros(bs * na, n_act)
+                next_h = local.new_zeros(bs * na, hidden_dim)
+                if ids.numel():
+                    x_t = fused[:, t].reshape(bs * na, hidden_dim).index_select(0, ids)
+                    previous = h.reshape(bs * na, hidden_dim).index_select(0, ids)
+                    enemies = None if enemy_tokens is None else enemy_tokens[:, t].reshape(
+                        bs * na, *enemy_tokens.shape[-2:]).index_select(0, ids).unsqueeze(1)
+                    q_live, h_live = self._head.step(x_t.unsqueeze(1), previous.unsqueeze(1),
+                        dead.new_ones(ids.numel(), 1), enemies)
+                    q_t = q_t.index_copy(0, ids, q_live[:, 0])
+                    next_h = next_h.index_copy(0, ids, h_live[:, 0])
+                    self._loop_temporal_cost(stats, ids.numel(), 0 if enemies is None else enemies.shape[-2])
+                else:
+                    # Keep the zero-output replay path differentiable without
+                    # evaluating padded agent GRUs or fabricating decisions.
+                    q_t = q_t + fused[:, t].sum() * 0
+                h = next_h.reshape(bs, na, hidden_dim)
+                outputs.append(q_t.reshape(bs, na, n_act))
+            q = th.stack(outputs, 1)
+            selected_depths = depths.masked_fill(dead, 0)
+            self.global_net._loop_add(stats, macs=active.numel() * dim * hidden_dim)
+            # Real policy decisions have T=1. Never recompute the temporal
+            # head merely to capture recurrent histories in a replay batch.
+            if ts == 1:
+                self._capture_loop_exit(tokens[:, 0].reshape(bs * na, entities, dim),
+                    key_mask[:, 0].reshape(bs * na, entities), types[:, 0].reshape(bs * na, entities, 3),
+                    origin[:, 0].reshape(bs * na, entities), ~dead[:, 0], h_prev, q[:, 0],
+                    read.reshape(bs * na, dim), depths[:, 0].reshape(-1), 0)
+        else:
+            if not evaluation:
+                raise ValueError("adaptive/random deployment is evaluation-only")
+            if "avail_actions" not in inputs:
+                raise ValueError("adaptive/random loop execution requires avail_actions")
+            outputs = []
+            exit_depths = []
+            for t in range(ts):
+                h_prev = h
+                q_t, h, selected_read, selected_depth = self._loop_execute_online(tokens[:, t].reshape(bs * na, entities, dim),
+                    key_mask[:, t].reshape(bs * na, entities), b0.reshape(bs, ts, na, dim)[:, t].reshape(bs * na, dim),
+                    local[:, t], ~dead[:, t], h, inputs["avail_actions"][:, t], depths[:, t], mode, execution,
+                    None if enemy_tokens is None else enemy_tokens[:, t], stats)
+                outputs.append(q_t)
+                exit_depths.append(selected_depth.reshape(bs, na))
+                self._capture_loop_exit(tokens[:, t].reshape(bs * na, entities, dim),
+                    key_mask[:, t].reshape(bs * na, entities), types[:, t].reshape(bs * na, entities, 3),
+                    origin[:, t].reshape(bs * na, entities), ~dead[:, t], h_prev, q_t,
+                    selected_read, selected_depth, t)
+            q = th.stack(outputs, 1)
+            selected_depths = th.stack(exit_depths, 1)
+        if stats is not None:
+            # Per-decision record for counterfactual probes, not an additive
+            # episode cost. Adapters must exclude this list when summing costs.
+            stats["selected_depths"] = selected_depths.detach().cpu().tolist()
+        self.last_loop_stats = {} if stats is None else stats
+        return q.masked_fill(inputs["entity_mask"][:, :, :na].unsqueeze(-1), 0), h
+
     def _compute_global(self, inputs):
+        if getattr(self.global_net, "loop_core", None) is not None:
+            return self._compute_loop(inputs)
         local, tokens, key_mask, dead, types, origin = self._base.encode_bundle(inputs)
         enemy_tokens = tokens[..., self.args.n_agents:, :] if getattr(self._head, "enemy_head", False) else None
         if hasattr(self, "task_cond") and "task_embeds" in inputs:
@@ -1120,6 +1706,11 @@ class EntityAgent(ALMAAgent):
         imagined, groups = super().make_imagined_inputs(inputs)
         if "observer_entities" in inputs:
             imagined["observer_entities"] = inputs["observer_entities"].repeat(2, 1, 1, 1, 1)
+        if self.global_branch and getattr(self.global_net, "loop_core", None) is not None:
+            for name in ("loop_depth", "loop_filled"):
+                if name in inputs:
+                    value = inputs[name]
+                    imagined[name] = value.repeat(2, *([1] * (value.ndim - 1)))
         # Keep the random partition constant but exclude deaths at each t.
         inactive = inputs["entity_mask"].bool()
         blocked = inactive.unsqueeze(-1) | inactive.unsqueeze(-2)

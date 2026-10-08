@@ -22,6 +22,11 @@ class BasicMAC:
 
         self.hidden_states = None
         self._episode_depth = None
+        if getattr(args, "leaf_loop_core", None):
+            # A private CPU stream keeps depth sampling independent of epsilon,
+            # REFIL partitions, environment seeds and CUDA random streams.
+            self._loop_depth_generator = th.Generator(device="cpu")
+            self._loop_depth_generator.manual_seed(int(getattr(args, "seed", 0)) ^ 0x1EAF1009)
 
     def select_actions(self, ep_batch, t_ep, t_env, bs=slice(None), test_mode=False):
         # Only select actions for the selected batch elements in bs
@@ -57,7 +62,10 @@ class BasicMAC:
                 ep_batch['entity2task_mask'][:, t_ep, :self.n_agents] = (1 - self.task_allocations).detach().to(th.uint8)
                 active_allocs = self.task_allocations.detach()[bs]
 
-        self._prepare_global_depth(ep_batch.batch_size, t_ep, test_mode, ep_batch.device)
+        if getattr(self.args, "leaf_loop_core", None):
+            self.prepare_loop_depth(ep_batch, t_ep, bs=bs, test_mode=test_mode)
+        else:
+            self._prepare_global_depth(ep_batch.batch_size, t_ep, test_mode, ep_batch.device)
         agent_outputs, _ = self.forward(ep_batch, t_ep, test_mode=test_mode, acting=True)
         chosen_actions = self.action_selector.select_action(agent_outputs[bs], avail_actions[bs], t_env, allocs=active_allocs, test_mode=test_mode)
         return chosen_actions
@@ -72,7 +80,10 @@ class BasicMAC:
 
         agent_inputs, imagine_inps = self._build_inputs(ep_batch, t, target=target, imagine_inps=imagine_inps)
         agent_inputs['hidden_state'] = self.hidden_states
-        if test_mode and getattr(self.args, "global_branch", None) in ("cycle", "slot", "feedback"):
+        if getattr(self.args, "leaf_loop_core", None):
+            self.agent.loop_acting = bool(acting)
+            self.agent.loop_test_mode = bool(test_mode)
+        elif test_mode and getattr(self.args, "global_branch", None) in ("cycle", "slot", "feedback"):
             self._episode_depth = int(getattr(self.args, "global_eval_depth", 4))
         self.agent.cycle_depth = self._episode_depth
         if self.use_copa:
@@ -92,6 +103,49 @@ class BasicMAC:
         self._episode_depth = depth
         if hasattr(self, "agent"):
             self.agent.cycle_depth = depth
+
+    def prepare_loop_depth(self, ep_batch, t_ep, bs=slice(None), test_mode=False):
+        """Record one independent exit per observer, without advancing hidden.
+
+        Runners also call this for their final bootstrap observation. Unfilled
+        replay padding stays zero; the entity controller maps it to depth one.
+        """
+        if not getattr(self.args, "leaf_loop_core", None):
+            return
+        if "loop_depth" not in ep_batch.scheme:
+            raise ValueError("Loop candidates require the loop_depth replay field")
+        indices = th.arange(ep_batch.batch_size, device=ep_batch.device)[bs].reshape(-1)
+        if not indices.numel():
+            return
+        current = ep_batch['loop_depth'][:, t_ep].index_select(0, indices)
+        if current.shape != (indices.numel(), self.n_agents, 1):
+            raise ValueError("loop_depth must have shape [B,T,A,1]")
+        missing = ~(current > 0).all(dim=(1, 2))
+        if not bool(missing.any()):
+            return
+        indices = indices[missing]
+        shape = (indices.numel(), self.n_agents, 1)
+        if test_mode:
+            execution = getattr(self.agent, 'loop_execution', None) or {}
+            depth = int(execution.get('depth', getattr(self.args, 'global_eval_depth', 4)))
+            if not 1 <= depth <= 4:
+                raise ValueError("Loop execution depth must be in 1..4")
+            values = th.full(shape, depth, dtype=th.long, device=ep_batch.device)
+        else:
+            values = th.randint(1, 5, shape, generator=self._loop_depth_generator,
+                                device='cpu', dtype=th.long).to(ep_batch.device)
+        ep_batch.update({'loop_depth': values}, bs=indices.tolist(), ts=t_ep, mark_filled=False)
+
+    def loop_depth_rng_state(self):
+        if not getattr(self.args, "leaf_loop_core", None):
+            return None
+        return self._loop_depth_generator.get_state().clone()
+
+    def load_loop_depth_rng_state(self, state):
+        if getattr(self.args, "leaf_loop_core", None):
+            if state is None:
+                raise ValueError("Loop candidate resume is missing its depth RNG state")
+            self._loop_depth_generator.set_state(state.cpu())
 
     def _prepare_global_depth(self, batch_size, t_ep, test_mode, device):
         branch = getattr(self.args, "global_branch", None)
