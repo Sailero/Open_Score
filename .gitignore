@@ -1,0 +1,53 @@
+# Experiment data (keep reports and figures)
+*.csv
+*.tsv
+*.parquet
+
+# Model weights and arrays
+*.pt
+*.pth
+*.ckpt
+*.pkl
+*.npy
+*.npz
+*.h5
+*.log
+
+# Python / packaging
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+
+# Runtime junk
+*.lock
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Atomic checkpoint and experiment control files
+*.pt.pending
+*.pt.tmp
+stop.request
+eval.stop.request
+
+# Local diagnostic trajectories and process handles
+*.json.gz
+*.pid
+
+# Per-run runtime state (rewritten continuously; not results)
+resource.json
+resource_retry.json
+failure.json
+scheduler.*.json
+queue.*.json
+Open-SCORE/outputs/*/smacv2/scenes/manifest.json
+
+# This branch publishes runtime only; keep all experiment outputs local.
+/Open-SCORE/outputs/
