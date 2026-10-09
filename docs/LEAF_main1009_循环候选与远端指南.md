@@ -187,6 +187,22 @@ python scripts/leaf1009.py report --output "$LEAF_OUTPUT"
 
 `--devices` 是当前 `CUDA_VISIBLE_DEVICES` 下的逻辑编号。不同终端若设置了不同的可见卡列表，应按各自列表重新编号，避免实际抢同一张卡。每卡八进程是评估并发默认值，不是重新训练四份模型。
 
+### 实时查看任务进度与整轮 ETA
+
+代码放在现有 `Open-SCORE/scripts/leaf1009.py`，无需新增脚本、安装包或重启评估。在同一代码目录的另一个终端执行：
+
+```bash
+conda activate sarc
+cd /inspire/hdd/project/urbanlowaltitude/fengkairui-25026/shenqili/TP/LEAF1009-lite/Open-SCORE
+python -B scripts/leaf1009.py progress --output outputs/main1009 --devices all --jobs-per-gpu 16 --watch-seconds 30
+```
+
+终端每 30 秒刷新，显示整轮已完成/总任务分片数、各阶段完成场数、正在运行任务的 PID/方法/种子/规模/百分比、当前任务和阶段的近期速度 ETA，以及整轮剩余时间和北京时间预计结束点。整个协议共有 1,809 个任务分片；选型完成前，确认阶段用待选方法占位，不预先指定赢家。反事实的进度单位是完整场景，其他阶段是 episode。
+
+查看器只读已有记录和 Linux `/proc` 的任务日志描述符，不加载策略、不运行 HAD、不写文件。逐场记录增量读取，不反复重扫整份记录。运行主控存在时，自动读取其每卡并发与设备配置；没有运行主控时，使用命令中的设置做预算估算。`Ctrl+C` 只退出查看器。只看一次可将 `--watch-seconds` 改为 `0`。
+
+整轮 ETA 按原协议的串行校准、选型、预算匹配、混合任务队列及独立确认顺序估算。优先使用同方法、同规模、同实验臂实测 episode 时间；未测实验臂使用同规模代理，未测规模使用实体数线性到 observer×实体数平方的计算包络，未测基线使用其他模型的宽代理，未测反事实按每场 1–13 次 rollout 范围估算。范围是工程预算区间，**不是置信区间或保证的上下界**；CPU/GPU 争用、对局长度与存储开销会改变速度。界面公开各代理占比及直接实测覆盖率，低覆盖时整轮数字标为 `PROVISIONAL`。当前任务和阶段的近期 ETA 需要至少一分钟速度采样。不能把本机部分诊断时间当成远端服务器的实测时间。
+
 ### 完整配额、恢复与结果边界
 
 | 阶段 | 完整配额 |

@@ -1963,9 +1963,247 @@ def report(options):
     print(reportpath)
 
 
+def progress(options):
+    """Read-only terminal view; never initializes HAD, models, jobs or outputs."""
+    import heapq
+    import subprocess
+    from collections import deque, Counter
+    from datetime import datetime, timezone, timedelta
+
+    order=("calibrate","select","budget_only","mechanism","eval","adaptive","counterfactual","confirm")
+    labels={m:f"M{i+1}" for i,m in enumerate(LOOP_METHODS)}
+    labels.update(regir_nomem="OldLEAF",refil="REFIL",transfqmix="TransfQMix")
+    root=options.output
+    bank=defaultdict(lambda:defaultdict(set))
+    costs=defaultdict(lambda:[0.,0,0.])
+    history=deque(maxlen=11)
+    offset=0
+    bad=0
+    key=lambda j:(j["split"],j["method"],int(j["seed"]),tuple(j["config"]))
+    fmt=lambda seconds: (f"{seconds/60:.0f}m" if seconds<3600 else f"{seconds/3600:.1f}h")
+
+    def queues():
+        phase=copy.copy(options)
+        groups={}
+        for stage in ("calibrate","select","mechanism","eval","adaptive","counterfactual"):
+            phase.stage=stage
+            selected=LOOP_METHODS+TIERS["references"] if stage=="eval" else LOOP_METHODS
+            groups[stage]=stage_jobs(phase,selected)
+        phase.stage="adaptive"
+        groups["budget_only"]=stage_jobs(phase,LOOP_METHODS,split="budget_only",
+            arms=["fixed1","fixed2","fixed3","fixed4","adaptive"],
+            configs=tuple(c for c in FINAL_CONFIGS if c not in GROUPS["ID"]),start=43000,quota=10)
+        selection=root/"selection.json"
+        chosen=json.loads(selection.read_text(encoding="utf-8"))["selected_method"] if selection.is_file() else "selected_pending"
+        phase.stage="confirm"
+        groups["confirm"]=stage_jobs(phase,(chosen,*TIERS["references"]))
+        from itertools import zip_longest
+        banks=[groups["mechanism"],groups["counterfactual"],
+            [j for j in groups["eval"] if j["method"] in LOOP_METHODS],
+            [j for j in groups["eval"] if j["method"] in TIERS["references"]],groups["adaptive"]]
+        mixed=[j for row in zip_longest(*banks) for j in row if j is not None]
+        return groups,[groups["calibrate"],groups["select"],groups["budget_only"],mixed,groups["confirm"]]
+
+    def processes(lookup):
+        active={}; mains=[]; denied=0
+        if not Path("/proc").is_dir():return active,mains,denied
+        for proc in Path("/proc").iterdir():
+            if not proc.name.isdigit():continue
+            try:
+                args=[a.decode(errors="replace") for a in (proc/"cmdline").read_bytes().split(b"\0") if a]
+                if any(a.endswith("leaf1009.py") for a in args) and "run" in args:
+                    output=args[args.index("--output")+1] if "--output" in args else str(PROJECT/"outputs/main1009")
+                    cwd=Path(os.readlink(proc/"cwd"))
+                    if (cwd/output).resolve()==root:
+                        mains.append((int(proc.name),args))
+                if not any("spawn_main" in a for a in args):continue
+                for fd in (proc/"fd").iterdir():
+                    try:
+                        parts=Path(os.readlink(fd)).relative_to(root).parts
+                        if len(parts)!=5 or parts[0]!="had" or parts[2]!="train":continue
+                        split,nr,nb,k=Path(parts[4]).stem.rsplit("_",3)
+                        task=(split,parts[1],int(parts[3].split("_")[-1]),(int(nr),int(nb),int(k)))
+                        if task in lookup:active[int(proc.name)]=task
+                    except (OSError,ValueError):pass
+            except PermissionError:denied+=1
+            except OSError:pass
+        return active,mains,denied
+
+    def capacity(mains,active):
+        args=mains[0][1] if len(mains)==1 else []
+        spec=args[args.index("--devices")+1] if "--devices" in args else options.devices
+        per=int(args[args.index("--jobs-per-gpu")+1]) if "--jobs-per-gpu" in args else options.jobs_per_gpu
+        if spec!="all":return len(spec.split(","))*per
+        visible=os.environ.get("CUDA_VISIBLE_DEVICES","").strip()
+        if mains:
+            try:
+                env=(Path("/proc")/str(mains[0][0])/"environ").read_bytes().split(b"\0")
+                visible=next((v.split(b"=",1)[1].decode() for v in env if v.startswith(b"CUDA_VISIBLE_DEVICES=")),visible)
+            except OSError:pass
+        if visible and visible!="-1":return len(visible.split(","))*per
+        try:
+            result=subprocess.run(["nvidia-smi","--query-gpu=index","--format=csv,noheader"],
+                capture_output=True,text=True,timeout=3)
+            n=len(result.stdout.strip().splitlines()) if result.returncode==0 else 0
+            return n*per if n else None
+        except (OSError,subprocess.TimeoutExpired):return None
+
+    def sample(method,cfg,arm):
+        entries=[(c,a,v) for (m,c,a),v in costs.items() if m==method and v[1]]
+        exact=[v for c,a,v in entries if c==cfg and a==arm]
+        if exact:
+            return sum(v[0] for v in exact)/sum(v[1] for v in exact),"measured",None
+        same=[v for c,a,v in entries if c==cfg and (a=="fixed4" if arm not in ("fixed1","fixed2","fixed3") else True)]
+        if same:
+            mean=sum(v[0] for v in same)/sum(v[1] for v in same)
+            return mean,"same-config proxy",(.5*mean,2*mean)
+        if entries:
+            c,a,v=min(entries,key=lambda x:(abs(math.log(sum(cfg)/sum(x[0]))),x[1]!=arm))
+            mean=v[0]/v[1]; ratio=sum(cfg)/sum(c)
+            # Planning envelope, not a confidence bound: entity-linear to observer*entity^2.
+            lo=.5*ratio*mean
+            hi=2*max(ratio,(cfg[0]/c[0])*ratio**2)*mean*max(1,100/max(v[2]/v[1],1))
+            return math.sqrt(lo*hi),"unseen-config proxy",(lo,hi)
+        other=[v for (m,c,a),v in costs.items() if c==cfg and v[1]]
+        if other:
+            lo=.5*min(v[0]/v[1] for v in other); hi=2*max(v[0]/v[1] for v in other)
+            return math.sqrt(lo*hi),"unmeasured-model proxy",(lo,hi)
+        any_cost=[(c,v) for (m,c,a),v in costs.items() if v[1]]
+        if any_cost:
+            c,v=min(any_cost,key=lambda x:abs(math.log(sum(cfg)/sum(x[0]))))
+            mean=v[0]/v[1];ratio=sum(cfg)/sum(c)
+            lo=.25*ratio*mean;hi=4*max(ratio,(cfg[0]/c[0])*ratio**2)*mean*max(1,100/max(v[2]/v[1],1))
+            return math.sqrt(lo*hi),"unmeasured-model/config proxy",(lo,hi)
+        return None,"no timing samples",None
+
+    try:
+        while True:
+            groups,phase_queues=queues()
+            lookup={key(j):j for jobs in groups.values() for j in jobs}
+            path=root/"loop_records.jsonl"
+            if path.is_file():
+                with path.open("rb") as stream:
+                    stream.seek(offset)
+                    while True:
+                        line=stream.readline()
+                        if not line or not line.endswith(b"\n"):break
+                        offset=stream.tell()
+                        try:row=json.loads(line)
+                        except (ValueError,UnicodeDecodeError):bad+=1;continue
+                        if row.get("protocol") not in (REVISION,MECHANISM_REVISION):continue
+                        task=(row["split"],row["method"],int(row["seed"]),config_tuple(row["config"]))
+                        arm="completed_scene" if row["split"]=="counterfactual" else row["arm"]
+                        if row["split"]=="counterfactual" and not row.get("scene_complete"):continue
+                        scene=int(row["episode_seed"])
+                        if scene in bank[task][arm]:continue
+                        bank[task][arm].add(scene)
+                        seconds=row.get("episode_wall_seconds")
+                        if seconds is not None and math.isfinite(seconds) and seconds>0:
+                            v=costs[task[1],task[3],row["arm"]]
+                            v[0]+=seconds;v[1]+=1;v[2]+=row.get("ep_len",100)
+            done={}; totals={}; remaining={}
+            for task,j in lookup.items():
+                arms=["completed_scene"] if task[0]=="counterfactual" else j["arms"]
+                scenes=set(range(j["start"],j["start"]+j["quota"]))
+                remaining[task]={a:j["quota"]-len(bank[task][a]&scenes) for a in arms}
+                totals[task]=len(arms)*j["quota"]
+                done[task]=totals[task]-sum(remaining[task].values())
+            now=time.monotonic();history.append((now,dict(done)))
+            def rate(tasks):
+                tasks=list(tasks);current=sum(done[t] for t in tasks)
+                samples=[(t,sum(v.get(k,0) for k in tasks)) for t,v in history]
+                base=next(((t,n) for t,n in samples if n>0),samples[0])
+                dt=now-base[0];gain=current-base[1]
+                return gain/dt if dt>=60 and gain>0 else None
+            def recent_eta(tasks):
+                tasks=list(tasks);left=sum(totals[t]-done[t] for t in tasks)
+                if not left:return "done"
+                speed=rate(tasks)
+                return fmt(left/speed) if speed else "sampling"
+            active,mains,denied=processes(lookup)
+            slots=capacity(mains,active)
+            bounds={}; reasons=Counter();unpriced=0
+            for task,j in lookup.items():
+                left=remaining[task];low=high=0.
+                for arm,n in left.items():
+                    if not n:continue
+                    if task[1]=="selected_pending":
+                        values=[sample(m,task[3],arm) for m in LOOP_METHODS]
+                        available=[v for v in values if v[0] is not None]
+                        if available:
+                            estimate=math.sqrt(min(v[2][0] if v[2] else v[0] for v in available)*max(v[2][1] if v[2] else v[0] for v in available))
+                            spread=(min(v[2][0] if v[2] else v[0] for v in available),max(v[2][1] if v[2] else v[0] for v in available))
+                            reason="selection pending"
+                        else:estimate,reason,spread=None,"no timing samples",None
+                    elif task[0]=="counterfactual":
+                        speed=rate([task])
+                        if speed:
+                            estimate,reason,spread=1/speed,"observed scene rate",None
+                        else:
+                            estimate,reason,spread=sample(task[1],task[3],"fixed4")
+                            if estimate is not None:
+                                spread=(spread[0] if spread else estimate,13*(spread[1] if spread else estimate))
+                                reason="counterfactual 1-13 rollout proxy"
+                    else:estimate,reason,spread=sample(task[1],task[3],arm)
+                    reasons[reason]+=n
+                    if estimate is None:unpriced+=n;continue
+                    lo,hi=spread if spread else (estimate,estimate)
+                    low+=n*lo;high+=n*hi
+                bounds[task]=(low,high)
+            def makespan(jobs,index):
+                heap=[0.]*slots
+                tasks=[key(j) for j in jobs if totals[key(j)]>done[key(j)]]
+                tasks.sort(key=lambda t:t not in active.values())
+                for task in tasks:
+                    start=heapq.heappop(heap);heapq.heappush(heap,start+bounds[task][index])
+                return max(heap)
+            lower=upper=None
+            if slots and not unpriced:
+                lower=sum(makespan(jobs,0) for jobs in phase_queues)
+                upper=sum(makespan(jobs,1) for jobs in phase_queues)
+            if sys.stdout.isatty():print("\033[2J\033[H",end="")
+            stamp=datetime.now(timezone(timedelta(hours=8)))
+            print(stamp.strftime("%Y-%m-%d %H:%M:%S UTC+08"),f"refresh={options.watch_seconds:g}s")
+            print(f"Main PID(s): {[pid for pid,args in mains]} | Active workers: {len(active)} | Planned slots: {slots or 'unknown'}")
+            finished=sum(done[t]==totals[t] for t in lookup)
+            print(f"Whole run: completed shards {finished}/{len(lookup)}; remaining shards {len(lookup)-finished}")
+            priced=sum(reasons.values())
+            direct=reasons["measured"]+reasons["observed scene rate"]
+            print(f"Direct timing coverage of remaining units: {100*direct/max(priced,1):.1f}%")
+            if lower is not None:
+                middle=math.sqrt(lower*upper) if upper else 0
+                finish=stamp+timedelta(seconds=middle)
+                print(f"WHOLE-RUN remaining estimate: ~{fmt(middle)}; planning range {fmt(lower)} - {fmt(upper)}")
+                print(f"Estimated finish: {finish.strftime('%m-%d %H:%M UTC+08')} (conditional on unchanged concurrency)")
+                if direct<.8*priced:print("PROVISIONAL: most remaining work uses timing proxies; do not treat the central estimate as a deadline.")
+            else:print(f"WHOLE-RUN ETA: awaiting timing/GPU samples; unpriced remaining units={unpriced}")
+            print("Remaining timing bases:",dict(reasons))
+            print("Planning range is heuristic, NOT a confidence interval; unseen scales/models and CF are provisional.")
+            if not mains:print("No matching run controller detected: ETA is a budget estimate, not an active countdown.")
+            if len(mains)>1:print("Multiple run controllers detected: concurrency/ETA may be inaccurate.")
+            if denied:print(f"/proc access denied for {denied} process(es); active list may be incomplete.")
+            if bad:print(f"Malformed complete record lines: {bad}")
+            print("\nSTAGE           DONE UNITS/TOTAL       SHARDS DONE/TOTAL   RECENT-RATE ETA")
+            for stage in order:
+                tasks=[key(j) for j in groups[stage]]
+                n=sum(done[t] for t in tasks);total=sum(totals[t] for t in tasks)
+                complete=sum(done[t]==totals[t] for t in tasks)
+                estimate=recent_eta(tasks) if any(t[0]==stage for t in active.values()) else ("done" if n==total else "pending")
+                print(f"{stage:15} {n:>8}/{total:<8} {complete:>5}/{len(tasks):<5}          {estimate}")
+            print("\nPID      STAGE           METHOD      SEED CONFIG        DONE/TOTAL    %     TASK ETA")
+            for pid,task in sorted(active.items()):
+                stage,method,seed,cfg=task;n,total=done[task],totals[task]
+                print(f"{pid:<8} {stage:15} {labels.get(method,method):11} {seed:<4} {str(cfg):13} {n:>4}/{total:<5} {100*n/total:5.1f} {recent_eta([task])}")
+            print("\nUnits=episodes; counterfactual units=fully completed scenes. Ctrl+C stops only this viewer.",flush=True)
+            if options.watch_seconds==0:return 0
+            time.sleep(options.watch_seconds)
+    except KeyboardInterrupt:
+        print("\nViewer stopped; evaluation is unchanged.");return 0
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("stage",choices=("plan","train","run","mechanism","calibrate","select","eval","adaptive","counterfactual","confirm","depth","report"))
+    parser.add_argument("stage",choices=("plan","progress","train","run","mechanism","calibrate","select","eval","adaptive","counterfactual","confirm","depth","report"))
     parser.add_argument("--output",type=Path,default=PROJECT/"outputs/main1009")
     parser.add_argument("--base-config",type=Path,default=None,help="Optional retained regir_nomem config override; default is a complete frozen literal")
     parser.add_argument("--source-output",type=Path,default=PROJECT/"outputs/main0928")
@@ -1978,6 +2216,7 @@ def main():
     parser.add_argument("--devices",default="all",help="all visible logical GPUs (default), or a comma-separated logical subset")
     parser.add_argument("--jobs-per-gpu",type=int,default=4,help="Local concurrent jobs per visible GPU (default: 4)")
     parser.add_argument("--max-minutes",type=float,default=None,help="Stop at episode boundaries after this wall-clock budget; rerun to resume")
+    parser.add_argument("--watch-seconds",type=float,default=30,help="progress refresh interval; 0 prints one snapshot")
     parser.add_argument("--episodes",type=int,help="Legacy confirm/depth quota only; candidate protocol quotas are frozen")
     parser.add_argument("--depths",default="1,2,4,6,8",help="Legacy depth sweep only")
     parser.add_argument("--resume",action="store_true")
@@ -1990,6 +2229,8 @@ def main():
         if options.jobs_per_gpu<=0:raise ValueError("--jobs-per-gpu must be positive")
         if options.max_minutes is not None and (not math.isfinite(options.max_minutes) or options.max_minutes<=0):
             raise ValueError("--max-minutes must be a positive finite value")
+        if not math.isfinite(options.watch_seconds) or options.watch_seconds<0:raise ValueError("--watch-seconds must be finite and nonnegative")
+        if options.stage=="progress":return progress(options)
         if not options.seeds or len(set(options.seeds))!=len(options.seeds) or set(options.seeds)-{0,1,2}:raise ValueError("Use distinct seeds from 0,1,2")
         if options.stage=="depth":options.suite="legacy"
         selected=methods(options)
