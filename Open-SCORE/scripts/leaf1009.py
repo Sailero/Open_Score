@@ -39,6 +39,7 @@ sys.dont_write_bytecode = True
 PROFILE = "leaf1009"
 LEGACY_REVISION = "leaf1009_input_conditioned_v1"
 REVISION = "leaf1009_loop_candidates_v2"
+MECHANISM_REVISION = "leaf1009_native_feedback_v1"
 # Complete retained main0928 seed-0 configuration: cloud defaults need no old file.
 FROZEN_BASE_CONFIG = {'runner': 'parallel',
  'mac': 'entity_mac',
@@ -190,6 +191,14 @@ LOOP_METHODS = ("regir_loop_nomem", "regir_bidirectional_nomem", "regir_requery_
                 "regir_entitygru_nomem", "regir_slotgru_nomem")
 THRESHOLDS = (.01, .03, .1, .3, 1.)
 CF_CONFIGS = ((4,4,2), (10,10,3), (30,30,2), (50,50,2), (30,30,12))
+MECHANISM_CONFIGS = ((4,4,2), (10,10,3), (10,10,12), (30,30,2), (50,50,2), (30,30,12))
+FEEDBACK_ARMS = {
+    "query_feedback": ("normal", "query_update_frozen"),
+    "bidirectional": ("normal", "query_update_frozen", "reverse_kv_clamp"),
+    "requery": ("normal", "query_update_frozen"),
+    "entity_gru": ("normal", "entity_gru_hidden_reset"),
+    "slot_gru": ("normal", "slot_gru_hidden_reset", "slot_competition_removed"),
+}
 LOOP_STATS = ("decisions", "depth_1", "depth_2", "depth_3", "depth_4",
               "attention_entries", "read_calls", "temporal_previews",
               "entity_rounds", "slot_rounds", "query_updates", "macs")
@@ -441,6 +450,16 @@ def initialize_metadata(options):
     if REVISION in protocols and protocols[REVISION] != canonical:
         raise ValueError("Frozen candidate protocol/base provenance changed")
     protocols.setdefault(REVISION, canonical)
+    if options.stage in ("mechanism", "run"):
+        mechanism = dict(revision=MECHANISM_REVISION, configs=MECHANISM_CONFIGS,
+            scenes=[44000,44009], seeds=[0,1,2], checkpoint="final",
+            fixed_depths=[1,2,3,4], feedback_arms=FEEDBACK_ARMS,
+            comparison="paired complete episodes; frozen-model interventions",
+            selection_use=False, formal_ood=False, maximum_episodes=4860)
+        mechanism = json.loads(json.dumps(mechanism))
+        if MECHANISM_REVISION in protocols and protocols[MECHANISM_REVISION] != mechanism:
+            raise ValueError("Native mechanism protocol changed; existing records preserved")
+        protocols.setdefault(MECHANISM_REVISION, mechanism)
     (root / "had").mkdir(parents=True, exist_ok=True)
     atomic_document(path, data)
     return base
@@ -485,11 +504,22 @@ def loop_records(options, method=None, seed=None, config=None, split=None):
     path = options.output / "loop_records.jsonl"
     if not path.is_file():
         return []
-    logging = analysis_module("utils/logging.py")
     bank = {}
-    with logging._locked_file(path) as stream:
+    needles=[]
+    for key,value in (("method",method),("seed",seed),("split",split)):
+        if value is not None:
+            suffix="," if key=="seed" else ""
+            needles.append((json.dumps(key)+": "+json.dumps(value)+suffix).encode("utf-8"))
+    # Writers only append. Read a complete-line prefix without holding their
+    # append lock across a full scan, so GPU workers can persist concurrently.
+    reader=(analysis_module("utils/logging.py")._locked_file(path)
+            if os.name=="nt" else path.open("rb"))
+    with reader as stream:
+        limit=os.fstat(stream.fileno()).st_size
         for line in stream:
+            if stream.tell()>limit or not line.endswith(b"\n"):break
             if not line.strip(): continue
+            if any(needle not in line for needle in needles):continue
             row = json.loads(line)
             if method is not None and row["method"] != method: continue
             if seed is not None and int(row["seed"]) != seed: continue
@@ -548,6 +578,201 @@ def decision_seed(seed, scene):
     return (int(seed) * 1_000_003 + int(scene) * 97 + 1009) % (2**63 - 1)
 
 
+class FeedbackIntervention:
+    def __init__(self, agent, arm):
+        from collections import Counter
+        import torch as th
+        self.agent = agent
+        self.net = agent.global_net
+        self.arm = arm
+        self.core = self.net.loop_core
+        if arm not in FEEDBACK_ARMS.get(self.core, ()):
+            raise ValueError(f"Unsupported feedback intervention {self.core}/{arm}")
+        if getattr(agent, "_native_feedback_intervention", None) is not None:
+            raise RuntimeError("Clear the existing intervention before installing another")
+        if agent.training:
+            raise RuntimeError("Feedback interventions are for eval-mode frozen policies")
+        self.stats = Counter()
+        self.last_forward = {}
+        self._forward_start = Counter()
+        self._saved = []
+        self._handles = []
+        self._context = None
+        self._offset = 0
+        self._gru_hidden = None
+        self._active = True
+        if arm == "normal":
+            return
+        agent._native_feedback_intervention = self
+        self._handles.append(agent.register_forward_pre_hook(self._before_forward))
+        self._handles.append(agent.register_forward_hook(self._after_forward))
+        if arm == "query_update_frozen":
+            original = self.net._loop_update_query
+
+            def frozen(net, b0, previous, read):
+                original(b0, previous, read)
+                self.stats["query_updates_computed"] += int(read.shape[0])
+                self.stats["query_updates_overwritten"] += int(read.shape[0])
+                self.stats["query_update_calls"] += 1
+                return previous
+
+            self._patch(self.net, "_loop_update_query", frozen)
+        elif arm == "reverse_kv_clamp":
+            original_context = self.net._loop_context
+            original_round = self.net.loop_round
+
+            def context(net, memory, mask, query=None):
+                if self._context is not None and query is not None:
+                    size = int(memory.shape[0])
+                    query = self._context[self._offset:self._offset + size]
+                    if query.shape[0] != size:
+                        raise RuntimeError("Reverse-feedback chunk alignment mismatch")
+                    self._offset += size
+                    self.stats["reverse_queries_clamped"] += size
+                    self.stats["reverse_context_calls"] += 1
+                return original_context(memory, mask, query)
+
+            def reverse_round(net, work, stats=None):
+                self._context, self._offset = work["b0"], 0
+                try:
+                    result = original_round(work, stats)
+                    if self._offset != work["b0"].shape[0]:
+                        raise RuntimeError("Reverse-feedback workspace was not fully consumed")
+                    return result
+                finally:
+                    self._context = None
+                    self._offset = 0
+
+            self._patch(self.net, "_loop_context", context)
+            self._patch(self.net, "loop_round", reverse_round)
+        elif arm == "entity_gru_hidden_reset":
+            original = self.net._loop_entity_step
+
+            def entity_step(net, previous, initial, mask):
+                self._gru_hidden = initial.reshape(-1, initial.shape[-1])
+                try:
+                    result = original(previous, initial, mask)
+                    self.stats["entity_hidden_resets"] += int(initial.shape[0])
+                    self.stats["entity_step_calls"] += 1
+                    return result
+                finally:
+                    self._gru_hidden = None
+
+            self._patch(self.net, "_loop_entity_step", entity_step)
+            self._handles.append(self.net.loop_entity_gru.register_forward_pre_hook(self._reset_gru_hidden))
+        elif arm == "slot_gru_hidden_reset":
+            original_initialize = self.net.loop_initialize
+            original_round = self.net.loop_round
+            original_step = self.net._loop_slot_step
+
+            def initialize(net, initial, mask, b0, stats=None):
+                work = original_initialize(initial, mask, b0, stats)
+                # loop_compact index-selects every tensor in work.  Initial
+                # slots consequently keep the exact surviving-observer order.
+                work["native_feedback_initial_slots"] = work["slots"]
+                self.stats["slot_workspaces_initialized"] += int(initial.shape[0])
+                return work
+
+            def slot_round(net, work, stats=None):
+                self._context, self._offset = work["native_feedback_initial_slots"], 0
+                try:
+                    result = original_round(work, stats)
+                    if self._offset != self._context.shape[0]:
+                        raise RuntimeError("Initial-slot workspace was not fully consumed")
+                    return result
+                finally:
+                    self._context = None
+                    self._offset = 0
+
+            def slot_step(net, slots, key, value, mask):
+                size = int(slots.shape[0])
+                initial = self._context[self._offset:self._offset + size]
+                self._offset += size
+                if initial.shape != slots.shape:
+                    raise RuntimeError("Initial-slot chunk alignment mismatch")
+                self._gru_hidden = initial.reshape(-1, initial.shape[-1])
+                try:
+                    result = original_step(slots, key, value, mask)
+                    self.stats["slot_hidden_resets"] += size
+                    self.stats["slot_step_calls"] += 1
+                    return result
+                finally:
+                    self._gru_hidden = None
+
+            self._patch(self.net, "loop_initialize", initialize)
+            self._patch(self.net, "loop_round", slot_round)
+            self._patch(self.net, "_loop_slot_step", slot_step)
+            self._handles.append(self.net.loop_slot_gru.register_forward_pre_hook(self._reset_gru_hidden))
+        elif arm == "slot_competition_removed":
+
+            def independent_slot_step(net, slots, key, value, mask):
+                query = net.loop_slot_query(net.loop_slot_norm(slots))
+                logits = th.bmm(query, key.transpose(1, 2)) / query.shape[-1] ** 0.5
+                # Normalize independently over entities.  All-masked rows
+                # use zero logits before softmax and remain zero after mask.
+                logits = logits.masked_fill(mask.unsqueeze(1), float("-inf"))
+                logits = logits.masked_fill(mask.all(-1)[:, None, None], 0)
+                weights = th.softmax(logits, dim=-1).masked_fill(mask.unsqueeze(1), 0)
+                weights = weights / weights.sum(-1, keepdim=True).clamp_min(1e-8)
+                updates = th.bmm(weights, value)
+                rows, n_slots, dim = slots.shape
+                updated = net.loop_slot_gru(updates.reshape(-1, dim), slots.reshape(-1, dim))
+                updated = updated.reshape(rows, n_slots, dim)
+                updated = updated + net.loop_slot_ffn(net.loop_slot_norm(updated))
+                self.stats["independent_slot_routes"] += int(rows)
+                self.stats["slot_step_calls"] += 1
+                return updated.masked_fill(mask.all(-1)[:, None, None], 0)
+
+            self._patch(self.net, "_loop_slot_step", independent_slot_step)
+
+    def _patch(self, obj, name, function):
+        from types import MethodType
+        # Remove the instance override on clear if the original was a class
+        # method.  Do not leave a bound-method instance shadow behind.
+        had_instance_value = name in obj.__dict__
+        self._saved.append((obj, name, had_instance_value, obj.__dict__.get(name)))
+        setattr(obj, name, MethodType(function, obj))
+
+    def _reset_gru_hidden(self, module, args):
+        if self._gru_hidden is None:
+            raise RuntimeError("GRU reset invoked without a matching workspace")
+        if args[1].shape != self._gru_hidden.shape:
+            raise RuntimeError("GRU hidden-reset shape mismatch")
+        return args[0], self._gru_hidden
+
+    def _before_forward(self, module, args):
+        if module.training:
+            raise RuntimeError("Do not use native feedback interventions for training")
+        self._forward_start = self.stats.copy()
+
+    def _after_forward(self, module, args, output):
+        self.stats["forwards"] += 1
+        self.last_forward = dict(self.stats - self._forward_start)
+
+    def reset_stats(self):
+        self.stats.clear()
+        self.last_forward = {}
+
+    def summary(self):
+        return {"arm": self.arm, "core": self.core, **dict(self.stats)}
+
+    def clear(self):
+        if not self._active:
+            return
+        for handle in self._handles:
+            handle.remove()
+        for obj, name, had_instance_value, value in reversed(self._saved):
+            if had_instance_value:
+                setattr(obj, name, value)
+            else:
+                delattr(obj, name)
+        if getattr(self.agent, "_native_feedback_intervention", None) is self:
+            delattr(self.agent, "_native_feedback_intervention")
+        self._context = self._gru_hidden = None
+        self._offset = 0
+        self._active = False
+
+
 def configure_execution(policy, arm, threshold=None, probabilities=None):
     if arm.startswith("fixed"):
         policy.set_loop_execution("fixed", depth=int(arm[-1]))
@@ -565,17 +790,22 @@ def stage_jobs(options, selected=None, split=None, arms=None, configs=None, star
     if stage == "train":
         return [dict(method=m, seed=s, config=None, split="train", arms=[]) for m in selected for s in options.seeds]
     if configs is None:
-        configs = GROUPS["ID"] if stage in ("calibrate", "select") else CF_CONFIGS if stage == "counterfactual" else FINAL_CONFIGS
+        configs = (GROUPS["ID"] if stage in ("calibrate", "select") else
+                   MECHANISM_CONFIGS if stage == "mechanism" else
+                   CF_CONFIGS if stage == "counterfactual" else FINAL_CONFIGS)
     if start is None:
-        start = {"calibrate":42000, "select":40000, "confirm":110000, "counterfactual":44000}.get(stage,9000)
+        start = {"calibrate":42000, "select":40000, "confirm":110000, "counterfactual":44000, "mechanism":44000}.get(stage,9000)
     if quota is None:
-        quota = {"calibrate":40, "select":100, "counterfactual":10}.get(stage,300)
+        quota = {"calibrate":40, "select":100, "counterfactual":10, "mechanism":10}.get(stage,300)
     split = stage if split is None else split
     jobs = []
+    registry = read_registry() if stage == "mechanism" else None
     for method in selected:
         current_arms = arms
         if current_arms is None:
-            current_arms = (["original"] if method in TIERS["references"] else
+            current_arms = (["fixed1","fixed2","fixed3","fixed4"] +
+                list(FEEDBACK_ARMS[registry[method]["leaf_loop_core"]][1:]) if stage == "mechanism" else
+                ["original"] if method in TIERS["references"] else
                 ["fixed1","fixed2","fixed3","fixed4"] + [f"tau_{t:g}" for t in THRESHOLDS] if stage == "calibrate" else
                 ["fixed1","fixed2","fixed3","fixed4","adaptive","random"] if stage == "select" else
                 ["adaptive","random"] if stage == "adaptive" else
@@ -661,7 +891,11 @@ def evaluate_shard(options, job, stop):
                            adaptive_eligible=qualification["adaptive_eligible"])
             if record_key(row) in done:
                 continue
-            if arm == "adaptive" and calibration["mode"] == "fixed":
+            intervention = None
+            if job["split"] == "mechanism" and not arm.startswith("fixed"):
+                configure_execution(policy,"fixed4")
+                intervention = FeedbackIntervention(policy.mac.agent,arm)
+            elif arm == "adaptive" and calibration["mode"] == "fixed":
                 configure_execution(policy,"fixed4")
             else:
                 tau, probabilities = execution_parameters(options,job,arm)
@@ -669,13 +903,32 @@ def evaluate_shard(options, job, stop):
             if method in LOOP_METHODS:
                 policy.set_loop_seed(decision_seed(seed,scene))
             episode_started = time.perf_counter()
-            result = run_episode(red=config[0],blue=config[1],targets=config[2],seed=scene,
-                red_strategy={"architecture":"end_to_end","policy":name},blue_strategy=BLUE_STRATEGY,
-                max_steps=100,record=False,task_mode="damage",spatial_dim=2,
-                target_initialization="random",diagnostics=True,record_events=False,retain_trajectory=False)
+            try:
+                result = run_episode(red=config[0],blue=config[1],targets=config[2],seed=scene,
+                    red_strategy={"architecture":"end_to_end","policy":name},blue_strategy=BLUE_STRATEGY,
+                    max_steps=100,record=False,task_mode="damage",spatial_dim=2,
+                    target_initialization="random",diagnostics=True,record_events=False,retain_trajectory=False)
+                if intervention is not None:
+                    row["feedback_intervention_stats"] = intervention.summary()
+            finally:
+                if intervention is not None:intervention.clear()
             row["episode_wall_seconds"] = time.perf_counter() - episode_started
             stats = policy.get_loop_stats() if method in LOOP_METHODS else {}
             row["loop_stats"] = {key:float(stats.get(key,0)) for key in LOOP_STATS}
+            if job["split"] == "mechanism":
+                row.update(protocol=MECHANISM_REVISION,analysis_role="frozen_model_diagnostic",
+                           formal_ood=False,method_selection_allowed=False)
+                if intervention is not None:
+                    counts=row["feedback_intervention_stats"]
+                    key=("query_updates_overwritten" if arm=="query_update_frozen" else
+                         "reverse_queries_clamped" if arm=="reverse_kv_clamp" else
+                         "entity_hidden_resets" if arm=="entity_gru_hidden_reset" else
+                         "slot_hidden_resets" if arm=="slot_gru_hidden_reset" else "independent_slot_routes")
+                    repeats=3 if arm=="query_update_frozen" else 4
+                    expected=repeats*int(stats["decisions"])
+                    if counts.get(key,0)!=expected or stats["read_calls"]!=4*stats["decisions"]:
+                        raise RuntimeError(f"Feedback intervention coverage mismatch: {arm}/{counts}/{stats}")
+                    row["feedback_intervention_validated"]=True
             if job["split"] == "calibrate" and scene == job["start"]:
                 row["checkpoint_identity"] = identity
             if job["split"] == "budget_only":
@@ -717,6 +970,9 @@ def logical_devices(spec):
 
 def shard_worker(options, job, gpu, stop, results):
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
+    if options.stage == "run":
+        options=copy.copy(options)
+        options.stage=job["split"]
     directory = options.output / "had" / job["method"] / "train" / f"seed_{job['seed']}"
     directory.mkdir(parents=True,exist_ok=True)
     label = "train" if job["config"] is None else "_".join(map(str,job["config"]))
@@ -806,8 +1062,13 @@ def dispatch_shards(options, jobs):
         handlers[signum] = signal.getsignal(signum)
         signal.signal(signum,lambda *_:stop.set())
     waiting, active, completed, failures = list(jobs),{},[],[]
+    deadline=time.monotonic()+options.max_minutes*60 if options.max_minutes is not None else None
+    deadline_reached=False
     try:
         while waiting or active:
+            if deadline is not None and time.monotonic()>=deadline and not deadline_reached:
+                deadline_reached=True;stop.set()
+                print("Time limit reached; finishing current episodes and preserving resumable records.",flush=True)
             if not stop.is_set():
                 for slot_key in slots:
                     if slot_key not in active and waiting:
@@ -847,11 +1108,48 @@ def dispatch_shards(options, jobs):
         coverage=coverage),ensure_ascii=False),flush=True)
     if not coverage.get("global_complete"):
         print("Local tasks ended; global data may still be running on another server. Rerun this stage after shared coverage is complete.",flush=True)
-    return 1 if failures else 130 if stop.is_set() else 0
+    return 1 if failures else 130 if stop.is_set() else 1 if options.stage=="run" and not coverage.get("global_complete") else 0
 
 
 def delta(damage):
     return max(.01,.02*float(damage))
+
+
+def run_evaluation(options):
+    """Freeze ID choices, then share all GPUs across independent evaluation jobs."""
+    from itertools import zip_longest
+    for stage,name,freeze in (("calibrate","calibration.json",freeze_calibration),
+                              ("select","selection.json",freeze_selection)):
+        phase=copy.copy(options);phase.stage=stage
+        if not (options.output/name).is_file():
+            result=dispatch_shards(phase,stage_jobs(phase,LOOP_METHODS))
+            if result:return result
+        if not freeze(phase):
+            return 1  # Another owner or incomplete quota is not a finished stage.
+        frozen_document(options,name)
+    budget=copy.copy(options);budget.stage="adaptive"
+    result=ensure_budget_jobs(budget,LOOP_METHODS)
+    if result is None:return 1
+    if result:return result
+    banks=[]
+    for stage,selected in (("mechanism",LOOP_METHODS),("counterfactual",LOOP_METHODS),
+                           ("eval",LOOP_METHODS),("eval",TIERS["references"]),
+                           ("adaptive",LOOP_METHODS)):
+        phase=copy.copy(options);phase.stage=stage
+        banks.append(stage_jobs(phase,selected))
+    # One queue avoids reserving idle cards for a shorter stage. Every task
+    # still owns its original method/seed/config/split lock and record keys.
+    jobs=[job for group in zip_longest(*banks) for job in group if job is not None]
+    result=dispatch_shards(options,jobs)
+    if result:
+        report(options)
+        return result
+    phase=copy.copy(options);phase.stage="confirm"
+    selection=frozen_document(options,"selection.json")
+    selected=(selection["selected_method"],*TIERS["references"])
+    result=dispatch_shards(phase,stage_jobs(phase,selected))
+    report(options)
+    return result
 
 
 class IncompleteQuota(ValueError):
@@ -1092,20 +1390,62 @@ def wrapper_act(wrapper,policy,depths=None):
     return done
 
 
+def cached_decision(policy,step):
+    """Read the completed decision; no extra forward, random draw or env step."""
+    return dict(q=policy.mac._decision_q[0].detach().cpu().clone(),
+                hidden=policy.mac.hidden_states[0].detach().cpu().clone(),
+                legal=policy.batch["avail_actions"][0,step].bool().detach().cpu().clone())
+
+
+def decision_effect(current,factual,index,entering):
+    """Separate immediate action agreement from the submitted state difference."""
+    legal=factual["legal"][index]
+    q,q4=current["q"][index],factual["q"][index]
+    h,h4=current["hidden"][index],factual["hidden"][index]
+    def direction(value):
+        value=value.masked_fill(~legal,0)
+        centered=(value-value.sum()/legal.sum().clamp_min(1)).masked_fill(~legal,0)
+        return centered/centered.norm().clamp_min(1e-6)
+    greedy=int(q.masked_fill(~legal,float("-inf")).argmax())
+    greedy4=int(q4.masked_fill(~legal,float("-inf")).argmax())
+    previous=entering.detach().cpu()
+    return dict(decision_greedy_planar=greedy,factual_greedy_planar=greedy4,
+                decision_action_matches_r4=greedy==greedy4,
+                decision_q=q.tolist(),factual_decision_q=q4.tolist(),
+                decision_q_direction_change=float((direction(q)-direction(q4)).norm()),
+                decision_hidden_relative_change_vs_r4=float((h-h4).norm()/h4.norm().clamp_min(1e-6)),
+                decision_hidden_change_from_entering=float((h-previous).norm()),
+                decision_effect_scope="current_action_and_committed_temporal_state")
+
+
 def complexity_proxies(state,index):
     import numpy as np
     living_blue=[b for b in state.blue if b.alive]
     living_red=[r for r in state.red if r.alive]
     observer=state.red[index]
     if living_blue:
-        nearest=lambda red:min(living_blue,key=lambda blue:(float(np.linalg.norm(np.asarray(red.position)-np.asarray(blue.position))),blue.id)).id
+        nearest=lambda red:min(living_blue,key=lambda blue:(float(np.linalg.norm(np.asarray(red.position[:2])-np.asarray(blue.position[:2]))),blue.id)).id
         target=nearest(observer)
         competitors=sum(nearest(red)==target for red in living_red)-1
     else:
         target=None;competitors=0
-    # HAD observer mask exposes all live entities; proxy defined from physical roster, not learned state/Q.
-    return dict(visible_count=len(living_red)+len(living_blue)+sum(t.alive for t in state.targets),
-                same_nearest_blue_competitors=competitors,nearest_blue_id=target)
+    from open_score.envs.features import entities_from_state,masks_from_entity_mask
+    _,absent=entities_from_state(state)
+    observed=int((masks_from_entity_mask(absent)["obs_mask"][index]==0).sum())
+    physical=len(living_red)+len(living_blue)+sum(t.alive for t in state.targets)
+    xy_distance=lambda a,b:float(np.linalg.norm(np.asarray(a.position[:2])-np.asarray(b.position[:2])))
+    blue=next((b for b in living_blue if b.id==target),None)
+    live_targets=[t for t in state.targets if t.alive]
+    # Retain the legacy field, but name its actual meaning explicitly. The
+    # actor's entity mask retains all target slots, including destroyed targets.
+    return dict(visible_count=physical,physical_alive_count=physical,observed_entity_count=observed,
+                alive_red_count=len(living_red),alive_blue_count=len(living_blue),
+                alive_target_count=len(live_targets),observed_target_count=len(state.targets),
+                same_nearest_blue_competitors=competitors,nearest_blue_id=target,
+                observer_nearest_blue_distance=xy_distance(observer,blue) if blue is not None else None,
+                observer_nearest_alive_target_distance=min(xy_distance(observer,t) for t in live_targets) if live_targets else None,
+                nearest_blue_target_distance=min(xy_distance(blue,t) for t in state.targets) if blue is not None and state.targets else None,
+                distance_geometry="planar_xy")
 
 
 def adaptive_snapshot_depths(options,method,policy,wrapper,snapshot):
@@ -1158,6 +1498,7 @@ def counterfactual_shard(options,job,stop):
                 ended=wrapper_act(wrapper,policy)
                 if snapshots and snapshots[-1][0] == step:
                     snapshots[-1][2]["factual_actions"] = copy.deepcopy(policy.last_result)
+                    snapshots[-1][2]["factual_decision"] = cached_decision(policy,step)
             factual_D=float(wrapper.adapter.env.target_damage)
             factual_stats=policy.get_loop_stats()
             factual=dict(factual_base,D=factual_D,return_value=-factual_D,loop_stats=factual_stats,
@@ -1192,12 +1533,18 @@ def counterfactual_shard(options,job,stop):
                         if depth==4:
                             row.update(D=factual_D,return_value=-factual_D,source="factual_reuse",intervention_tail=False,
                                        benefit_vs_r4=0.,loop_stats=factual_stats)
+                            row.update(decision_effect(snapshot["factual_decision"],snapshot["factual_decision"],index,
+                                                       snapshot["policy"]["mac"]["hidden_states"][0,index]))
+                            row["decision_greedy_native"]=snapshot["factual_actions"][agent_id]
                         else:
                             complete_restore(wrapper,policy,snapshot)
                             configure_execution(policy,"fixed4")
                             n_agents=int(policy.args.n_agents)
                             override=np.full((1,n_agents),4,dtype=np.int64);override[0,index]=depth
                             ended=wrapper_act(wrapper,policy,override)
+                            row.update(decision_effect(cached_decision(policy,step),snapshot["factual_decision"],index,
+                                                       snapshot["policy"]["mac"]["hidden_states"][0,index]))
+                            row["decision_greedy_native"]=policy.last_result[agent_id]
                             while not ended:
                                 if stop.is_set():return "stopped"
                                 ended=wrapper_act(wrapper,policy)
@@ -1229,6 +1576,227 @@ def grouped_loop_summary(rows):
     return summary
 
 
+def native_mechanism_summary(rows):
+    """Paired complete-episode diagnostics; OOD scenes never select a family."""
+    import numpy as np
+    native = [r for r in rows if r.get("split") == "mechanism"
+              and r.get("protocol") == MECHANISM_REVISION and "D" in r]
+    registry = read_registry()
+    scenes = set(range(44000, 44010))
+    seeds = (0, 1, 2)
+    bank = {}
+    invalid = 0
+    for row in native:
+        cfg, seed, scene = config_tuple(row["config"]), int(row["seed"]), int(row["episode_seed"])
+        if (cfg not in MECHANISM_CONFIGS or seed not in seeds or scene not in scenes
+                or not math.isfinite(float(row["D"]))
+                or (not row["arm"].startswith("fixed") and not row.get("feedback_intervention_validated"))):
+            invalid += 1
+            continue
+        bank[row["method"], row["arm"], cfg, seed, scene] = row
+
+    def complete_cell(method, arm, cfg, seed):
+        values = [bank.get((method, arm, cfg, seed, scene)) for scene in sorted(scenes)]
+        if any(r is None for r in values):
+            return None
+        if len({r["checkpoint"] for r in values}) != 1:
+            return None
+        return values
+
+    def intervals(seed_values, cfg_scene_values):
+        mean = float(np.mean(seed_values))
+        sd = float(np.std(seed_values, ddof=1))
+        half = 4.30265273 * sd / math.sqrt(3)
+        rng = np.random.default_rng(1009)
+        replicates = np.zeros(2000)
+        # One sampled physical scene carries all three frozen training weights.
+        # Configurations remain equally weighted, rather than resampling observers.
+        for values in cfg_scene_values:
+            means = np.mean(np.asarray(values, dtype=float), axis=0)
+            draws = rng.integers(0, len(means), size=(2000, len(means)))
+            replicates += means[draws].mean(axis=1) / len(cfg_scene_values)
+        return dict(mean=mean, seed_sd=sd, seed_t95=[mean-half, mean+half],
+                    conditional_scene_bootstrap95=np.quantile(replicates, [.025, .975]).tolist(),
+                    seed_values={str(s):float(v) for s,v in zip(seeds, seed_values)})
+
+    def assess(value):
+        if not value or not value["complete"]:
+            return "证据不足"
+        delta = value["practical_margin"]
+        intervals95 = (value["seed_t95"], value["conditional_scene_bootstrap95"])
+        seed_values = list(value["seed_values"].values())
+        if (value["mean"] >= delta and min(i[0] for i in intervals95) > 0
+                and sum(v > 0 for v in seed_values) >= 2 and min(seed_values) >= -delta):
+            return "支持"
+        if max(i[1] for i in intervals95) <= 0:
+            return "未支持"
+        if max(abs(x) for i in intervals95 for x in i) <= delta:
+            return "未支持"
+        return "证据不足"
+
+    def contrast(method, arm, reference="fixed4", configs=MECHANISM_CONFIGS):
+        valid, cfg_scene, ref_values = [], [], []
+        for cfg in configs:
+            left = [complete_cell(method, arm, cfg, seed) for seed in seeds]
+            right = [complete_cell(method, reference, cfg, seed) for seed in seeds]
+            if any(v is None for v in left+right):
+                continue
+            if any(a[0]["checkpoint"] != b[0]["checkpoint"] for a,b in zip(left,right)):
+                continue
+            valid.append(cfg)
+            cfg_scene.append([[float(a["D"])-float(b["D"]) for a,b in zip(l,r)] for l,r in zip(left,right)])
+            ref_values.append([[float(r["D"]) for r in cell] for cell in right])
+        if not valid:
+            return dict(arm=arm, reference=reference, complete=False, configs=[], paired_episodes=0, status="证据不足")
+        per_seed = np.mean(np.asarray(cfg_scene), axis=(0,2)).tolist()
+        value = dict(arm=arm, reference=reference, configs=[list(c) for c in valid],
+                     complete=len(valid)==len(configs), paired_episodes=30*len(valid),
+                     reference_D=float(np.mean(ref_values)))
+        value.update(intervals(per_seed, cfg_scene))
+        value["practical_margin"] = max(.01, .02*value["reference_D"])
+        value["status"] = assess(value)
+        value["sign"] = "positive means the reference has lower damage"
+        return value
+
+    def arm_summary(method, arm, configs=MECHANISM_CONFIGS):
+        cfg_values, valid = [], []
+        for cfg in configs:
+            cells = [complete_cell(method,arm,cfg,seed) for seed in seeds]
+            if any(c is None for c in cells):
+                continue
+            valid.append(cfg)
+            cfg_values.append([dict(D=statistics.mean(float(r["D"]) for r in cell),
+                macs_per_decision=sum(float(r["loop_stats"].get("macs",0)) for r in cell)
+                    / max(sum(float(r["loop_stats"].get("decisions",0)) for r in cell),1),
+                decisions=sum(float(r["loop_stats"].get("decisions",0)) for r in cell),
+                episode_wall_seconds=statistics.mean(float(r["episode_wall_seconds"]) for r in cell)) for cell in cells])
+        result = dict(arm=arm, complete=len(valid)==len(configs), configs=[list(c) for c in valid], episodes=30*len(valid))
+        if cfg_values:
+            for key in ("D","macs_per_decision","decisions","episode_wall_seconds"):
+                per_seed = [statistics.mean(cfg[seed][key] for cfg in cfg_values) for seed in seeds]
+                result[key] = statistics.mean(per_seed)
+                result[key+"_seed_values"] = {str(seed):float(v) for seed,v in zip(seeds,per_seed)}
+                result[key+"_seed_sd"] = statistics.stdev(per_seed)
+        return result
+
+    methods_summary = []
+    for method in LOOP_METHODS:
+        cuts = FEEDBACK_ARMS[registry[method]["leaf_loop_core"]][1:]
+        arms = tuple(f"fixed{d}" for d in range(1,5)) + cuts
+        expected = len(arms)*180
+        count = sum(key[0] == method for key in bank)
+        gains = {f"R{d}_to_R4":contrast(method,f"fixed{d}") for d in (1,2,3)}
+        gains["R1_to_R2"] = contrast(method,"fixed1","fixed2")
+        cut_results = {arm:contrast(method,arm) for arm in cuts}
+        arm_results = {arm:arm_summary(method,arm) for arm in arms}
+        per_config = [dict(config=list(cfg), arms={arm:arm_summary(method,arm,(cfg,)) for arm in arms},
+            depth_gains={f"R{d}_to_R4":contrast(method,f"fixed{d}",configs=(cfg,)) for d in (1,2,3)},
+            feedback_losses={arm:contrast(method,arm,configs=(cfg,)) for arm in cuts}) for cfg in MECHANISM_CONFIGS]
+        group_results = {}
+        for name,configs in GROUPS.items():
+            represented = tuple(c for c in MECHANISM_CONFIGS if c in configs)
+            if represented:
+                group_results[name] = dict(configs=[list(c) for c in represented],
+                    fixed4=arm_summary(method,"fixed4",represented),
+                    depth_gains={f"R{d}_to_R4":contrast(method,f"fixed{d}",configs=represented) for d in (1,2,3)},
+                    feedback_losses={arm:contrast(method,arm,configs=represented) for arm in cuts})
+        ni = gains["R2_to_R4"]
+        ni_status = "证据不足"
+        savings = None
+        if ni.get("complete") and arm_results["fixed2"].get("complete") and arm_results["fixed4"].get("complete"):
+            savings = 1-arm_results["fixed2"]["macs_per_decision"]/max(arm_results["fixed4"]["macs_per_decision"],1)
+            upper = max(ni["seed_t95"][1],ni["conditional_scene_bootstrap95"][1])
+            lower = min(ni["seed_t95"][0],ni["conditional_scene_bootstrap95"][0])
+            if (upper <= ni["practical_margin"] and savings > 0
+                    and sum(v <= ni["practical_margin"] for v in ni["seed_values"].values()) >= 2
+                    and max(ni["seed_values"].values()) <= 2*ni["practical_margin"]):
+                ni_status = "支持"
+            elif lower > ni["practical_margin"]:
+                ni_status = "未支持"
+        methods_summary.append(dict(method=method, records=count, expected_records=expected, complete=count==expected,
+            arms=arm_results, depth_gains=gains, feedback_losses=cut_results, per_config=per_config, groups=group_results,
+            story_tests=dict(reward_value_R1_to_R4=gains["R1_to_R4"]["status"],
+                extra_depth_R2_to_R4=gains["R2_to_R4"]["status"],
+                feedback_paths={arm:value["status"] for arm,value in cut_results.items()},
+                R2_noninferior_and_lower_matrix_MAC=ni_status),
+            fixed2_mac_saving_per_decision=savings))
+    return dict(revision=MECHANISM_REVISION, records=len(bank), expected_records=4860,
+        complete=len(bank)==4860 and all(m["complete"] for m in methods_summary), invalid_records=invalid,
+        scene_range=[44000,44009], configs=[list(c) for c in MECHANISM_CONFIGS], training_seeds=list(seeds),
+        checkpoint_policy="same frozen final@1M within each paired training seed",
+        uncertainty=dict(seed_t95="three training seed means; Student t df=2, 4.30265273",
+            bootstrap="2000 physical config/scene cluster resamples, stratified by equally weighted config; conditional on three frozen weights",
+            practical_margin="max(0.01, 0.02 * paired reference mean damage)",
+            support_rule="complete quota, mean >= margin, both 95% intervals lower > 0, >=2 positive seeds and no seed loss > margin"),
+        formal_ood=False, method_selection_allowed=False,
+        compute_definition="config-equal matrix MAC/decision from complete live-policy episodes; excludes scalar operations, not wall-clock speed",
+        methods=methods_summary)
+
+
+def plot_native_mechanisms(analysis, save):
+    """Render actual native reward diagnostics, including incomplete coverage."""
+    import matplotlib.pyplot as plt
+    import numpy as np
+    if not analysis["records"]:
+        return []
+    captions = []
+    methods_summary = analysis["methods"]
+    labels = {m:f"M{i+1}" for i,m in enumerate(LOOP_METHODS)}
+    coverage = f"{analysis['records']}/{analysis['expected_records']} episodes; 10 scenes/config; preliminary OOD"
+    fig,axes = plt.subplots(1,2,figsize=(12,5))
+    for item in methods_summary:
+        xs,ys,sd,cost = [],[],[],[]
+        for d in range(1,5):
+            arm = item["arms"][f"fixed{d}"]
+            if "D" not in arm:
+                continue
+            xs.append(d);ys.append(arm["D"]);sd.append(arm["D_seed_sd"])
+            cost.append(arm["macs_per_decision"]/1e6)
+        if xs:
+            axes[0].errorbar(xs,ys,yerr=sd,marker="o",capsize=3,label=labels[item["method"]])
+            axes[1].plot(xs,cost,marker="o",label=labels[item["method"]])
+    axes[0].set(xlabel="Fixed depth",ylabel="Damage D (lower is better)",title="Config-equal reward, mean +/- seed SD")
+    axes[1].set(xlabel="Fixed depth",ylabel="Measured matrix MAC / decision (million)",title="Live-policy computation")
+    for ax in axes:
+        ax.set_xticks([1,2,3,4]);ax.legend();ax.grid(alpha=.2)
+    fig.suptitle(coverage,fontsize=10)
+    save(fig,"loop_native_depth.png","Native depth reward and measured matrix MAC (complete cells only)")
+    fig,ax = plt.subplots(figsize=(11,5))
+    y, cut_labels = 0, []
+    for item in methods_summary:
+        for arm,value in item["feedback_losses"].items():
+            if "mean" not in value:
+                continue
+            low,high = value["conditional_scene_bootstrap95"]
+            ax.errorbar(value["mean"],y,xerr=[[max(0,value["mean"]-low)],[max(0,high-value["mean"])]],fmt="o",capsize=4,color="C0")
+            for seed,number in value["seed_values"].items():
+                ax.scatter(number,y+(.09*(int(seed)-1)),marker="|",color=f"C{int(seed)+1}",s=70)
+            cut_labels.append(f"{labels[item['method']]} / {arm}")
+            captions.append(f"{labels[item['method']]} {arm}: {value['status']}")
+            y += 1
+    ax.set(yticks=list(range(y)),yticklabels=cut_labels,
+           ylim=(-.5,max(y-.5,.5)),xlabel="Damage(cut) - damage(normal R4); positive favors feedback",title=coverage)
+    ax.tick_params(axis="y",labelsize=8)
+    ax.axvline(0,color="grey",lw=1);ax.grid(axis="x",alpha=.2)
+    save(fig,"loop_native_feedback_reward.png","Native feedback cuts: conditional scene bootstrap95, with separate seed estimates")
+    fig,axes = plt.subplots(1,4,figsize=(15,4.5))
+    for ax,name in zip(axes,GROUPS):
+        names,means,sds = [],[],[]
+        for item in methods_summary:
+            group = item["groups"].get(name,{})
+            value = group.get("fixed4",{})
+            if "D" not in value:
+                continue
+            names.append(labels[item["method"]]);means.append(value["D"]);sds.append(value["D_seed_sd"])
+        positions = np.arange(len(names))
+        ax.bar(positions,means,yerr=sds,capsize=3,color="C0",alpha=.75)
+        ax.set(xticks=positions,xticklabels=names,title=name,ylabel="Damage D (lower is better)")
+        ax.grid(axis="y",alpha=.2)
+    fig.suptitle(coverage+"; mean +/- training seed SD; no family selection",fontsize=10)
+    save(fig,"loop_native_ood_pilot.png","Six-config frozen-weight OOD pilot, not the formal 24-config evaluation")
+    return captions
+
+
 def report(options):
     """Replace only this protocol's section in the sole existing report."""
     import matplotlib
@@ -1258,6 +1826,11 @@ def report(options):
     combined["loop_candidates"]=dict(revision=REVISION,results=summary,actual_budget_comparisons=comparisons,
         counterfactual_records=sum(r["split"]=="counterfactual" for r in rows),
         intervention_tails=sum(bool(r.get("intervention_tail")) for r in rows))
+    native = native_mechanism_summary(rows)
+    combined["native_mechanism_analysis"] = native
+    if native["complete"]:
+        combined.setdefault("native_mechanism_execution",{}).update(status="completed",
+            completed_episodes=native["records"],remaining_episodes=0)
     atomic_document(path,combined)
     csvpath=options.output/"loop_summary.csv"
     if summary:
@@ -1300,6 +1873,32 @@ def report(options):
     def save(fig,name,label):
         figures.mkdir(parents=True,exist_ok=True);fig.tight_layout();fig.savefig(figures/name,dpi=160);plt.close(fig)
         images.append((label,f"had/figures/{name}"))
+    if native["records"]:
+        text.extend(["", "### 原生奖励机制与初步外推", "",
+            f"已完成 {native['records']}/{native['expected_records']} 个完整 episode；全部完成={native['complete']}。"
+            "仅使用三个冻结 final 权重，每配置十个配对物理场景。六配置外推用于机制判断，不能代替正式 24 配置、每配置 300 场的外推比较或 ID 方法选择。",
+            "以下差值均以 D 为单位：深度收益为 D浅−D四，反馈损失为 D切断−D正常四轮。配置等权、训练种子分别公开；t95 使用三个种子均值（df=2），另提供按配置分层、同场景联合三个权重的 2000 次聚类 bootstrap95。正差代表四轮或正常反馈更好。",
+            "支持要求完整配额、均值至少达到 δ=max(0.01,0.02×参考D)、两个区间下界均大于零、至少两个种子为正且第三个不显著反向。宽区间保留为证据不足。",
+            "| 方法 | 原生记录 | R1→R4 | R2→R4 | 反馈奖励证据 | R2非劣且节省MAC |",
+            "|---|---:|---|---|---|---|"])
+        for i,item in enumerate(native["methods"],1):
+            status = item["story_tests"]
+            paths = "; ".join(f"{arm}: {result}" for arm,result in status["feedback_paths"].items())
+            text.append(f"| M{i} | {item['records']}/{item['expected_records']} | {status['reward_value_R1_to_R4']} | {status['extra_depth_R2_to_R4']} | {paths} | {status['R2_noninferior_and_lower_matrix_MAC']} |")
+        text.extend(["", "| 方法 | 配对比较 | 配置覆盖 | 差值均值±seed SD | seed 0/1/2 | seed t95 | 场景聚类95 |",
+                     "|---|---|---:|---:|---|---|---|"])
+        for i,item in enumerate(native["methods"],1):
+            values = {**item["depth_gains"], **item["feedback_losses"]}
+            for name,value in values.items():
+                if "mean" not in value:
+                    continue
+                seed_values = "/".join(f"{value['seed_values'][str(s)]:+.4f}" for s in (0,1,2))
+                ci = lambda bounds: f"[{bounds[0]:+.4f}, {bounds[1]:+.4f}]"
+                text.append(f"| M{i} | {name} | {len(value['configs'])}/6 | {value['mean']:+.4f}±{value['seed_sd']:.4f} | {seed_values} | {ci(value['seed_t95'])} | {ci(value['conditional_scene_bootstrap95'])} |")
+        text.extend(["", "M2 的 reverse_kv_clamp 单独检验反向 query→实体通路；不能用两个切断差值相减拆分贡献。M4/M5 hidden reset 仅去掉直接状态承接，保留迭代注意力/路由。M5 competition removed 检验当前竞争归一化，不能自动证明对象分组。",
+            "实际 matrix MAC/decision 来自完整在线策略的矩阵调用；尾段长度和存活状态可能随策略改变，MAC 不代表纯推理速度。全局状态反馈敏感性不能替代奖励贡献。自适应按需计算仍需正式 adaptive 对预算匹配 random 与单决策反事实。",
+            "完整配置、种子和路径统计保存在 [summary.json](summary.json) 的 native_mechanism_analysis。"])
+        plot_native_mechanisms(native,save)
     def complete_family(values,configs):
         cells={(r["seed"],tuple(r["config"])) for r in values}
         expected={(seed,config) for seed in (0,1,2) for config in configs}
@@ -1346,7 +1945,7 @@ def report(options):
     cf=[r for r in rows if r["split"]=="counterfactual" and r.get("intervention_tail")]
     if cf:
         fig,axes=plt.subplots(1,2,figsize=(12,5))
-        for ax,proxy in zip(axes,("visible_count","same_nearest_blue_competitors")):
+        for ax,proxy in zip(axes,("physical_alive_count","same_nearest_blue_competitors")):
             b=defaultdict(list)
             for r in cf:b[r["method"],config_tuple(r["config"]),r["forced_depth"],r[proxy]].append(r["benefit_vs_r4"])
             for method,config,depth in sorted({(m,c,d) for m,c,d,x in b}):
@@ -1355,7 +1954,7 @@ def report(options):
             ax.set(xlabel=proxy,ylabel="Damage(forced depth) - damage(R4)");ax.axhline(0,color="grey",lw=.7)
         axes[0].legend(fontsize=4,ncol=2);save(fig,"loop_complexity_counterfactual.png","Config-stratified physical complexity / counterfactual benefit")
         text.extend(["",f"反事实实际干预尾随 {len(cf)} 条；R4 记录复用同场景 factual final D。原生物理状态、对手 RNG、策略 batch/hidden/cache 与全局 RNG 从同一快照恢复。",
-            "图中收益是单个 observer 当前动作深度改变、未来全为四轮的回报差；它不等于整条自适应策略的收益。复杂度由物理可见数量与共同最近敌机竞争定义，按配置分层。"])
+            "图中收益是单个 observer 当前深度改变（含动作与提交 hidden）、未来全为四轮的总回报差；它不等于整条自适应策略的收益。复杂度由物理存活数量与共同最近敌机竞争定义，按配置分层。"])
     for label,path in images:text.extend(["",f"![{label}]({path})"])
     text.extend(["","停机的价值由 adaptive 对 fixed4 的真实回报与计算节省、以及对实际预算匹配 random 的优势判断。",
         "counterfactual 单决策收益只提供归因证据；decision stability 和动作一致性不直接证明回报收益。无合格方法时保留 performance best 并标记 loop_unverified。",""])
@@ -1366,7 +1965,7 @@ def report(options):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("stage",choices=("plan","train","calibrate","select","eval","adaptive","counterfactual","confirm","depth","report"))
+    parser.add_argument("stage",choices=("plan","train","run","mechanism","calibrate","select","eval","adaptive","counterfactual","confirm","depth","report"))
     parser.add_argument("--output",type=Path,default=PROJECT/"outputs/main1009")
     parser.add_argument("--base-config",type=Path,default=None,help="Optional retained regir_nomem config override; default is a complete frozen literal")
     parser.add_argument("--source-output",type=Path,default=PROJECT/"outputs/main0928")
@@ -1378,6 +1977,7 @@ def main():
     parser.add_argument("--steps",type=int,default=1_000_000)
     parser.add_argument("--devices",default="all",help="all visible logical GPUs (default), or a comma-separated logical subset")
     parser.add_argument("--jobs-per-gpu",type=int,default=4,help="Local concurrent jobs per visible GPU (default: 4)")
+    parser.add_argument("--max-minutes",type=float,default=None,help="Stop at episode boundaries after this wall-clock budget; rerun to resume")
     parser.add_argument("--episodes",type=int,help="Legacy confirm/depth quota only; candidate protocol quotas are frozen")
     parser.add_argument("--depths",default="1,2,4,6,8",help="Legacy depth sweep only")
     parser.add_argument("--resume",action="store_true")
@@ -1388,6 +1988,8 @@ def main():
     try:
         options.seeds=tuple(int(v) for v in options.seeds.split(","));options.depths=tuple(int(v) for v in options.depths.split(","))
         if options.jobs_per_gpu<=0:raise ValueError("--jobs-per-gpu must be positive")
+        if options.max_minutes is not None and (not math.isfinite(options.max_minutes) or options.max_minutes<=0):
+            raise ValueError("--max-minutes must be a positive finite value")
         if not options.seeds or len(set(options.seeds))!=len(options.seeds) or set(options.seeds)-{0,1,2}:raise ValueError("Use distinct seeds from 0,1,2")
         if options.stage=="depth":options.suite="legacy"
         selected=methods(options)
@@ -1407,6 +2009,9 @@ def main():
                     formal_episode_arms={m:1 if m in TIERS["references"] else 4 for m in selected},
                     adaptive_episode_arms=2 if any(m in LOOP_METHODS for m in selected) else 0,
                     counterfactual_max_intervention_tails=9000 if selected==LOOP_METHODS else 1800*sum(m in LOOP_METHODS for m in selected))
+                payload.update(native_mechanism_configs=MECHANISM_CONFIGS,native_mechanism_scenes=[44000,44009],
+                    native_mechanism_episode_arms={m:4+len(FEEDBACK_ARMS[registry[m]["leaf_loop_core"]])-1
+                        for m in selected if m in LOOP_METHODS},native_mechanism_maximum_episodes=4860)
             print(json.dumps(payload,ensure_ascii=False,indent=2));return 0
         if options.stage=="report":report(options);return 0
         if not options.devices:raise ValueError("--devices must be all or a logical GPU list")
@@ -1419,14 +2024,18 @@ def main():
             return dispatch_shards(options,jobs)
         if options.steps!=1_000_000:raise ValueError("Candidate comparison uses exactly 1M physical training steps")
         if options.episodes is not None:raise ValueError("Candidate stage quotas are fixed; --episodes is only for legacy tiers")
-        if options.stage in ("calibrate","select","eval","adaptive","counterfactual","confirm") and options.seeds!=(0,1,2):raise ValueError("Freeze and formal paired stages require ordered seeds 0,1,2")
+        if options.stage in ("run","mechanism","calibrate","select","eval","adaptive","counterfactual","confirm") and options.seeds!=(0,1,2):raise ValueError("Mechanism, freeze and formal paired stages require ordered seeds 0,1,2")
         if options.stage=="train" and any(m in TIERS["references"] for m in selected):raise ValueError("Reference checkpoints are reused read-only")
-        if options.stage in ("calibrate","select","adaptive","counterfactual") and any(m not in LOOP_METHODS for m in selected):raise ValueError("This stage only applies to new loop candidates")
+        if options.stage in ("mechanism","calibrate","select","adaptive","counterfactual") and any(m not in LOOP_METHODS for m in selected):raise ValueError("This stage only applies to new loop candidates")
+        if options.stage=="mechanism" and selected!=LOOP_METHODS:raise ValueError("Mechanism comparison requires all five candidates")
+        if options.stage=="run" and selected!=LOOP_METHODS:raise ValueError("Full evaluation requires the five-candidate suite")
+        if options.stage=="run" and options.max_minutes is not None:raise ValueError("Full evaluation runs on the other machine without a local time limit")
         if options.stage in ("calibrate","select") and selected!=LOOP_METHODS:raise ValueError("Frozen calibration/family selection requires all five candidates")
         if options.stage in ("eval","adaptive","counterfactual","confirm") and any(m in LOOP_METHODS for m in selected):frozen_document(options,"selection.json")
         if options.stage=="confirm":
             selection=frozen_document(options,"selection.json");selected=(selection["selected_method"],*TIERS["references"])
         initialize(options)
+        if options.stage=="run":return run_evaluation(options)
         if options.stage=="calibrate" and (options.output/"calibration.json").is_file():
             freeze_calibration(options);return 0
         if options.stage=="select" and (options.output/"selection.json").is_file():

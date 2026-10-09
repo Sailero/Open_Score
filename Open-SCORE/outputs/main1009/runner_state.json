@@ -1,0 +1,186 @@
+{
+  "hosts": {
+    "sql-dream-z5--580822cba0ba-z3un2hlcrc": {
+      "train": {
+        "pid": 529276,
+        "task_results": [
+          {
+            "job": {
+              "method": "regir_requery_nomem",
+              "seed": 1,
+              "config": null,
+              "split": "train",
+              "arms": []
+            },
+            "status": "completed",
+            "error": null
+          },
+          {
+            "job": {
+              "method": "regir_requery_nomem",
+              "seed": 0,
+              "config": null,
+              "split": "train",
+              "arms": []
+            },
+            "status": "completed",
+            "error": null
+          },
+          {
+            "job": {
+              "method": "regir_requery_nomem",
+              "seed": 2,
+              "config": null,
+              "split": "train",
+              "arms": []
+            },
+            "status": "completed",
+            "error": null
+          },
+          {
+            "job": {
+              "method": "regir_slotgru_nomem",
+              "seed": 1,
+              "config": null,
+              "split": "train",
+              "arms": []
+            },
+            "status": "completed",
+            "error": null
+          },
+          {
+            "job": {
+              "method": "regir_slotgru_nomem",
+              "seed": 2,
+              "config": null,
+              "split": "train",
+              "arms": []
+            },
+            "status": "completed",
+            "error": null
+          },
+          {
+            "job": {
+              "method": "regir_slotgru_nomem",
+              "seed": 0,
+              "config": null,
+              "split": "train",
+              "arms": []
+            },
+            "status": "completed",
+            "error": null
+          },
+          {
+            "job": {
+              "method": "regir_entitygru_nomem",
+              "seed": 0,
+              "config": null,
+              "split": "train",
+              "arms": []
+            },
+            "status": "completed",
+            "error": null
+          },
+          {
+            "job": {
+              "method": "regir_entitygru_nomem",
+              "seed": 2,
+              "config": null,
+              "split": "train",
+              "arms": []
+            },
+            "status": "completed",
+            "error": null
+          },
+          {
+            "job": {
+              "method": "regir_entitygru_nomem",
+              "seed": 1,
+              "config": null,
+              "split": "train",
+              "arms": []
+            },
+            "status": "completed",
+            "error": null
+          },
+          {
+            "job": {
+              "method": "regir_loop_nomem",
+              "seed": 2,
+              "config": null,
+              "split": "train",
+              "arms": []
+            },
+            "status": "completed",
+            "error": null
+          },
+          {
+            "job": {
+              "method": "regir_bidirectional_nomem",
+              "seed": 2,
+              "config": null,
+              "split": "train",
+              "arms": []
+            },
+            "status": "completed",
+            "error": null
+          },
+          {
+            "job": {
+              "method": "regir_loop_nomem",
+              "seed": 0,
+              "config": null,
+              "split": "train",
+              "arms": []
+            },
+            "status": "completed",
+            "error": null
+          },
+          {
+            "job": {
+              "method": "regir_loop_nomem",
+              "seed": 1,
+              "config": null,
+              "split": "train",
+              "arms": []
+            },
+            "status": "completed",
+            "error": null
+          },
+          {
+            "job": {
+              "method": "regir_bidirectional_nomem",
+              "seed": 1,
+              "config": null,
+              "split": "train",
+              "arms": []
+            },
+            "status": "completed",
+            "error": null
+          },
+          {
+            "job": {
+              "method": "regir_bidirectional_nomem",
+              "seed": 0,
+              "config": null,
+              "split": "train",
+              "arms": []
+            },
+            "status": "completed",
+            "error": null
+          }
+        ],
+        "pending": [],
+        "local_completed": 15,
+        "claimed_elsewhere": 0,
+        "interrupted": false,
+        "coverage": {
+          "kind": "global_training",
+          "complete": 15,
+          "total": 15,
+          "global_complete": true
+        }
+      }
+    }
+  }
+}

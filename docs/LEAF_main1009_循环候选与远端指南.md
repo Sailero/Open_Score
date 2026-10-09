@@ -1,6 +1,10 @@
-# LEAF main1009：五种循环候选与远端执行指南
+# LEAF main1009：五种循环候选执行指南
 
-2026-10-09。本文是代码与运行指南；实验结果统一更新到 `Open-SCORE/outputs/main1009/实验报告.md`。本机准备代码，使用既有保存状态执行离线验收及用户要求的临时 smoke；不启动正式训练或 HAD 对局，不安装依赖，不保留 smoke 代码。
+2026-10-09。本文是代码与运行指南；实验结果只更新到[main1009 唯一正式报告](../Open-SCORE/outputs/main1009/实验报告.md)。15 个 1M 训练任务已全部完成，不要重复启动训练。8,100 个 final 和 120 个 best 离线机制快照已完成。本机原生校准与机制任务均已停止，部分记录保留，不能记为完成。校准、选型、原生机制、完整 OOD、自适应和反事实的完整配额未完成。
+
+用户最新指令是：**全部实验都在另一台已配好 HAD 和多 GPU 的机器执行，本机不再启动对局。** 本机只准备代码与指南。不安装依赖、不重训、不修改模型或 HAD 物理接口。
+
+离线诊断证明对应反馈被模型使用；完整回报、困难状态深轮收益及按需分配须由下面冻结协议验证。M1 至 M5 对应不同论文主题，完整讨论只保留在正式报告中。
 
 ## 本轮固定范围
 
@@ -50,6 +54,7 @@ M4 的实体 GRU 输入为 `[LN(E), LN(message)]`（128 维），hidden 为上�
 
 | 阶段 | 场景与配额 |
 |---|---|
+| 原生机制 | 六配置，各 10 场，44000–44009；五方法、三个训练种子，fixed1/2/3/4 与方法专属反馈切断，总计 4,860 场 |
 | 校准 | 四个训练 ID 配置，各 40 场，42000–42039；阈值 `{0.01,0.03,0.1,0.3,1}` |
 | 选型 | 四个 ID 配置，各 100 场，40000–40099；与校准独立 |
 | 完整评估 | 原 24 配置，各 300 场，9000–9299；固定 1/2/3/4 轮、自适应、预算匹配随机深度 |
@@ -57,7 +62,7 @@ M4 的实体 GRU 输入为 `[LN(E), LN(message)]`（128 维），hidden 为上�
 | 反事实 | 五配置各 10 场；步数 0/5/10；每快照最多两个存活智能体，各自只改变当前决策深度为 1/2/4 |
 | 独立确认 | 锁定候选与旧 LEAF/REFIL/TransfQMix；24 配置各 300 场，110000–110299 |
 
-反事实配置固定为 `(4,4,2)`、`(10,10,3)`、`(30,30,2)`、`(50,50,2)`、`(30,30,12)`。恢复环境、随机流、策略 batch/hidden/cache 与必要 grouping 状态，其他智能体和未来决策均执行四轮。R4 直接复用同场景的事实轨迹最终 D，不重复运行；全轮最多 750 场事实轨迹及 9,000 条 R1/R2 干预尾段。以可见数量及最近攻击者竞争程度作独立物理复杂度指标，在同一 N/K 内分层。缺失或提前终止的快照如实记录，不补充额外场景。
+反事实配置固定为 `(4,4,2)`、`(10,10,3)`、`(30,30,2)`、`(50,50,2)`、`(30,30,12)`。恢复环境、随机流、策略 batch/hidden/cache 与必要 grouping 状态，其他智能体和未来决策均执行四轮。R4 直接复用同场景的事实轨迹最终 D，不重复运行；全轮最多 750 场事实轨迹及 9,000 条 R1/R2 干预尾段。以物理存活数量及最近攻击者竞争程度作独立物理复杂度指标，在同一 N/K 和快照步数内分层。缺失或提前终止的快照如实记录，不补充额外场景。
 
 以 `D=-reward`、`delta(D)=max(0.01,0.02*D)` 为预先约定的实际意义容差：
 
@@ -68,47 +73,146 @@ M4 的实体 GRU 输入为 `[LN(E), LN(message)]`（128 维），hidden 为上�
 
 同 checkpoint 深度比较验证冻结策略的深度效用，不能替代重新训练单轮的贡献对照。胜出方法的训练消融、参数匹配和额外 Set Transformer 等训练基线后置。完整故事还需要反事实证明复杂决策从深度中获益更多，以及自适应比预算匹配的随机分配更有效。
 
-## 远端拉取与运行
+## 原生机制矩阵：在另一机器完整执行
 
-发布分支为 `leaf/main1009-dual-route`。共享仓库只需在一台服务器执行下面的 Git 更新；其余服务器直接进入同一个已更新目录。保留远端已有结果，不执行 `git reset --hard` 或清理 outputs。远端继续使用已配置好的原 HAD 环境。
+另一机器继续使用原 HAD 接口，训练对应 `CORE_VERSION=had-workbench-2.1.0`、`PHYSICS_PROTOCOL=rebuild-calibrated-v3-r7-target-initialization`。本机曾临时恢复原源码以运行已停止的任务，没有修改 SkyHAD；本机进程退出后清理临时运行源码，正式权重与已落盘结果保留。
+
+机制配置为 `(4,4,2)`、`(10,10,3)`、`(10,10,12)`、`(30,30,2)`、`(50,50,2)`、`(30,30,12)`；每配置使用场景 44000–44009，训练种子 0/1/2，正式 `final.pt`。所有方法运行 fixed1/2/3/4，再运行下面的 fixed4 切断条件。总计 90 个配置级分片、4,860 场完整闭环对局；M1/M3/M4 各 900 场，M2/M5 各 1,080 场。
+
+| 方法 | 专属切断 |
+|---|---|
+| M1 | `query_update_frozen`：计算 query 更新后覆盖回 previous query |
+| M2 | `query_update_frozen`；`reverse_kv_clamp`：实体端追加的 query K/V 固定为初始 b0，reader query 正常更新 |
+| M3 | `query_update_frozen` |
+| M4 | `entity_gru_hidden_reset`：实体 GRU hidden 改为初始 E0，仍保留当前注意力消息 |
+| M5 | `slot_gru_hidden_reset`；`slot_competition_removed`：每个 slot 独立沿实体归一化，其他更新保留 |
+
+切断仅作用于当前评估进程，不改模型文件或参数。M4/M5 的 reset 隔离直接 GRU 状态承接，注意力消息仍可传递上轮信息，因此不能称为切断全部循环。比较正常四轮与切断的伤害差 `Dcut−D4`，再与 fixed1/2/3/4 的伤害差共同判断各故事；动作或 hidden 敏感性不能替代奖励证据。
+
+此阶段独立于 calibrate/select，结果写入同一 `main1009/loop_records.jsonl`、`split=mechanism`、协议 `leaf1009_native_feedback_v1`，**不进入正式阈值或方法选型**。十场/配置只是机制与初步外推证据，不能称为完成正式 300 场 OOD。另一机器不加 `--max-minutes`，按完整配额执行。中断后原指令重跑，已完成记录跳过；本机已有 partial 保留，不另建实验目录。
+
+## 另一机器：复用已有权重完成全部正式评估
+
+发布分支为 `leaf/main1009-dual-route`。本次 Git 同时提供代码和评估输入：main1009 的 15 个 `final.pt`、15 个 `best.pt`、配置、已有训练/验证与机制记录、图表和唯一报告，以及 main0928 的旧 NoMem LEAF、REFIL、TransfQMix 共 9 个 `final.pt` 和配置。采用普通 Git，拉取即获得这些文件，无需 Git LFS 或额外下载权重。恢复训练的 replay/resume 文件不属于本次评估输入。
+
+在另一机器已有仓库根目录执行下面命令，继续使用已经配置好的原 HAD 环境。若该机器已有同路径的自有实验结果，先保留它们；使用另一份 checkout 接收本次发布，避免覆盖已有数据。不要用 `git reset --hard` 或清理 outputs 解决拉取冲突。
 
 ```bash
 git fetch origin
 git switch leaf/main1009-dual-route
 git pull --ff-only origin leaf/main1009-dual-route
 cd Open-SCORE
-
-python scripts/leaf1009.py plan --suite loop_candidates --steps 1000000 --seeds 0,1,2
-python scripts/leaf1009.py train --suite loop_candidates --steps 1000000 --seeds 0,1,2 --devices all --jobs-per-gpu 4
-
-python scripts/leaf1009.py calibrate --suite loop_candidates --devices all
-python scripts/leaf1009.py select --suite loop_candidates --devices all
-python scripts/leaf1009.py eval --suite loop_candidates --devices all
-python scripts/leaf1009.py eval --suite references --devices all
-python scripts/leaf1009.py adaptive --suite loop_candidates --devices all
-python scripts/leaf1009.py counterfactual --suite loop_candidates --devices all
-python scripts/leaf1009.py confirm --suite selected --devices all
-python scripts/leaf1009.py report
+python scripts/leaf1009.py run --suite loop_candidates --devices all --jobs-per-gpu 8
 ```
 
-`--devices all` 使用 `CUDA_VISIBLE_DEVICES` 下全部可见卡，`--jobs-per-gpu 4` 让每张 **48GB 魔改 4090** 同时执行四个独立任务。也可指定 `--devices 0,1,2` 等可见逻辑编号；本轮所有服务器合计只有 15 个训练任务。评估按方法、种子、配置分片。
+默认读取当前 `Open-SCORE/outputs/main1009` 中已上传的权重，新结果也进入这个目录；旧基线默认从 `Open-SCORE/outputs/main0928` 只读加载。无需设置路径变量，不启动训练。普通 Git 下载量约 427 MiB 原始文件，实际传输量由 Git 压缩决定。
 
-多台服务器使用同一个共享仓库及 `outputs/main1009`，每台在自己的已配置环境中运行下面训练命令。进程持有共享任务锁，其他服务器跳过已领取任务；权重完成后也会跳过。某台服务器退出不能代表全体 15 个任务均已完成。以下命令中，`hostname` 只区分主控日志，不创建结果副本。
+### 推荐：一条指令完成整轮评估
 
-如果代码在各服务器的独立 checkout 中，共享输出路径必须相同：在各阶段指令加 `--output /shared/path/main1009`。共享存储需支持文件锁；Linux 使用 `fcntl.flock`，本机 Windows smoke 使用 `msvcrt`。锁在进程退出时释放，不需要手动领取或维护心跳。完成任务在主控末尾显示 `coverage.complete/total`；`global_complete=true` 且 `15/15` 才进入后续阶段。
+上述 `run` 就是整轮执行入口，没有 105 分钟或其他自动截止。它使用全部可见 GPU，每卡八个独立评估进程。先完成 ID calibrate/select 冻结及计算预算匹配，再把原生机制、候选固定深度、旧基线、自适应/随机及反事实放入同一个多 GPU 队列；完整配额成功后执行独立 confirm，最后更新统计图与唯一报告。失败或中断后停止后继阶段，重跑同一指令恢复；不按 OOD 改选方法。
+
+如果希望关闭终端后继续运行，可在 `Open-SCORE` 中使用：
 
 ```bash
-mkdir -p outputs/main1009
-nohup python scripts/leaf1009.py train --suite loop_candidates --steps 1000000 --devices all --jobs-per-gpu 4 --resume >> "outputs/main1009/train_$(hostname).log" 2>&1 &
+nohup python -u scripts/leaf1009.py run --suite loop_candidates --devices all --jobs-per-gpu 8 > outputs/main1009/evaluation.log 2>&1 &
+tail -f outputs/main1009/evaluation.log
 ```
 
-`--resume` 可用于首次启动和恢复；全新任务正常开始，已有恢复点继续执行。所有 15 个 final 通过完成判定之后，再在任意一台协调服务器执行校准、选择和后续评估。可将上述训练命令后的各阶段用 `&&` 连起来；某阶段失败立即停止。不要让各服务器各自把训练与后续阶段连成一条命令，以免其他服务器的权重尚未完成。
+`tail` 只查看日志，退出查看不停止后台评估。`--devices` 使用当前 `CUDA_VISIBLE_DEVICES` 下的逻辑编号；默认 `all` 使用所有可见卡。每卡八进程是评估并发设置，可按显存与 CPU 负载调整 `--jobs-per-gpu`，不改变实验配额。
 
-后续阶段读取已完成的 final 权重，不重训旧基线；主控运行日志和方法种子日志均留在同一个 main1009 目录。
+以下是需要手动分阶段调度时的等价指令；已经启动 `run` 时不要另启重复主控。
 
-候选各阶段配额已经冻结，不能传 `--episodes` 或自定义反事实步数。`confirm --suite selected` 自动运行锁定候选的 fixed4/adaptive/random 和三个旧基线。旧权重默认读取 `outputs/main0928`。若旧结果位于其他位置，给 references 和 confirm 阶段加 `--source-output /absolute/path/to/main0928`。训练默认内置冻结配置，无需复制旧输出目录；显式 `--base-config` 只读加载原 NoMem config 并记录来源。
+### 手动方式一：所有可见卡依次完成各阶段
 
-训练中按 Ctrl+C 请求完整 batch 边界保存，之后在原训练指令加 `--resume`。评估原指令重跑，完整记录跳过。不要改变同一方法已经开始运行的架构或预算；需要中断时等待恢复点落盘。完成和失败必须按实际权重/记录判定，不把旧 failure 文件直接当最终状态。
+使用全部可见 GPU，每卡八个独立评估进程。下面变量默认就是 Git 上传后的目录；只有复用其他存储位置时才需要改动。`set -e` 使任一阶段失败或中断后停止后继阶段；成功仍需确认日志的 `coverage.global_complete=true`。
+
+```bash
+set -e
+export LEAF_OUTPUT="$(pwd)/outputs/main1009"
+export LEAF_OLD_OUTPUT="$(pwd)/outputs/main0928"
+python scripts/leaf1009.py calibrate --suite loop_candidates --output "$LEAF_OUTPUT" --devices all --jobs-per-gpu 8
+python scripts/leaf1009.py select --suite loop_candidates --output "$LEAF_OUTPUT" --devices all --jobs-per-gpu 8
+python scripts/leaf1009.py mechanism --suite loop_candidates --output "$LEAF_OUTPUT" --devices all --jobs-per-gpu 8
+python scripts/leaf1009.py eval --suite loop_candidates --output "$LEAF_OUTPUT" --devices all --jobs-per-gpu 8
+python scripts/leaf1009.py eval --suite references --output "$LEAF_OUTPUT" --source-output "$LEAF_OLD_OUTPUT" --devices all --jobs-per-gpu 8
+python scripts/leaf1009.py adaptive --suite loop_candidates --output "$LEAF_OUTPUT" --devices all --jobs-per-gpu 8
+python scripts/leaf1009.py counterfactual --suite loop_candidates --output "$LEAF_OUTPUT" --devices all --jobs-per-gpu 8
+python scripts/leaf1009.py confirm --suite selected --output "$LEAF_OUTPUT" --source-output "$LEAF_OLD_OUTPUT" --devices all --jobs-per-gpu 8
+python scripts/leaf1009.py report --output "$LEAF_OUTPUT"
+```
+
+### 手动方式二：ID 冻结后分卡并行
+
+先在协调终端使用全部卡完成 calibrate 和 select，两阶段都成功且全配额覆盖后，再启动下面五项。每个终端进入同一个已更新的 `Open-SCORE` 并设置上述两项绝对路径。至少五张卡时使用五个互不重叠的卡组；四张卡时先完成较小的 mechanism，再启动其余四项。更多卡优先增加候选固定深度与 adaptive 的卡。例如八卡可分为候选 `0,1,2`、旧基线 `3`、反事实 `4`、adaptive `5,6`、mechanism `7`。
+
+```bash
+# 先在一个协调终端完成；失败时不进入下面四项并行任务。
+set -e
+python scripts/leaf1009.py calibrate --suite loop_candidates --output "$LEAF_OUTPUT" --devices all --jobs-per-gpu 8
+python scripts/leaf1009.py select --suite loop_candidates --output "$LEAF_OUTPUT" --devices all --jobs-per-gpu 8
+```
+
+```bash
+# 原生机制，五卡例用卡 4；四卡时在其余四项之前以全部卡完成。
+python scripts/leaf1009.py mechanism --suite loop_candidates --output "$LEAF_OUTPUT" --devices 4 --jobs-per-gpu 8
+```
+
+```bash
+# 终端 A：候选固定 1/2/3/4 轮，四卡例用卡 0。
+python scripts/leaf1009.py eval --suite loop_candidates --output "$LEAF_OUTPUT" --devices 0 --jobs-per-gpu 8
+```
+
+```bash
+# 终端 B：旧基线重评，四卡例用卡 1。
+python scripts/leaf1009.py eval --suite references --output "$LEAF_OUTPUT" --source-output "$LEAF_OLD_OUTPUT" --devices 1 --jobs-per-gpu 8
+```
+
+```bash
+# 终端 C：冻结自适应与实际预算匹配随机深度，四卡例用卡 2。
+python scripts/leaf1009.py adaptive --suite loop_candidates --output "$LEAF_OUTPUT" --devices 2 --jobs-per-gpu 8
+```
+
+```bash
+# 终端 D：单决策原生反事实，四卡例用卡 3。
+python scripts/leaf1009.py counterfactual --suite loop_candidates --output "$LEAF_OUTPUT" --devices 3 --jobs-per-gpu 8
+```
+
+**等待全部五项返回成功，并逐项确认全配额完成，才执行下方 confirm/report。** 某一项失败或中断，只恢复该项；不要提前继续确认。共享锁防止多个进程重复领取同一分片，但一个主控退出不能证明其他服务器的全局配额已经完成。
+
+```bash
+set -e
+python scripts/leaf1009.py confirm --suite selected --output "$LEAF_OUTPUT" --source-output "$LEAF_OLD_OUTPUT" --devices all --jobs-per-gpu 8
+python scripts/leaf1009.py report --output "$LEAF_OUTPUT"
+```
+
+`--devices` 是当前 `CUDA_VISIBLE_DEVICES` 下的逻辑编号。不同终端若设置了不同的可见卡列表，应按各自列表重新编号，避免实际抢同一张卡。每卡八进程是评估并发默认值，不是重新训练四份模型。
+
+### 完整配额、恢复与结果边界
+
+| 阶段 | 完整配额 |
+|---|---:|
+| mechanism | 4,860 场，五方法的完整闭环深度与专属反馈切断 |
+| calibrate | 21,600 场：5 方法 × 3 种子 × 4 ID 配置 × 40 场 × 9 臂 |
+| select | 36,000 场：5 × 3 × 4 × 100 × 6 臂 |
+| eval 候选 | 432,000 场：5 × 3 × 24 配置 × 300 × 4 深度 |
+| eval 旧基线 | 64,800 场：3 方法 × 3 种子 × 24 × 300 |
+| adaptive | 216,000 场；另有 15,000 场 OOD 计算预算数据：5 方法 × 3 种子 × 20 配置 × 10 场 × 5 计算臂，不用于观察奖励或选型 |
+| counterfactual | 最多 750 场 factual4，另最多 9,000 条 R1/R2 干预尾段 |
+| confirm | 129,600 场：锁定候选 fixed4/adaptive/random 加三个旧基线，3 种子 × 24 × 300 |
+
+全部实验均安排到另一机器，不在本机启动。已有校准和机制部分记录保留；在同一输出目录重跑即可恢复。跨服务器调度必须共享同一个绝对 `--output`，存储支持文件锁；Linux 使用 `fcntl.flock`。锁随进程退出释放，不手动删除锁文件或维护心跳。相同分片已有完整记录会跳过；反事实部分场景可能重放 factual 前缀，未落盘尾段需重算。
+
+单独恢复机制时，在另一机器执行下面命令，不加时限，不另起实验目录：
+
+```bash
+python scripts/leaf1009.py mechanism --suite loop_candidates --output "$LEAF_OUTPUT" --devices all --jobs-per-gpu 8
+```
+
+候选配额已冻结，不传 `--episodes` 或自定义反事实步数。`confirm --suite selected` 自动运行锁定候选及三个旧基线；不按 OOD 换赢家或替换 final。按场景聚类，三个训练种子分别报告。十场机制矩阵即使完成，也不能替代完整外推、state-level 反事实或预算匹配随机对照。
+
+反事实从已有前向缓存记录合法 Q、planar/native 动作、与四轮的动作及 hidden 差、相对进入 hidden 的更新幅度；不增加 forward 或环境步。`physical_alive_count` 与 `observed_entity_count` 分开记录，旧 `visible_count` 兼容保留，不能称为真实观测实体数。距离和最近攻击者关系统一使用 XY 平面。收益包含当前动作和提交时序 hidden 的共同效应。
+
+`report` 保留 `<!-- leaf1009_loop_candidates_v2 -->` 之前的研究分析，重生成后面的协议记录章节。实际各深度 D 图、回报–MAC 图和原生反事实收益图只有对应记录产生后才出现；离线动作差异图不能充当这些图。所有结果归 main1009 的同一份正式报告，不另建远端总结。
 
 ## 文献依据与执行状态
 
@@ -122,7 +226,7 @@ nohup python scripts/leaf1009.py train --suite loop_candidates --steps 1000000 -
 
 离线验收使用已有 main0928 保存状态：seed 0、`(10,10,2)`、场景 9000、步数 0。旧 NoMem 严格加载原权重，重算 Q 与保存值最大误差 `9.54e-7`。五个新核心的 fixed4 与逐 observer 执行四轮、退化随机四轮均对齐，override2 与 fixed2 对齐；全 key 屏蔽和混合深度反传均为有限值。反传未执行优化器更新，以上只验证实现路径。
 
-执行矩阵离线检查为五种不同 `leaf_loop_core`、种子 0/1/2、15 个训练任务、360 个配置级正式固定深度评估分片。正式 HAD 包的导入和对局留给已配置原环境的云端。
+执行矩阵离线检查为五种不同 `leaf_loop_core`、种子 0/1/2、15 个训练任务、360 个配置级正式固定深度评估分片。本机曾成功导入原 HAD，原生任务现已停止；只有另一机器生成的实际完整记录和全局覆盖才能证明矩阵完成。
 
 按新增要求完成 CPU smoke：真实 EntityMAC、ALMAAgent、QLearner 和 mixer 使用已有轨迹构成的 batch，每方法每次检查两次优化器更新；为核对新循环专属梯度，检查重复一次，总计临时 20 次 update。imagined 输出为 `[3,2,10,9]`。五个方法的 loss/梯度均有限，第二次新 `loop_*` 参数梯度绝对和依次为 `0.001270264 / 0.044881802 / 0.001506771 / 0.679230750 / 0.369145721`。online 与 target 使用同一归档深度；内存序列化恢复网络、优化器和深度随机流后，Q 最大差均为零。
 
@@ -134,4 +238,4 @@ nohup python scripts/leaf1009.py train --suite loop_candidates --steps 1000000 -
 
 五个核心以相同参数和保存输入核对完整循环重算与直接计算，强制小块拼接后的读出最大差 `4.18e-7`、参数梯度最大差 `1.87e-9`，均在 `1e-6` 容差内。以上检查不改变原 HAD 环境接口。
 
-执行状态：代码及本机临时 smoke 已完成；本轮 15 个正式任务未在本机启动。运行时用 `git log -1 --oneline` 查看拉取的具体提交。真实收益、循环价值及论文主线由云端结果判定。
+执行状态：15 个正式训练任务均已完成，75,000 条训练验证记录已归并；离线机制主矩阵及 best/final 比较已完成，图与统计进入唯一报告。上述 smoke 属于训练前历史验收，不是本次新增训练。本机原生校准与机制均已停止并保留 partial，完整原生机制、正式深度、OOD、自适应与反事实尚未完成，全部按本指南在另一机器执行。运行时用 `git log -1 --oneline` 查看实际代码提交。

@@ -1,0 +1,915 @@
+{
+  "profile": "leaf1009",
+  "implementation_revision": "leaf1009_loop_candidates_v2",
+  "base_config": {
+    "runner": "parallel",
+    "mac": "entity_mac",
+    "env": "had",
+    "env_args": {},
+    "batch_size_run": 8,
+    "test_nepisode": 20,
+    "test_interval": 2000,
+    "test_greedy": true,
+    "log_interval": 2000,
+    "runner_log_interval": 2000,
+    "learner_log_interval": 1000,
+    "t_max": 1000000,
+    "use_cuda": true,
+    "buffer_cpu_only": true,
+    "buffer_opt_mem": true,
+    "multi_task": false,
+    "use_tensorboard": false,
+    "save_model": false,
+    "save_model_interval": 5000,
+    "checkpoint_run_name": "",
+    "pi_checkpoint_run_name": "",
+    "checkpoint_unique_id": "",
+    "evaluate": false,
+    "load_step": 0,
+    "save_replay": false,
+    "video_path": null,
+    "fps": 2,
+    "tb_dirname": "tb_logs",
+    "eval_all_models": false,
+    "eval_all_scen": false,
+    "eval_sep": false,
+    "eval_n_task_range": "",
+    "eval_path": null,
+    "gamma": 0.99,
+    "batch_size": 32,
+    "max_traj_len": -1,
+    "buffer_size": 5000,
+    "lr": 0.0005,
+    "optim_alpha": 0.99,
+    "optim_eps": 1e-05,
+    "grad_norm_clip": 10,
+    "weight_decay": 0,
+    "alloc_q_weight_decay": 0,
+    "target_update_interval": 200,
+    "alloc_target_update_interval": 50,
+    "popart": false,
+    "n_extra_units": 0,
+    "n_extra_tasks": 0,
+    "vi_lambda": 5e-05,
+    "agent": {
+      "recurrent": true,
+      "entity_scheme": true,
+      "imagine": true,
+      "subtask_cond": null
+    },
+    "hier_agent": {
+      "task_allocation": null,
+      "copa": false,
+      "mask_copa": true,
+      "copa_vi_loss": true,
+      "action_length": 5,
+      "alloc_critic": "standard",
+      "alloc_policy": "autoreg",
+      "decay_old": 150000,
+      "n_proposals": 32,
+      "alloc_eps": "1.0-0.0-0.05",
+      "prop_alloc_eps": "1.0-0.05-0.2",
+      "entropy_loss": 0.01,
+      "alloc_opt": "rmsprop",
+      "max_bs": 400,
+      "pi_ag_attn": false,
+      "subtask_mask": true,
+      "sel_task_upd": true,
+      "pi_pointer_net": true,
+      "pi_autoreg": true
+    },
+    "mask_subtask_actions": false,
+    "rnn_hidden_dim": 64,
+    "attn_embed_dim": 128,
+    "attn_n_heads": 4,
+    "alloc_embed_dim": 128,
+    "alloc_n_heads": 4,
+    "obs_agent_id": false,
+    "obs_last_action": false,
+    "softmax_mixing_weights": true,
+    "mixer_subtask_cond": null,
+    "training_iters": 8,
+    "action_selector": "epsilon_greedy",
+    "epsilon_start": 1.0,
+    "epsilon_finish": 0.05,
+    "epsilon_anneal_time": 100000,
+    "agent_output_type": "q",
+    "double_q": true,
+    "encoder_chunk_size": 1024,
+    "encoder_skip_dead": true,
+    "mixing_embed_dim": 32,
+    "mixer_chunk_size": 256,
+    "mixer_skip_unfilled": true,
+    "hypernet_embed": 128,
+    "name": "regir_nomem",
+    "learner": "q_learner",
+    "mixer": "flex_qmix",
+    "encoder": "attention",
+    "entity_last_action": true,
+    "lmbda": 0.5,
+    "imagine_group": "original",
+    "count_cond": "phi2",
+    "skip_count_inject": true,
+    "global_branch": "cycle",
+    "global_slots": 4,
+    "global_depths": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "global_eval_depth": 4,
+    "global_embed_dim": 64,
+    "global_ffn_mult": 2,
+    "global_n_heads": 4,
+    "global_query_no_memory": true,
+    "method": "regir_nomem",
+    "seed": 0,
+    "entity_scheme": true,
+    "feature_layout": "had",
+    "report_interval": 300,
+    "progress_interval": 10,
+    "resume_interval": 600,
+    "resume": true,
+    "run": "train",
+    "shaping_coef": 1.0,
+    "shaping_range": 4000.0,
+    "implementation_revision": "main0928_looped_nocount_v1",
+    "profile": "main0928",
+    "output": "/inspire/hdd/project/urbanlowaltitude/fengkairui-25026/shenqili/TP/Open_Score/Open-SCORE/outputs/main0928",
+    "skip_final_eval": true,
+    "reward_mode": "damage",
+    "friendly_penalty": 1.0,
+    "concurrency": 12,
+    "device": "cuda",
+    "count_ln": true,
+    "global_feedback_mode": "gru",
+    "skip_refil_local": false,
+    "read_last_round": false,
+    "rer_update": "tied",
+    "rer_readout": "learned",
+    "matched_hidden": 0,
+    "entity_pad": "train",
+    "n_agents": 10,
+    "n_entities": 23,
+    "n_actions": 9,
+    "entity_shape": 10,
+    "state_shape": 233,
+    "obs_shape": 230,
+    "episode_limit": 100,
+    "gt_mask_avail": false,
+    "n_tasks": 3
+  },
+  "methods": {
+    "regir_loop_nomem": {
+      "imagine_group": "original",
+      "count_cond": "phi2",
+      "global_branch": "cycle",
+      "global_slots": 4,
+      "global_depths": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "global_eval_depth": 4,
+      "global_embed_dim": 64,
+      "global_ffn_mult": 2,
+      "global_n_heads": 4,
+      "skip_count_inject": true,
+      "global_query_detach_memory": true,
+      "global_query_no_memory": true,
+      "leaf_loop_core": "query_feedback",
+      "rer_stable_cycle": true,
+      "read_last_round": true,
+      "rnn_hidden_dim": 64
+    },
+    "regir_bidirectional_nomem": {
+      "imagine_group": "original",
+      "count_cond": "phi2",
+      "global_branch": "cycle",
+      "global_slots": 4,
+      "global_depths": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "global_eval_depth": 4,
+      "global_embed_dim": 64,
+      "global_ffn_mult": 2,
+      "global_n_heads": 4,
+      "skip_count_inject": true,
+      "global_query_detach_memory": true,
+      "global_query_no_memory": true,
+      "leaf_loop_core": "bidirectional",
+      "rer_stable_cycle": true,
+      "read_last_round": true,
+      "rnn_hidden_dim": 64
+    },
+    "regir_requery_nomem": {
+      "imagine_group": "original",
+      "count_cond": "phi2",
+      "global_branch": "cycle",
+      "global_slots": 4,
+      "global_depths": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "global_eval_depth": 4,
+      "global_embed_dim": 64,
+      "global_ffn_mult": 2,
+      "global_n_heads": 4,
+      "skip_count_inject": true,
+      "global_query_detach_memory": true,
+      "global_query_no_memory": true,
+      "leaf_loop_core": "requery",
+      "rer_stable_cycle": true,
+      "read_last_round": true,
+      "rnn_hidden_dim": 64
+    },
+    "regir_entitygru_nomem": {
+      "imagine_group": "original",
+      "count_cond": "phi2",
+      "global_branch": "cycle",
+      "global_slots": 4,
+      "global_depths": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "global_eval_depth": 4,
+      "global_embed_dim": 64,
+      "global_ffn_mult": 2,
+      "global_n_heads": 4,
+      "skip_count_inject": true,
+      "global_query_detach_memory": true,
+      "global_query_no_memory": true,
+      "leaf_loop_core": "entity_gru",
+      "rer_stable_cycle": true,
+      "read_last_round": true,
+      "rnn_hidden_dim": 64
+    },
+    "regir_slotgru_nomem": {
+      "imagine_group": "original",
+      "count_cond": "phi2",
+      "global_branch": "cycle",
+      "global_slots": 4,
+      "global_depths": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "global_eval_depth": 4,
+      "global_embed_dim": 64,
+      "global_ffn_mult": 2,
+      "global_n_heads": 4,
+      "skip_count_inject": true,
+      "global_query_detach_memory": true,
+      "global_query_no_memory": true,
+      "leaf_loop_core": "slot_gru",
+      "rer_stable_cycle": true,
+      "read_last_round": true,
+      "rnn_hidden_dim": 64
+    }
+  },
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "training_steps": 1000000,
+  "final_configs": [
+    [
+      4,
+      4,
+      2
+    ],
+    [
+      5,
+      5,
+      2
+    ],
+    [
+      6,
+      6,
+      2
+    ],
+    [
+      8,
+      8,
+      2
+    ],
+    [
+      10,
+      10,
+      2
+    ],
+    [
+      10,
+      10,
+      3
+    ],
+    [
+      10,
+      10,
+      4
+    ],
+    [
+      10,
+      10,
+      6
+    ],
+    [
+      10,
+      10,
+      9
+    ],
+    [
+      10,
+      10,
+      12
+    ],
+    [
+      15,
+      15,
+      2
+    ],
+    [
+      15,
+      15,
+      4
+    ],
+    [
+      15,
+      15,
+      6
+    ],
+    [
+      20,
+      20,
+      2
+    ],
+    [
+      20,
+      20,
+      4
+    ],
+    [
+      20,
+      20,
+      6
+    ],
+    [
+      25,
+      25,
+      2
+    ],
+    [
+      30,
+      30,
+      2
+    ],
+    [
+      30,
+      30,
+      4
+    ],
+    [
+      30,
+      30,
+      6
+    ],
+    [
+      30,
+      30,
+      9
+    ],
+    [
+      30,
+      30,
+      12
+    ],
+    [
+      40,
+      40,
+      2
+    ],
+    [
+      50,
+      50,
+      2
+    ]
+  ],
+  "episodes_per_config": 300,
+  "validation_points": 50,
+  "validation_episodes_per_config": 25,
+  "official_checkpoint": "final",
+  "confirmation_scene_start": 110000,
+  "had_core_version": "had-workbench-2.1.0",
+  "physics_protocol": "rebuild-calibrated-v3-r7-target-initialization",
+  "protocols": {
+    "leaf1009_loop_candidates_v2": {
+      "revision": "leaf1009_loop_candidates_v2",
+      "base_config": {
+        "runner": "parallel",
+        "mac": "entity_mac",
+        "env": "had",
+        "env_args": {},
+        "batch_size_run": 8,
+        "test_nepisode": 20,
+        "test_interval": 2000,
+        "test_greedy": true,
+        "log_interval": 2000,
+        "runner_log_interval": 2000,
+        "learner_log_interval": 1000,
+        "t_max": 1000000,
+        "use_cuda": true,
+        "buffer_cpu_only": true,
+        "buffer_opt_mem": true,
+        "multi_task": false,
+        "use_tensorboard": false,
+        "save_model": false,
+        "save_model_interval": 5000,
+        "checkpoint_run_name": "",
+        "pi_checkpoint_run_name": "",
+        "checkpoint_unique_id": "",
+        "evaluate": false,
+        "load_step": 0,
+        "save_replay": false,
+        "video_path": null,
+        "fps": 2,
+        "tb_dirname": "tb_logs",
+        "eval_all_models": false,
+        "eval_all_scen": false,
+        "eval_sep": false,
+        "eval_n_task_range": "",
+        "eval_path": null,
+        "gamma": 0.99,
+        "batch_size": 32,
+        "max_traj_len": -1,
+        "buffer_size": 5000,
+        "lr": 0.0005,
+        "optim_alpha": 0.99,
+        "optim_eps": 1e-05,
+        "grad_norm_clip": 10,
+        "weight_decay": 0,
+        "alloc_q_weight_decay": 0,
+        "target_update_interval": 200,
+        "alloc_target_update_interval": 50,
+        "popart": false,
+        "n_extra_units": 0,
+        "n_extra_tasks": 0,
+        "vi_lambda": 5e-05,
+        "agent": {
+          "recurrent": true,
+          "entity_scheme": true,
+          "imagine": true,
+          "subtask_cond": null
+        },
+        "hier_agent": {
+          "task_allocation": null,
+          "copa": false,
+          "mask_copa": true,
+          "copa_vi_loss": true,
+          "action_length": 5,
+          "alloc_critic": "standard",
+          "alloc_policy": "autoreg",
+          "decay_old": 150000,
+          "n_proposals": 32,
+          "alloc_eps": "1.0-0.0-0.05",
+          "prop_alloc_eps": "1.0-0.05-0.2",
+          "entropy_loss": 0.01,
+          "alloc_opt": "rmsprop",
+          "max_bs": 400,
+          "pi_ag_attn": false,
+          "subtask_mask": true,
+          "sel_task_upd": true,
+          "pi_pointer_net": true,
+          "pi_autoreg": true
+        },
+        "mask_subtask_actions": false,
+        "rnn_hidden_dim": 64,
+        "attn_embed_dim": 128,
+        "attn_n_heads": 4,
+        "alloc_embed_dim": 128,
+        "alloc_n_heads": 4,
+        "obs_agent_id": false,
+        "obs_last_action": false,
+        "softmax_mixing_weights": true,
+        "mixer_subtask_cond": null,
+        "training_iters": 8,
+        "action_selector": "epsilon_greedy",
+        "epsilon_start": 1.0,
+        "epsilon_finish": 0.05,
+        "epsilon_anneal_time": 100000,
+        "agent_output_type": "q",
+        "double_q": true,
+        "encoder_chunk_size": 1024,
+        "encoder_skip_dead": true,
+        "mixing_embed_dim": 32,
+        "mixer_chunk_size": 256,
+        "mixer_skip_unfilled": true,
+        "hypernet_embed": 128,
+        "name": "regir_nomem",
+        "learner": "q_learner",
+        "mixer": "flex_qmix",
+        "encoder": "attention",
+        "entity_last_action": true,
+        "lmbda": 0.5,
+        "imagine_group": "original",
+        "count_cond": "phi2",
+        "skip_count_inject": true,
+        "global_branch": "cycle",
+        "global_slots": 4,
+        "global_depths": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "global_eval_depth": 4,
+        "global_embed_dim": 64,
+        "global_ffn_mult": 2,
+        "global_n_heads": 4,
+        "global_query_no_memory": true,
+        "method": "regir_nomem",
+        "seed": 0,
+        "entity_scheme": true,
+        "feature_layout": "had",
+        "report_interval": 300,
+        "progress_interval": 10,
+        "resume_interval": 600,
+        "resume": true,
+        "run": "train",
+        "shaping_coef": 1.0,
+        "shaping_range": 4000.0,
+        "implementation_revision": "main0928_looped_nocount_v1",
+        "profile": "main0928",
+        "output": "/inspire/hdd/project/urbanlowaltitude/fengkairui-25026/shenqili/TP/Open_Score/Open-SCORE/outputs/main0928",
+        "skip_final_eval": true,
+        "reward_mode": "damage",
+        "friendly_penalty": 1.0,
+        "concurrency": 12,
+        "device": "cuda",
+        "count_ln": true,
+        "global_feedback_mode": "gru",
+        "skip_refil_local": false,
+        "read_last_round": false,
+        "rer_update": "tied",
+        "rer_readout": "learned",
+        "matched_hidden": 0,
+        "entity_pad": "train",
+        "n_agents": 10,
+        "n_entities": 23,
+        "n_actions": 9,
+        "entity_shape": 10,
+        "state_shape": 233,
+        "obs_shape": 230,
+        "episode_limit": 100,
+        "gt_mask_avail": false,
+        "n_tasks": 3
+      },
+      "base_provenance": {
+        "kind": "frozen_literal",
+        "source": "main0928/had/regir_nomem/train/seed_0/config.json"
+      },
+      "methods": [
+        "regir_loop_nomem",
+        "regir_bidirectional_nomem",
+        "regir_requery_nomem",
+        "regir_entitygru_nomem",
+        "regir_slotgru_nomem"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "training_steps": 1000000,
+      "calibration": {
+        "configs": [
+          [
+            4,
+            4,
+            2
+          ],
+          [
+            6,
+            6,
+            2
+          ],
+          [
+            8,
+            8,
+            2
+          ],
+          [
+            10,
+            10,
+            3
+          ]
+        ],
+        "scenes": [
+          42000,
+          42039
+        ],
+        "thresholds": [
+          0.01,
+          0.03,
+          0.1,
+          0.3,
+          1.0
+        ]
+      },
+      "selection": {
+        "configs": [
+          [
+            4,
+            4,
+            2
+          ],
+          [
+            6,
+            6,
+            2
+          ],
+          [
+            8,
+            8,
+            2
+          ],
+          [
+            10,
+            10,
+            3
+          ]
+        ],
+        "scenes": [
+          40000,
+          40099
+        ]
+      },
+      "formal": {
+        "configs": [
+          [
+            4,
+            4,
+            2
+          ],
+          [
+            5,
+            5,
+            2
+          ],
+          [
+            6,
+            6,
+            2
+          ],
+          [
+            8,
+            8,
+            2
+          ],
+          [
+            10,
+            10,
+            2
+          ],
+          [
+            10,
+            10,
+            3
+          ],
+          [
+            10,
+            10,
+            4
+          ],
+          [
+            10,
+            10,
+            6
+          ],
+          [
+            10,
+            10,
+            9
+          ],
+          [
+            10,
+            10,
+            12
+          ],
+          [
+            15,
+            15,
+            2
+          ],
+          [
+            15,
+            15,
+            4
+          ],
+          [
+            15,
+            15,
+            6
+          ],
+          [
+            20,
+            20,
+            2
+          ],
+          [
+            20,
+            20,
+            4
+          ],
+          [
+            20,
+            20,
+            6
+          ],
+          [
+            25,
+            25,
+            2
+          ],
+          [
+            30,
+            30,
+            2
+          ],
+          [
+            30,
+            30,
+            4
+          ],
+          [
+            30,
+            30,
+            6
+          ],
+          [
+            30,
+            30,
+            9
+          ],
+          [
+            30,
+            30,
+            12
+          ],
+          [
+            40,
+            40,
+            2
+          ],
+          [
+            50,
+            50,
+            2
+          ]
+        ],
+        "scenes": [
+          9000,
+          9299
+        ]
+      },
+      "budget_only_scenes": [
+        43000,
+        43009
+      ],
+      "confirmation_scenes": [
+        110000,
+        110299
+      ],
+      "counterfactual": {
+        "configs": [
+          [
+            4,
+            4,
+            2
+          ],
+          [
+            10,
+            10,
+            3
+          ],
+          [
+            30,
+            30,
+            2
+          ],
+          [
+            50,
+            50,
+            2
+          ],
+          [
+            30,
+            30,
+            12
+          ]
+        ],
+        "scenes": [
+          44000,
+          44009
+        ],
+        "steps": [
+          0,
+          5,
+          10
+        ],
+        "agent_rule": "first two live observers by stable roster order",
+        "maximum_intervention_tails": 9000,
+        "fixed4_source": "factual_reuse"
+      }
+    },
+    "leaf1009_native_feedback_v1": {
+      "revision": "leaf1009_native_feedback_v1",
+      "configs": [
+        [
+          4,
+          4,
+          2
+        ],
+        [
+          10,
+          10,
+          3
+        ],
+        [
+          10,
+          10,
+          12
+        ],
+        [
+          30,
+          30,
+          2
+        ],
+        [
+          50,
+          50,
+          2
+        ],
+        [
+          30,
+          30,
+          12
+        ]
+      ],
+      "scenes": [
+        44000,
+        44009
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "checkpoint": "final",
+      "fixed_depths": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "feedback_arms": {
+        "query_feedback": [
+          "normal",
+          "query_update_frozen"
+        ],
+        "bidirectional": [
+          "normal",
+          "query_update_frozen",
+          "reverse_kv_clamp"
+        ],
+        "requery": [
+          "normal",
+          "query_update_frozen"
+        ],
+        "entity_gru": [
+          "normal",
+          "entity_gru_hidden_reset"
+        ],
+        "slot_gru": [
+          "normal",
+          "slot_gru_hidden_reset",
+          "slot_competition_removed"
+        ]
+      },
+      "comparison": "paired complete episodes; frozen-model interventions",
+      "selection_use": false,
+      "formal_ood": false,
+      "maximum_episodes": 4860
+    }
+  }
+}
