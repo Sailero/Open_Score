@@ -1,0 +1,2302 @@
+{
+  "frozen": true,
+  "revision": "leaf1009_loop_candidates_v2",
+  "methods": {
+    "regir_loop_nomem": {
+      "4,4,2": {
+        "probabilities": [
+          0.0,
+          0.613178814589429,
+          0.3868211854105709,
+          0.0
+        ],
+        "target_macs": 2909939393.6,
+        "predicted_macs": 2909939393.5999994,
+        "predicted_relative_gap": 1.6386497919917538e-16,
+        "depth_macs": [
+          2294439906.6666665,
+          2715256840.0,
+          3218545080.0,
+          3726466058.6666665
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "5,5,2": {
+        "probabilities": [
+          0.0,
+          0.49874017405034,
+          0.50125982594966,
+          0.0
+        ],
+        "target_macs": 3618409085.8666663,
+        "predicted_macs": 3618409085.8666663,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          2852578346.6666665,
+          3285985361.0666666,
+          3949161836.8,
+          4615711163.733334
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "6,6,2": {
+        "probabilities": [
+          0.0,
+          0.6639042237440276,
+          0.3360957762559724,
+          0.0
+        ],
+        "target_macs": 3875089628.8,
+        "predicted_macs": 3875089628.8,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3031721600.0,
+          3626942174.9333334,
+          4365265805.866667,
+          5189249331.733334
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "8,8,2": {
+        "probabilities": [
+          0.0,
+          0.7362715468718746,
+          0.2637284531281255,
+          0.0
+        ],
+        "target_macs": 4498383510.4,
+        "predicted_macs": 4498383510.4,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3425189133.3333335,
+          4227537458.133333,
+          5254525820.8,
+          6213046690.133333
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,2": {
+        "probabilities": [
+          0.0,
+          0.7467590035715459,
+          0.25324099642845416,
+          0.0
+        ],
+        "target_macs": 5164842534.4,
+        "predicted_macs": 5164842534.4,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          4058959466.6666665,
+          4888639008.0,
+          5979313623.466666,
+          7195647242.666667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,3": {
+        "probabilities": [
+          0.0,
+          0.5179683103939313,
+          0.4820316896060687,
+          0.0
+        ],
+        "target_macs": 5490044059.2,
+        "predicted_macs": 5490044059.2,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3963139426.6666665,
+          4986923575.466666,
+          6030673384.0,
+          7635733001.6
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,4": {
+        "probabilities": [
+          0.0,
+          0.6756747862731205,
+          0.32432521372687945,
+          0.0
+        ],
+        "target_macs": 5087489888.0,
+        "predicted_macs": 5087489888.0,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3861028906.6666665,
+          4676363884.8,
+          5943998918.4,
+          7092108234.666667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,6": {
+        "probabilities": [
+          0.0,
+          0.5054923452330538,
+          0.4945076547669463,
+          0.0
+        ],
+        "target_macs": 5279903669.333333,
+        "predicted_macs": 5279903669.333333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3956963680.0,
+          4655290852.266666,
+          5918391253.333333,
+          7048223123.2
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,9": {
+        "probabilities": [
+          0.0,
+          0.6352540662438322,
+          0.3647459337561679,
+          0.0
+        ],
+        "target_macs": 5230227541.333333,
+        "predicted_macs": 5230227541.333334,
+        "predicted_relative_gap": 1.823389726105743e-16,
+        "depth_macs": [
+          3695071786.6666665,
+          4791836371.2,
+          5993744684.8,
+          7286491948.8
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,12": {
+        "probabilities": [
+          0.0,
+          0.4772060365355899,
+          0.5227939634644101,
+          0.0
+        ],
+        "target_macs": 5464732183.466666,
+        "predicted_macs": 5464732183.466666,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3738291786.6666665,
+          4806406510.933333,
+          6065651488.0,
+          7606102564.266666
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "15,15,2": {
+        "probabilities": [
+          0.0,
+          0.6605164226877065,
+          0.3394835773122935,
+          0.0
+        ],
+        "target_macs": 7214053194.666667,
+        "predicted_macs": 7214053194.666667,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          5054509440.0,
+          6608398775.466666,
+          8392445073.066667,
+          10288479867.733334
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "15,15,4": {
+        "probabilities": [
+          0.0,
+          0.4734415196230929,
+          0.5265584803769071,
+          0.0
+        ],
+        "target_macs": 7564651692.8,
+        "predicted_macs": 7564651692.8,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          5127256586.666667,
+          6644026323.2,
+          8392408324.266667,
+          10616951035.733334
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "15,15,6": {
+        "probabilities": [
+          0.0,
+          0.5170459492156474,
+          0.48295405078435266,
+          0.0
+        ],
+        "target_macs": 6986817806.933333,
+        "predicted_macs": 6986817806.933334,
+        "predicted_relative_gap": 1.3649623373030797e-16,
+        "depth_macs": [
+          4905915360.0,
+          6202783411.2,
+          7826197469.866667,
+          9824770156.8
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "20,20,2": {
+        "probabilities": [
+          0.0,
+          0.5557492356304019,
+          0.44425076436959815,
+          0.0
+        ],
+        "target_macs": 9125438536.533333,
+        "predicted_macs": 9125438536.533333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          6190298453.333333,
+          7950158903.466667,
+          10595690948.266666,
+          12937586148.266666
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "20,20,4": {
+        "probabilities": [
+          0.0,
+          0.6366633699819713,
+          0.36333663001802874,
+          0.0
+        ],
+        "target_macs": 8633513657.6,
+        "predicted_macs": 8633513657.6,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          5831623306.666667,
+          7868002073.6,
+          9974895573.333334,
+          12417985049.6
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "20,20,6": {
+        "probabilities": [
+          0.0,
+          0.7423932657209996,
+          0.2576067342790004,
+          0.0
+        ],
+        "target_macs": 8365250519.466666,
+        "predicted_macs": 8365250519.466665,
+        "predicted_relative_gap": 1.1400427449087947e-16,
+        "depth_macs": [
+          5915825493.333333,
+          7889713563.733334,
+          9735693860.266666,
+          12487284942.933332
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "25,25,2": {
+        "probabilities": [
+          0.0,
+          0.6872137408643888,
+          0.3127862591356112,
+          0.0
+        ],
+        "target_macs": 10582424979.2,
+        "predicted_macs": 10582424979.2,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          7107457013.333333,
+          9688710374.4,
+          12545979767.466667,
+          15485201960.533333
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,2": {
+        "probabilities": [
+          0.0,
+          0.6267408514419908,
+          0.3732591485580093,
+          0.0
+        ],
+        "target_macs": 12350982988.8,
+        "predicted_macs": 12350982988.8,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          8197134293.333333,
+          11299204953.6,
+          14117027475.2,
+          17891036042.666668
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,4": {
+        "probabilities": [
+          0.0,
+          0.6590874522350081,
+          0.34091254776499197,
+          0.0
+        ],
+        "target_macs": 12298893868.800001,
+        "predicted_macs": 12298893868.800003,
+        "predicted_relative_gap": 1.550829410481448e-16,
+        "depth_macs": [
+          8275567466.666667,
+          11202936313.6,
+          14417712544.0,
+          18195257506.13333
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,6": {
+        "probabilities": [
+          0.0,
+          0.5418718937453648,
+          0.4581281062546351,
+          0.0
+        ],
+        "target_macs": 11963827438.933334,
+        "predicted_macs": 11963827438.933334,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          7662534613.333333,
+          10605828569.6,
+          13570062483.2,
+          17052963827.2
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,9": {
+        "probabilities": [
+          0.0,
+          0.5679522578065839,
+          0.43204774219341613,
+          0.0
+        ],
+        "target_macs": 12375512650.666666,
+        "predicted_macs": 12375512650.666666,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          8072812746.666667,
+          11083225557.333334,
+          14074300309.333334,
+          17556409813.333332
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,12": {
+        "probabilities": [
+          0.0,
+          0.6527789038993388,
+          0.34722109610066115,
+          0.0
+        ],
+        "target_macs": 12636031618.133333,
+        "predicted_macs": 12636031618.133331,
+        "predicted_relative_gap": 1.509452247709922e-16,
+        "depth_macs": [
+          8088535573.333333,
+          11473371910.4,
+          14821842728.533333,
+          18338123630.933334
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "40,40,2": {
+        "probabilities": [
+          0.0,
+          0.6194341322064094,
+          0.38056586779359053,
+          0.0
+        ],
+        "target_macs": 15683074455.466667,
+        "predicted_macs": 15683074455.466665,
+        "predicted_relative_gap": 1.2161828589340487e-16,
+        "depth_macs": [
+          10103267413.333334,
+          14183774897.066666,
+          18123433403.733334,
+          22817074372.266666
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "50,50,2": {
+        "probabilities": [
+          0.0,
+          0.5554131681452248,
+          0.44458683185477527,
+          0.0
+        ],
+        "target_macs": 18497505841.066666,
+        "predicted_macs": 18497505841.066666,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          11608686560.0,
+          16511106451.199999,
+          20979073668.266666,
+          26958321053.866665
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      }
+    },
+    "regir_bidirectional_nomem": {
+      "4,4,2": {
+        "probabilities": [
+          0.0,
+          0.5933275529997977,
+          0.4066724470002023,
+          0.0
+        ],
+        "target_macs": 2876243434.133333,
+        "predicted_macs": 2876243434.133333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          2422452590.4,
+          2681086443.733333,
+          3160973861.3333335,
+          3777487120.0
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "5,5,2": {
+        "probabilities": [
+          0.0,
+          0.9537692330753959,
+          0.046230766924604115,
+          0.0
+        ],
+        "target_macs": 3452373610.6666665,
+        "predicted_macs": 3452373610.6666665,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          2865764324.266667,
+          3427332422.4,
+          3968988768.0,
+          4794598956.8
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "6,6,2": {
+        "probabilities": [
+          0.0,
+          0.7074082370608662,
+          0.2925917629391338,
+          0.0
+        ],
+        "target_macs": 3745119381.3333335,
+        "predicted_macs": 3745119381.333333,
+        "predicted_relative_gap": 1.2732228526006612e-16,
+        "depth_macs": [
+          2918905604.8,
+          3556355047.4666667,
+          4201500802.6666665,
+          4928829953.066667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "8,8,2": {
+        "probabilities": [
+          0.0,
+          0.6184796377113144,
+          0.3815203622886856,
+          0.0
+        ],
+        "target_macs": 4492590202.133333,
+        "predicted_macs": 4492590202.133333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3709054848.5333333,
+          4141505505.0666666,
+          5061730824.0,
+          6174444082.133333
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,2": {
+        "probabilities": [
+          0.0,
+          0.19888392250604225,
+          0.8011160774939577,
+          0.0
+        ],
+        "target_macs": 5457259820.8,
+        "predicted_macs": 5457259820.799999,
+        "predicted_relative_gap": 1.7475332817605288e-16,
+        "depth_macs": [
+          3840949672.5333333,
+          4527668309.333333,
+          5688038869.333333,
+          6835542658.133333
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,3": {
+        "probabilities": [
+          0.0,
+          0.748835819894988,
+          0.2511641801050119,
+          0.0
+        ],
+        "target_macs": 5187395742.4,
+        "predicted_macs": 5187395742.4,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3978461226.133333,
+          4901949957.866667,
+          6038440776.0,
+          7489030162.666667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,4": {
+        "probabilities": [
+          0.0,
+          0.6111832135270894,
+          0.38881678647291057,
+          0.0
+        ],
+        "target_macs": 5152340654.933333,
+        "predicted_macs": 5152340654.933333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3734771709.866667,
+          4655955833.6,
+          5932610645.333333,
+          7023580411.733334
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,6": {
+        "probabilities": [
+          0.0,
+          0.42101674436873027,
+          0.5789832556312697,
+          0.0
+        ],
+        "target_macs": 5295513388.8,
+        "predicted_macs": 5295513388.8,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3923573992.5333333,
+          4691695707.733334,
+          5734588874.666667,
+          7311701440.0
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,9": {
+        "probabilities": [
+          0.0,
+          0.6664472432032346,
+          0.33355275679676544,
+          0.0
+        ],
+        "target_macs": 5329291556.266666,
+        "predicted_macs": 5329291556.266666,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3914314389.3333335,
+          4901400582.4,
+          6184229056.0,
+          7544718368.0
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,12": {
+        "probabilities": [
+          0.0,
+          0.5069900698391675,
+          0.4930099301608325,
+          0.0
+        ],
+        "target_macs": 5697263078.4,
+        "predicted_macs": 5697263078.4,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          4070827490.133333,
+          5037040857.599999,
+          6376207029.333333,
+          7868121233.066667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "15,15,2": {
+        "probabilities": [
+          0.0,
+          0.6813560753268685,
+          0.3186439246731315,
+          0.0
+        ],
+        "target_macs": 7017054148.266666,
+        "predicted_macs": 7017054148.266666,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          5136352377.6,
+          6508480806.4,
+          8104536160.0,
+          9934975396.266666
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "15,15,4": {
+        "probabilities": [
+          0.0,
+          0.6559368830737314,
+          0.34406311692626856,
+          0.0
+        ],
+        "target_macs": 7291885181.866667,
+        "predicted_macs": 7291885181.866667,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          5344981625.6,
+          6759142666.666666,
+          8307528672.0,
+          10409107908.266666
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "15,15,6": {
+        "probabilities": [
+          0.0,
+          0.5205967464307621,
+          0.47940325356923785,
+          0.0
+        ],
+        "target_macs": 7071286139.733334,
+        "predicted_macs": 7071286139.733334,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          5089147172.266666,
+          6199583170.133333,
+          8017891584.0,
+          9843012849.066668
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "20,20,2": {
+        "probabilities": [
+          0.0,
+          0.6043071406890153,
+          0.3956928593109848,
+          0.0
+        ],
+        "target_macs": 8935088309.333332,
+        "predicted_macs": 8935088309.333332,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          6645178434.133333,
+          7953675052.8,
+          10433915050.666666,
+          12715792253.866667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "20,20,4": {
+        "probabilities": [
+          0.0,
+          0.6259390165380316,
+          0.37406098346196837,
+          0.0
+        ],
+        "target_macs": 8588800829.866667,
+        "predicted_macs": 8588800829.866667,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          6239763163.733334,
+          7767603854.933333,
+          9962959722.666666,
+          12811272196.266666
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "20,20,6": {
+        "probabilities": [
+          0.0,
+          0.4713997217526623,
+          0.5286002782473377,
+          0.0
+        ],
+        "target_macs": 8839705497.6,
+        "predicted_macs": 8839705497.6,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          6061039402.666667,
+          7594160332.8,
+          9950468522.666666,
+          12277277094.4
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "25,25,2": {
+        "probabilities": [
+          0.0,
+          0.6030562085696765,
+          0.3969437914303235,
+          0.0
+        ],
+        "target_macs": 10876209555.2,
+        "predicted_macs": 10876209555.2,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          7852012960.0,
+          9670634907.733334,
+          12707776874.666666,
+          15739228503.466667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,2": {
+        "probabilities": [
+          0.0,
+          0.4854040938824731,
+          0.5145959061175269,
+          0.0
+        ],
+        "target_macs": 12698842039.466667,
+        "predicted_macs": 12698842039.466667,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          8930036426.666666,
+          11104245593.6,
+          14202980789.333334,
+          18400947069.86667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,4": {
+        "probabilities": [
+          0.0,
+          0.5631394824203573,
+          0.4368605175796427,
+          0.0
+        ],
+        "target_macs": 12816281905.066666,
+        "predicted_macs": 12816281905.066666,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          8946246852.266666,
+          11340509521.066666,
+          14718641269.333334,
+          18831946154.666664
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,6": {
+        "probabilities": [
+          0.0,
+          0.499402877433624,
+          0.500597122566376,
+          0.0
+        ],
+        "target_macs": 12503414333.866667,
+        "predicted_macs": 12503414333.866667,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          8473470807.466666,
+          10844347989.333334,
+          14158522741.333334,
+          18073580443.733334
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,9": {
+        "probabilities": [
+          0.0,
+          0.4889095200744782,
+          0.5110904799255218,
+          0.0
+        ],
+        "target_macs": 13473131281.066666,
+        "predicted_macs": 13473131281.066666,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          8984872667.733334,
+          11477440776.533333,
+          15382210250.666666,
+          19487914242.133335
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,12": {
+        "probabilities": [
+          0.0,
+          0.4095126625178749,
+          0.5904873374821251,
+          0.0
+        ],
+        "target_macs": 14538563524.266666,
+        "predicted_macs": 14538563524.266666,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          9390322067.2,
+          12085054472.533333,
+          16240112330.666666,
+          20766037634.133335
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "40,40,2": {
+        "probabilities": [
+          0.0,
+          0.5073503854603079,
+          0.49264961453969214,
+          0.0
+        ],
+        "target_macs": 16625818912.0,
+        "predicted_macs": 16625818912.0,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          11296688317.866667,
+          14643178752.0,
+          18667621482.666668,
+          22852058677.333332
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "50,50,2": {
+        "probabilities": [
+          0.0,
+          0.5286999906327875,
+          0.4713000093672125,
+          0.0
+        ],
+        "target_macs": 19671112360.533333,
+        "predicted_macs": 19671112360.533333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          13224756375.466667,
+          17053045484.8,
+          22608035562.666668,
+          28530352802.133335
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      }
+    },
+    "regir_requery_nomem": {
+      "4,4,2": {
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "target_macs": 2323646703.4666667,
+        "predicted_macs": 2337318560.0,
+        "predicted_relative_gap": 0.005883793139867671,
+        "depth_macs": [
+          2346960146.6666665,
+          2376138066.133333,
+          2337318560.0,
+          2337996610.6666665
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "5,5,2": {
+        "probabilities": [
+          0.0,
+          0.37161409398136824,
+          0.6283859060186318,
+          0.0
+        ],
+        "target_macs": 2935871191.4666667,
+        "predicted_macs": 2935871191.4666667,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3005162346.6666665,
+          3056255159.4666667,
+          2864678666.6666665,
+          2830149851.733333
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "6,6,2": {
+        "probabilities": [
+          0.0,
+          0.0,
+          0.010358419466702573,
+          0.9896415805332974
+        ],
+        "target_macs": 2961304798.4,
+        "predicted_macs": 2961304798.4,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3018546386.6666665,
+          3036127922.6666665,
+          2974772499.7333336,
+          2961163834.133333
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "8,8,2": {
+        "probabilities": [
+          0.9153888117716575,
+          0.08461118822834246,
+          0.0,
+          0.0
+        ],
+        "target_macs": 3421991883.733333,
+        "predicted_macs": 3421991883.733333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3416139400.0,
+          3485308547.2,
+          3457848781.866667,
+          3408939267.733333
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,2": {
+        "probabilities": [
+          0.4504703593833672,
+          0.5495296406166328,
+          0.0,
+          0.0
+        ],
+        "target_macs": 3877986470.4,
+        "predicted_macs": 3877986470.4,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3973464960.0,
+          3799719118.9333334,
+          4027673469.866667,
+          3913438935.4666667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,3": {
+        "probabilities": [
+          0.0,
+          0.06788266759113826,
+          0.9321173324088617,
+          0.0
+        ],
+        "target_macs": 4004367059.2000003,
+        "predicted_macs": 4004367059.2000003,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          4047657893.3333335,
+          4053891233.0666666,
+          4000760396.266667,
+          3983145861.3333335
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,4": {
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "target_macs": 3879213636.2666664,
+        "predicted_macs": 3925157066.6666665,
+        "predicted_relative_gap": 0.011843490642143597,
+        "depth_macs": [
+          3925157066.6666665,
+          3940322489.6,
+          3947809683.2,
+          4105138259.2
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,6": {
+        "probabilities": [
+          0.9585482944436445,
+          0.04145170555635544,
+          0.0,
+          0.0
+        ],
+        "target_macs": 3954555692.8,
+        "predicted_macs": 3954555692.8,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3957519946.6666665,
+          3886008923.733333,
+          3925984454.4,
+          4027425169.0666666
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,9": {
+        "probabilities": [
+          0.507655454282796,
+          0.49234454571720404,
+          0.0,
+          0.0
+        ],
+        "target_macs": 3911529666.133333,
+        "predicted_macs": 3911529666.133333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3928201493.3333335,
+          3894339379.2,
+          3929216187.7333336,
+          3947204791.4666667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,12": {
+        "probabilities": [
+          0.0,
+          0.3763730373149504,
+          0.6236269626850496,
+          0.0
+        ],
+        "target_macs": 4007411150.9333334,
+        "predicted_macs": 4007411150.9333334,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          4048617280.0,
+          4028637570.133333,
+          3994600524.8,
+          4020317809.0666666
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "15,15,2": {
+        "probabilities": [
+          0.0,
+          0.0,
+          0.20522192516364557,
+          0.7947780748363544
+        ],
+        "target_macs": 5386734715.733334,
+        "predicted_macs": 5386734715.733334,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          5213293653.333333,
+          5265770412.8,
+          5319991833.6,
+          5403968586.666667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "15,15,4": {
+        "probabilities": [
+          0.0,
+          0.0,
+          0.24700984183481423,
+          0.7529901581651858
+        ],
+        "target_macs": 5297485064.533333,
+        "predicted_macs": 5297485064.533333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          5337490773.333333,
+          5339938481.066667,
+          5379329506.133333,
+          5270636928.0
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "15,15,6": {
+        "probabilities": [
+          0.0,
+          0.08695187283218397,
+          0.913048127167816,
+          0.0
+        ],
+        "target_macs": 5024504061.866667,
+        "predicted_macs": 5024504061.866667,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          5135347360.0,
+          5181843146.666667,
+          5009520264.533334,
+          5023545096.533334
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "20,20,2": {
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "target_macs": 6385425700.266666,
+        "predicted_macs": 6344329354.666667,
+        "predicted_relative_gap": 0.006435960189511433,
+        "depth_macs": [
+          6262350560.0,
+          6200325213.866667,
+          6344329354.666667,
+          6237526711.466666
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "20,20,4": {
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        "target_macs": 6343460966.4,
+        "predicted_macs": 6275745913.6,
+        "predicted_relative_gap": 0.010674780401215025,
+        "depth_macs": [
+          6170530880.0,
+          6275745913.6,
+          6259136467.2,
+          6224519323.733334
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "20,20,6": {
+        "probabilities": [
+          0.0,
+          0.4717457633723956,
+          0.5282542366276044,
+          0.0
+        ],
+        "target_macs": 6189933653.333333,
+        "predicted_macs": 6189933653.333333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          6125183786.666667,
+          6058360145.066667,
+          6307432465.066667,
+          6277073269.333333
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "25,25,2": {
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "target_macs": 7350151848.533334,
+        "predicted_macs": 7347155765.333333,
+        "predicted_relative_gap": 0.0004076219460144362,
+        "depth_macs": [
+          7339711680.0,
+          7257464516.266666,
+          7347155765.333333,
+          7285728036.266666
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,2": {
+        "probabilities": [
+          0.8732845486658148,
+          0.1267154513341852,
+          0.0,
+          0.0
+        ],
+        "target_macs": 8456116029.866667,
+        "predicted_macs": 8456116029.866668,
+        "predicted_relative_gap": 1.127792373044445e-16,
+        "depth_macs": [
+          8478948160.0,
+          8298763897.6,
+          8295624808.533334,
+          8318301636.266666
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,4": {
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "target_macs": 8785355968.0,
+        "predicted_macs": 8722709706.666666,
+        "predicted_relative_gap": 0.007130759591474526,
+        "depth_macs": [
+          8534665920.0,
+          8664746229.333334,
+          8722709706.666666,
+          8679142609.066666
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,6": {
+        "probabilities": [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "target_macs": 8134555744.0,
+        "predicted_macs": 8149889179.733334,
+        "predicted_relative_gap": 0.0018849751868310004,
+        "depth_macs": [
+          8220114400.0,
+          8222501196.8,
+          8149889179.733334,
+          8191518404.266666
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,9": {
+        "probabilities": [
+          0.0,
+          0.8373501754763624,
+          0.16264982452363758,
+          0.0
+        ],
+        "target_macs": 8392693710.933333,
+        "predicted_macs": 8392693710.933333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          8565068853.333333,
+          8374020861.866667,
+          8488824853.333334,
+          8260770811.733334
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,12": {
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "target_macs": 8690171938.133333,
+        "predicted_macs": 8818981973.333334,
+        "predicted_relative_gap": 0.014822495586625807,
+        "depth_macs": [
+          8818981973.333334,
+          8893442807.466667,
+          8854570105.6,
+          8911204904.533333
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "40,40,2": {
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        "target_macs": 10253695451.733334,
+        "predicted_macs": 10279861698.133333,
+        "predicted_relative_gap": 0.0025518844911252316,
+        "depth_macs": [
+          10438935893.333334,
+          10279861698.133333,
+          10421004629.333334,
+          10418497378.133333
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "50,50,2": {
+        "probabilities": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "target_macs": 11860572507.733334,
+        "predicted_macs": 11876793504.0,
+        "predicted_relative_gap": 0.0013676402430059758,
+        "depth_macs": [
+          12131331786.666666,
+          12030820646.4,
+          12166880008.533333,
+          11876793504.0
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      }
+    },
+    "regir_entitygru_nomem": {
+      "4,4,2": {
+        "probabilities": [
+          0.0,
+          0.35202755548751485,
+          0.6479724445124851,
+          0.0
+        ],
+        "target_macs": 3960735193.6,
+        "predicted_macs": 3960735193.6000004,
+        "predicted_relative_gap": 1.2039107259016655e-16,
+        "depth_macs": [
+          3007408209.0666666,
+          3484665101.333333,
+          4219372412.266667,
+          5168706849.066667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "5,5,2": {
+        "probabilities": [
+          0.0,
+          0.25964907823103345,
+          0.7403509217689666,
+          0.0
+        ],
+        "target_macs": 4866206596.266666,
+        "predicted_macs": 4866206596.266666,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3362252010.666667,
+          4176837060.266667,
+          5107975950.933333,
+          6189596021.333333
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "6,6,2": {
+        "probabilities": [
+          0.0,
+          0.4570987291852563,
+          0.5429012708147437,
+          0.0
+        ],
+        "target_macs": 5229886691.2,
+        "predicted_macs": 5229886691.2,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3792129314.6666665,
+          4568712021.333333,
+          5786566363.2,
+          7016220844.8
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "8,8,2": {
+        "probabilities": [
+          0.0,
+          0.4178725118788106,
+          0.5821274881211894,
+          0.0
+        ],
+        "target_macs": 6344751226.133333,
+        "predicted_macs": 6344751226.133333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          4376130561.6,
+          5571168772.266666,
+          6900057150.933333,
+          8497086040.533334
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,2": {
+        "probabilities": [
+          0.0,
+          0.3305828375251807,
+          0.6694171624748193,
+          0.0
+        ],
+        "target_macs": 7231913702.4,
+        "predicted_macs": 7231913702.4,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          4800934105.6,
+          6086070146.133333,
+          7797773431.466667,
+          9770083874.133333
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,3": {
+        "probabilities": [
+          0.0,
+          0.3783415313001366,
+          0.6216584686998634,
+          0.0
+        ],
+        "target_macs": 7617069536.533334,
+        "predicted_macs": 7617069536.533335,
+        "predicted_relative_gap": 1.2520225945584375e-16,
+        "depth_macs": [
+          5090470140.8,
+          6474548820.8,
+          8312407988.266666,
+          10189017683.2
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,4": {
+        "probabilities": [
+          0.0,
+          0.39163057699701576,
+          0.6083694230029842,
+          0.0
+        ],
+        "target_macs": 7575126564.266666,
+        "predicted_macs": 7575126564.266666,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          4950826568.533334,
+          6255959054.933333,
+          8424324951.466667,
+          10109501973.333334
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,6": {
+        "probabilities": [
+          0.0,
+          0.4002715474562105,
+          0.5997284525437895,
+          0.0
+        ],
+        "target_macs": 7546462120.533333,
+        "predicted_macs": 7546462120.533333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          4619974370.133333,
+          6365415948.8,
+          8334717499.733334,
+          10055050301.866667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,9": {
+        "probabilities": [
+          0.0,
+          0.3652214661034229,
+          0.6347785338965771,
+          0.0
+        ],
+        "target_macs": 7430066242.133333,
+        "predicted_macs": 7430066242.133333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          4769773689.6,
+          6172147438.933333,
+          8153813068.8,
+          10148218327.466667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,12": {
+        "probabilities": [
+          0.0,
+          0.2761305165848499,
+          0.7238694834151501,
+          0.0
+        ],
+        "target_macs": 7833919980.8,
+        "predicted_macs": 7833919980.799999,
+        "predicted_relative_gap": 1.21736540422112e-16,
+        "depth_macs": [
+          4789518220.8,
+          6402389610.666666,
+          8379998009.599999,
+          10257036706.133333
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "15,15,2": {
+        "probabilities": [
+          0.0,
+          0.4406751639780718,
+          0.5593248360219282,
+          0.0
+        ],
+        "target_macs": 10180885678.933332,
+        "predicted_macs": 10180885678.933332,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          6364133945.6,
+          8787269105.066668,
+          11278874133.333334,
+          14115630470.4
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "15,15,4": {
+        "probabilities": [
+          0.0,
+          0.36161432844527264,
+          0.6383856715547274,
+          0.0
+        ],
+        "target_macs": 10727703481.6,
+        "predicted_macs": 10727703481.6,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          6520838568.533334,
+          8846352531.199999,
+          11793396981.333334,
+          14634160270.933332
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "15,15,6": {
+        "probabilities": [
+          0.0,
+          0.4195631172867016,
+          0.5804368827132984,
+          0.0
+        ],
+        "target_macs": 9898888518.4,
+        "predicted_macs": 9898888518.4,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          6238125905.066667,
+          8335337216.0,
+          11029086267.733334,
+          13677976928.0
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "20,20,2": {
+        "probabilities": [
+          0.0,
+          0.4520557454005508,
+          0.5479442545994492,
+          0.0
+        ],
+        "target_macs": 12699433115.733334,
+        "predicted_macs": 12699433115.733334,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          7871918257.066667,
+          10685382227.199999,
+          14361031477.333334,
+          18216611150.933334
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "20,20,4": {
+        "probabilities": [
+          0.0,
+          0.4572311982722278,
+          0.5427688017277722,
+          0.0
+        ],
+        "target_macs": 12319396761.6,
+        "predicted_macs": 12319396761.6,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          7792308100.266666,
+          10617819848.533333,
+          13752813804.800001,
+          17581989971.2
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "20,20,6": {
+        "probabilities": [
+          0.0,
+          0.3920011045889161,
+          0.6079988954110839,
+          0.0
+        ],
+        "target_macs": 12284552443.733334,
+        "predicted_macs": 12284552443.733334,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          7335758884.266666,
+          10277570114.133333,
+          13578533890.133333,
+          16594641446.4
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "25,25,2": {
+        "probabilities": [
+          0.0,
+          0.3726004790497669,
+          0.6273995209502331,
+          0.0
+        ],
+        "target_macs": 15893374941.866667,
+        "predicted_macs": 15893374941.866667,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          9084128004.266666,
+          13030441798.4,
+          17593615737.6,
+          22082387737.6
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,2": {
+        "probabilities": [
+          0.0,
+          0.42044802200519704,
+          0.579551977994803,
+          0.0
+        ],
+        "target_macs": 18001339709.86667,
+        "predicted_macs": 18001339709.86667,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          10767552070.4,
+          14970465186.133333,
+          20200150596.266666,
+          25660929416.533333
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,4": {
+        "probabilities": [
+          0.0,
+          0.42251271288879455,
+          0.5774872871112054,
+          0.0
+        ],
+        "target_macs": 18273273363.2,
+        "predicted_macs": 18273273363.2,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          10617737363.2,
+          15379204887.466667,
+          20390689192.533333,
+          26208055680.0
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,6": {
+        "probabilities": [
+          0.0,
+          0.37651249567611966,
+          0.6234875043238803,
+          0.0
+        ],
+        "target_macs": 17157038466.133333,
+        "predicted_macs": 17157038466.133333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          9876630702.933334,
+          14057091449.6,
+          19029038754.133335,
+          24424594777.6
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,9": {
+        "probabilities": [
+          0.0,
+          0.4371934600318603,
+          0.5628065399681397,
+          0.0
+        ],
+        "target_macs": 18142082092.8,
+        "predicted_macs": 18142082092.8,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          10418857088.0,
+          15158055338.666666,
+          20460102387.2,
+          25926966656.0
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,12": {
+        "probabilities": [
+          0.0,
+          0.348108312704703,
+          0.651891687295297,
+          0.0
+        ],
+        "target_macs": 19134856098.133335,
+        "predicted_macs": 19134856098.133335,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          10718255936.0,
+          15649191400.533333,
+          20996191163.733334,
+          26561371863.466667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "40,40,2": {
+        "probabilities": [
+          0.0,
+          0.4634770375437165,
+          0.5365229624562835,
+          0.0
+        ],
+        "target_macs": 22570310803.2,
+        "predicted_macs": 22570310803.2,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          12981142734.933332,
+          18948065137.066666,
+          25699399040.0,
+          32732032785.066666
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "50,50,2": {
+        "probabilities": [
+          0.0,
+          0.43112318746657463,
+          0.5688768125334254,
+          0.0
+        ],
+        "target_macs": 26886731332.266666,
+        "predicted_macs": 26886731332.266663,
+        "predicted_relative_gap": 1.4188029100610664e-16,
+        "depth_macs": [
+          15981859968.0,
+          22419402126.933334,
+          30272295946.666664,
+          39305239159.46667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      }
+    },
+    "regir_slotgru_nomem": {
+      "4,4,2": {
+        "probabilities": [
+          0.0,
+          0.09068645768166028,
+          0.9093135423183397,
+          0.0
+        ],
+        "target_macs": 2375595217.6,
+        "predicted_macs": 2375595217.6,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          2368185532.266667,
+          2309145454.9333334,
+          2382222297.6,
+          2501097584.5333333
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "5,5,2": {
+        "probabilities": [
+          0.5545725754945082,
+          0.4454274245054918,
+          0.0,
+          0.0
+        ],
+        "target_macs": 2851799959.4666667,
+        "predicted_macs": 2851799959.4666667,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          2754722395.7333336,
+          2972664889.6,
+          2934932268.8,
+          3187811185.0666666
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "6,6,2": {
+        "probabilities": [
+          0.9758451923683068,
+          0.024154807631693222,
+          0.0,
+          0.0
+        ],
+        "target_macs": 3081115312.5333333,
+        "predicted_macs": 3081115312.5333333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3082300925.3333335,
+          3033216998.9333334,
+          3101298968.0,
+          3202032829.3333335
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "8,8,2": {
+        "probabilities": [
+          0.0,
+          0.7728819605368434,
+          0.2271180394631566,
+          0.0
+        ],
+        "target_macs": 3575823523.733333,
+        "predicted_macs": 3575823523.733333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3511438953.6,
+          3572965039.4666667,
+          3585550936.5333333,
+          3611178116.2666664
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,2": {
+        "probabilities": [
+          0.7489985418905264,
+          0.2510014581094736,
+          0.0,
+          0.0
+        ],
+        "target_macs": 4090822555.733333,
+        "predicted_macs": 4090822555.733333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          4049670129.0666666,
+          4213623067.7333336,
+          4172854643.2,
+          4149771157.3333335
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,3": {
+        "probabilities": [
+          0.0,
+          0.0,
+          0.7564246585103256,
+          0.24357534148967436
+        ],
+        "target_macs": 4152032178.133333,
+        "predicted_macs": 4152032178.1333327,
+        "predicted_relative_gap": 1.1484428293075055e-16,
+        "depth_macs": [
+          4108790742.4,
+          4112799801.6,
+          4136746758.4,
+          4199501139.2000003
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,4": {
+        "probabilities": [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        "target_macs": 3974173875.2,
+        "predicted_macs": 4003787080.5333333,
+        "predicted_relative_gap": 0.007451411604844091,
+        "depth_macs": [
+          4104120657.0666666,
+          4003787080.5333333,
+          4073050741.3333335,
+          4035412017.0666666
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,6": {
+        "probabilities": [
+          0.0,
+          0.3660429247132694,
+          0.6339570752867306,
+          0.0
+        ],
+        "target_macs": 4176447298.1333337,
+        "predicted_macs": 4176447298.1333337,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          4014712716.8,
+          4146159584.0,
+          4193935238.4,
+          4024561066.666667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,9": {
+        "probabilities": [
+          0.12928663576128097,
+          0.870713364238719,
+          0.0,
+          0.0
+        ],
+        "target_macs": 3942081004.8,
+        "predicted_macs": 3942081004.8,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3902019613.866667,
+          3948029463.4666667,
+          3982795622.4,
+          4057838634.666667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "10,10,12": {
+        "probabilities": [
+          0.0,
+          0.0,
+          0.22659780869761192,
+          0.7734021913023881
+        ],
+        "target_macs": 4127607453.866667,
+        "predicted_macs": 4127607453.866667,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          3982030033.0666666,
+          4096215961.6,
+          4082815206.4,
+          4140731059.2000003
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "15,15,2": {
+        "probabilities": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "target_macs": 5399150353.066667,
+        "predicted_macs": 5531843940.266666,
+        "predicted_relative_gap": 0.02457675347467053,
+        "depth_macs": [
+          5531843940.266666,
+          5532090547.2,
+          5669741280.0,
+          5652365858.133333
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "15,15,4": {
+        "probabilities": [
+          0.6731406590326479,
+          0.32685934096735214,
+          0.0,
+          0.0
+        ],
+        "target_macs": 5514883765.333333,
+        "predicted_macs": 5514883765.333333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          5539751825.066667,
+          5463669986.133333,
+          5567253393.066667,
+          5676785450.666667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "15,15,6": {
+        "probabilities": [
+          0.0,
+          0.8728851616394168,
+          0.12711483836058324,
+          0.0
+        ],
+        "target_macs": 5290634557.866667,
+        "predicted_macs": 5290634557.866667,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          5231406619.733334,
+          5289381544.533334,
+          5299238877.866667,
+          5419554997.333333
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "20,20,2": {
+        "probabilities": [
+          0.06539378325922829,
+          0.9346062167407717,
+          0.0,
+          0.0
+        ],
+        "target_macs": 6719965002.666667,
+        "predicted_macs": 6719965002.666667,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          6436610705.066667,
+          6739791116.8,
+          6736838696.533334,
+          6915248838.4
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "20,20,4": {
+        "probabilities": [
+          0.3020269022661145,
+          0.6979730977338855,
+          0.0,
+          0.0
+        ],
+        "target_macs": 6344331381.333333,
+        "predicted_macs": 6344331381.333333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          6281342517.333333,
+          6371587921.066667,
+          6553756313.6,
+          6631463801.6
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "20,20,6": {
+        "probabilities": [
+          0.0,
+          0.7021424117946033,
+          0.29785758820539665,
+          0.0
+        ],
+        "target_macs": 6271690457.6,
+        "predicted_macs": 6271690457.6,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          5906909137.066667,
+          6192883394.133333,
+          6457463067.733334,
+          6507216226.133333
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "25,25,2": {
+        "probabilities": [
+          0.0,
+          0.0,
+          0.7600948433070428,
+          0.23990515669295717
+        ],
+        "target_macs": 7979899948.8,
+        "predicted_macs": 7979899948.799999,
+        "predicted_relative_gap": 1.1950955808031921e-16,
+        "depth_macs": [
+          7834091163.733334,
+          7804342350.933333,
+          7959707202.133333,
+          8043876908.8
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,2": {
+        "probabilities": [
+          0.0,
+          0.0,
+          0.7543179415724047,
+          0.24568205842759527
+        ],
+        "target_macs": 8942077376.0,
+        "predicted_macs": 8942077376.0,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          8504575040.0,
+          8833743460.266666,
+          8868109514.666666,
+          9169180996.266666
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,4": {
+        "probabilities": [
+          0.0,
+          0.0,
+          0.8880409784271323,
+          0.11195902157286775
+        ],
+        "target_macs": 8955208298.666668,
+        "predicted_macs": 8955208298.666668,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          8582161427.200001,
+          8911469548.800001,
+          8942155643.733334,
+          9058739861.333334
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,6": {
+        "probabilities": [
+          0.0,
+          0.0,
+          0.9820371941851097,
+          0.017962805814890327
+        ],
+        "target_macs": 8540731554.133333,
+        "predicted_macs": 8540731554.133333,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          8102653128.533334,
+          8413421900.8,
+          8532652693.333333,
+          8982407641.6
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,9": {
+        "probabilities": [
+          0.04259477321752703,
+          0.957405226782473,
+          0.0,
+          0.0
+        ],
+        "target_macs": 8808038572.8,
+        "predicted_macs": 8808038572.8,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          8625353525.333334,
+          8816166195.2,
+          8844786771.2,
+          9087837561.6
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "30,30,12": {
+        "probabilities": [
+          0.16715355081051464,
+          0.8328464491894854,
+          0.0,
+          0.0
+        ],
+        "target_macs": 9036380620.8,
+        "predicted_macs": 9036380620.8,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          8716123522.133333,
+          9100656708.266666,
+          9284568467.2,
+          9371710359.466667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "40,40,2": {
+        "probabilities": [
+          0.46251735104397906,
+          0.5374826489560209,
+          0.0,
+          0.0
+        ],
+        "target_macs": 10884039031.466667,
+        "predicted_macs": 10884039031.466667,
+        "predicted_relative_gap": 0.0,
+        "depth_macs": [
+          10639914954.666668,
+          11094113945.6,
+          11110036345.6,
+          11372896253.866667
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      },
+      "50,50,2": {
+        "probabilities": [
+          0.5617957931174093,
+          0.4382042068825906,
+          0.0,
+          0.0
+        ],
+        "target_macs": 12673170022.4,
+        "predicted_macs": 12673170022.399998,
+        "predicted_relative_gap": 1.5050288360696143e-16,
+        "depth_macs": [
+          12442479479.466667,
+          12968924774.4,
+          13115302414.933332,
+          13301070137.6
+        ],
+        "matchable": true,
+        "status": "matched_prediction"
+      }
+    }
+  },
+  "scene_range": [
+    43000,
+    43009
+  ],
+  "reward_observed_or_tuned": false,
+  "thresholds_source": "calibration.json: ID only"
+}

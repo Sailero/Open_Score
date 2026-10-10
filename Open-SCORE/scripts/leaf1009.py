@@ -1000,7 +1000,7 @@ def shard_worker(options, job, gpu, stop, results):
 
 
 def gpu_slots(devices,jobs_per_gpu):
-    return tuple((gpu,slot) for gpu in devices for slot in range(jobs_per_gpu))
+    return tuple((gpu,slot) for slot in range(jobs_per_gpu) for gpu in devices)
 
 
 def global_coverage(options,jobs):
@@ -1052,7 +1052,7 @@ def save_runner_state(options,completed,pending,interrupted,coverage):
         atomic_document(path,state)
 
 
-def dispatch_shards(options, jobs):
+def dispatch_shards(options, jobs, release=None):
     devices = logical_devices(options.devices)
     slots=gpu_slots(devices,options.jobs_per_gpu)
     ctx = get_context("spawn")
@@ -1064,16 +1064,31 @@ def dispatch_shards(options, jobs):
     waiting, active, completed, failures = list(jobs),{},[],[]
     deadline=time.monotonic()+options.max_minutes*60 if options.max_minutes is not None else None
     deadline_reached=False
+    unreleased=release is not None
+    refresh=0.
     try:
-        while waiting or active:
+        while waiting or active or unreleased:
+            if release is not None and unreleased and not stop.is_set() and time.monotonic()>=refresh:
+                additions,unreleased=release()
+                jobs.extend(additions)
+                waiting.extend(additions)
+                waiting.sort(key=lambda job:{"calibrate":0,"select":1,"budget_only":2}.get(job["split"],3))
+                refresh=time.monotonic()+30
             if deadline is not None and time.monotonic()>=deadline and not deadline_reached:
                 deadline_reached=True;stop.set()
                 print("Time limit reached; finishing current episodes and preserving resumable records.",flush=True)
             if not stop.is_set():
                 for slot_key in slots:
-                    if slot_key not in active and waiting:
+                    while slot_key not in active and waiting:
                         gpu,_=slot_key
                         job = waiting.pop(0)
+                        if release is not None:
+                            directory=run_dir(options.output,job["method"],job["seed"])
+                            label="_".join(map(str,job["config"]))
+                            with process_lock(directory/f".leaf1009_{job['split']}_{label}.lock") as available:
+                                if not available:
+                                    completed.append(dict(job=job,status="claimed_elsewhere",error=None))
+                                    continue
                         process = ctx.Process(target=shard_worker,args=(options,job,gpu,stop,results))
                         process.start(); active[slot_key]=(process,job)
             try:
@@ -1082,6 +1097,7 @@ def dispatch_shards(options, jobs):
                 print(json.dumps(dict(job=job,status=status,error=error),ensure_ascii=False),flush=True)
                 if status == "failed":
                     failures.append(job)
+                    if release is not None:stop.set()
             except Empty:
                 pass
             for slot_key,(process,job) in list(active.items()):
@@ -1089,6 +1105,7 @@ def dispatch_shards(options, jobs):
                     process.join()
                     if process.exitcode and job not in failures:
                         failures.append(job)
+                        if release is not None:stop.set()
                     del active[slot_key]
             if stop.is_set() and not active:
                 break
@@ -1116,39 +1133,89 @@ def delta(damage):
 
 
 def run_evaluation(options):
-    """Freeze ID choices, then share all GPUs across independent evaluation jobs."""
+    """Release independent banks immediately; publish ID choices before their users."""
     from itertools import zip_longest
-    for stage,name,freeze in (("calibrate","calibration.json",freeze_calibration),
-                              ("select","selection.json",freeze_selection)):
+    banks={}
+    for stage in ("calibrate","select"):
         phase=copy.copy(options);phase.stage=stage
-        if not (options.output/name).is_file():
-            result=dispatch_shards(phase,stage_jobs(phase,LOOP_METHODS))
-            if result:return result
-        if not freeze(phase):
-            return 1  # Another owner or incomplete quota is not a finished stage.
-        frozen_document(options,name)
-    budget=copy.copy(options);budget.stage="adaptive"
-    result=ensure_budget_jobs(budget,LOOP_METHODS)
-    if result is None:return 1
-    if result:return result
-    banks=[]
+        banks[stage]=stage_jobs(phase,LOOP_METHODS)
     for stage,selected in (("mechanism",LOOP_METHODS),("counterfactual",LOOP_METHODS),
                            ("eval",LOOP_METHODS),("eval",TIERS["references"]),
                            ("adaptive",LOOP_METHODS)):
         phase=copy.copy(options);phase.stage=stage
-        banks.append(stage_jobs(phase,selected))
-    # One queue avoids reserving idle cards for a shorter stage. Every task
-    # still owns its original method/seed/config/split lock and record keys.
-    jobs=[job for group in zip_longest(*banks) for job in group if job is not None]
-    result=dispatch_shards(options,jobs)
-    if result:
-        report(options)
-        return result
-    phase=copy.copy(options);phase.stage="confirm"
-    selection=frozen_document(options,"selection.json")
-    selected=(selection["selected_method"],*TIERS["references"])
-    result=dispatch_shards(phase,stage_jobs(phase,selected))
-    report(options)
+        name="references" if stage=="eval" and selected==TIERS["references"] else stage
+        banks[name]=stage_jobs(phase,selected)
+    phase=copy.copy(options);phase.stage="adaptive"
+    banks["budget_only"]=stage_jobs(phase,LOOP_METHODS,split="budget_only",
+        arms=["fixed1","fixed2","fixed3","fixed4","adaptive"],
+        configs=tuple(c for c in FINAL_CONFIGS if c not in GROUPS["ID"]),start=43000,quota=10)
+    released=set()
+    existing=defaultdict(lambda:dict(scenes=set(),checkpoints=set(),count=0))
+    cf_scenes=defaultdict(set)
+    for row in loop_records(options):
+        prefix=(row["split"],row["method"],int(row["seed"]),config_tuple(row["config"]))
+        if row["split"]=="counterfactual":
+            if row.get("scene_complete"):cf_scenes[prefix].add(int(row["episode_seed"]))
+            continue
+        cell=existing[(*prefix,row["arm"])]
+        cell["scenes"].add(int(row["episode_seed"]))
+        cell["checkpoints"].add(row["checkpoint"]);cell["count"]+=1
+
+    def retained(job):
+        prefix=(job["split"],job["method"],job["seed"],tuple(job["config"]))
+        scenes=set(range(job["start"],job["start"]+job["quota"]))
+        if job["split"]=="counterfactual":
+            return cf_scenes[prefix]==scenes
+        values=[existing[(*prefix,arm)] for arm in job["arms"]]
+        return all(v["scenes"]==scenes and v["count"]==len(scenes)
+                   and len(v["checkpoints"])==1 for v in values)
+
+    def publish(name,stage,freeze,jobs,*args):
+        if (options.output/name).is_file():
+            document=frozen_document(options,name)
+            if name!="budgets.json" or all(m in document["methods"] for m in LOOP_METHODS):return True
+        if not global_coverage(options,jobs)["global_complete"]:return False
+        phase=copy.copy(options);phase.stage=stage
+        return freeze(phase,*args)
+
+    def release():
+        calibrated=publish("calibration.json","calibrate",freeze_calibration,banks["calibrate"])
+        selected=calibrated and publish("selection.json","select",freeze_selection,banks["select"])
+        budgeted=calibrated and publish("budgets.json","adaptive",freeze_budgets,banks["budget_only"],LOOP_METHODS)
+        ready=["calibrate","mechanism","references"]
+        if calibrated:ready.extend(("select","budget_only"))
+        if selected:ready.extend(("eval","counterfactual"))
+        if selected and budgeted:
+            ready.extend(("adaptive","confirm"))
+            if "confirm" not in banks:
+                phase=copy.copy(options);phase.stage="confirm"
+                winner=frozen_document(options,"selection.json")["selected_method"]
+                banks["confirm"]=stage_jobs(phase,(winner,*TIERS["references"]))
+        new=[name for name in ready if name not in released]
+        released.update(new)
+        if new:print("Dependency release: "+", ".join(new),flush=True)
+        # Keep protocol prerequisites first; fill remaining slots with independent work.
+        priority=[j for name in new if name in ("calibrate","select","budget_only") for j in banks[name]]
+        independent=[banks[name] for name in new if name not in ("calibrate","select","budget_only")]
+        additions=priority+[j for row in zip_longest(*independent) for j in row if j is not None]
+        return additions,len(released)<9
+
+    # Retained shards still enter the coverage matrix, but need no worker/GPU.
+    def pending_release():
+        additions,pending=release()
+        skipped=[j for j in additions if retained(j)]
+        all_jobs.extend(additions)
+        if skipped:print(f"Retained complete shards without GPU startup: {len(skipped)}",flush=True)
+        return [j for j in additions if not retained(j)],pending
+
+    all_jobs=[]
+    result=dispatch_shards(options,[],release=pending_release)
+    coverage=global_coverage(options,all_jobs)
+    print(json.dumps(dict(status="dependency_run_coverage",coverage=coverage),ensure_ascii=False),flush=True)
+    if not result and not coverage["global_complete"]:result=1
+    # Other servers may still own shards. Publication is serialized and never
+    # turns local queue completion into a claim of global completion.
+    with process_lock(options.output/".report.lock",blocking=True):report(options)
     return result
 
 
@@ -1964,23 +2031,55 @@ def report(options):
 
 
 def progress(options):
-    """Read-only terminal view; never initializes HAD, models, jobs or outputs."""
+    """View shared records; optional host status publication never starts evaluation."""
     import heapq
     import subprocess
+    import shutil
+    import unicodedata
     from collections import deque, Counter
     from datetime import datetime, timezone, timedelta
 
     order=("calibrate","select","budget_only","mechanism","eval","adaptive","counterfactual","confirm")
-    labels={m:f"M{i+1}" for i,m in enumerate(LOOP_METHODS)}
-    labels.update(regir_nomem="OldLEAF",refil="REFIL",transfqmix="TransfQMix")
     root=options.output
     bank=defaultdict(lambda:defaultdict(set))
     costs=defaultdict(lambda:[0.,0,0.])
-    history=deque(maxlen=11)
+    history=deque(maxlen=max(11,math.ceil(300/max(options.watch_seconds,1))+1))
     offset=0
     bad=0
     key=lambda j:(j["split"],j["method"],int(j["seed"]),tuple(j["config"]))
     fmt=lambda seconds: (f"{seconds/60:.0f}m" if seconds<3600 else f"{seconds/3600:.1f}h")
+
+    def publish_status(active,mains,slots,denied):
+        host=socket.gethostname()
+        snapshot=dict(host=host,updated_at=time.time(),interval=options.watch_seconds,
+            monitor_pid=os.getpid(),masters=[pid for pid,_ in mains],slots=slots,
+            denied=denied,tasks=[dict(pid=pid,task=task) for pid,task in active.items()])
+        # A separate snapshot per host avoids touching the evaluation runner's
+        # large shared state. Unique pending paths also separate two monitors
+        # on the same host (e.g. the collector and interactive viewer).
+        path=root/f".leaf1009_status_{host}.json"
+        pending=path.with_suffix(f".{os.getpid()}.pending")
+        pending.write_text(json.dumps(snapshot,ensure_ascii=False),encoding="utf-8")
+        os.replace(pending,path)
+
+    def cluster_status(local_active,local_mains,local_slots):
+        publish_status(local_active,local_mains,local_slots,denied)
+        active={};lines=[];slots=0;masters=0;fresh=0
+        for path in sorted(root.glob(".leaf1009_status_*.json")):
+            snap=json.loads(path.read_text(encoding="utf-8"))
+            host=snap["host"]
+            age=max(0,time.time()-snap["updated_at"])
+            stale=age>max(60,3*snap.get("interval",10))
+            tasks=snap.get("tasks",[]);pids=snap.get("masters",[])
+            label="STALE" if stale else "RUN" if tasks else "WAIT" if pids else "STOP"
+            lines.append(f"{label:5} tasks={len(tasks):3} main={len(pids)} age={age:.0f}s | {host}")
+            if stale:continue
+            fresh+=1;masters+=len(pids)
+            if pids or tasks:slots+=snap.get("slots") or 0
+            for item in tasks:
+                task=item["task"]
+                active[host,item["pid"]]=(task[0],task[1],int(task[2]),tuple(task[3]))
+        return active,slots or None,masters,fresh,lines
 
     def queues():
         phase=copy.copy(options)
@@ -2076,10 +2175,33 @@ def progress(options):
             return math.sqrt(lo*hi),"unmeasured-model/config proxy",(lo,hi)
         return None,"no timing samples",None
 
+    fixed_screen=sys.stdout.isatty() and options.watch_seconds>0 and not options.status_only
+    if fixed_screen:
+        sys.stdout.write("\033[?1049h\033[?25l");sys.stdout.flush()
+    def render(lines):
+        size=shutil.get_terminal_size(fallback=(100,24))
+        width=max(1,size.columns-1)
+        def clip(line):
+            result=[];used=0
+            for char in line:
+                cells=0 if unicodedata.combining(char) else 2 if unicodedata.east_asian_width(char) in ("W","F") else 1
+                if used+cells>width:break
+                result.append(char);used+=cells
+            return "".join(result)
+        visible=lines[:max(1,size.lines-1)] if fixed_screen else lines
+        frame="\n".join(clip(line) for line in visible)
+        sys.stdout.write(("\033[H" if fixed_screen else "")+frame+("\033[J" if fixed_screen else "\n"))
+        sys.stdout.flush()
     try:
         while True:
             groups,phase_queues=queues()
             lookup={key(j):j for jobs in groups.values() for j in jobs}
+            if options.status_only:
+                active,mains,denied=processes(lookup)
+                publish_status(active,mains,capacity(mains,active),denied)
+                if options.watch_seconds==0:return 0
+                time.sleep(options.watch_seconds)
+                continue
             path=root/"loop_records.jsonl"
             if path.is_file():
                 with path.open("rb") as stream:
@@ -2122,6 +2244,9 @@ def progress(options):
                 return fmt(left/speed) if speed else "sampling"
             active,mains,denied=processes(lookup)
             slots=capacity(mains,active)
+            host_lines=[];cluster_masters=len(mains);fresh_hosts=1
+            if options.cluster:
+                active,slots,cluster_masters,fresh_hosts,host_lines=cluster_status(active,mains,slots)
             bounds={}; reasons=Counter();unpriced=0
             for task,j in lookup.items():
                 left=remaining[task];low=high=0.
@@ -2157,48 +2282,80 @@ def progress(options):
                 for task in tasks:
                     start=heapq.heappop(heap);heapq.heappush(heap,start+bounds[task][index])
                 return max(heap)
+            def dependency_makespan(index):
+                pending={}; remaining=Counter()
+                def bank(job):
+                    return "references" if job["split"]=="eval" and job["method"] in TIERS["references"] else job["split"]
+                for jobs in groups.values():
+                    for job in jobs:
+                        task=key(job)
+                        if totals[task]>done[task]:
+                            name=bank(job);pending[task]=name;remaining[name]+=1
+                dependencies={"select":("calibrate",),"budget_only":("calibrate",),
+                    "eval":("calibrate","select"),"counterfactual":("calibrate","select"),
+                    "adaptive":("calibrate","select","budget_only"),
+                    "confirm":("calibrate","select","budget_only")}
+                running=[];now=0.
+                while pending or running:
+                    eligible=[t for t,name in pending.items()
+                        if all(remaining[d]==0 for d in dependencies.get(name,()))]
+                    eligible.sort(key=lambda t:(t not in active.values(),
+                        {"calibrate":0,"select":1,"budget_only":2}.get(pending[t],3)))
+                    for task in eligible[:slots-len(running)]:
+                        name=pending.pop(task)
+                        heapq.heappush(running,(now+bounds[task][index],task,name))
+                    if not running:raise ValueError("Evaluation dependency graph cannot advance")
+                    now,task,name=heapq.heappop(running);remaining[name]-=1
+                return now
             lower=upper=None
             if slots and not unpriced:
-                lower=sum(makespan(jobs,0) for jobs in phase_queues)
-                upper=sum(makespan(jobs,1) for jobs in phase_queues)
-            if sys.stdout.isatty():print("\033[2J\033[H",end="")
+                lower=dependency_makespan(0)
+                upper=dependency_makespan(1)
             stamp=datetime.now(timezone(timedelta(hours=8)))
-            print(stamp.strftime("%Y-%m-%d %H:%M:%S UTC+08"),f"refresh={options.watch_seconds:g}s")
-            print(f"Main PID(s): {[pid for pid,args in mains]} | Active workers: {len(active)} | Planned slots: {slots or 'unknown'}")
+            running_stages=Counter(t[0] for t in active.values())
             finished=sum(done[t]==totals[t] for t in lookup)
-            print(f"Whole run: completed shards {finished}/{len(lookup)}; remaining shards {len(lookup)-finished}")
+            fraction=sum(done[t]/totals[t] for t in lookup)/max(len(lookup),1)
+            filled=int(fraction*24)
+            lines=["LEAF main1009  |  "+stamp.strftime("%m-%d %H:%M:%S UTC+08"),
+                f"{'集群' if options.cluster else '本机'}正在运行: {len(active)} 个任务  |  并发上限: {slots or '未知'}  |  每 {options.watch_seconds:g} 秒刷新",
+                f"整体任务进度: [{'#'*filled+'.'*(24-filled)}] {100*fraction:.1f}% (含部分完成)",
+                f"完整任务: {finished}/{len(lookup)}  |  未完整完成: {len(lookup)-finished}",
+                "当前阶段: "+(" / ".join(f"{s} ({n}任务)" for s,n in running_stages.items()) or "未识别到运行任务")]
+            if options.cluster:
+                lines.append(f"状态上报: {fresh_hosts} 台在线 | RUN=有任务 WAIT=主控等待 STOP=无主控 STALE=上报过期")
+                lines.extend(host_lines)
             priced=sum(reasons.values())
             direct=reasons["measured"]+reasons["observed scene rate"]
-            print(f"Direct timing coverage of remaining units: {100*direct/max(priced,1):.1f}%")
             if lower is not None:
                 middle=math.sqrt(lower*upper) if upper else 0
                 finish=stamp+timedelta(seconds=middle)
-                print(f"WHOLE-RUN remaining estimate: ~{fmt(middle)}; planning range {fmt(lower)} - {fmt(upper)}")
-                print(f"Estimated finish: {finish.strftime('%m-%d %H:%M UTC+08')} (conditional on unchanged concurrency)")
-                if direct<.8*priced:print("PROVISIONAL: most remaining work uses timing proxies; do not treat the central estimate as a deadline.")
-            else:print(f"WHOLE-RUN ETA: awaiting timing/GPU samples; unpriced remaining units={unpriced}")
-            print("Remaining timing bases:",dict(reasons))
-            print("Planning range is heuristic, NOT a confidence interval; unseen scales/models and CF are provisional.")
-            if not mains:print("No matching run controller detected: ETA is a budget estimate, not an active countdown.")
-            if len(mains)>1:print("Multiple run controllers detected: concurrency/ETA may be inaccurate.")
-            if denied:print(f"/proc access denied for {denied} process(es); active list may be incomplete.")
-            if bad:print(f"Malformed complete record lines: {bad}")
-            print("\nSTAGE           DONE UNITS/TOTAL       SHARDS DONE/TOTAL   RECENT-RATE ETA")
+                lines.extend([f"整轮剩余(估计): 约 {fmt(middle)}  |  推算范围: {fmt(lower)} - {fmt(upper)}",
+                    "预计结束: "+finish.strftime("%m-%d %H:%M 北京时间")])
+            else:lines.extend(["整轮剩余: 等待运行时间/设备采样","预计结束: 暂不可估算"])
+            lines.extend([f"耗时实测覆盖: {100*direct/max(priced,1):.1f}%  |  "+("粗估，仍含未测规模/模型" if direct<.8*priced else "仍受负载和对局长度影响"),
+                "", "Stage           Done/Quota           %   Tasks    Run   Stage ETA"])
             for stage in order:
                 tasks=[key(j) for j in groups[stage]]
                 n=sum(done[t] for t in tasks);total=sum(totals[t] for t in tasks)
                 complete=sum(done[t]==totals[t] for t in tasks)
-                estimate=recent_eta(tasks) if any(t[0]==stage for t in active.values()) else ("done" if n==total else "pending")
-                print(f"{stage:15} {n:>8}/{total:<8} {complete:>5}/{len(tasks):<5}          {estimate}")
-            print("\nPID      STAGE           METHOD      SEED CONFIG        DONE/TOTAL    %     TASK ETA")
-            for pid,task in sorted(active.items()):
-                stage,method,seed,cfg=task;n,total=done[task],totals[task]
-                print(f"{pid:<8} {stage:15} {labels.get(method,method):11} {seed:<4} {str(cfg):13} {n:>4}/{total:<5} {100*n/total:5.1f} {recent_eta([task])}")
-            print("\nUnits=episodes; counterfactual units=fully completed scenes. Ctrl+C stops only this viewer.",flush=True)
+                estimate=recent_eta(tasks) if running_stages[stage] else ("done" if n==total else "pending")
+                lines.append(f"{stage:15} {str(n)+'/'+str(total):17} {100*n/total:5.1f} {str(complete)+'/'+str(len(tasks)):8} {running_stages[stage]:3}   {estimate}")
+            alerts=[]
+            if not cluster_masters:alerts.append("无主控: ETA仅为预算推算")
+            if not options.cluster and len(mains)>1:alerts.append("多个主控: ETA可能不准")
+            if denied:alerts.append("进程访问受限")
+            if bad:alerts.append(f"异常记录{bad}行")
+            lines.extend(["", "任务比例不等于时间比例；反事实按完整场景计。",
+                " | ".join(alerts) if alerts else "ETA为推算，不是保证的上下界。",
+                "Ctrl+C 只退出查看器，后台评估继续运行。"])
+            render(lines)
             if options.watch_seconds==0:return 0
             time.sleep(options.watch_seconds)
     except KeyboardInterrupt:
-        print("\nViewer stopped; evaluation is unchanged.");return 0
+        return 0
+    finally:
+        if fixed_screen:
+            sys.stdout.write("\033[?25h\033[?1049l");sys.stdout.flush()
 
 
 def main():
@@ -2217,6 +2374,8 @@ def main():
     parser.add_argument("--jobs-per-gpu",type=int,default=4,help="Local concurrent jobs per visible GPU (default: 4)")
     parser.add_argument("--max-minutes",type=float,default=None,help="Stop at episode boundaries after this wall-clock budget; rerun to resume")
     parser.add_argument("--watch-seconds",type=float,default=30,help="progress refresh interval; 0 prints one snapshot")
+    parser.add_argument("--cluster",action="store_true",help="progress: publish local status and show all reporting hosts")
+    parser.add_argument("--status-only",action="store_true",help="progress: publish local process status only, without reading episode records")
     parser.add_argument("--episodes",type=int,help="Legacy confirm/depth quota only; candidate protocol quotas are frozen")
     parser.add_argument("--depths",default="1,2,4,6,8",help="Legacy depth sweep only")
     parser.add_argument("--resume",action="store_true")

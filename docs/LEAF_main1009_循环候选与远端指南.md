@@ -197,11 +197,11 @@ cd /inspire/hdd/project/urbanlowaltitude/fengkairui-25026/shenqili/TP/LEAF1009-l
 python -B scripts/leaf1009.py progress --output outputs/main1009 --devices all --jobs-per-gpu 16 --watch-seconds 30
 ```
 
-终端每 30 秒刷新，显示整轮已完成/总任务分片数、各阶段完成场数、正在运行任务的 PID/方法/种子/规模/百分比、当前任务和阶段的近期速度 ETA，以及整轮剩余时间和北京时间预计结束点。整个协议共有 1,809 个任务分片；选型完成前，确认阶段用待选方法占位，不预先指定赢家。反事实的进度单位是完整场景，其他阶段是 episode。
+终端每 30 秒在固定屏幕内刷新，默认只显示整体总览，不列出 PID 或逐方法/种子/场景细节。总览包括运行任务数、并发上限、含部分完成的整体任务进度、完整任务数、各阶段完成场数/百分比/完整任务数/运行数/近期速度 ETA，以及整轮剩余时间和北京时间预计结束点。整体任务进度按各分片完成比例等权平均，不等同于剩余时间比例。整个协议共有 1,809 个任务分片；选型完成前，确认阶段用待选方法占位，不预先指定赢家。反事实的进度单位是完整场景，其他阶段是 episode。界面使用终端独立屏幕缓冲区并按窗口高度、字符宽度裁剪，避免长输出向下滚动；退出后恢复原终端。
 
 查看器只读已有记录和 Linux `/proc` 的任务日志描述符，不加载策略、不运行 HAD、不写文件。逐场记录增量读取，不反复重扫整份记录。运行主控存在时，自动读取其每卡并发与设备配置；没有运行主控时，使用命令中的设置做预算估算。`Ctrl+C` 只退出查看器。只看一次可将 `--watch-seconds` 改为 `0`。
 
-整轮 ETA 按原协议的串行校准、选型、预算匹配、混合任务队列及独立确认顺序估算。优先使用同方法、同规模、同实验臂实测 episode 时间；未测实验臂使用同规模代理，未测规模使用实体数线性到 observer×实体数平方的计算包络，未测基线使用其他模型的宽代理，未测反事实按每场 1–13 次 rollout 范围估算。范围是工程预算区间，**不是置信区间或保证的上下界**；CPU/GPU 争用、对局长度与存储开销会改变速度。界面公开各代理占比及直接实测覆盖率，低覆盖时整轮数字标为 `PROVISIONAL`。当前任务和阶段的近期 ETA 需要至少一分钟速度采样。不能把本机部分诊断时间当成远端服务器的实测时间。
+整轮 ETA 按任务依赖图和本机 GPU slot 数估算：机制与旧基线不等待校准；选型与预算统计依赖校准；候选固定深度与反事实依赖选型；自适应和确认还依赖预算冻结。跨服务器的完成记录计入全局进度，但运行进程数、并发上限和计划 ETA 仅覆盖当前服务器；多机协作时不把该 ETA 当作整个集群的准确剩余时间。优先使用同方法、同规模、同实验臂实测 episode 时间；未测实验臂使用同规模代理，未测规模使用实体数线性到 observer×实体数平方的计算包络，未测基线使用其他模型的宽代理，未测反事实按每场 1–13 次 rollout 范围估算。范围是工程预算区间，**不是置信区间或保证的上下界**；CPU/GPU 争用、对局长度与存储开销会改变速度。界面公开各代理占比及直接实测覆盖率，低覆盖时整轮数字标为 `PROVISIONAL`。当前任务和阶段的近期 ETA 需要至少一分钟速度采样。不能把本机部分诊断时间当成远端服务器的实测时间。
 
 ### 完整配额、恢复与结果边界
 
@@ -255,3 +255,42 @@ python scripts/leaf1009.py mechanism --suite loop_candidates --output "$LEAF_OUT
 五个核心以相同参数和保存输入核对完整循环重算与直接计算，强制小块拼接后的读出最大差 `4.18e-7`、参数梯度最大差 `1.87e-9`，均在 `1e-6` 容差内。以上检查不改变原 HAD 环境接口。
 
 执行状态：15 个正式训练任务均已完成，75,000 条训练验证记录已归并；离线机制主矩阵及 best/final 比较已完成，图与统计进入唯一报告。上述 smoke 属于训练前历史验收，不是本次新增训练。本机原生校准与机制均已停止并保留 partial，完整原生机制、正式深度、OOD、自适应与反事实尚未完成，全部按本指南在另一机器执行。运行时用 `git log -1 --oneline` 查看实际代码提交。
+
+### 共享存储、多服务器与按依赖调度
+
+完整协议为 1,809 个分片、最多 920,610 场完整对局，另最多 9,000 段反事实尾段。分片不是单场对局。各阶段原配额保持不变。
+
+更新后的 `run` 使用一个 GPU slot 池，立即放行校准、机制和旧基线。校准冻结后同时放行选型与预算统计；选型冻结后放行候选固定深度和反事实；选型及预算冻结后放行自适应和独立确认。方法仅按 ID 选择，OOD 不用于改选。已完整记录的分片不再启动 GPU worker。
+
+所有服务器使用相同代码、相同 HAD 环境与同一个共享绝对输出目录；共享文件系统必须支持跨主机 `flock`，不能启用仅本机生效的文件锁。每台服务器仅运行一个 `run` 主控。任务锁跨服务器共享，主控先跳过被占用任务，worker 再持锁执行。冻结文件和运行状态的发布也有共享锁。某台主控本地队列结束时，其他服务器可能尚在执行；以全局记录覆盖判断完成。
+
+用户当前选择每卡 32 并行。每台服务器执行以下相同命令（路径保持原共享挂载）：
+
+```bash
+conda activate sarc
+cd /inspire/hdd/project/urbanlowaltitude/fengkairui-25026/shenqili/TP/LEAF1009-lite/Open-SCORE
+export LEAF_OUTPUT="$PWD/outputs/main1009"
+export LEAF_OLD_OUTPUT="$PWD/outputs/main0928"
+nohup python -u scripts/leaf1009.py run --suite loop_candidates --output "$LEAF_OUTPUT" --source-output "$LEAF_OLD_OUTPUT" --devices all --jobs-per-gpu 32 >> "$LEAF_OUTPUT/evaluation.log" 2>&1 &
+echo "本机主控 PID: $!"
+```
+
+增加服务器无需复制权重或另建结果目录。查看器读取共享记录，因此完成量是全局的；进程数是本机的。已运行的主控必须正常停止并重启，才能使用新的调度逻辑；仅覆盖 Python 文件不会替换主控内已加载的函数。使用 SIGTERM 或前台 Ctrl+C，等待当前对局和 worker 退出后重开，保留所有结果与锁文件。未落盘对局重算，完整记录续跑。
+### 无需重启评估的三机统一状态面板
+
+将最新 `scripts/leaf1009.py` 覆盖到共享代码目录即可；评估主控无需停止。旧的查看器需要退出重开。默认 progress 仍只读；`--status-only` 和 `--cluster` 将本机进程快照写入 main1009 下独立的 `.leaf1009_status_<hostname>.json`；各服务器分文件发布，临时写入路径还包含监控 PID，并通过原子替换发布，避免多机共写状态的冲突。监控不读取或修改 runner_state.json，不修改训练权重、对局记录或冻结文件。
+
+每台服务器在 sarc 环境及 Open-SCORE 目录各启动一次轻量状态上报（只扫描本机 /proc，不读整份对局记录，不启动评估）：
+
+```bash
+nohup python -B scripts/leaf1009.py progress --output "$PWD/outputs/main1009" --devices all --jobs-per-gpu 32 --watch-seconds 10 --status-only >> outputs/main1009/evaluation.log 2>&1 &
+echo "本机监控 PID：$!"
+```
+
+在任意一台服务器打开统一固定屏幕查看器：
+
+```bash
+python -B scripts/leaf1009.py progress --output "$PWD/outputs/main1009" --devices all --jobs-per-gpu 32 --watch-seconds 10 --cluster
+```
+
+面板显示所有已上报 hostname、任务数、主控数、上报年龄及 RUN/WAIT/STOP/STALE 状态；超过 max(60 秒, 三个刷新周期) 的状态标记过期，排除其任务和容量。RUN 表示有评估 worker，WAIT 表示有主控但尚无 worker，STOP 表示当前无主控和 worker，STALE 代表上报过期，不能据此断言评估已停止。各服务器必须具有不同 hostname，否则无法区分。集群任务数、阶段任务数和并发上限合并有效快照；ETA 使用有效服务器的合计 slot 和共享实测耗时估算，仍是粗略预算。未启动上报的服务器不会出现在列表中，应核对三台 hostname 都出现。
