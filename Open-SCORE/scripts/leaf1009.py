@@ -40,6 +40,9 @@ PROFILE = "leaf1009"
 LEGACY_REVISION = "leaf1009_input_conditioned_v1"
 REVISION = "leaf1009_loop_candidates_v2"
 MECHANISM_REVISION = "leaf1009_native_feedback_v1"
+NOMEM_DEPTH_REVISION = "leaf1009_nomem_depth_v1"
+NOMEM_DEPTH_SPLIT = "nomem_depth_eval"
+NOMEM_DEPTHS = (1, 2, 3, 4, 5, 6)
 # Complete retained main0928 seed-0 configuration: cloud defaults need no old file.
 FROZEN_BASE_CONFIG = {'runner': 'parallel',
  'mac': 'entity_mac',
@@ -539,6 +542,212 @@ def append_loop_record(options, row):
         os.fsync(stream.fileno())
 
 
+def nomem_depth_context(options, *, stored=False):
+    """Inspect retained checkpoints and metadata without importing HAD."""
+    path = options.output / "experiment.json"
+    data = json.loads(path.read_text(encoding="utf-8-sig"))
+    if data.get("profile") != PROFILE:
+        raise ValueError("Depth supplement requires the existing main1009 experiment")
+    environment = {key: data.get(key) for key in ("had_core_version", "physics_protocol")}
+    if not all(environment.values()):
+        raise ValueError("Existing main1009 metadata lacks the HAD version/protocol")
+    formal = data.get("protocols", {}).get(REVISION, {}).get("formal", {})
+    if (tuple(sorted(map(config_tuple, formal.get("configs", [])))) != FINAL_CONFIGS
+            or formal.get("scenes") != [9000, 9299]):
+        raise ValueError("Existing formal configuration/scene pool differs")
+    retained = data.get("protocols", {}).get(NOMEM_DEPTH_REVISION)
+    if stored:
+        if retained is None:
+            raise ValueError("Run depth-eval before generating its report")
+        context = dict(environment=environment, checkpoints=retained["checkpoints"],
+                       checkpoint_files={})
+        if retained != nomem_depth_protocol(context):
+            raise ValueError("Stored NoMem depth protocol differs")
+        return context
+    import torch
+    identities, files = {}, {}
+    for seed in (0, 1, 2):
+        checkpoint = run_dir(options.source_output, "regir_nomem", seed) / "final.pt"
+        saved = torch.load(checkpoint, map_location="cpu", weights_only=False)
+        cfg, progress = saved["config"], saved["progress"]
+        if (cfg.get("method") != "regir_nomem" or cfg.get("env") != "had"
+                or cfg.get("profile") != "main0928" or int(cfg.get("seed", -1)) != seed
+                or int(cfg.get("t_max", 0)) != 1_000_000
+                or progress.get("status") not in ("complete", "completed")
+                or int(progress.get("t_env", 0)) < 1_000_000):
+            raise ValueError(f"Missing completed original NoMem checkpoint: {checkpoint}")
+        if (cfg.get("global_branch") != "cycle" or not cfg.get("global_query_no_memory")
+                or cfg.get("rer_update", "tied") != "tied"
+                or cfg.get("rer_readout", "learned") != "learned"
+                or cfg.get("read_last_round", False) or cfg.get("global_read_h0", False)
+                or cfg.get("leaf_loop_core")
+                or tuple(cfg.get("global_depths", ())) != (1, 2, 3, 4)
+                or int(cfg.get("global_eval_depth", 0)) != 4):
+            raise ValueError(f"Checkpoint is not the retained tied/learned NoMem: {checkpoint}")
+        identities[str(seed)] = dict(method="regir_nomem", seed=seed,
+            checkpoint=f"final@{int(progress['t_env'])}",
+            artifact_id=saved.get("artifact_id"), configuration=cfg)
+        files[str(seed)] = str(checkpoint)
+    context = dict(environment=environment, checkpoints=identities, checkpoint_files=files)
+    expected = nomem_depth_protocol(context)
+    if retained is not None and retained != expected:
+        raise ValueError("Retained NoMem depth protocol/checkpoint identity changed")
+    return context
+
+
+def nomem_depth_protocol(context):
+    return json.loads(json.dumps(dict(revision=NOMEM_DEPTH_REVISION,
+        method="regir_nomem", seeds=[0, 1, 2], depths=NOMEM_DEPTHS,
+        configs=FINAL_CONFIGS, scenes=[9000, 9299], episodes_per_cell=300,
+        checkpoint="final", checkpoints=context["checkpoints"],
+        training_depth_max=4, environment=context["environment"],
+        evaluation=dict(task_mode="damage", spatial_dim=2, max_steps=100,
+            target_initialization="random", greedy=True,
+            blue_strategy={"architecture": "hierarchical",
+                           "layers": {"grouping": "reactive", "control": "rush"}}),
+        reuse=dict(split="eval", arm="original", execution_depth=4, protocol=REVISION),
+        selection_use=False)))
+
+
+def nomem_depth_rows(options, context, records=None):
+    """Return a logical matrix; R4 source rows are mapped only in memory."""
+    records = loop_records(options, method="regir_nomem") if records is None else records
+    bank, reused = {}, {}
+    for row in records:
+        if row.get("official_aggregate") is False or row.get("method") != "regir_nomem":
+            continue
+        seed = int(row["seed"])
+        cfg, scene = config_tuple(row["config"]), int(row["episode_seed"])
+        if seed not in (0, 1, 2) or cfg not in FINAL_CONFIGS or not 9000 <= scene <= 9299:
+            continue
+        identity = context["checkpoints"][str(seed)]
+        if row.get("checkpoint") != identity["checkpoint"]:
+            continue
+        if "D" not in row or not math.isfinite(float(row["D"])):
+            continue
+        if any(row.get(key, value) != value for key, value in context["environment"].items()):
+            continue
+        artifact = row.get("checkpoint_artifact_id")
+        if artifact is not None and artifact != identity["artifact_id"]:
+            continue
+        if row.get("split") == NOMEM_DEPTH_SPLIT:
+            arm = row.get("arm")
+            if (row.get("protocol") != NOMEM_DEPTH_REVISION
+                    or arm not in tuple(f"fixed{d}" for d in NOMEM_DEPTHS)
+                    or row.get("execution_depth") != int(arm[5:])
+                    or any(row.get(k) != v for k, v in context["environment"].items())
+                    or artifact != identity["artifact_id"]):
+                continue
+            bank[arm, cfg, seed, scene] = row
+        elif (row.get("split") == "eval" and row.get("arm") == "original"
+                and row.get("protocol") == REVISION
+                and row.get("execution_depth", 4) == 4):
+            mapped = dict(row, split=NOMEM_DEPTH_SPLIT, arm="fixed4",
+                protocol=NOMEM_DEPTH_REVISION, execution_depth=4, training_depth_max=4,
+                depth_extrapolation=False, loop_stats={},
+                checkpoint_artifact_id=identity["artifact_id"],
+                source_split="eval", source_arm="original", source_protocol=REVISION,
+                source_environment_metadata="experiment.json", reused=True,
+                **context["environment"])
+            reused["fixed4", cfg, seed, scene] = mapped
+    # A directly evaluated R4 has priority over its reusable source.
+    return list({**reused, **bank}.values())
+
+
+def nomem_depth_coverage(rows):
+    cells = defaultdict(set)
+    for row in rows:
+        cells[row["arm"], config_tuple(row["config"]), int(row["seed"])].add(int(row["episode_seed"]))
+    scenes = set(range(9000, 9300))
+    complete_cells = sum(cells[f"fixed{depth}", cfg, seed] == scenes
+        for depth in NOMEM_DEPTHS for cfg in FINAL_CONFIGS for seed in (0, 1, 2))
+    complete_shards = sum(all(cells[f"fixed{d}", cfg, seed] == scenes for d in NOMEM_DEPTHS)
+        for cfg in FINAL_CONFIGS for seed in (0, 1, 2))
+    expected = len(NOMEM_DEPTHS) * len(FINAL_CONFIGS) * 3 * 300
+    return dict(kind="nomem_depth_matrix", complete=complete_shards,
+        total=len(FINAL_CONFIGS) * 3, complete_cells=complete_cells,
+        expected_cells=len(NOMEM_DEPTHS) * len(FINAL_CONFIGS) * 3,
+        logical_episodes=len(rows), expected_episodes=expected,
+        reused_R4_episodes=sum(bool(r.get("reused")) for r in rows),
+        new_completed_episodes=sum(not r.get("reused", False) for r in rows),
+        remaining_episodes=expected-len(rows), global_complete=complete_cells == 432)
+
+
+def initialize_nomem_depth(options, context):
+    from had_env.core.version import CORE_VERSION, PHYSICS_PROTOCOL
+    from open_score.eval.anchors import BLUE_STRATEGY
+    actual = dict(had_core_version=CORE_VERSION, physics_protocol=PHYSICS_PROTOCOL)
+    if actual != context["environment"]:
+        raise ValueError("Current HAD differs from the formal main1009 environment; data preserved")
+    if BLUE_STRATEGY != nomem_depth_protocol(context)["evaluation"]["blue_strategy"]:
+        raise ValueError("Current opponent differs from the formal main1009 protocol")
+    with process_lock(options.output / ".experiment.lock", blocking=True):
+        path = options.output / "experiment.json"
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+        protocol = nomem_depth_protocol(context)
+        protocols = data.setdefault("protocols", {})
+        if NOMEM_DEPTH_REVISION in protocols and protocols[NOMEM_DEPTH_REVISION] != protocol:
+            raise ValueError("Frozen NoMem depth supplement changed")
+        protocols.setdefault(NOMEM_DEPTH_REVISION, protocol)
+        atomic_document(path, data)
+
+
+def evaluate_nomem_depth_shard(options, job, stop):
+    from open_score.eval.anchors import BLUE_STRATEGY
+    from open_score.eval.protocol import config_dict
+    from open_score.rules import register_end_to_end_policy, run_episode
+    from open_score.utils.logging import ExperimentLogger
+    context = options.nomem_depth_context
+    method, seed, config = job["method"], job["seed"], job["config"]
+    policy, t_env, identity, params = load_frozen_policy(options, method, seed)
+    expected = context["checkpoints"][str(seed)]
+    if (identity["checkpoint"] != expected["checkpoint"]
+            or identity["configuration"] != expected["configuration"]
+            or identity.get("artifact_id") != expected["artifact_id"]):
+        raise ValueError("NoMem checkpoint differs from the supplement preflight")
+    name = f"{PROFILE}_nomem_depth_{seed}_{os.getpid()}"
+    register_end_to_end_policy("red", name, name, lambda _: policy)
+    logger = ExperimentLogger(options.output, method, seed, "train", env="had")
+    records = loop_records(options, method=method, seed=seed, config=config)
+    done = {record_key(r) for r in nomem_depth_rows(options, context, records)}
+    for scene in range(9000, 9300):
+        for arm in job["arms"]:
+            if stop.is_set():
+                return "stopped"
+            depth = int(arm[5:])
+            row = dict(method=method, seed=seed, split=NOMEM_DEPTH_SPLIT, arm=arm,
+                config=config_dict(config), episode_seed=scene, checkpoint=identity["checkpoint"],
+                checkpoint_artifact_id=identity["artifact_id"], actor_params=params,
+                protocol=NOMEM_DEPTH_REVISION, execution_depth=depth, training_depth_max=4,
+                depth_extrapolation=depth > 4, loop_stats={}, **context["environment"])
+            if record_key(row) in done:
+                continue
+            policy.set_eval_depth(depth)
+            policy.reset()
+            started = time.perf_counter()
+            result = run_episode(red=config[0], blue=config[1], targets=config[2], seed=scene,
+                red_strategy={"architecture": "end_to_end", "policy": name},
+                blue_strategy=BLUE_STRATEGY, max_steps=100, record=False, task_mode="damage",
+                spatial_dim=2, target_initialization="random", diagnostics=True,
+                record_events=False, retain_trajectory=False)
+            if result.get("physics_protocol") != context["environment"]["physics_protocol"]:
+                raise ValueError("Episode physics protocol differs from the formal pool")
+            row["episode_wall_seconds"] = time.perf_counter() - started
+            summary = result["episode_summary"]
+            row.update({key: summary[key] for key in ("D", "return", "ep_len")})
+            if not all(math.isfinite(float(row[key])) for key in ("D", "return", "ep_len")):
+                raise ValueError("Non-finite NoMem evaluation result")
+            logger.episodes([dict({**summary, **row}, phase="depth_eval",
+                cycle_depth=depth, arm=f"{NOMEM_DEPTH_SPLIT}:{arm}",
+                checkpoint=f"{identity['checkpoint']}/{NOMEM_DEPTH_SPLIT}/{arm}",
+                artifact_id=identity["checkpoint"], eval_point=50, t_env=t_env)])
+            append_loop_record(options, row)
+            done.add(record_key(row))
+        if (scene-8999) % 10 == 0:
+            print(f"NoMem seed={seed} {config} depth-eval {scene-8999}/300", flush=True)
+    return "completed"
+
+
 def frozen_document(options, name):
     path = options.output / name
     if not path.is_file():
@@ -570,6 +779,8 @@ def load_frozen_policy(options, method, seed):
             if not callable(getattr(policy, api, None)):
                 raise ValueError(f"Frozen policy lacks required true-loop API {api}")
     identity = dict(method=method, seed=seed, checkpoint=f"final@{t_env}", configuration=cfg)
+    if method == "regir_nomem":
+        identity["artifact_id"] = saved.get("artifact_id")
     params = sum(p.numel() for p in policy.mac.agent.parameters())
     return policy, t_env, identity, params
 
@@ -988,6 +1199,7 @@ def shard_worker(options, job, gpu, stop, results):
             with logpath.open("a",encoding="utf-8",buffering=1) as stream,redirect_stdout(stream),redirect_stderr(stream):
                 try:
                     status = (train_one(options,job["method"],job["seed"],stop) if options.stage == "train" else
+                              evaluate_nomem_depth_shard(options,job,stop) if options.stage == "depth-eval" else
                               counterfactual_shard(options,job,stop) if options.stage == "counterfactual" else
                               evaluate_one(options,job["method"],job["seed"],stop) if options.suite == "legacy" else
                               evaluate_shard(options,job,stop))
@@ -1004,6 +1216,8 @@ def gpu_slots(devices,jobs_per_gpu):
 
 
 def global_coverage(options,jobs):
+    if options.stage == "depth-eval":
+        return nomem_depth_coverage(nomem_depth_rows(options, options.nomem_depth_context))
     if options.stage=="train":
         from open_score.eval.protocol import training_finished
         matrix=([(job["method"],job["seed"]) for job in jobs] if options.suite=="legacy"
@@ -1125,7 +1339,7 @@ def dispatch_shards(options, jobs, release=None):
         coverage=coverage),ensure_ascii=False),flush=True)
     if not coverage.get("global_complete"):
         print("Local tasks ended; global data may still be running on another server. Rerun this stage after shared coverage is complete.",flush=True)
-    return 1 if failures else 130 if stop.is_set() else 1 if options.stage=="run" and not coverage.get("global_complete") else 0
+    return 1 if failures else 130 if stop.is_set() else 1 if options.stage in ("run","depth-eval") and not coverage.get("global_complete") else 0
 
 
 def delta(damage):
@@ -1636,10 +1850,12 @@ def grouped_loop_summary(rows):
             episodes=len(values),selection_status=values[0].get("selection_status"),
             D=statistics.mean(float(r["D"]) for r in values),
             reward=-statistics.mean(float(r["D"]) for r in values),
-            macs=statistics.mean(float(r["loop_stats"].get("macs",0)) for r in values),
+            macs=statistics.mean(float(r["loop_stats"]["macs"]) for r in values)
+                if all(r.get("loop_stats",{}).get("macs") is not None for r in values) else None,
             episode_wall_seconds=statistics.mean(float(r["episode_wall_seconds"]) for r in values)
                 if all("episode_wall_seconds" in r for r in values) else None,
-            mean_depth=statistics.mean(sum(d*r["loop_stats"].get(f"depth_{d}",0) for d in range(1,5))/max(r["loop_stats"].get("decisions",0),1) for r in values)))
+            mean_depth=statistics.mean(float(r["execution_depth"]) if "execution_depth" in r else
+                sum(d*r["loop_stats"].get(f"depth_{d}",0) for d in range(1,5))/max(r["loop_stats"].get("decisions",0),1) for r in values)))
     return summary
 
 
@@ -1864,13 +2080,226 @@ def plot_native_mechanisms(analysis, save):
     return captions
 
 
+def nomem_depth_report(options):
+    """Update only the depth supplement in the single formal docs report."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    context = nomem_depth_context(options, stored=True)
+    rows = nomem_depth_rows(options, context)
+    coverage = nomem_depth_coverage(rows)
+    summary = grouped_loop_summary(rows)
+    cell_bank = {(r["arm"], tuple(r["config"]), int(r["seed"])): r
+                 for r in summary if r["episodes"] == 300}
+    groups = {"All24": FINAL_CONFIGS, **GROUPS,
+        "Extra": tuple(c for c in FINAL_CONFIGS if not any(c in v for v in GROUPS.values()))}
+
+    def seed_stats(values):
+        mean, sd = statistics.mean(values), statistics.stdev(values)
+        half = 4.30265273 * sd / math.sqrt(3)
+        return dict(mean=mean, seed_sd=sd, seed_values=list(values),
+                    seed_t95=[mean-half, mean+half])
+
+    def pool_stats(bank, arm, configs):
+        keys = [(arm, cfg, seed) for seed in (0, 1, 2) for cfg in configs]
+        if any(key not in bank for key in keys):
+            return None
+        return seed_stats([statistics.mean(bank[arm, cfg, seed]["D"] for cfg in configs)
+                           for seed in (0, 1, 2)])
+
+    def gains(depth_stats):
+        result = {}
+        for shallow, deep in ((1, 2), (2, 4), (4, 5), (4, 6)):
+            a, b = depth_stats[str(shallow)], depth_stats[str(deep)]
+            result[f"R{shallow}_to_R{deep}"] = (seed_stats([
+                x-y for x, y in zip(a["seed_values"], b["seed_values"])]) if a and b else None)
+        return result
+
+    group_results = {}
+    for name, configs in groups.items():
+        depths = {str(d): pool_stats(cell_bank, f"fixed{d}", configs) for d in NOMEM_DEPTHS}
+        group_results[name] = dict(configs=list(configs), depths=depths, reward_gains=gains(depths))
+    configuration_results = []
+    for cfg in FINAL_CONFIGS:
+        depths = {str(d): pool_stats(cell_bank, f"fixed{d}", (cfg,)) for d in NOMEM_DEPTHS}
+        configuration_results.append(dict(config=list(cfg), depths=depths, reward_gains=gains(depths)))
+
+    # Compare candidates on the same physical pool, with their frozen final tags.
+    candidate_rows = [r for r in loop_records(options, split="eval")
+        if r["method"] in LOOP_METHODS and r.get("official_aggregate") is not False
+        and r.get("protocol") == REVISION and 9000 <= int(r["episode_seed"]) <= 9299
+        and config_tuple(r["config"]) in FINAL_CONFIGS and int(r["seed"]) in (0, 1, 2)
+        and r["arm"] in ("fixed1", "fixed2", "fixed3", "fixed4")
+        and math.isfinite(float(r["D"]))
+        and all(r.get(k, v) == v for k, v in context["environment"].items())]
+    calibration = json.loads((options.output / "calibration.json").read_text(encoding="utf-8-sig"))
+    candidate_rows = [r for r in candidate_rows if r["checkpoint"] ==
+        calibration["methods"][r["method"]]["checkpoints"][str(r["seed"])]["checkpoint"]]
+    candidate_summary = grouped_loop_summary(candidate_rows)
+    comparisons = {"NoMem": dict(depths=group_results["All24"]["depths"],
+                                 reward_gains=group_results["All24"]["reward_gains"])}
+    candidate_banks = {}
+    for index, method in enumerate(LOOP_METHODS, 1):
+        bank = {(r["arm"], tuple(r["config"]), int(r["seed"])): r
+            for r in candidate_summary if r["method"] == method and r["episodes"] == 300}
+        candidate_banks[method] = bank
+        depths = {str(d): pool_stats(bank, f"fixed{d}", FINAL_CONFIGS) for d in (1, 2, 3, 4)}
+        comparisons[f"M{index}"] = dict(method=method, depths=depths,
+            reward_gains={"R1_to_R2": gains({**depths, "5": None, "6": None})["R1_to_R2"],
+                          "R2_to_R4": gains({**depths, "5": None, "6": None})["R2_to_R4"]})
+    m4_gains = {}
+    for d in (1, 2, 3, 4):
+        a, b = comparisons["NoMem"]["depths"][str(d)], comparisons["M4"]["depths"][str(d)]
+        m4_gains[str(d)] = seed_stats([x-y for x, y in zip(a["seed_values"], b["seed_values"])]) if a and b else None
+    analysis = dict(revision=NOMEM_DEPTH_REVISION, coverage=coverage,
+        environment=context["environment"], checkpoints=context["checkpoints"],
+        R4_source=dict(split="eval", arm="original", protocol=REVISION,
+            metadata="experiment.json; retained checkpoint global_eval_depth=4",
+            legacy_rows_have_artifact_id=False),
+        groups=group_results, configurations=configuration_results, results=summary,
+        comparisons=comparisons, M4_reward_gain_vs_NoMem_at_same_depth=m4_gains,
+        interpretation=dict(training_depth_max=4, extrapolation_depths=[5, 6],
+            learned_fusion_candidate_set_changes=True,
+            effect="whole-episode fixed-depth policy including temporal history",
+            selection_use=False))
+    reportpath = PROJECT.parent / "docs/LEAF_main1009_完整分析报告.md"
+    preserved = reportpath.read_text(encoding="utf-8")
+    begin, end = "<!-- leaf1009_nomem_depth_v1:start -->", "<!-- leaf1009_nomem_depth_v1:end -->"
+    if begin not in preserved and "\n## 4." not in preserved:
+        raise ValueError("Formal docs report lacks the section-4 insertion point")
+    figures = options.output / "had/figures"
+    figures.mkdir(parents=True, exist_ok=True)
+    fig, axes = plt.subplots(2, 3, figsize=(13, 7))
+    for ax, (name, result) in zip(axes.flat, group_results.items()):
+        points = [(int(d), v) for d, v in result["depths"].items() if v is not None]
+        if points:
+            ax.errorbar([d for d, v in points], [v["mean"] for d, v in points],
+                yerr=[v["seed_sd"] for d, v in points], marker="o", capsize=3)
+        ax.axvspan(4.5, 6.5, alpha=.08, color="orange")
+        ax.set(title=name, xlabel="Fixed execution rounds", ylabel="D (lower is better)",
+               xticks=NOMEM_DEPTHS, xlim=(.7, 6.3))
+        ax.grid(alpha=.2)
+    fig.suptitle("Original NoMem: mean and SD across three training seeds")
+    fig.tight_layout()
+    fig.savefig(figures / "loop_nomem_depth.png", dpi=160)
+    plt.close(fig)
+    fig, ax = plt.subplots(figsize=(8, 5))
+    for name, item in comparisons.items():
+        points = [(int(d), v) for d, v in item["depths"].items() if v is not None]
+        if points:
+            ax.errorbar([d for d, v in points], [v["mean"] for d, v in points],
+                yerr=[v["seed_sd"] for d, v in points], marker="o", capsize=2, label=name)
+    ax.axvspan(4.5, 6.5, alpha=.08, color="orange")
+    ax.set(title="All24: frozen checkpoints and matched scene pool",
+           xlabel="Fixed execution rounds", ylabel="D (lower is better)",
+           xticks=NOMEM_DEPTHS, xlim=(.7, 6.3))
+    ax.grid(alpha=.2)
+    if ax.lines:
+        ax.legend()
+    fig.tight_layout()
+    fig.savefig(figures / "loop_nomem_comparison.png", dpi=160)
+    plt.close(fig)
+
+    def value_text(value):
+        return f"{value['mean']:.4f}±{value['seed_sd']:.4f}" if value else "未完整"
+
+    def gain_text(value):
+        return (f"{value['mean']:+.4f}; [{value['seed_t95'][0]:+.4f}, {value['seed_t95'][1]:+.4f}]"
+                if value else "未完整")
+
+    lines = [begin, "### 3.10 原 NoMem R1–R6：冻结权重的完整深度补评", "",
+        f"逻辑矩阵 {coverage['logical_episodes']:,}/{coverage['expected_episodes']:,} 场；"
+        f"完整单元 {coverage['complete_cells']}/{coverage['expected_cells']}；"
+        f"复用 R4 {coverage['reused_R4_episodes']:,} 场，新增已完成 {coverage['new_completed_episodes']:,} 场。"
+        f"全部完成：{'是' if coverage['global_complete'] else '否，缺口不能视作完整结果'}。", "",
+        "原 main0928 三个 final 权重，24 配置、种子 0/1/2、场景 9000–9299，每单元 300 场。"
+        "D 越低越好，±为三个训练种子的样本标准差；配置等权。"
+        "收益为 D浅−D深，t95 用三个配对种子均值、df=2，不将对局当作独立训练种子。", "",
+        "R4 来源为既有正式 eval/original；原行无环境版本和 artifact UUID，"
+        "复用依据是原 runner 的权重来源、checkpoint 标签、保留的 final 配置与所属 experiment.json。"
+        "映射仅参与汇总，不复制或改写旧逐场记录。新行独立保存 HAD 版本、checkpoint artifact 与执行深度。", "",
+        "R5/R6 超过训练最大四轮，同时改变 learned fusion 的候选集合与归一化。"
+        "这里测量整场固定深度策略，包括时序历史变化，不能直接解释为单个状态的加深收益。"
+        "本补评不重新选择方法或阈值，也不覆盖前文与最后的 M4 方法章节。", "",
+        "| 分组 | R1 | R2 | R3 | R4 | R5 | R6 |", "|---|---|---|---|---|---|---|"]
+    for name, item in group_results.items():
+        lines.append("| " + name + " | " + " | ".join(value_text(item["depths"][str(d)]) for d in NOMEM_DEPTHS) + " |")
+    lines += ["", "| 分组 | R1→R2收益; t95 | R2→R4收益; t95 | R4→R5收益; t95 | R4→R6收益; t95 |",
+              "|---|---|---|---|---|"]
+    for name, item in group_results.items():
+        lines.append("| " + name + " | " + " | ".join(gain_text(v) for v in item["reward_gains"].values()) + " |")
+    lines += ["", "| 配置 (N_R,N_B,K) | R1 | R2 | R3 | R4 | R5 | R6 |",
+              "|---|---|---|---|---|---|---|"]
+    for item in configuration_results:
+        lines.append("| " + str(tuple(item["config"])) + " | " +
+                     " | ".join(value_text(item["depths"][str(d)]) for d in NOMEM_DEPTHS) + " |")
+    lines += ["", "| 方法（All24） | R1 | R2 | R3 | R4 | R2→R4奖励收益; t95 |",
+              "|---|---|---|---|---|---|"]
+    for name, item in comparisons.items():
+        lines.append("| " + name + " | " + " | ".join(value_text(item["depths"][str(d)]) for d in (1, 2, 3, 4)) +
+                     " | " + gain_text(item["reward_gains"]["R2_to_R4"]) + " |")
+    lines += ["", "M4 相对原 NoMem 的同轮数奖励收益（正值代表 M4 更好）："
+              + "；".join(f"R{d}: {gain_text(v)}" for d, v in m4_gains.items()) + "。", ""]
+    for key, value in group_results["All24"]["reward_gains"].items():
+        status = ("证据不足（单元未完整）" if value is None else
+                  "支持平均奖励改善" if value["seed_t95"][0] > 0 else
+                  "支持平均奖励退化" if value["seed_t95"][1] < 0 else
+                  "证据不足（种子 t95 跨零）")
+        lines.append(f"- 原 NoMem {key.replace('_to_', '→')}：{status}，{gain_text(value)}。")
+    for name in ("loop_nomem_depth.png", "loop_nomem_comparison.png"):
+        relative = os.path.relpath(figures / name, reportpath.parent).replace(os.sep, "/")
+        lines += ["", f"![NoMem深度补评：真实结果与种子波动]({relative})"]
+    lines += ["", "配置×深度×种子的明细与来源覆盖见原 main1009 的 summary.json / loop_summary.csv；"
+              "原有正式比较、选型与确认统计保留。", end, ""]
+    section = "\n".join(lines)
+    if begin in preserved:
+        prefix, rest = preserved.split(begin, 1)
+        if end not in rest:
+            raise ValueError("Incomplete NoMem depth report markers")
+        preserved = prefix + section.rstrip("\n") + rest.split(end, 1)[1]
+    else:
+        prefix, rest = preserved.split("\n## 4.", 1)
+        preserved = prefix.rstrip() + "\n\n" + section + "\n## 4." + rest
+    with process_lock(options.output / ".nomem_depth_report.lock", blocking=True):
+        path = options.output / "summary.json"
+        combined = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+        combined["nomem_depth_analysis"] = analysis
+        atomic_document(path, combined)
+        csvpath = options.output / "loop_summary.csv"
+        if csvpath.is_file():
+            with csvpath.open(encoding="utf-8-sig", newline="") as stream:
+                reader = csv.DictReader(stream)
+                fieldnames = reader.fieldnames
+                retained = [r for r in reader if r["split"] != NOMEM_DEPTH_SPLIT]
+        else:
+            retained = combined.get("loop_candidates", {}).get("results", [])
+            fieldnames = list((retained or summary)[0]) if retained or summary else None
+        if fieldnames:
+            pending = csvpath.with_suffix(".csv.pending")
+            with pending.open("w", encoding="utf-8", newline="") as stream:
+                writer = csv.DictWriter(stream, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows([*retained, *summary])
+            os.replace(pending, csvpath)
+        pending = reportpath.with_suffix(".md.pending")
+        pending.write_text(preserved, encoding="utf-8")
+        os.replace(pending, reportpath)
+    print(json.dumps(dict(report=str(reportpath), coverage=coverage), ensure_ascii=False, indent=2))
+
+
 def report(options):
     """Replace only this protocol's section in the sole existing report."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     logging=analysis_module("utils/logging.py")
-    rows=loop_records(options);summary=grouped_loop_summary(rows)
+    rows=loop_records(options)
+    metadata=options.output/"experiment.json"
+    if metadata.is_file() and NOMEM_DEPTH_REVISION in json.loads(metadata.read_text(encoding="utf-8-sig")).get("protocols",{}):
+        context=nomem_depth_context(options,stored=True)
+        mapped=nomem_depth_rows(options,context,[r for r in rows if r["method"]=="regir_nomem"])
+        rows=[r for r in rows if r["split"]!=NOMEM_DEPTH_SPLIT]+mapped
+    summary=grouped_loop_summary(rows)
     path=options.output/"summary.json"
     combined=json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
     comparisons=[]
@@ -2360,7 +2789,7 @@ def progress(options):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("stage",choices=("plan","progress","train","run","mechanism","calibrate","select","eval","adaptive","counterfactual","confirm","depth","report"))
+    parser.add_argument("stage",choices=("plan","progress","train","run","mechanism","calibrate","select","eval","adaptive","counterfactual","confirm","depth","depth-eval","report"))
     parser.add_argument("--output",type=Path,default=PROJECT/"outputs/main1009")
     parser.add_argument("--base-config",type=Path,default=None,help="Optional retained regir_nomem config override; default is a complete frozen literal")
     parser.add_argument("--source-output",type=Path,default=PROJECT/"outputs/main0928")
@@ -2377,21 +2806,49 @@ def main():
     parser.add_argument("--cluster",action="store_true",help="progress: publish local status and show all reporting hosts")
     parser.add_argument("--status-only",action="store_true",help="progress: publish local process status only, without reading episode records")
     parser.add_argument("--episodes",type=int,help="Legacy confirm/depth quota only; candidate protocol quotas are frozen")
-    parser.add_argument("--depths",default="1,2,4,6,8",help="Legacy depth sweep only")
+    parser.add_argument("--depths",default=None,help="depth-eval uses 1..6; legacy depth defaults to 1,2,4,6,8")
+    parser.add_argument("--dry-run",action="store_true",help="depth-eval: inspect checkpoints and coverage without games or writes")
+    parser.add_argument("--section",choices=("nomem-depth",),help="report: update only the NoMem depth supplement in the formal docs report")
     parser.add_argument("--resume",action="store_true")
     options=parser.parse_args();options.output=options.output.resolve();options.source_output=options.source_output.resolve()
     options.suite="legacy" if options.tier is not None and options.suite is None else options.suite or "loop_candidates"
     options.tier=options.tier or "P0"
     if options.output.name!="main1009":parser.error("New outputs must stay in a directory named main1009")
     try:
-        options.seeds=tuple(int(v) for v in options.seeds.split(","));options.depths=tuple(int(v) for v in options.depths.split(","))
+        options.seeds=tuple(int(v) for v in options.seeds.split(","))
+        options.depths=tuple(int(v) for v in (options.depths or ("1,2,3,4,5,6" if options.stage=="depth-eval" else "1,2,4,6,8")).split(","))
         if options.jobs_per_gpu<=0:raise ValueError("--jobs-per-gpu must be positive")
         if options.max_minutes is not None and (not math.isfinite(options.max_minutes) or options.max_minutes<=0):
             raise ValueError("--max-minutes must be a positive finite value")
         if not math.isfinite(options.watch_seconds) or options.watch_seconds<0:raise ValueError("--watch-seconds must be finite and nonnegative")
+        if options.dry_run and options.stage!="depth-eval":raise ValueError("--dry-run is only for depth-eval")
+        if options.section and options.stage!="report":raise ValueError("--section is only for report")
+        if options.stage=="report" and options.section=="nomem-depth":
+            nomem_depth_report(options);return 0
         if options.stage=="progress":return progress(options)
         if not options.seeds or len(set(options.seeds))!=len(options.seeds) or set(options.seeds)-{0,1,2}:raise ValueError("Use distinct seeds from 0,1,2")
         if options.stage=="depth":options.suite="legacy"
+        if options.stage=="depth-eval":
+            if options.methods not in (None,"regir_nomem"):raise ValueError("depth-eval only evaluates original regir_nomem")
+            if options.seeds!=(0,1,2) or options.depths!=NOMEM_DEPTHS:
+                raise ValueError("depth-eval requires ordered seeds 0,1,2 and depths 1,2,3,4,5,6")
+            if options.episodes is not None or options.steps!=1_000_000 or options.max_minutes is not None:
+                raise ValueError("depth-eval uses the full frozen 300-scene, 1M-checkpoint protocol without a time limit")
+            options.suite="references";options.methods="regir_nomem"
+            context=nomem_depth_context(options)
+            coverage=nomem_depth_coverage(nomem_depth_rows(options,context))
+            print(json.dumps(dict(stage="depth-eval",revision=NOMEM_DEPTH_REVISION,
+                method="regir_nomem",seeds=options.seeds,depths=NOMEM_DEPTHS,configs=FINAL_CONFIGS,
+                scenes=[9000,9299],environment=context["environment"],
+                checkpoints={s:dict(checkpoint=v["checkpoint"],artifact_id=v["artifact_id"],
+                    path=context["checkpoint_files"][s]) for s,v in context["checkpoints"].items()},
+                coverage=coverage,dry_run=options.dry_run),ensure_ascii=False,indent=2),flush=True)
+            if options.dry_run:return 0
+            initialize_nomem_depth(options,context)
+            options.nomem_depth_context=context
+            jobs=stage_jobs(options,("regir_nomem",),split=NOMEM_DEPTH_SPLIT,
+                arms=[f"fixed{d}" for d in NOMEM_DEPTHS],configs=FINAL_CONFIGS,start=9000,quota=300)
+            return dispatch_shards(options,jobs)
         selected=methods(options)
         if options.stage=="plan":
             registry=read_registry();base,provenance=base_configuration(options)

@@ -1,12 +1,80 @@
-# LEAF main1009：五种循环候选执行指南
+# LEAF main1009：原 NoMem 深度补评与历史循环候选指南
 
-2026-10-09。本文是代码与运行指南；实验结果只更新到[main1009 唯一正式报告](../Open-SCORE/outputs/main1009/实验报告.md)。15 个 1M 训练任务已全部完成，不要重复启动训练。8,100 个 final 和 120 个 best 离线机制快照已完成。本机原生校准与机制任务均已停止，部分记录保留，不能记为完成。校准、选型、原生机制、完整 OOD、自适应和反事实的完整配额未完成。
+更新：2026-10-10。另一机器的 **1009_eval 整轮评估已完成并合并**，包括校准、选型、原生机制、正式固定深度与旧基线、自适应、反事实及独立确认。15 个 1M 训练任务、8,100 个 final 和 120 个 best 离线机制快照也已完成。唯一正式报告为 [LEAF_main1009_完整分析报告.md](LEAF_main1009_完整分析报告.md)；本文件只保留运行指南。原有整轮结果已完成，**无需重跑 `run`、`calibrate`、`select`、`train` 或其他旧阶段**。
 
-用户最新指令是：**全部实验都在另一台已配好 HAD 和多 GPU 的机器执行，本机不再启动对局。** 本机只准备代码与指南。不安装依赖、不重训、不修改模型或 HAD 物理接口。
+全部新增对局继续在原 1009_eval 机器的既有 HAD、多 GPU 环境执行，本机只更新代码与文档。不安装依赖、不重训、不修改模型权重或 HAD 物理接口。本次只补原 NoMem 的固定深度评估，不扩展 M1–M5 的运行深度。
 
-离线诊断证明对应反馈被模型使用；完整回报、困难状态深轮收益及按需分配须由下面冻结协议验证。M1 至 M5 对应不同论文主题，完整讨论只保留在正式报告中。
+## 本次已获批：原 NoMem R1–R6 完整补评
 
-## 本轮固定范围
+| 项目 | 冻结范围 |
+|---|---|
+| 唯一方法 | 原 main0928 NoMem LEAF：`regir_nomem`，沿用三个正式 1M `final.pt` |
+| 深度 | 固定 R1、R2、R3、R4、R5、R6；每场从初始状态执行同一固定深度 |
+| 配置 | 原正式 eval 的全部 24 配置，沿用 `FINAL_CONFIGS`，不增减 N/K 组合 |
+| 训练种子 | 0、1、2，不挑选单个种子 |
+| 场景 | 每个方法×深度×配置×训练种子使用 9000–9299，各 300 场 |
+| 完整矩阵 | 6 深度 × 24 配置 × 3 种子 × 300 = **129,600 场** |
+| 默认复用 | 当前 main1009 正式 eval 中原 NoMem 的 R4，**21,600 场** |
+| 新增对局 | R1、R2、R3、R5、R6，共 **108,000 场**；不重复运行已复用的 R4 |
+| 权重来源 | 原机器现有 `Open-SCORE/outputs/main0928`，只读加载 |
+| 结果位置 | 原机器现有 `Open-SCORE/outputs/main1009`，保留全部原始记录、已完成进度与权重 |
+
+原 NoMem 的共享实体循环和 learned JK 可用同一 checkpoint 执行六轮，无需增加模型参数。R5/R6 超过原训练最大四轮，属于**推理深度外推**；learned JK 的融合归一化集合也从 R1–R4 扩展到 R1–R5/R6，所以差异同时包含实体处理与融合候选集合变化，不能只归因于最后两轮。该补评不重新选型、不重校准阈值，不改变已有 M4 故事或确认结论。
+
+### 原机器更新代码与两份 docs，保留 outputs 和权重
+
+在原 1009_eval checkout 的仓库根目录执行以下命令。只恢复列出的三个文件，不切换分支、不执行 `git pull` 或 `git reset --hard`，不清理或 stash outputs；即使 outputs 已被 Git 跟踪且存在本机修改，也保留原内容。这三个代码/文档文件自身的本地修改会被替换，若有独有改动先合并。
+
+本次 Git 发布代码、文档和可读小结果，不发布约 680 MB 的原始 JSONL；下面的恢复命令只更新代码与两份 docs，不将发布结果覆盖到原机器 outputs。
+
+```bash
+git fetch origin leaf/main1009-dual-route
+git restore --source=FETCH_HEAD --worktree -- \
+  Open-SCORE/scripts/leaf1009.py \
+  docs/LEAF_main1009_循环候选与远端指南.md \
+  docs/LEAF_main1009_完整分析报告.md
+cd Open-SCORE
+export LEAF_OUTPUT="$PWD/outputs/main1009"
+export LEAF_OLD_OUTPUT="$PWD/outputs/main0928"
+```
+
+沿用原机器已配置好的 Python/HAD 环境。`LEAF_OLD_OUTPUT` 指向原权重来源，`LEAF_OUTPUT` 指向含本机完整 1009_eval 记录的输出目录；不另建实验输出目录。
+
+### 先查看计划，再运行完整补评
+
+新入口是 **`depth-eval`**，不是历史 `depth`。先用 dry-run 查看 24 配置完整矩阵和 R4 复用覆盖，不启动对局：
+
+```bash
+python scripts/leaf1009.py depth-eval --methods regir_nomem --depths 1,2,3,4,5,6 --source-output "$LEAF_OLD_OUTPUT" --output "$LEAF_OUTPUT" --devices all --jobs-per-gpu 8 --dry-run
+```
+
+正式执行相同命令，去掉 `--dry-run`：
+
+```bash
+python scripts/leaf1009.py depth-eval --methods regir_nomem --depths 1,2,3,4,5,6 --source-output "$LEAF_OLD_OUTPUT" --output "$LEAF_OUTPUT" --devices all --jobs-per-gpu 8
+python scripts/leaf1009.py report --section nomem-depth --output "$LEAF_OUTPUT"
+```
+
+使用所有可见 GPU，每卡八个独立评估进程。无需 `--episodes`、`--resume` 或 `--max-minutes`；24 配置、三个种子和每配置 300 场按本次协议执行。完成资格以完整矩阵覆盖为准，不能把单机队列退出或部分落盘结果描述为全部完成。
+
+`report --section nomem-depth` 只更新唯一正式报告的 **3.10 原 NoMem 深度补评章节**及对应结果图，不重写前文比较或末尾 M4 方法故事；不调用历史无 section 的整轮报告命令。原有其他实验结果继续保留。
+
+### 后台执行与断点继续
+
+关闭终端后仍需运行时，在已设置上述路径变量的 `Open-SCORE` 目录执行：
+
+```bash
+nohup python -u scripts/leaf1009.py depth-eval --methods regir_nomem --depths 1,2,3,4,5,6 --source-output "$LEAF_OLD_OUTPUT" --output "$LEAF_OUTPUT" --devices all --jobs-per-gpu 8 >> "$LEAF_OUTPUT/nomem_depth_eval.log" 2>&1 &
+tail -f "$LEAF_OUTPUT/nomem_depth_eval.log"
+```
+
+`tail` 只查看日志，退出查看不会停止评估。中断后在同一代码、权重来源和输出目录重跑同一正式命令，或重跑同一后台命令；已完成记录跳过，未完成进度继续，无需额外 `--resume` 或时限参数。不要同时启动重复补评主控。全配额完成后再执行上面的 `report --section nomem-depth`。
+
+## 之前整轮指南（历史协议，当前无需重跑）
+
+**以下所有章节保留此前整轮实施、验收和多机调度的历史说明，其中“未完成”“本机已停止”等状态是当时记录，不代表当前完成状态。旧报告路径与无 section 的 report 命令也属于历史；当前唯一报告和本次补评入口以上文为准。以下 `run`、训练、校准及整轮队列命令不属于本次补评。**
+
+## 历史整轮固定范围
 
 五种候选，各从头训练 1,000,000 环境步，训练种子为 0/1/2：共 **15 个训练任务**。不增加旧方法重训、初始化扫描、锚定系数扫描或各候选的训练消融。所有新权重、恢复点、数据、日志和图片只进入 `Open-SCORE/outputs/main1009`；main0921/main0923/main0928 只读。
 
