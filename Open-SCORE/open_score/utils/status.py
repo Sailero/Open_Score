@@ -1151,98 +1151,125 @@ def _main1013_estimates(state):
 
 
 def _main1013_render(state, path, *, details=False, now=None):
+    """Two compact tables; one row per model rather than per evaluator."""
     now = time.time() if now is None else now
     published = _stamp(state.get("updated_at"))
     age = max(0., now - published) if published is not None else _age(path, now)
     alive = _main1013_pid_alive(state.get("pid"))
-    resources = state.get("resources", {})
+    current = alive and age is not None and age <= 30
     models = sorted(state.get("models", []), key=lambda row: row.get("order", 0))
-    training = state.get("training", {}).get("live", [])
-    evaluation = state.get("evaluation", {}).get("live", [])
-    train_live = [row for row in training if _main1013_pid_alive(row.get("pid"))]
-    eval_live = [row for row in evaluation if _main1013_pid_alive(row.get("pid"))]
-    lines = [f"main1013 / main1013_supp · 北京时间 {_main1013_beijing(now)}",
-             f"调度 {state.get('status', '未知')} · PID {state.get('pid', '—')} {'存活' if alive else '已退出'} · 状态年龄 {_duration(age)}",
-             f"训练 {len(train_live)}/{len(resources.get('devices', [0, 1])) * int(resources.get('train_per_gpu', 3))}（每GPU3） · 独立评估 CPU {sum(not str(row.get('device', 'cpu')).startswith('cuda') for row in eval_live)}/{resources.get('cpu_eval_workers', 32)} + GPU {sum(str(row.get('device', 'cpu')).startswith('cuda') for row in eval_live)}/2"]
-    if age is None or age > 30:
-        lines.append("状态已过期；以下为最后保存的进度，不能据此确认仍在运行。")
-    done = sum(row.get("train", {}).get("status") in _DONE and bool(row.get("train", {}).get("final_checkpoint")) for row in models)
-    totals = {pool: (sum(row.get(pool, {}).get("completed", 0) for row in models),
-                     sum(row.get(pool, {}).get("total", 0) for row in models)) for pool in ("formal", "confirm", "gru_reset")}
-    lines.append(f"final模型 {done}/{len(models)} · 正式 {totals['formal'][0]:,}/{totals['formal'][1]:,} · 确认 {totals['confirm'][0]:,}/{totals['confirm'][1]:,} · 独立GRU重置 {totals['gru_reset'][0]:,}/{totals['gru_reset'][1]:,}")
-    pool_done = {pool: sum(row.get(pool, {}).get("completed", 0) >= row.get(pool, {}).get("total", 7200)
-                           and row.get(pool, {}).get("status") in _DONE for row in models) for pool in ("formal", "confirm")}
-    validation_completed = sum(row.get("train", {}).get("validation_completed_episodes", 0) for row in models)
-    validation_total = sum(row.get("train", {}).get("validation_total_episodes", 5000) for row in models)
-    failures = sum(row.get("train", {}).get("status") == "failed"
-                   or any(row.get(pool, {}).get("status") == "failed" for pool in ("formal", "confirm", "gru_reset")) for row in models)
-    worker_failures = state.get("evaluation", {}).get("failures", [])
-    lines.append(f"剩余模型：训练 {len(models) - done} · 正式 {len(models) - pool_done['formal']} · 确认 {len(models) - pool_done['confirm']} · 失败模型 {failures} · 失败分片登记 {len(worker_failures)} · 验证 {validation_completed:,}/{validation_total:,}")
-    train_stopped = bool(state.get("training", {}).get("stopped")) and done < len(models)
-    eval_unfinished = any(row.get(pool, {}).get("completed", 0) < row.get(pool, {}).get("total", 0)
-                          for row in models for pool in ("formal", "confirm", "gru_reset"))
-    eval_stopped = bool(state.get("evaluation", {}).get("stopped")) and eval_unfinished
-    lines.append(f"待运行队列：训练 {len(state.get('training', {}).get('queue', []))}{'（已停止，需恢复）' if train_stopped else ''} · 评估 {len(state.get('evaluation', {}).get('queue', []))}{'（已停止，需恢复）' if eval_stopped else ''}")
+    training = [row for row in state.get("training", {}).get("live", [])
+                if _main1013_pid_alive(row.get("pid"))]
+    evaluation = [row for row in state.get("evaluation", {}).get("live", [])
+                  if _main1013_pid_alive(row.get("pid"))]
     estimate = _main1013_estimates(state)
-    current = alive and age is not None and age <= 30 and not failures and state.get("status") not in {"stopped", "failed", "interrupted", "stopping"}
-    calendar_enabled = current and not train_stopped and not eval_stopped
-    finished_all = (bool(models) and done == len(models) and all(pool_done[pool] == len(models) for pool in ("formal", "confirm"))
-                    and totals["gru_reset"][0] >= totals["gru_reset"][1])
-    prefix = "运行中粗估" if current and not train_stopped else "恢复后粗估"
-    lines.append(f"{prefix}训练含剩余验证：{_range(estimate['training']) if estimate['training'] else '采样中'}")
-    if train_stopped and not eval_stopped:
-        lines.append("训练池已单独停止；评估可继续处理现成final，全部计划需恢复训练后才可估计完工日期。")
-    elif eval_stopped and not train_stopped:
-        lines.append("评估池已单独停止；训练阶段ETA仍按当前训练估计，全部计划需恢复评估后才发布完工日期。")
-    if finished_all:
-        lines.append("全部计划已登记完成；无需发布未来完工日期。")
-    elif estimate["overall"] and calendar_enabled:
-        values = estimate["overall"]
-        lines.append(f"全部完成粗估：{_range(values)} · 北京时间 {_main1013_beijing(now + values[0])} ～ {_main1013_beijing(now + values[1])}")
-    elif estimate["overall"]:
-        lines.append(f"恢复后全部完成粗估：{_range(estimate['overall'])}；当前状态不发布完工日期。")
-    else:
-        lines.append("全部完成ETA：采样中（需实际训练/验证及逐配置CPU评估耗时）")
-    lines.append("ETA按六训练槽、模型就绪后75场片并行评估模拟；CPU32与已获准GPU槽并行，正式完成才释放确认。")
-    lines.append("区间来自实测速率范围；跨模型/方法借用耗时属粗估，未采样CUDA不计入吞吐。" + (" 当前存在跨方法估计。" if estimate["rough"] else ""))
-    rows = models if details else [row for row in models if row["id"] in {item.get("model_id", item.get("id")) for item in training + evaluation}]
+    failures = sum(any(model.get(pool, {}).get("status") == "failed"
+                       for pool in ("train", "formal", "confirm", "gru_reset")) for model in models)
+    stopped = any(state.get(pool, {}).get("stopped") for pool in ("training", "evaluation"))
+    labels = {"running": "运行", "completed": "完成", "stopped": "停止",
+              "stopping": "停止中", "failed": "失败", "interrupted": "中断"}
+    status = labels.get(state.get("status"), state.get("status", "--"))
+    if state.get("status") != "completed" and not current:
+        status = "已退出" if not alive else "状态过期"
+
+    def duration(value):
+        value = _number(value)
+        if value is None:
+            return "--"
+        seconds = max(0, int(value))
+        if seconds >= 86400:
+            return f"{seconds // 86400}d{seconds % 86400 // 3600}h"
+        if seconds >= 3600:
+            return f"{seconds // 3600}h{seconds % 3600 // 60}m"
+        return f"{seconds // 60}m{seconds % 60}s"
+
+    def eta(values):
+        if not values or any(_number(value) is None for value in values):
+            return "--"
+        low, high = duration(min(values)), duration(max(values))
+        return low if low == high else f"{low}~{high}"
+
+    def percent(completed, total):
+        return f"{min(100., 100. * float(completed or 0) / max(1., float(total or 0))):.1f}%"
+
+    def table(headers, rows):
+        rows = [[str(value) for value in row] for row in rows]
+        widths = [max([_width(header)] + [_width(row[i]) for row in rows]) for i, header in enumerate(headers)]
+        return ["  ".join(_cell(value, widths[i]) for i, value in enumerate(headers)),
+                "  ".join("-" * width for width in widths),
+                *("  ".join(_cell(value, widths[i]) for i, value in enumerate(row)) for row in rows)]
+
+    running = current and not stopped and not failures and state.get("status") not in {"stopped", "stopping", "failed", "interrupted"}
+    overall = "0s" if state.get("status") == "completed" else eta(estimate["overall"]) if running else "--"
+    lines = [f"main1013  {_main1013_beijing(now)}  {status}  全部剩余≈{overall}"]
+    summary = []
+    for pool, label in (("train", "训练"), ("formal", "正式评估"), ("confirm", "确认评估"), ("gru_reset", "GRU重置")):
+        selected = [model for model in models if pool == "train" or model.get(pool, {}).get("total", 0)]
+        total = len(selected)
+        if not total:
+            continue
+        def complete(model):
+            bank = model.get(pool, {})
+            return bank.get("status") in _DONE and (bool(bank.get("final_checkpoint")) if pool == "train"
+                    else bank.get("completed", 0) >= bank.get("total", 0))
+        done = sum(complete(model) for model in selected)
+        workers = len(training) if pool == "train" else sum(row.get("pool") == pool for row in evaluation)
+        work = sum(model.get(pool, {}).get("t_env" if pool == "train" else "completed", 0) for model in selected)
+        budget = sum(model.get(pool, {}).get("budget_steps", 1000000) if pool == "train"
+                     else model.get(pool, {}).get("total", 0) for model in selected)
+        summary.append((label, f"{done}/{total}", workers, total - done, percent(work, budget)))
+    lines += table(("阶段", "完成/模型", "运行进程", "剩余模型", "进度"), summary)
+    active = defaultdict(list)
+    for row in training + evaluation:
+        active[row.get("model_id", row.get("id"))].append(row)
+    rows = []
+    names = {"regir_nomem_memtoken": "MemToken", "transfqmix_aligned": "TQMix",
+             "regir_nomem_ff": "NoMemory", "regir_nomem_memtoken_sg": "MemTokenSG",
+             "regir_nomem_r0": "R0", "regir_nomem_r1": "R1", "regir_nomem_norefil": "NoHost"}
+    for model in models:
+        items = active.get(model["id"], [])
+        if not (items or details or state.get("status") == "completed" or
+                any(model.get(pool, {}).get("status") == "failed" for pool in ("train", "formal", "confirm", "gru_reset"))):
+            continue
+        train, formal, confirm = (model.get(pool, {}) for pool in ("train", "formal", "confirm"))
+        phases = []
+        if any(row in training for row in items):
+            phases.append("收尾" if train.get("status") in _DONE else
+                          "验证" if train.get("current_phase") == "validating" else "训练")
+        for pool, label in (("formal", "正式"), ("confirm", "确认"), ("gru_reset", "重置")):
+            if any(row.get("pool") == pool for row in items):
+                phases.append(label)
+        failure = any(model.get(pool, {}).get("status") == "failed" for pool in ("train", "formal", "confirm", "gru_reset"))
+        phase = "/".join(phases) or ("失败" if failure else "完成" if confirm.get("status") in _DONE
+                                     else "停止" if stopped else "中断" if not current else "等待")
+        if failure and phases:
+            phase += "/失败"
+        devices = sorted({f"GPU{row.get('gpu')}" for row in items if row.get("gpu") is not None})
+        cpu = sum(row.get("device") == "cpu" for row in items)
+        if cpu:
+            devices.append(f"CPU×{cpu}")
+        starts = [_stamp(row.get("started_at")) for row in items]
+        starts = [value for value in starts if value is not None]
+        timing = estimate["per_model"][model["id"]]
+        remaining = timing["training_remaining"] if any(row in training for row in items) and train.get("status") not in _DONE else timing["finish"]
+        def metric(pool):
+            value = _number(pool.get("D"))
+            if value is not None and pool.get("status") in _DONE:
+                return f"{value:.3f}"
+            count = sum(cell.get("completed", 0) for cell in pool.get("configs", {}).values())
+            damage = sum(cell.get("D_sum", 0.) for cell in pool.get("configs", {}).values())
+            return f"~{damage / count:.3f}" if count else "--"
+        validation = _number(train.get("latest_validation_D"))
+        rows.append((f"{names.get(model['method'], model['method'])}/{model['seed']}", phase,
+                     "+".join(devices) or "--", percent(train.get("t_env"), train.get("budget_steps", 1000000)),
+                     percent(formal.get("completed"), formal.get("total", 7200)),
+                     percent(confirm.get("completed"), confirm.get("total", 7200)),
+                     duration(now - min(starts)) if starts else "--",
+                     eta(remaining) if current and items and not failure else "--",
+                     f"{validation:.3f}" if validation is not None else "--", metric(formal), metric(confirm)))
     if rows:
-        lines += ["", "模型 | 训练 | 验证 | 正式 | 确认 | 正式D | 确认D | 最近验证D"]
-    for model in rows:
-        train = model.get("train", {})
-        def percent(done, total):
-            return f"{min(100., 100. * float(done or 0) / max(1., float(total or 0))):5.1f}%"
-        formal, confirm = model.get("formal", {}), model.get("confirm", {})
-        value = lambda x: f"{float(x):.4f}" if _number(x) is not None else "—"
-        official_value = lambda pool: pool.get("D") if pool.get("status") in _DONE and pool.get("completed", 0) >= pool.get("total", 7200) else None
-        lines.append(f"{model.get('scope', '')}/{model['method']} s{model['seed']} | {percent(train.get('t_env'), train.get('budget_steps', 1000000))} | {percent(train.get('validation_completed_episodes'), train.get('validation_total_episodes', 5000))} | {percent(formal.get('completed'), formal.get('total', 7200))} | {percent(confirm.get('completed'), confirm.get('total', 7200))} | {value(official_value(formal))} | {value(official_value(confirm))} | {value(train.get('latest_validation_D'))}")
-        if details:
-            lines.append(f"  训练状态 {train.get('status', 'pending')} · t_env={train.get('t_env', 0):,} · {_duration(train.get('training_seconds'))}（不含验证） · 实测 {_number(train.get('rate'), 0):.2f}步/s")
-            timing = estimate["per_model"][model["id"]]
-            finish = timing["finish"]
-            has_finish = all(value is not None for value in finish)
-            model_done = (train.get("status") in _DONE and all(model.get(pool, {}).get("status") in _DONE for pool in ("formal", "confirm")))
-            end = ("；双池已完成" if model_done else
-                   f"；北京时间 {_main1013_beijing(now + min(finish))} ～ {_main1013_beijing(now + max(finish))}"
-                   if has_finish and calendar_enabled else "；完工时间采样中或等待恢复")
-            lines.append(f"  剩余训练含验证 {_range(timing['training_remaining']) if timing['training_remaining'] else '采样中'} · 含排队就绪 {_range(timing['training_ready'])} · 双池完成 {_range(finish)}{end}")
-            if model.get("gru_reset", {}).get("total"):
-                item = model["gru_reset"]
-                lines.append(f"  独立GRU重置 {item.get('completed', 0)}/{item['total']} · {item.get('status', 'waiting')}")
-    if details:
-        lines += ["", "活动worker（PID核实，不扫描CSV或加载checkpoint）："]
-        if resources.get("gpu_memory"):
-            lines.append("GPU当前实测资源 " + json.dumps(resources["gpu_memory"], ensure_ascii=False))
-        for kind, items in (("训练", training), ("评估", evaluation)):
-            for item in items:
-                device = item.get("device", f"cuda:{item.get('gpu')}" if item.get("gpu") is not None else "cpu")
-                lines.append(f"  {kind} {item.get('model_id', item.get('id'))} PID={item.get('pid')} {'存活' if _main1013_pid_alive(item.get('pid')) else '已退出'} {device} {item.get('phase', item.get('pool', ''))} config={item.get('config', '—')} {item.get('completed', 0)}/{item.get('total', '—')} · 运行 {_duration(max(0, now - (_stamp(item.get('started_at')) or now)))}")
-        lines.append(f"排队训练 {len(state.get('training', {}).get('queue', []))} · 排队评估 {len(state.get('evaluation', {}).get('queue', []))} · 等模型 {len(state.get('evaluation', {}).get('awaiting_models', []))}")
-        if worker_failures:
-            lines.append("失败分片登记 " + json.dumps(worker_failures, ensure_ascii=False))
-        for event in state.get("events", [])[-5:]:
-            lines.append("事件 " + (json.dumps(event, ensure_ascii=False) if isinstance(event, dict) else str(event)))
-    lines.append("Ctrl+C只结束只读显示；训练与评估继续。")
+        lines += [""] + table(("模型/种子", "当前", "设备", "训练", "正式", "确认", "当前用时", "剩余≈", "验证D", "正式D", "确认D"), rows)
+    lines.append("D↓  ~=当前均值  --=待采样" + (f"  失败模型={failures}" if failures else ""))
     return "\n".join(lines)
 
 
@@ -1262,7 +1289,7 @@ def main1013_progress(options):
             if state.get("schema") == "main1013-runner-v1":
                 text = _main1013_render(state, path, details=details)
             else:
-                text = f"main1013尚无有效runner状态：{path}" + ("\n" + "\n".join(issues) if issues else "")
+                text = "main1013  状态不可读" if issues else "main1013  等待启动"
             sys.stdout.write(("\x1b[H\x1b[J" if overwrite else "") + text + "\n")
             sys.stdout.flush()
             if interval <= 0:

@@ -56,12 +56,12 @@ PYTHONPATH="$PWD" /data3/dell/Saileron/envs/saileron-smac/bin/python -B -s \
 ```bash
 PYTHONPATH="$PWD" /data3/dell/Saileron/envs/saileron-smac/bin/python -B -s \
   scripts/leaf1009.py progress --suite main1013 \
-  --output outputs/main1013 --supp-output outputs/main1013_supp \
-  --watch-seconds 10 --details
+  --watch-seconds 10
 ```
 
-面板显示训练剩余模型、正式与确认池剩余模型/场景、CPU/GPU活动worker、每模型三阶段进度、已有完整结果及ETA。
-全局ETA模拟独立训练/评估资源与模型就绪依赖，不将训练时间与评估时间相加；无实测计时时标采样中或粗估。
+面板只显示阶段总览和当前模型表格：完成/总数、运行进程、剩余数、进度、设备、用时、ETA及D。
+`--details`在同一表格中显示全部21个模型。`~D`为评估中均值，完成后显示正式值；`--`表示尚无数据。
+全局ETA模拟独立训练/评估资源与模型就绪依赖，不将训练时间与评估时间相加。
 `--watch-seconds 0`打印一次快照；关闭查看器不停止任务。
 
 使用相同suite/output参数的`stop --target train|eval|all`安全停止；重新运行原启动命令恢复。
