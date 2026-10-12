@@ -53,7 +53,8 @@ def schema_for(output, stream_name):
     extra = ("env", "checkpoint_id", "arm", "cycle_depth", "readout")
     if stream_name == "episodes":
         extra += ("battle_won", "return", "source_version", "dup_pursuit_frac", "intent_stats",
-                  "intent_override", "protocol")
+                  "intent_override", "protocol", "eval_device", "physical_gpu", "policy_seed",
+                  "episode_wall_seconds")
     if stream_name in ("learning", "trajectories", "progress"):
         extra += ("source_version", "protocol")
     if stream_name == "timing":
@@ -436,7 +437,7 @@ class ExperimentLogger:
             missing = set(EPISODE_FIELDS) - row.keys()
             if missing:
                 raise ValueError(f"Missing episode fields: {sorted(missing)}")
-            if row["phase"] not in ("train_eval", "final_eval", "depth_eval", "readout_eval", "anchor",
+            if row["phase"] not in ("train_eval", "final_eval", "confirm_eval", "mechanism_eval", "depth_eval", "readout_eval", "anchor",
                                     "gate_depth_eval", "dup_eval", "r1deploy_eval", "intent_intervention_eval"):
                 raise ValueError(f"Not a frozen evaluation phase: {row['phase']}")
             for field in (("battle_won", "ep_len") if self.env == "smacv2" else ("D", "rho", "ep_len")):

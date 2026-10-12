@@ -416,6 +416,332 @@ def evaluate_checkpoint(method, checkpoint, *, output=None, run=None, seed=None,
     return dict(status="complete", completed=completed, total=total)
 
 
+def _main1013_rng_state(cuda=False):
+    import random
+    import numpy as np
+    import torch
+    return (random.getstate(), np.random.get_state(), torch.get_rng_state(),
+            torch.cuda.get_rng_state_all() if cuda else None)
+
+
+def _main1013_restore_rng(state):
+    import random
+    import numpy as np
+    import torch
+    random.setstate(state[0])
+    np.random.set_state(state[1])
+    torch.set_rng_state(state[2])
+    if state[3] is not None:
+        torch.cuda.set_rng_state_all(state[3])
+
+
+def _main1013_clone(value):
+    """Copy only mutable controller/capture state, never model parameters."""
+    import torch
+    if isinstance(value, torch.Tensor):
+        return value.clone()
+    if isinstance(value, dict):
+        return {key: _main1013_clone(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_main1013_clone(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_main1013_clone(item) for item in value)
+    return value
+
+
+def _main1013_append_diagnostic(output, row):
+    """Recover an uncommitted partial tail, then append a durable gzip member."""
+    import gzip
+    import json
+    import os
+    import zlib
+    from open_score.eval.experiment import atomic_json
+    from open_score.utils.logging import _encode, _locked_file
+    path = Path(output) / "had" / "diagnostics.jsonl.gz"
+    offset_path = path.with_name(".diagnostics.offset.json")
+    member = gzip.compress((_encode(row) + "\n").encode("utf-8"), compresslevel=3, mtime=0)
+    with _locked_file(path, create=True) as stream:
+        stream.seek(0, os.SEEK_END)
+        size = stream.tell()
+        offset = (int(json.loads(offset_path.read_text(encoding="utf-8"))["complete_bytes"])
+                  if offset_path.exists() else 0)
+        if not 0 <= offset <= size:
+            raise RuntimeError("Diagnostic offset exceeds the existing file; preserving data")
+        stream.seek(offset)
+        valid_end, started = offset, False
+        decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
+        pending = b""
+        while True:
+            chunk = pending or stream.read(65536)
+            pending = b""
+            if not chunk:
+                break
+            started = True
+            try:
+                decoder.decompress(chunk)
+            except zlib.error as error:
+                raise RuntimeError("Corrupt diagnostic gzip member; preserving data") from error
+            if decoder.eof:
+                pending = decoder.unused_data
+                valid_end = stream.tell() - len(pending)
+                decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
+                started = False
+        if started:
+            # The CSV episode is committed only after this append returns.
+            # Therefore an interrupted final member has no committed result.
+            stream.truncate(valid_end)
+        stream.seek(0, os.SEEK_END)
+        stream.write(member)
+        stream.flush()
+        os.fsync(stream.fileno())
+        atomic_json(offset_path, {"complete_bytes": stream.tell()})
+
+
+class _Main1013EpisodePolicy:
+    """Bounded factual capture and same-state probes around the frozen adapter."""
+    def __init__(self, base, seed, config, episode_seed, *, capture=False,
+                 perturb=False, reset_gru=False):
+        self.base, self.seed, self.config = base, seed, config
+        self.episode_seed = episode_seed
+        self.capture, self.perturb, self.reset_gru = capture, perturb, reset_gru
+        self.representations, self.perturbations = [], []
+
+    def reset(self):
+        self.representations, self.perturbations = [], []
+        self.base.reset()
+        agent = self.base.mac.agent
+        if hasattr(agent, "disable_capture"):
+            agent.disable_capture()
+            agent.last_capture.clear()
+
+    def act(self, state, side, action_ids):
+        import torch
+        agent, mac = self.base.mac.agent, self.base.mac
+        if self.reset_gru:
+            mac.hidden_states = torch.zeros_like(mac.hidden_states)
+        if self.capture:
+            # Keep all live observers, but discard the much larger H capture
+            # after this actual decision rather than retaining it for a battle.
+            agent.enable_capture(max_decisions=1, max_observers=int(self.base.args.n_agents))
+        previous = mac.hidden_states.clone() if self.perturb else None
+        rng_before = _main1013_rng_state(self.base.device == "cuda") if self.perturb else None
+        actions = self.base.act(state, side, action_ids)
+        if self.capture:
+            for captured in agent.last_capture:
+                self.representations.append({
+                    "step": int(state.step),
+                    **{key: captured[key].tolist() for key in ("observer_ids", "u_t", "h_t", "h_prev")},
+                })
+            agent.last_capture.clear()
+            agent.disable_capture()
+        if self.perturb:
+            self.perturbations.append(self._probe(state.step, previous, rng_before))
+        return actions
+
+    def _probe(self, step, previous, rng_before):
+        import numpy as np
+        import torch
+        mac, agent = self.base.mac, self.base.mac.agent
+        branch = agent.global_net
+        rng_after = _main1013_rng_state(self.base.device == "cuda")
+        fields = (
+            (mac, ("hidden_states", "_decision_q", "_decision_hidden", "_episode_depth")),
+            (agent, ("_capture_limits", "last_capture", "_capture_real_decision", "_capture_time", "cycle_depth")),
+            (branch, ("_capture_read_indices", "captured_reads", "captured_alpha",
+                      "captured_read_attn", "last_alpha", "last_self_attn")),
+        )
+        retained = [(obj, {key: (hasattr(obj, key), _main1013_clone(getattr(obj, key, None)))
+                           for key in names}) for obj, names in fields]
+        original_q = mac._decision_q.clone()
+        original_hidden = mac.hidden_states.clone()
+        alive = ~self.base.batch["entity_mask"][:, step, :previous.shape[1]].bool()
+        direction_seed = int(np.random.SeedSequence([
+            self.seed, *self.config, self.episode_seed, int(step)]).generate_state(1)[0])
+        generator = torch.Generator(device="cpu").manual_seed(direction_seed)
+        direction = torch.randn(previous.shape[-1], generator=generator, dtype=torch.float32)
+        direction = (direction / direction.square().mean().sqrt()).to(previous.device)
+        rms = previous.square().mean(dim=-1, keepdim=True).sqrt()
+        delta = (0.01 * rms * direction).masked_fill(~alive.unsqueeze(-1), 0)
+        try:
+            agent.disable_capture()
+            mac.hidden_states = previous + delta
+            _main1013_restore_rng(rng_before)
+            probe_q = mac.forward(self.base.batch, t=int(step), test_mode=True)[0]
+            legal = self.base.batch["avail_actions"][:, step].bool()
+            factual_actions = original_q.masked_fill(~legal, -torch.inf).argmax(-1)
+            probe_actions = probe_q.masked_fill(~legal, -torch.inf).argmax(-1)
+            count = int(alive.sum().item())
+            changed = int(((factual_actions != probe_actions) & alive).sum().item())
+            q_delta = (probe_q - original_q)[alive]
+            h_delta = (mac.hidden_states - original_hidden)[alive]
+            return dict(step=int(step), direction_seed=direction_seed, relative_rms=0.01,
+                        alive=count, changed_actions=changed,
+                        action_change_fraction=changed / max(count, 1),
+                        perturbation_rms=float(delta[alive].square().mean().sqrt()) if count else 0.0,
+                        q_l2_change=float(q_delta.norm(dim=-1).mean()) if count else 0.0,
+                        h_l2_change=float(h_delta.norm(dim=-1).mean()) if count else 0.0)
+        finally:
+            for obj, values in retained:
+                for key, (existed, value) in values.items():
+                    if existed:
+                        setattr(obj, key, value)
+                    elif hasattr(obj, key):
+                        delattr(obj, key)
+            _main1013_restore_rng(rng_after)
+
+
+def evaluate_main1013_checkpoint(method, checkpoint, *, output, seed, pool, config,
+                                 episode_seeds, device="cpu", on_progress=None,
+                                 stop_requested=None):
+    """Evaluate an assigned pending subset; the parent's EpisodeIndex deduplicates.
+
+    Identity excludes device and scheduling. Only the seven newly trained arms
+    are eligible, and diagnostic forwards never advance the factual simulator.
+    """
+    import os
+    import random
+    import numpy as np
+    import torch
+    from open_score.algos import MAIN1013_OVERRIDES, load_policy
+    from open_score.rules import register_end_to_end_policy, run_episode
+    from open_score.utils.logging import ExperimentLogger
+    from .anchors import BLUE_STRATEGY
+
+    output, checkpoint = Path(output), Path(checkpoint)
+    actual_config = config_key(config)
+    scenes = tuple(int(value) for value in episode_seeds)
+    reset_configs = ((10, 10, 2), (50, 50, 2), (30, 30, 12))
+    supp_methods = ("regir_nomem_r0", "regir_nomem_r1", "regir_nomem_norefil")
+    expected_profile = "main1013_supp" if method in supp_methods else "main1013"
+    if method not in MAIN1013_OVERRIDES or int(seed) not in (0, 1, 2):
+        raise ValueError("Only the seven main1013 arms and seeds 0/1/2 are eligible")
+    if output.name != expected_profile or not checkpoint.resolve().is_relative_to(output.resolve()):
+        raise ValueError("Checkpoint and output must belong to this arm's new campaign")
+    if actual_config not in FINAL_CONFIGS or pool not in ("formal", "confirm", "gru_reset"):
+        raise ValueError("Unknown main1013 evaluation pool or configuration")
+    allowed = (range(9000, 9300) if pool == "formal" else
+               range(110000, 110300) if pool == "confirm" else range(9000, 9010))
+    if len(set(scenes)) != len(scenes) or any(value not in allowed for value in scenes):
+        raise ValueError("Scene seeds must be a unique subset of the frozen pool")
+    if pool == "gru_reset" and (method != "regir_nomem_memtoken" or actual_config not in reset_configs):
+        raise ValueError("GRU reset is limited to E1 and its three approved configurations")
+    if device not in ("cpu", "cuda"):
+        raise ValueError("Evaluation device must be cpu or cuda")
+    physical_gpu = os.environ.get("CUDA_VISIBLE_DEVICES") if device == "cuda" else None
+    if device == "cuda" and physical_gpu not in ("0", "1"):
+        raise ValueError("CUDA evaluation needs exactly one permitted visible GPU (0 or 1)")
+    saved = torch.load(checkpoint, map_location="cpu", weights_only=False)
+    cfg, state = saved["config"], saved["progress"]
+    t_env = int(state["t_env"])
+    if (checkpoint.name != "final.pt" or cfg.get("method") != method
+            or int(cfg.get("seed", -1)) != int(seed) or cfg.get("profile") != expected_profile
+            or cfg.get("env") != "had" or int(cfg.get("t_max", 0)) != 1_000_000
+            or t_env < 1_000_000 or state.get("status") != "completed"):
+        raise ValueError("Evaluation requires this new arm's completed 1M-step final checkpoint")
+    del saved
+    phase = {"formal": "final_eval", "confirm": "confirm_eval", "gru_reset": "mechanism_eval"}[pool]
+    protocol = "main1013_memory_placement_v1"
+    identity = dict(checkpoint_id=f"main1013/{method}/seed_{int(seed)}/final@{t_env}",
+                    checkpoint=f"final@{t_env}", source_version=output.name, protocol=protocol,
+                    arm=pool, phase=phase, config=config_dict(actual_config),
+                    eval_device=device, physical_gpu=physical_gpu, t_env=t_env, eval_point=50)
+    (output / "had").mkdir(parents=True, exist_ok=True)
+    logger = ExperimentLogger(output, method, seed, "train", env="had")
+    logger.version = output.name
+    completed, damage_sum, measured_seconds = 0, 0.0, 0.0
+    total = len(scenes)
+
+    def result(status):
+        return dict(status=status, completed=completed, total=total, D_sum=damage_sum,
+                    mean_D=damage_sum / completed if completed else None,
+                    measured_episodes=completed, measured_seconds=measured_seconds)
+
+    if not scenes:
+        return result("complete")
+    policy = load_policy(method, checkpoint)
+    policy.mac.agent.float().eval()
+    if policy.mixer is not None:
+        policy.mixer.float().eval()
+    policy.set_device(device)
+    policy.set_eval_depth(int(cfg.get("global_eval_depth", 4)))
+    old_precision = torch.get_float32_matmul_precision()
+    old_tf32 = (torch.backends.cuda.matmul.allow_tf32, torch.backends.cudnn.allow_tf32)
+    torch.set_float32_matmul_precision("highest")
+    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.backends.cudnn.allow_tf32 = False
+    token_methods = ("regir_nomem_memtoken", "regir_nomem_memtoken_sg")
+    diagnostic_configs = VALIDATION_CONFIGS + ((15, 15, 2), (30, 30, 2), (50, 50, 2), (30, 30, 12))
+    proxy = None
+    policy_name = f"main1013_evaluation_{next(_POLICY_IDS)}"
+    register_end_to_end_policy("red", policy_name, f"{method} frozen final", lambda _seed: proxy)
+    try:
+        for scene in scenes:
+            if stop_requested is not None and stop_requested():
+                logger.progress(**identity, **result("stopped"))
+                return result("stopped")
+            policy_seed = int(np.random.SeedSequence([int(seed), *actual_config, scene]).generate_state(1)[0])
+            random.seed(policy_seed)
+            np.random.seed(policy_seed)
+            torch.manual_seed(policy_seed)
+            diagnostic = (pool == "formal" and scene < 9010 and (
+                (actual_config in diagnostic_configs and method in (*token_methods, "transfqmix_aligned"))
+                or (method == "regir_nomem_memtoken" and actual_config in reset_configs)))
+            proxy = _Main1013EpisodePolicy(policy, int(seed), actual_config, scene,
+                capture=diagnostic and method in token_methods and actual_config in diagnostic_configs,
+                perturb=diagnostic and method == "regir_nomem_memtoken" and actual_config in reset_configs,
+                reset_gru=pool == "gru_reset")
+            started = time.monotonic()
+            with torch.inference_mode():
+                episode = run_episode(targets=actual_config[2], red=actual_config[0], blue=actual_config[1],
+                    seed=scene, red_strategy={"architecture": "end_to_end", "policy": policy_name},
+                    blue_strategy=BLUE_STRATEGY, max_steps=100, record=False, task_mode="damage",
+                    spatial_dim=2, target_initialization="random", diagnostics=True,
+                    record_events=True, retain_trajectory=diagnostic)
+            wall_seconds = time.monotonic() - started
+            summary = dict(episode["episode_summary"])
+            summary.update(identity, episode_seed=scene, policy_seed=policy_seed,
+                           episode_wall_seconds=wall_seconds)
+            summary.update(policy.episode_q_statistics())
+            if diagnostic:
+                _main1013_append_diagnostic(output, dict(
+                    **identity, env="had", method=method, seed=int(seed), episode_seed=scene,
+                    policy_seed=policy_seed, D=float(summary["D"]),
+                    representation_space="fused_temporal_input", representations=proxy.representations,
+                    perturbations=proxy.perturbations,
+                    damage_curve=[dict(step=int(frame["step"]), step_damage=float(frame["step_damage"]))
+                                  for frame in episode["trajectory"]],
+                    reference_status={"SCOPE": "reference_missing", "Memory query": "reference_missing"}))
+            # Diagnostic data reaches disk first: a committed factual row can
+            # never claim its bounded capture exists when it was not written.
+            logger.episodes([summary])
+            completed += 1
+            damage_sum += float(summary["D"])
+            measured_seconds += wall_seconds
+            progress = dict(**result("complete" if completed == total else "running"),
+                            episode_seed=scene, D=float(summary["D"]), episode_wall_seconds=wall_seconds)
+            if on_progress is not None:
+                on_progress(progress)
+            proxy.base = None
+            proxy.representations.clear()
+            proxy.perturbations.clear()
+        logger.progress(**identity, **result("complete"))
+        return result("complete")
+    except BaseException as error:
+        logger.progress(**identity, **result("failed"), error=f"{type(error).__name__}: {error}")
+        raise
+    finally:
+        if proxy is not None:
+            proxy.base = None
+            proxy.representations.clear()
+            proxy.perturbations.clear()
+        agent = policy.mac.agent
+        if hasattr(agent, "disable_capture"):
+            agent.disable_capture()
+            agent.last_capture.clear()
+        torch.set_float32_matmul_precision(old_precision)
+        torch.backends.cuda.matmul.allow_tf32, torch.backends.cudnn.allow_tf32 = old_tf32
+
+
 def evaluate_depth_sweep(method, checkpoint, *, output=None, run=None, seed=None,
                          device="cpu", on_progress=None, stop_requested=None):
     """1:1 equal-scale sweep over cycle depths R=1..6 for a retained checkpoint."""

@@ -142,9 +142,40 @@ LOOP_CANDIDATE_OVERRIDES = {
         "global_n_heads": 4, "global_ffn_mult": 2, "global_slots": 4},
 }
 MAIN_OVERRIDES.update(LOOP_CANDIDATE_OVERRIDES)
+# Literal overrides are also read by the simulator-free main1013 launcher.
+MAIN1013_OVERRIDES = {
+    "regir_nomem_memtoken": {"global_memory_token": True, "global_memory_token_detach": False,
+                            "global_query_no_memory": True, "skip_count_inject": True},
+    "transfqmix_aligned": {"mac": "transfqmix_mac", "learner": "transfqmix_learner",
+        "mixer": "transfqmix", "transfqmix_aligned": True, "global_branch": None,
+        "lr": 0.0005, "optimizer": "rmsprop", "optim_alpha": 0.99, "optim_eps": 0.00001,
+        "gamma": 0.99, "td_lambda": 0.0, "double_q": True, "training_iters": 8,
+        "weight_decay": 0, "buffer_size": 5000, "batch_size": 32,
+        "epsilon_start": 1.0, "epsilon_finish": 0.05, "epsilon_anneal_time": 100000,
+        "target_update_interval": 200, "entity_last_action": True,
+        "emb": 32, "heads": 4, "depth": 2, "mixer_emb": 32, "mixer_heads": 4,
+        "mixer_depth": 2, "ff_hidden_mult": 4, "dropout": 0.0,
+        "agent": {"imagine": False}, "lmbda": 0.0},
+    "regir_nomem_ff": {"temporal_head_mode": "feedforward", "global_query_no_memory": True,
+                        "skip_count_inject": True},
+    "regir_nomem_memtoken_sg": {"global_memory_token": True, "global_memory_token_detach": True,
+                               "global_query_no_memory": True, "skip_count_inject": True},
+    "regir_nomem_r0": {"global_read_h0": True, "global_depths": [1], "global_eval_depth": 1,
+                        "global_query_no_memory": True, "skip_count_inject": True},
+    "regir_nomem_r1": {"global_depths": [1], "global_eval_depth": 1,
+                        "global_query_no_memory": True, "skip_count_inject": True},
+    "regir_nomem_norefil": {"skip_refil_local": True, "agent": {"imagine": False}, "lmbda": 0.0,
+                            "global_query_no_memory": True, "skip_count_inject": True},
+}
+MAIN_OVERRIDES.update({method: {
+    **MAIN_OVERRIDES.get(method, _NOMEM if method.startswith("regir") else {}), **overrides}
+    for method, overrides in MAIN1013_OVERRIDES.items()})
+# Saved SCOPE references retain this identity; no new reference training is queued.
+MAIN_OVERRIDES["regir_nomem"] = dict(_NOMEM)
 POLICY_METHODS = METHODS + PROBE_METHODS + tuple(dict.fromkeys(
     (*V4_METHODS, *V5_METHODS, *MAIN_TRAIN_METHODS, *MAIN0923_METHODS, "refil_cycle", "alma_legacy",
-     "refil_count_ln", *REFINEMENT_OVERRIDES, *LOOP_CANDIDATE_OVERRIDES)))
+     "refil_count_ln", *REFINEMENT_OVERRIDES, *LOOP_CANDIDATE_OVERRIDES,
+     *MAIN1013_OVERRIDES, "regir_nomem")))
 V4_OVERRIDES = {
     "refil_local_mild": {
         "imagine_group": "mixed_distance",
@@ -261,7 +292,7 @@ def canonical_method(name):
 
 
 def _config_yaml_name(name):
-    if name in ("refil_matched", "transfqmix") or name in V4_METHODS or name in V5_METHODS:
+    if name in ("refil_matched", "transfqmix", "transfqmix_aligned") or name in V4_METHODS or name in V5_METHODS:
         return "refil"
     if name == "alma_legacy":
         return "alma"
@@ -443,7 +474,7 @@ class LearnerLogger:
 
 
 def build_learner(mac, scheme, logger, args):
-    if args.method == "transfqmix":
+    if args.method in ("transfqmix", "transfqmix_aligned"):
         from .transfqmix import TransfQMixLearner
         return TransfQMixLearner(mac, scheme, logger, args)
     if args.method == "dcg":
@@ -611,13 +642,16 @@ def train(name, cfg):
             print(f"[{name}] report refresh skipped: {type(error).__name__}", flush=True)
 
     stop_event = cfg.get("_stop_event")
+    final_ready_callback = cfg.get("_final_ready_callback")
     cfg = {key: value for key, value in cfg.items() if not key.startswith("_")}
     if "t_max" not in cfg:
         raise ValueError("train requires an explicit t_max physical-step budget")
     args = load_config(name, cfg)
     from open_score.eval import experiment
-    profile = getattr(args, "profile", None) == experiment.PROFILE
-    if profile:
+    legacy_profile = getattr(args, "profile", None) == experiment.PROFILE
+    main1013_profile = getattr(args, "profile", None) in ("main1013", "main1013_supp")
+    profile = legacy_profile or main1013_profile
+    if legacy_profile:
         if (name not in experiment.methods(args.env)
                 or int(args.seed) not in experiment.method_seeds(args.env, name)):
             raise ValueError(f"Method/environment/seed is outside the frozen {experiment.PROFILE} matrix")
@@ -625,6 +659,14 @@ def train(name, cfg):
             raise ValueError(f"{experiment.PROFILE} requires run=train and its frozen environment budget")
         args.skip_final_eval = True
         args.implementation_revision = experiment.IMPLEMENTATION_REVISION
+    elif main1013_profile:
+        allowed = (tuple(MAIN1013_OVERRIDES)[:4] if args.profile == "main1013"
+                   else tuple(MAIN1013_OVERRIDES)[4:])
+        if name not in allowed or int(args.seed) not in (0, 1, 2):
+            raise ValueError("Method/seed is outside the fixed main1013 experiment")
+        if args.env != "had" or args.run != "train" or int(args.t_max) != 1000000:
+            raise ValueError("main1013 requires HAD, run=train and a 1M physical-step budget")
+        args.skip_final_eval = True
     if int(args.t_max) <= 0:
         raise ValueError("t_max must be an explicitly selected positive physical-step budget")
     output = Path(args.output)
@@ -740,7 +782,7 @@ def train(name, cfg):
                 validation_completed_episodes=int(state["validation_completed_episodes"]),
                 validation_measured_episodes=int(state["validation_measured_episodes"]),
                 validation_measured_seconds=state["validation_measured_seconds"],
-                validation_total_episodes=(experiment.validation_point_count(args.env)
+                validation_total_episodes=((50 if main1013_profile else experiment.validation_point_count(args.env))
                     * (100 if args.env == "had" else 128)),
                 eval_completed=eval_progress["completed"], eval_total=eval_progress["total"],
                 grad_spikes=int(state.get("grad_spikes", 0)),
@@ -979,7 +1021,7 @@ def train(name, cfg):
                     th.cuda.set_rng_state_all(rng[3])
                 runner.load_state_dict(runner_state)
 
-        thresholds = ((experiment.validation_thresholds(args.env) if profile else
+        thresholds = ((experiment.validation_thresholds(args.env) if legacy_profile else
                        evaluation_thresholds(args.t_max)) if formal else [])
         def run_pending_evaluations():
             nonlocal transaction_phase
@@ -989,11 +1031,11 @@ def train(name, cfg):
                 save("resume", full=True)
                 transaction_phase = "validating"
                 point = state["next_eval"]
-                jobs = (experiment.validation_jobs(args.env, point, runner.t_env) if profile
+                jobs = (experiment.validation_jobs(args.env, point, runner.t_env) if legacy_profile
                         else validation_jobs(point, runner.t_env))
                 rows = evaluate_jobs(jobs)
                 current = [row for row in rows if row.get("phase") == "train_eval" and row.get("eval_point") == point]
-                score = experiment.validation_score(args.env, current) if profile else validation_score(current)
+                score = experiment.validation_score(args.env, current) if legacy_profile else validation_score(current)
                 if score is None:
                     if stop_requested:
                         break
@@ -1121,7 +1163,12 @@ def train(name, cfg):
 
         state["status"] = "stopped" if stop_requested else "completed"
         if not stop_requested:
-            save("final")
+            final_path = save("final")
+            if main1013_profile and callable(final_ready_callback):
+                try:
+                    final_ready_callback(final_path)
+                except Exception as error:
+                    print(f"[{name}] final-ready notification failed: {error}", flush=True)
             if formal and not profile and not bool(getattr(args, "skip_final_eval", False)):
                 from open_score.envs.features import MAX_AGENTS
                 best_path = run_dir / "best.pt"

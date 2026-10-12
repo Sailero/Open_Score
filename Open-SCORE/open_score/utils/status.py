@@ -7,7 +7,8 @@ qualified completion. Console tails only fill missing live progress fields.
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+import heapq
 import csv
 import json
 import math
@@ -21,8 +22,6 @@ import time
 import unicodedata
 
 
-from open_score.eval.experiment import validation_point_count
-
 _HAD = ("regir", "refil", "b2_qmix_atten", "dcg", "spectra", "alma", "regir_norefil",
         "regir_nocount", "regir_r1", "regir_last", "refil_matched", "transfqmix",
         "regir_fixed4", "regir_untied4", "regir_kv0")
@@ -30,6 +29,7 @@ _SMAC = ("regir", "regir_r1", "refil", "b2_qmix_atten", "spectra", "transfqmix")
 
 
 def _validation_quota(env):
+    from open_score.eval.experiment import validation_point_count
     return validation_point_count(env) * (100 if env == "had" else 128)
 
 
@@ -905,6 +905,371 @@ def watch_status(output, interval=5, once=False, details=False):
             time.sleep(max(.1, interval - (time.monotonic() - tick)))
     except KeyboardInterrupt:
         pass
+    finally:
+        if overwrite:
+            sys.stdout.write("\x1b[?25h\x1b[?1049l")
+            sys.stdout.flush()
+
+
+def _main1013_beijing(stamp):
+    return datetime.fromtimestamp(stamp, timezone(timedelta(hours=8))).strftime("%m-%d %H:%M:%S")
+
+
+def _main1013_pid_alive(pid):
+    # On Windows, os.kill(pid, 0) can terminate the process. Query it instead.
+    if os.name != "nt":
+        return _alive(pid)
+    try:
+        import ctypes
+        from ctypes import wintypes
+        pid = int(pid)
+        if pid <= 0:
+            return False
+        api = ctypes.WinDLL("kernel32", use_last_error=True)
+        api.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+        api.OpenProcess.restype = wintypes.HANDLE
+        api.GetExitCodeProcess.argtypes = (wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD))
+        api.CloseHandle.argtypes = (wintypes.HANDLE,)
+        handle = api.OpenProcess(0x1000, False, pid)
+        if not handle:
+            return ctypes.get_last_error() == 5
+        try:
+            code = wintypes.DWORD()
+            return bool(api.GetExitCodeProcess(handle, ctypes.byref(code))) and code.value == 259
+        finally:
+            api.CloseHandle(handle)
+    except (OSError, ValueError, TypeError):
+        return False
+
+
+def _main1013_estimates(state):
+    """Estimate only from published measured work; no logs or episode scans."""
+    models = sorted(state.get("models", []), key=lambda row: row.get("order", 0))
+    rates, validation = defaultdict(list), defaultdict(list)
+    timings = defaultdict(list)
+    for model in models:
+        train = model.get("train", {})
+        steps, seconds = _number(train.get("t_env"), 0), _number(train.get("training_seconds"), 0)
+        rate = steps / seconds if steps > 0 and seconds > 0 else _number(train.get("rate"), 0)
+        if rate > 0:
+            rates[model["method"]].append(rate)
+            rates[None].append(rate)
+        episodes = _number(train.get("validation_measured_episodes"), 0)
+        seconds = _number(train.get("validation_measured_seconds"), 0)
+        if episodes > 0 and seconds > 0:
+            validation[model["method"]].append(seconds / episodes)
+            validation[None].append(seconds / episodes)
+        for pool in ("formal", "confirm", "gru_reset"):
+            for key, cell in model.get(pool, {}).get("configs", {}).items():
+                for device, sample in cell.get("timing", {}).items():
+                    episodes, seconds = _number(sample.get("episodes"), 0), _number(sample.get("seconds"), 0)
+                    if episodes > 0 and seconds > 0:
+                        device = "cuda" if str(device).startswith("cuda") else "cpu"
+                        timings[model["method"], key, device].append(seconds / episodes)
+                        timings[None, key, device].append(seconds / episodes)
+    rough = False
+
+    def samples(bank, method):
+        nonlocal rough
+        values = bank.get(method) or bank.get(None)
+        rough |= not bool(bank.get(method))
+        return values
+
+    durations = {}
+    for model in models:
+        train = model.get("train", {})
+        budget = _number(train.get("budget_steps"), 1000000)
+        done = min(budget, _number(train.get("t_env"), 0))
+        remaining_steps = max(0, budget - done)
+        remaining_validation = max(0, _number(train.get("validation_total_episodes"), 5000)
+                                   - _number(train.get("validation_completed_episodes"), 0))
+        if train.get("status") in _DONE and train.get("final_checkpoint"):
+            durations[model["id"]] = (0., 0.)
+            continue
+        rate_values = samples(rates, model["method"]) if remaining_steps else [1.]
+        validation_values = samples(validation, model["method"]) if remaining_validation else [0.]
+        if not rate_values or not validation_values:
+            durations[model["id"]] = None
+            continue
+        durations[model["id"]] = (
+            remaining_steps / max(rate_values) + remaining_validation * min(validation_values),
+            remaining_steps / min(rate_values) + remaining_validation * max(validation_values))
+
+    per_model = {model["id"]: dict(training_remaining=durations[model["id"]], training_ready=[None, None],
+                                  finish=[None, None]) for model in models}
+
+    def episode_seconds(model, config, device, bound):
+        nonlocal rough
+        own = timings.get((model["method"], config, device))
+        values = own or timings.get((None, config, device))
+        rough |= not bool(own)
+        return (min(values) if bound == 0 else max(values)) if values else None
+
+    def simulate(bound, include_eval):
+        # Live training reserves its actual card's slot. Queued models refill
+        # the six slots in runner order; their final availability releases eval.
+        resources = state.get("resources", {})
+        cards = resources.get("devices", [0, 1])
+        per_card = max(1, int(resources.get("train_per_gpu", 3)))
+        slots = {int(card): [0.] * per_card for card in cards}
+        live = {item.get("model_id", item.get("id")): item for item in state.get("training", {}).get("live", [])}
+        ready = {}
+        for model in models:
+            if model["id"] not in live:
+                continue
+            duration = durations[model["id"]]
+            if duration is None:
+                return None
+            card = int(live[model["id"]].get("gpu", cards[0]))
+            card = card if card in slots else int(cards[0])
+            index = min(range(per_card), key=slots[card].__getitem__)
+            slots[card][index] = duration[bound]
+            ready[model["id"]] = duration[bound]
+        for model in models:
+            if model["id"] in ready:
+                continue
+            duration = durations[model["id"]]
+            if duration is None:
+                return None
+            if duration[bound] == 0:
+                ready[model["id"]] = 0.
+                continue
+            card, index = min(((card, index) for card in slots for index in range(per_card)),
+                              key=lambda cell: slots[cell[0]][cell[1]])
+            ready[model["id"]] = slots[card][index] + duration[bound]
+            slots[card][index] = ready[model["id"]]
+        train_finish = max(ready.values(), default=0.)
+        for identity, stamp in ready.items():
+            per_model[identity]["training_ready"][bound] = stamp
+        if not include_eval:
+            return train_finish
+        workers = [(0., index, "cpu") for index in range(int(resources.get("cpu_eval_workers", 32)))]
+        cuda_cards = resources.get("gpu_eval_admitted_devices", [])
+        # A GPU is counted only after runner admission, never by assuming that
+        # a free training slot or nominal GPU memory guarantees availability.
+        if any(key[2] == "cuda" for key in timings):
+            workers.extend((0., len(workers) + index, "cuda") for index, _ in enumerate(cuda_cards))
+        if not workers:
+            return None
+        heapq.heapify(workers)
+        releases, available = [], []
+        serial = 0
+        formal_left, formal_finish = {}, defaultdict(float)
+
+        def jobs(model, pool):
+            entries = []
+            evaluation = model.get(pool, {})
+            if not evaluation.get("total", 0) or evaluation.get("status") in _DONE:
+                return entries
+            configs = evaluation.get("configs", {})
+            if not configs and evaluation.get("completed", 0) < evaluation.get("total", 0):
+                raise LookupError("configuration timings not yet sampled")
+            for config, cell in configs.items():
+                remaining = max(0, int(cell.get("total", 300)) - int(cell.get("completed", 0)))
+                if remaining and episode_seconds(model, config, "cpu", bound) is None:
+                    raise LookupError("CPU configuration timings not yet sampled")
+                while remaining:
+                    count = min(75, remaining)
+                    entries.append((model, pool, config, count))
+                    remaining -= count
+            return entries
+
+        def release(entries, stamp):
+            nonlocal serial
+            for job in entries:
+                serial += 1
+                heapq.heappush(releases, (stamp, serial, job))
+
+        try:
+            deferred = {}
+            for model in models:
+                formal = jobs(model, "formal")
+                deferred[model["id"]] = jobs(model, "confirm") + jobs(model, "gru_reset")
+                formal_left[model["id"]] = len(formal)
+                release(formal, ready[model["id"]])
+                if not formal:
+                    release(deferred.pop(model["id"]), ready[model["id"]])
+            finish = train_finish
+            model_finish = dict(ready)
+            priority = {"formal": 0, "confirm": 1, "gru_reset": 2}
+            while releases or available:
+                stamp, worker_id, device = heapq.heappop(workers)
+                if not available and releases and releases[0][0] > stamp:
+                    stamp = releases[0][0]
+                while releases and releases[0][0] <= stamp:
+                    _, item_id, job = heapq.heappop(releases)
+                    model, pool, _, _ = job
+                    heapq.heappush(available, (priority[pool], model.get("order", 0), item_id, job))
+                skipped, selected = [], None
+                while available:
+                    item = heapq.heappop(available)
+                    model, pool, config, count = item[-1]
+                    seconds = episode_seconds(model, config, device, bound)
+                    if seconds is not None:
+                        selected = item, seconds
+                        break
+                    skipped.append(item)
+                for item in skipped:
+                    heapq.heappush(available, item)
+                if selected is None:
+                    # CPU jobs always have samples here. GPU jobs wait for a
+                    # measured-CUDA release or CPU completion. Ignore another
+                    # ineligible idle GPU: two such GPUs must not advance one
+                    # another in millisecond steps across a long CPU episode.
+                    next_events = [entry[0] for entry in workers if entry[2] == "cpu"]
+                    next_events.extend(released_at for released_at, _, job in releases
+                        if episode_seconds(job[0], job[2], device, bound) is not None)
+                    if not next_events:
+                        return None
+                    next_stamp = min(next_events)
+                    heapq.heappush(workers, (max(stamp + .001, next_stamp), worker_id, device))
+                    continue
+                item, seconds = selected
+                model, pool, config, count = item[-1]
+                completed_at = stamp + count * seconds
+                finish = max(finish, completed_at)
+                model_finish[model["id"]] = max(model_finish[model["id"]], completed_at)
+                heapq.heappush(workers, (completed_at, worker_id, device))
+                if pool == "formal":
+                    identity = model["id"]
+                    formal_left[identity] -= 1
+                    formal_finish[identity] = max(formal_finish[identity], completed_at)
+                    if formal_left[identity] == 0:
+                        release(deferred.pop(identity), formal_finish[identity])
+            for identity, stamp in model_finish.items():
+                per_model[identity]["finish"][bound] = stamp
+            return finish
+        except (LookupError, ValueError, KeyError):
+            return None
+
+    training = [simulate(bound, False) for bound in (0, 1)]
+    overall = [simulate(bound, True) for bound in (0, 1)]
+    return dict(training=training if all(value is not None for value in training) else None,
+                overall=overall if all(value is not None for value in overall) else None,
+                per_model=per_model, rough=rough, timings_sampled=len(timings),
+                observed_cuda_cards=state.get("resources", {}).get("gpu_eval_admitted_devices", []))
+
+
+def _main1013_render(state, path, *, details=False, now=None):
+    now = time.time() if now is None else now
+    published = _stamp(state.get("updated_at"))
+    age = max(0., now - published) if published is not None else _age(path, now)
+    alive = _main1013_pid_alive(state.get("pid"))
+    resources = state.get("resources", {})
+    models = sorted(state.get("models", []), key=lambda row: row.get("order", 0))
+    training = state.get("training", {}).get("live", [])
+    evaluation = state.get("evaluation", {}).get("live", [])
+    train_live = [row for row in training if _main1013_pid_alive(row.get("pid"))]
+    eval_live = [row for row in evaluation if _main1013_pid_alive(row.get("pid"))]
+    lines = [f"main1013 / main1013_supp · 北京时间 {_main1013_beijing(now)}",
+             f"调度 {state.get('status', '未知')} · PID {state.get('pid', '—')} {'存活' if alive else '已退出'} · 状态年龄 {_duration(age)}",
+             f"训练 {len(train_live)}/{len(resources.get('devices', [0, 1])) * int(resources.get('train_per_gpu', 3))}（每GPU3） · 独立评估 CPU {sum(not str(row.get('device', 'cpu')).startswith('cuda') for row in eval_live)}/{resources.get('cpu_eval_workers', 32)} + GPU {sum(str(row.get('device', 'cpu')).startswith('cuda') for row in eval_live)}/2"]
+    if age is None or age > 30:
+        lines.append("状态已过期；以下为最后保存的进度，不能据此确认仍在运行。")
+    done = sum(row.get("train", {}).get("status") in _DONE and bool(row.get("train", {}).get("final_checkpoint")) for row in models)
+    totals = {pool: (sum(row.get(pool, {}).get("completed", 0) for row in models),
+                     sum(row.get(pool, {}).get("total", 0) for row in models)) for pool in ("formal", "confirm", "gru_reset")}
+    lines.append(f"final模型 {done}/{len(models)} · 正式 {totals['formal'][0]:,}/{totals['formal'][1]:,} · 确认 {totals['confirm'][0]:,}/{totals['confirm'][1]:,} · 独立GRU重置 {totals['gru_reset'][0]:,}/{totals['gru_reset'][1]:,}")
+    pool_done = {pool: sum(row.get(pool, {}).get("completed", 0) >= row.get(pool, {}).get("total", 7200)
+                           and row.get(pool, {}).get("status") in _DONE for row in models) for pool in ("formal", "confirm")}
+    validation_completed = sum(row.get("train", {}).get("validation_completed_episodes", 0) for row in models)
+    validation_total = sum(row.get("train", {}).get("validation_total_episodes", 5000) for row in models)
+    failures = sum(row.get("train", {}).get("status") == "failed"
+                   or any(row.get(pool, {}).get("status") == "failed" for pool in ("formal", "confirm", "gru_reset")) for row in models)
+    worker_failures = state.get("evaluation", {}).get("failures", [])
+    lines.append(f"剩余模型：训练 {len(models) - done} · 正式 {len(models) - pool_done['formal']} · 确认 {len(models) - pool_done['confirm']} · 失败模型 {failures} · 失败分片登记 {len(worker_failures)} · 验证 {validation_completed:,}/{validation_total:,}")
+    train_stopped = bool(state.get("training", {}).get("stopped")) and done < len(models)
+    eval_unfinished = any(row.get(pool, {}).get("completed", 0) < row.get(pool, {}).get("total", 0)
+                          for row in models for pool in ("formal", "confirm", "gru_reset"))
+    eval_stopped = bool(state.get("evaluation", {}).get("stopped")) and eval_unfinished
+    lines.append(f"待运行队列：训练 {len(state.get('training', {}).get('queue', []))}{'（已停止，需恢复）' if train_stopped else ''} · 评估 {len(state.get('evaluation', {}).get('queue', []))}{'（已停止，需恢复）' if eval_stopped else ''}")
+    estimate = _main1013_estimates(state)
+    current = alive and age is not None and age <= 30 and not failures and state.get("status") not in {"stopped", "failed", "interrupted", "stopping"}
+    calendar_enabled = current and not train_stopped and not eval_stopped
+    finished_all = (bool(models) and done == len(models) and all(pool_done[pool] == len(models) for pool in ("formal", "confirm"))
+                    and totals["gru_reset"][0] >= totals["gru_reset"][1])
+    prefix = "运行中粗估" if current and not train_stopped else "恢复后粗估"
+    lines.append(f"{prefix}训练含剩余验证：{_range(estimate['training']) if estimate['training'] else '采样中'}")
+    if train_stopped and not eval_stopped:
+        lines.append("训练池已单独停止；评估可继续处理现成final，全部计划需恢复训练后才可估计完工日期。")
+    elif eval_stopped and not train_stopped:
+        lines.append("评估池已单独停止；训练阶段ETA仍按当前训练估计，全部计划需恢复评估后才发布完工日期。")
+    if finished_all:
+        lines.append("全部计划已登记完成；无需发布未来完工日期。")
+    elif estimate["overall"] and calendar_enabled:
+        values = estimate["overall"]
+        lines.append(f"全部完成粗估：{_range(values)} · 北京时间 {_main1013_beijing(now + values[0])} ～ {_main1013_beijing(now + values[1])}")
+    elif estimate["overall"]:
+        lines.append(f"恢复后全部完成粗估：{_range(estimate['overall'])}；当前状态不发布完工日期。")
+    else:
+        lines.append("全部完成ETA：采样中（需实际训练/验证及逐配置CPU评估耗时）")
+    lines.append("ETA按六训练槽、模型就绪后75场片并行评估模拟；CPU32与已获准GPU槽并行，正式完成才释放确认。")
+    lines.append("区间来自实测速率范围；跨模型/方法借用耗时属粗估，未采样CUDA不计入吞吐。" + (" 当前存在跨方法估计。" if estimate["rough"] else ""))
+    rows = models if details else [row for row in models if row["id"] in {item.get("model_id", item.get("id")) for item in training + evaluation}]
+    if rows:
+        lines += ["", "模型 | 训练 | 验证 | 正式 | 确认 | 正式D | 确认D | 最近验证D"]
+    for model in rows:
+        train = model.get("train", {})
+        def percent(done, total):
+            return f"{min(100., 100. * float(done or 0) / max(1., float(total or 0))):5.1f}%"
+        formal, confirm = model.get("formal", {}), model.get("confirm", {})
+        value = lambda x: f"{float(x):.4f}" if _number(x) is not None else "—"
+        official_value = lambda pool: pool.get("D") if pool.get("status") in _DONE and pool.get("completed", 0) >= pool.get("total", 7200) else None
+        lines.append(f"{model.get('scope', '')}/{model['method']} s{model['seed']} | {percent(train.get('t_env'), train.get('budget_steps', 1000000))} | {percent(train.get('validation_completed_episodes'), train.get('validation_total_episodes', 5000))} | {percent(formal.get('completed'), formal.get('total', 7200))} | {percent(confirm.get('completed'), confirm.get('total', 7200))} | {value(official_value(formal))} | {value(official_value(confirm))} | {value(train.get('latest_validation_D'))}")
+        if details:
+            lines.append(f"  训练状态 {train.get('status', 'pending')} · t_env={train.get('t_env', 0):,} · {_duration(train.get('training_seconds'))}（不含验证） · 实测 {_number(train.get('rate'), 0):.2f}步/s")
+            timing = estimate["per_model"][model["id"]]
+            finish = timing["finish"]
+            has_finish = all(value is not None for value in finish)
+            model_done = (train.get("status") in _DONE and all(model.get(pool, {}).get("status") in _DONE for pool in ("formal", "confirm")))
+            end = ("；双池已完成" if model_done else
+                   f"；北京时间 {_main1013_beijing(now + min(finish))} ～ {_main1013_beijing(now + max(finish))}"
+                   if has_finish and calendar_enabled else "；完工时间采样中或等待恢复")
+            lines.append(f"  剩余训练含验证 {_range(timing['training_remaining']) if timing['training_remaining'] else '采样中'} · 含排队就绪 {_range(timing['training_ready'])} · 双池完成 {_range(finish)}{end}")
+            if model.get("gru_reset", {}).get("total"):
+                item = model["gru_reset"]
+                lines.append(f"  独立GRU重置 {item.get('completed', 0)}/{item['total']} · {item.get('status', 'waiting')}")
+    if details:
+        lines += ["", "活动worker（PID核实，不扫描CSV或加载checkpoint）："]
+        if resources.get("gpu_memory"):
+            lines.append("GPU当前实测资源 " + json.dumps(resources["gpu_memory"], ensure_ascii=False))
+        for kind, items in (("训练", training), ("评估", evaluation)):
+            for item in items:
+                device = item.get("device", f"cuda:{item.get('gpu')}" if item.get("gpu") is not None else "cpu")
+                lines.append(f"  {kind} {item.get('model_id', item.get('id'))} PID={item.get('pid')} {'存活' if _main1013_pid_alive(item.get('pid')) else '已退出'} {device} {item.get('phase', item.get('pool', ''))} config={item.get('config', '—')} {item.get('completed', 0)}/{item.get('total', '—')} · 运行 {_duration(max(0, now - (_stamp(item.get('started_at')) or now)))}")
+        lines.append(f"排队训练 {len(state.get('training', {}).get('queue', []))} · 排队评估 {len(state.get('evaluation', {}).get('queue', []))} · 等模型 {len(state.get('evaluation', {}).get('awaiting_models', []))}")
+        if worker_failures:
+            lines.append("失败分片登记 " + json.dumps(worker_failures, ensure_ascii=False))
+        for event in state.get("events", [])[-5:]:
+            lines.append("事件 " + (json.dumps(event, ensure_ascii=False) if isinstance(event, dict) else str(event)))
+    lines.append("Ctrl+C只结束只读显示；训练与评估继续。")
+    return "\n".join(lines)
+
+
+def main1013_progress(options):
+    """Read the one small runner snapshot; watch=0 prints exactly one frame."""
+    path = Path(options.output) / "runner_state.json"
+    interval = float(getattr(options, "watch_seconds", 10))
+    details = bool(getattr(options, "details", False))
+    overwrite = interval > 0 and bool(getattr(sys.stdout, "isatty", lambda: False)())
+    try:
+        if overwrite:
+            sys.stdout.write("\x1b[?1049h\x1b[?25l")
+        while True:
+            tick = time.monotonic()
+            issues = []
+            state = _json(path, issues)
+            if state.get("schema") == "main1013-runner-v1":
+                text = _main1013_render(state, path, details=details)
+            else:
+                text = f"main1013尚无有效runner状态：{path}" + ("\n" + "\n".join(issues) if issues else "")
+            sys.stdout.write(("\x1b[H\x1b[J" if overwrite else "") + text + "\n")
+            sys.stdout.flush()
+            if interval <= 0:
+                return
+            time.sleep(max(.1, interval - (time.monotonic() - tick)))
+    except KeyboardInterrupt:
+        return
     finally:
         if overwrite:
             sys.stdout.write("\x1b[?25h\x1b[?1049l")

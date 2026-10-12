@@ -28,6 +28,7 @@ from queue import Empty
 import signal
 import socket
 import sys
+import threading
 import traceback
 
 PROJECT = Path(__file__).resolve().parents[1]
@@ -2468,8 +2469,14 @@ def progress(options):
     from collections import deque, Counter
     from datetime import datetime, timezone, timedelta
 
-    order=("calibrate","select","budget_only","mechanism","eval","adaptive","counterfactual","confirm")
+    nomem_mode=options.section=="nomem-depth"
+    order=(NOMEM_DEPTH_SPLIT,) if nomem_mode else ("calibrate","select","budget_only","mechanism","eval","adaptive","counterfactual","confirm")
     root=options.output
+    depth_context=None
+    if nomem_mode and not options.status_only:
+        metadata=json.loads((root/"experiment.json").read_text(encoding="utf-8-sig"))
+        depth_context=nomem_depth_context(options,stored=NOMEM_DEPTH_REVISION in metadata.get("protocols",{}))
+    reused_rows=set();direct_rows=set()
     bank=defaultdict(lambda:defaultdict(set))
     costs=defaultdict(lambda:[0.,0,0.])
     history=deque(maxlen=max(11,math.ceil(300/max(options.watch_seconds,1))+1))
@@ -2481,12 +2488,14 @@ def progress(options):
     def publish_status(active,mains,slots,denied):
         host=socket.gethostname()
         snapshot=dict(host=host,updated_at=time.time(),interval=options.watch_seconds,
+            section=options.section,
             monitor_pid=os.getpid(),masters=[pid for pid,_ in mains],slots=slots,
             denied=denied,tasks=[dict(pid=pid,task=task) for pid,task in active.items()])
         # A separate snapshot per host avoids touching the evaluation runner's
         # large shared state. Unique pending paths also separate two monitors
         # on the same host (e.g. the collector and interactive viewer).
-        path=root/f".leaf1009_status_{host}.json"
+        suffix="nomem_depth_" if nomem_mode else ""
+        path=root/f".leaf1009_status_{suffix}{host}.json"
         pending=path.with_suffix(f".{os.getpid()}.pending")
         pending.write_text(json.dumps(snapshot,ensure_ascii=False),encoding="utf-8")
         os.replace(pending,path)
@@ -2496,10 +2505,13 @@ def progress(options):
         active={};lines=[];slots=0;masters=0;fresh=0
         for path in sorted(root.glob(".leaf1009_status_*.json")):
             snap=json.loads(path.read_text(encoding="utf-8"))
+            if snap.get("section")!=options.section:continue
             host=snap["host"]
             age=max(0,time.time()-snap["updated_at"])
             stale=age>max(60,3*snap.get("interval",10))
-            tasks=snap.get("tasks",[]);pids=snap.get("masters",[])
+            tasks=[item for item in snap.get("tasks",[]) if
+                (item["task"][0],item["task"][1],int(item["task"][2]),tuple(item["task"][3])) in lookup]
+            pids=snap.get("masters",[])
             label="STALE" if stale else "RUN" if tasks else "WAIT" if pids else "STOP"
             lines.append(f"{label:5} tasks={len(tasks):3} main={len(pids)} age={age:.0f}s | {host}")
             if stale:continue
@@ -2512,6 +2524,11 @@ def progress(options):
 
     def queues():
         phase=copy.copy(options)
+        if nomem_mode:
+            phase.stage="depth-eval"
+            jobs=stage_jobs(phase,("regir_nomem",),split=NOMEM_DEPTH_SPLIT,
+                arms=[f"fixed{d}" for d in NOMEM_DEPTHS],configs=FINAL_CONFIGS,start=9000,quota=300)
+            return {NOMEM_DEPTH_SPLIT:jobs},[jobs]
         groups={}
         for stage in ("calibrate","select","mechanism","eval","adaptive","counterfactual"):
             phase.stage=stage
@@ -2539,7 +2556,7 @@ def progress(options):
             if not proc.name.isdigit():continue
             try:
                 args=[a.decode(errors="replace") for a in (proc/"cmdline").read_bytes().split(b"\0") if a]
-                if any(a.endswith("leaf1009.py") for a in args) and "run" in args:
+                if any(a.endswith("leaf1009.py") for a in args) and ("depth-eval" if nomem_mode else "run") in args and "--dry-run" not in args:
                     output=args[args.index("--output")+1] if "--output" in args else str(PROJECT/"outputs/main1009")
                     cwd=Path(os.readlink(proc/"cwd"))
                     if (cwd/output).resolve()==root:
@@ -2641,11 +2658,22 @@ def progress(options):
                         offset=stream.tell()
                         try:row=json.loads(line)
                         except (ValueError,UnicodeDecodeError):bad+=1;continue
-                        if row.get("protocol") not in (REVISION,MECHANISM_REVISION):continue
+                        if nomem_mode:
+                            mapped=nomem_depth_rows(options,depth_context,[row])
+                            if not mapped:continue
+                            row=mapped[0]
+                        elif row.get("protocol") not in (REVISION,MECHANISM_REVISION):continue
                         task=(row["split"],row["method"],int(row["seed"]),config_tuple(row["config"]))
                         arm="completed_scene" if row["split"]=="counterfactual" else row["arm"]
                         if row["split"]=="counterfactual" and not row.get("scene_complete"):continue
                         scene=int(row["episode_seed"])
+                        if nomem_mode:
+                            identity=(task,arm,scene)
+                            if row.get("reused"):
+                                if identity in direct_rows:continue
+                                reused_rows.add(identity)
+                            else:
+                                direct_rows.add(identity);reused_rows.discard(identity)
                         if scene in bank[task][arm]:continue
                         bank[task][arm].add(scene)
                         seconds=row.get("episode_wall_seconds")
@@ -2745,11 +2773,15 @@ def progress(options):
             finished=sum(done[t]==totals[t] for t in lookup)
             fraction=sum(done[t]/totals[t] for t in lookup)/max(len(lookup),1)
             filled=int(fraction*24)
-            lines=["LEAF main1009  |  "+stamp.strftime("%m-%d %H:%M:%S UTC+08"),
+            lines=["LEAF main1009"+(" NoMem R1-R6" if nomem_mode else "")+"  |  "+stamp.strftime("%m-%d %H:%M:%S UTC+08"),
                 f"{'集群' if options.cluster else '本机'}正在运行: {len(active)} 个任务  |  并发上限: {slots or '未知'}  |  每 {options.watch_seconds:g} 秒刷新",
                 f"整体任务进度: [{'#'*filled+'.'*(24-filled)}] {100*fraction:.1f}% (含部分完成)",
                 f"完整任务: {finished}/{len(lookup)}  |  未完整完成: {len(lookup)-finished}",
                 "当前阶段: "+(" / ".join(f"{s} ({n}任务)" for s,n in running_stages.items()) or "未识别到运行任务")]
+            if nomem_mode:
+                logical=sum(done.values());quota=sum(totals.values());reused=len(reused_rows)
+                new_done=logical-reused;new_quota=quota-reused
+                lines.insert(3,f"新增评估: {new_done:,}/{new_quota:,} ({100*new_done/max(new_quota,1):.1f}%) | 复用R4: {reused:,} | 全矩阵: {logical:,}/{quota:,}")
             if options.cluster:
                 lines.append(f"状态上报: {fresh_hosts} 台在线 | RUN=有任务 WAIT=主控等待 STOP=无主控 STALE=上报过期")
                 lines.extend(host_lines)
@@ -2761,9 +2793,18 @@ def progress(options):
                 lines.extend([f"整轮剩余(估计): 约 {fmt(middle)}  |  推算范围: {fmt(lower)} - {fmt(upper)}",
                     "预计结束: "+finish.strftime("%m-%d %H:%M 北京时间")])
             else:lines.extend(["整轮剩余: 等待运行时间/设备采样","预计结束: 暂不可估算"])
-            lines.extend([f"耗时实测覆盖: {100*direct/max(priced,1):.1f}%  |  "+("粗估，仍含未测规模/模型" if direct<.8*priced else "仍受负载和对局长度影响"),
-                "", "Stage           Done/Quota           %   Tasks    Run   Stage ETA"])
-            for stage in order:
+            lines.extend([f"耗时实测覆盖: {100*direct/max(priced,1):.1f}%  |  "+("粗估，仍含未测规模/模型" if direct<.8*priced else "仍受负载和对局长度影响"),""])
+            if nomem_mode:
+                lines.append("Depth           Done/Quota           %   Complete cells")
+                for depth in NOMEM_DEPTHS:
+                    arm=f"fixed{depth}"
+                    n=sum(j["quota"]-remaining[t][arm] for t,j in lookup.items())
+                    total=sum(j["quota"] for j in lookup.values())
+                    cells=sum(remaining[t][arm]==0 for t in lookup)
+                    lines.append(f"R{depth:<14} {str(n)+'/'+str(total):17} {100*n/total:5.1f} {cells}/{len(lookup)}")
+            else:
+                lines.append("Stage           Done/Quota           %   Tasks    Run   Stage ETA")
+            for stage in (() if nomem_mode else order):
                 tasks=[key(j) for j in groups[stage]]
                 n=sum(done[t] for t in tasks);total=sum(totals[t] for t in tasks)
                 complete=sum(done[t]==totals[t] for t in tasks)
@@ -2774,7 +2815,7 @@ def progress(options):
             if not options.cluster and len(mains)>1:alerts.append("多个主控: ETA可能不准")
             if denied:alerts.append("进程访问受限")
             if bad:alerts.append(f"异常记录{bad}行")
-            lines.extend(["", "任务比例不等于时间比例；反事实按完整场景计。",
+            lines.extend(["", "复用R4不消耗新增对局；全部完成需全矩阵129,600场。" if nomem_mode else "任务比例不等于时间比例；反事实按完整场景计。",
                 " | ".join(alerts) if alerts else "ETA为推算，不是保证的上下界。",
                 "Ctrl+C 只退出查看器，后台评估继续运行。"])
             render(lines)
@@ -2787,14 +2828,744 @@ def progress(options):
             sys.stdout.write("\033[?25h\033[?1049l");sys.stdout.flush()
 
 
+MAIN1013_REVISION = "main1013_memory_placement_v1"
+MAIN1013_METHODS = ("regir_nomem_memtoken", "transfqmix_aligned", "regir_nomem_ff", "regir_nomem_memtoken_sg")
+MAIN1013_SUPP_METHODS = ("regir_nomem_r0", "regir_nomem_r1", "regir_nomem_norefil")
+MAIN1013_RESET_CONFIGS = ((10, 10, 2), (50, 50, 2), (30, 30, 12))
+
+
+def main1013_registry():
+    """Inspect literal method declarations without importing the training stack."""
+    path = PROJECT / "open_score/algos/__init__.py"
+    namespace = {}
+    for node in ast.parse(path.read_text(encoding="utf-8-sig")).body:
+        if not isinstance(node, ast.Assign) or len(node.targets) != 1 or not isinstance(node.targets[0], ast.Name):
+            continue
+        name = node.targets[0].id
+        if name != "MAIN1013_OVERRIDES" and not name.startswith(("_CYCLE", "_NOMEM", "_MAIN1013", "MAIN1013_")):
+            continue
+        namespace[name] = eval(compile(ast.Expression(node.value), str(path), "eval"),
+                               {"__builtins__": {"dict": dict}}, namespace)
+    registry = namespace.get("MAIN1013_OVERRIDES", {})
+    missing = set(MAIN1013_METHODS + MAIN1013_SUPP_METHODS) - set(registry)
+    if missing:
+        raise ValueError(f"Missing main1013 literal method configurations: {sorted(missing)}")
+    return registry
+
+
+def _main1013_merge(base, values):
+    for key, value in values.items():
+        if isinstance(value, dict) and isinstance(base.get(key), dict):
+            _main1013_merge(base[key], value)
+        else:
+            base[key] = copy.deepcopy(value)
+    return base
+
+
+def _main1013_models(options):
+    registry = main1013_registry()
+    models = []
+    for scope, output, methods_ in (("main", options.output, MAIN1013_METHODS),
+                                    ("supp", options.supp_output, MAIN1013_SUPP_METHODS)):
+        profile = "main1013" if scope == "main" else "main1013_supp"
+        for method in methods_:
+            for seed in (0, 1, 2):
+                cfg = _main1013_merge(copy.deepcopy(FROZEN_BASE_CONFIG), registry[method])
+                cfg.update(method=method, name=method, seed=seed, profile=profile, output=str(output),
+                           implementation_revision=MAIN1013_REVISION, external_report=True,
+                           transactional_training=True, use_cuda=True, device="cuda", run="train",
+                           t_max=1_000_000, concurrency=6, skip_final_eval=True, resume=True)
+                models.append(dict(id=f"{profile}.{method}.s{seed}", scope=scope, profile=profile,
+                    output=str(output), method=method, seed=seed, order=len(models), configuration=cfg))
+    return models
+
+
+def _main1013_directory(model):
+    return Path(model["output"]) / "had" / model["method"] / "train" / f"seed_{model['seed']}"
+
+
+def _main1013_pool(configs=FINAL_CONFIGS, quota=300, applicable=True):
+    return dict(status="awaiting_final" if applicable else "not_applicable", completed=0,
+        total=len(configs) * quota if applicable else 0, D=None,
+        configs={",".join(map(str, c)): dict(completed=0, total=quota, D_sum=0.,
+            measured_episodes=0, measured_seconds=0., timing={}) for c in configs} if applicable else {})
+
+
+def _main1013_final(model):
+    """Read only this new run's final; never substitute an old reference/best."""
+    path = _main1013_directory(model) / "final.pt"
+    if not path.is_file():
+        return None
+    import torch
+    saved = torch.load(path, map_location="cpu", weights_only=False)
+    cfg, progress_ = saved["config"], saved["progress"]
+    validation_done = int(progress_.get("validation_completed_episodes", 0))
+    if not validation_done and int(progress_.get("next_eval", 0)) >= 51:
+        validation_done = 5000
+    if (cfg.get("method") != model["method"] or int(cfg.get("seed", -1)) != model["seed"]
+            or cfg.get("profile") != model["profile"] or int(cfg.get("t_max", 0)) != 1_000_000
+            or cfg.get("implementation_revision") != MAIN1013_REVISION
+            or progress_.get("status") not in ("completed", "complete")
+            or int(progress_.get("t_env", 0)) < 1_000_000 or validation_done < 5000):
+        raise ValueError(f"Incomplete or mismatched main1013 final preserved at {path}")
+    registry = main1013_registry()[model["method"]]
+    def matches(actual, expected):
+        return all(matches(actual.get(k, {}), v) if isinstance(v, dict) else actual.get(k) == v
+                   for k, v in expected.items())
+    if not matches(cfg, registry):
+        raise ValueError(f"Retained final differs from the frozen method configuration: {path}")
+    training_seconds = float(progress_.get("training_seconds", 0.))
+    return dict(final_checkpoint=str(path), t_env=int(progress_["t_env"]), status="completed",
+                checkpoint_id=f"main1013/{model['method']}/seed_{model['seed']}/final@{int(progress_['t_env'])}",
+                latest_validation_D=progress_.get("latest_validation_D"), training_seconds=training_seconds,
+                rate=int(progress_["t_env"]) / training_seconds if training_seconds > 0 else None,
+                validation_completed_episodes=validation_done, validation_total_episodes=5000,
+                validation_measured_episodes=int(progress_.get("validation_measured_episodes", 0)),
+                validation_measured_seconds=float(progress_.get("validation_measured_seconds", 0.)))
+
+
+def _main1013_initialize(options, models):
+    from had_env.core.version import CORE_VERSION, PHYSICS_PROTOCOL
+    if (CORE_VERSION != "had-workbench-2.1.0"
+            or PHYSICS_PROTOCOL != "rebuild-calibrated-v3-r7-target-initialization"):
+        raise ValueError("main1013 requires frozen HAD Workbench 2.1.0 / calibrated v3-r7 physics; no new protocol relabelling")
+    import importlib.metadata
+    import subprocess
+    import had_env.core.version as had_version
+    def git_commit(directory):
+        try:
+            return subprocess.check_output(["git", "-C", str(directory), "rev-parse", "HEAD"],
+                stderr=subprocess.DEVNULL, text=True, timeout=5).strip()
+        except (OSError, subprocess.SubprocessError):
+            return None
+    packages = {}
+    for package in ("torch", "numpy", "scipy", "matplotlib", "PyYAML", "psutil", "had-env"):
+        try:
+            packages[package] = importlib.metadata.version(package)
+        except importlib.metadata.PackageNotFoundError:
+            packages[package] = None
+    runtime = dict(started_at=time.time(), git_commit=git_commit(PROJECT.parent),
+        had_commit=git_commit(Path(had_version.__file__).resolve().parents[2]),
+        had_source=str(Path(had_version.__file__).resolve()), python=sys.version,
+        python_executable=sys.executable, packages=packages)
+    for output, profile in ((options.output, "main1013"), (options.supp_output, "main1013_supp")):
+        selected = [m for m in models if m["profile"] == profile]
+        manifest = dict(profile=profile, implementation_revision=MAIN1013_REVISION,
+            seeds=[0, 1, 2], training_steps=1_000_000, official_checkpoint="final",
+            methods={m["method"]: main1013_registry()[m["method"]] for m in selected},
+            base_config=copy.deepcopy(FROZEN_BASE_CONFIG), final_configs=FINAL_CONFIGS,
+            formal_scenes=[9000, 9299], confirmation_scenes=[110000, 110299],
+            episodes_per_config=300, validation_points=50, validation_episodes_per_config=25,
+            had_core_version=CORE_VERSION, physics_protocol=PHYSICS_PROTOCOL,
+            policy_rng="per_episode_seed_v1", eval_dtype="float32", eval_tf32=False,
+            diagnostics=dict(gru_reset=dict(method="regir_nomem_memtoken", configs=MAIN1013_RESET_CONFIGS,
+                scenes=[9000, 9009], episodes=90), references="missing; no old assets uploaded"))
+        path = output / "experiment.json"
+        expected = json.loads(json.dumps(manifest))
+        old = json.loads(path.read_text(encoding="utf-8-sig")) if path.exists() else {}
+        if old:
+            if any(old.get(k) != v for k, v in expected.items()):
+                raise ValueError(f"Frozen experiment configuration differs; existing results preserved: {path}")
+        (output / "had").mkdir(parents=True, exist_ok=True)
+        manifest = old or manifest
+        manifest.setdefault("runtime_sessions", []).append(runtime)
+        atomic_document(path, manifest)
+
+
+def _main1013_train_worker(model, gpu, stop, results):
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
+    directory = _main1013_directory(model)
+    directory.mkdir(parents=True, exist_ok=True)
+    with (directory / "console.log").open("a", encoding="utf-8", buffering=1) as log:
+        with redirect_stdout(log), redirect_stderr(log):
+            try:
+                from open_score.algos import train, resume_files
+                cfg = copy.deepcopy(model["configuration"])
+                cfg["resume"] = any(path.exists() for path in resume_files(directory))
+                if (directory / "config.json").exists() and not cfg["resume"]:
+                    raise ValueError(f"Recorded run has no recoverable checkpoint; refusing overwrite: {directory}")
+                cfg["_stop_event"] = stop
+                def final_ready(path):
+                    results.put(dict(kind="final_ready", model_id=model["id"], checkpoint=str(path)))
+                cfg["_final_ready_callback"] = final_ready
+                checkpoint = train(model["method"], cfg)
+                status = "completed" if Path(checkpoint).name == "final.pt" else "stopped"
+                results.put(dict(kind="train_result", model_id=model["id"], status=status, checkpoint=str(checkpoint)))
+            except BaseException as error:
+                detail = traceback.format_exc()
+                print(detail, flush=True)
+                from open_score.utils.resources import is_cuda_oom
+                failure = {}
+                failure_path = directory / "failure.json"
+                if failure_path.is_file():
+                    try:
+                        failure = json.loads(failure_path.read_text(encoding="utf-8"))
+                    except (OSError, ValueError):
+                        pass
+                safe = Path(failure["safe_checkpoint_path"]) if failure.get("safe_checkpoint_path") else None
+                recoverable = bool(is_cuda_oom(error) and failure.get("kind") == "cuda_oom"
+                    and failure.get("pid") == os.getpid() and failure.get("automatic_recovery")
+                    and safe is not None and safe.is_file() and safe.resolve().parent == directory.resolve())
+                results.put(dict(kind="train_result", model_id=model["id"],
+                    status="retry_safe" if recoverable else "failed", error=detail, failure=failure))
+
+
+def _main1013_eval_worker(task, model, device, gpu, stop, yield_cpu, results):
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu) if device == "cuda" else ""
+    directory = _main1013_directory(model)
+    directory.mkdir(parents=True, exist_ok=True)
+    label = "_".join(map(str, task["config"]))
+    logfile = directory / f"eval.{task['pool']}.{label}.part{task['part']:03d}.log"
+    with logfile.open("a", encoding="utf-8", buffering=1) as log:
+        with redirect_stdout(log), redirect_stderr(log):
+            try:
+                from open_score.eval.protocol import evaluate_main1013_checkpoint
+                import torch
+                def on_progress(value):
+                    row = dict(value, kind="eval_progress", id=task["id"], model_id=model["id"],
+                               pool=task["pool"], config=task["config"], device=device, gpu=gpu)
+                    if device == "cuda":
+                        row["cuda_peak_reserved_gib"] = torch.cuda.max_memory_reserved() / 2**30
+                    results.put(row)
+                result = evaluate_main1013_checkpoint(model["method"], model["train"]["final_checkpoint"],
+                    output=Path(model["output"]), seed=model["seed"], pool=task["pool"], config=task["config"],
+                    episode_seeds=task["episode_seeds"], device=device, on_progress=on_progress,
+                    stop_requested=lambda: stop.is_set() or yield_cpu.is_set())
+                status = result.get("status", "incomplete")
+                if yield_cpu.is_set() and not stop.is_set() and status not in ("complete", "completed"):
+                    status = "retry_cpu"
+                results.put(dict(kind="eval_result", id=task["id"], model_id=model["id"], status=status, result=result))
+            except BaseException as error:
+                detail = traceback.format_exc()
+                print(detail, flush=True)
+                from open_score.utils.resources import is_cuda_oom
+                results.put(dict(kind="eval_result", id=task["id"], model_id=model["id"],
+                    status="retry_cpu" if device == "cuda" and is_cuda_oom(error) else "failed", error=detail))
+
+
+def main1013_run(options):
+    """Six training slots and a separate, shared CPU/GPU evaluation queue."""
+    from open_score.utils.resources import gpu_memory
+    from open_score.utils.logging import iter_records
+    import psutil
+    models = _main1013_models(options)
+    _main1013_initialize(options, models)
+    by_id = {m["id"]: m for m in models}
+    by_row = {(m["profile"], m["method"], m["seed"]): m for m in models}
+    done = defaultdict(set)
+    for model in models:
+        model["train"] = dict(status="queued", t_env=0, budget_steps=1_000_000, rate=None,
+            training_seconds=0., validation_completed_episodes=0, validation_total_episodes=5000,
+            validation_measured_episodes=0, validation_measured_seconds=0., final_checkpoint=None)
+        model["formal"], model["confirm"] = _main1013_pool(), _main1013_pool()
+        model["gru_reset"] = _main1013_pool(MAIN1013_RESET_CONFIGS, 10,
+            applicable=model["method"] == "regir_nomem_memtoken")
+    events = []
+    def event(message, **values):
+        events.append(dict(at=time.time(), message=message, **values))
+        del events[:-100]
+        print(json.dumps(events[-1], ensure_ascii=False), flush=True)
+    def add_episode(model, pool, config, scene, damage, seconds=None, device=None):
+        key = ",".join(map(str, config))
+        cell = model[pool]["configs"].get(key)
+        if cell is None or scene in done[model["id"], pool, key]:
+            return
+        start, quota = (9000, 10) if pool == "gru_reset" else (9000 if pool == "formal" else 110000, 300)
+        if not start <= scene < start + quota:
+            return
+        done[model["id"], pool, key].add(scene)
+        cell["completed"] += 1
+        cell["D_sum"] += float(damage)
+        if seconds is not None and math.isfinite(float(seconds)) and float(seconds) > 0:
+            cell["measured_episodes"] += 1
+            cell["measured_seconds"] += float(seconds)
+            if device in ("cpu", "cuda"):
+                timing = cell["timing"].setdefault(device, dict(episodes=0, seconds=0.))
+                timing["episodes"] += 1
+                timing["seconds"] += float(seconds)
+        bank = model[pool]
+        bank["completed"] += 1
+        if bank["completed"] == bank["total"]:
+            bank.update(status="completed", D=statistics.mean(c["D_sum"] / c["total"] for c in bank["configs"].values()))
+    for model in models:
+        final = _main1013_final(model)
+        if final:
+            model["train"].update(final)
+    # One pass per NEW output, never a per-worker scan or a historical archive read.
+    for output, profile in ((options.output, "main1013"), (options.supp_output, "main1013_supp")):
+        for row in iter_records(output, "episodes", run="train", env="had"):
+            model = by_row.get((row.get("source_version") or row.get("version") or profile,
+                                row.get("method"), int(row.get("seed", -1))))
+            pool = row.get("arm")
+            if not model or pool not in ("formal", "confirm", "gru_reset"):
+                continue
+            if row.get("checkpoint_id") != model["train"].get("checkpoint_id"):
+                continue
+            cfg = row["config"]
+            add_episode(model, pool, tuple(int(cfg[k]) for k in ("N_R", "N_B", "K")),
+                int(row["episode_seed"]), row["D"], row.get("episode_wall_seconds"), row.get("eval_device"))
+    ctx = get_context("spawn")
+    results = ctx.Queue()
+    train_stop, eval_stop = ctx.Event(), ctx.Event()
+    train_live, eval_live, eval_waiting = {}, {}, []
+    train_waiting = [m["id"] for m in models if m["train"]["status"] != "completed"]
+    released, failed_eval, seen_results = set(), set(), set()
+    last_eval_model, report_thread = None, None
+    report_dirty, last_report, last_publish = True, 0., 0.
+    admitted = []
+    gpu_snapshots, gpu_sampled_at, eval_peaks = {}, {}, {}
+    started = time.time()
+    deadline = time.monotonic() + options.max_minutes * 60 if options.max_minutes else None
+    for output in (options.output, options.supp_output):
+        for name in ("stop.request", "eval.stop.request"):
+            path = output / name
+            if path.exists() and path.stat().st_mtime <= started:
+                path.unlink()
+    previous = {sig: signal.getsignal(sig) for sig in (signal.SIGINT, signal.SIGTERM)}
+    def signal_stop(*_):
+        train_stop.set()
+        eval_stop.set()
+    for sig in previous:
+        signal.signal(sig, signal_stop)
+    def memory(gpu):
+        now = time.monotonic()
+        if now - gpu_sampled_at.get(gpu, 0.) >= 5:
+            try:
+                gpu_snapshots[gpu] = gpu_memory(gpu)
+            except Exception:
+                gpu_snapshots[gpu] = None
+            gpu_sampled_at[gpu] = now
+        return gpu_snapshots.get(gpu)
+    def release(model, pool):
+        nonlocal report_dirty
+        identity = model["id"], pool
+        if identity in released or model[pool]["status"] == "not_applicable":
+            return
+        released.add(identity)
+        if model[pool]["completed"] == model[pool]["total"]:
+            return
+        model[pool]["status"] = "queued"
+        start, quota, width = (9000, 10, 10) if pool == "gru_reset" else (9000 if pool == "formal" else 110000, 300, 75)
+        # Configuration-local blocks have stable identities across CPU/GPU/restarts.
+        for config_key in model[pool]["configs"]:
+            config = tuple(int(v) for v in config_key.split(","))
+            for part, offset in enumerate(range(0, quota, width)):
+                scenes = [s for s in range(start + offset, min(start + offset + width, start + quota))
+                          if s not in done[model["id"], pool, config_key]]
+                if scenes:
+                    eval_waiting.append(dict(id=f"{model['id']}.{pool}.{config_key}.part{part:03d}",
+                        model_id=model["id"], pool=pool, config=config, part=part,
+                        episode_seeds=scenes, total=len(scenes), force_cpu=False))
+        report_dirty = True
+        event("evaluation_ready", model_id=model["id"], pool=pool)
+    def release_ready():
+        for model in models:
+            if model["train"]["status"] == "completed":
+                release(model, "formal")
+                if model["formal"]["status"] == "completed":
+                    release(model, "confirm")
+                    release(model, "gru_reset")
+    def snapshot(status="running"):
+        nonlocal last_publish
+        state = dict(schema="main1013-runner-v1", implementation_revision=MAIN1013_REVISION,
+            pid=os.getpid(), host=socket.gethostname(), status=status, updated_at=time.time(),
+            main_output=str(options.output), supp_output=str(options.supp_output),
+            resources=dict(devices=[0, 1], train_per_gpu=3, cpu_eval_workers=options.cpu_eval_workers,
+                gpu_eval_workers_per_gpu=options.gpu_eval_workers_per_gpu,
+                gpu_eval_admitted_devices=admitted, gpu_memory={str(k): v for k, v in gpu_snapshots.items()}),
+            models=[{k: v for k, v in model.items() if k != "configuration"} for model in models],
+            training=dict(live=[dict(id=item["model_id"], model_id=item["model_id"], pid=item["child"].pid,
+                gpu=item["gpu"], device="cuda", started_at=item["started_at"]) for item in train_live.values()],
+                queue=list(train_waiting), stopped=train_stop.is_set()),
+            evaluation=dict(live=[{**{k: v for k, v in item["task"].items() if k != "episode_seeds"},
+                **item.get("progress", {}), "pid":item["child"].pid, "gpu":item["gpu"], "device":item["device"],
+                "started_at":item["started_at"]} for item in eval_live.values()],
+                queue=[{k: v for k, v in t.items() if k != "episode_seeds"} for t in eval_waiting],
+                awaiting_models=[m["id"] for m in models if m["train"]["status"] != "completed"],
+                stopped=eval_stop.is_set(), failures=sorted(failed_eval)), events=list(events),
+            diagnostics=dict(reference_comparisons="reference_missing",
+                gru_reset=dict(completed=sum(m["gru_reset"]["completed"] for m in models), total=90)))
+        atomic_document(options.output / "runner_state.json", state)
+        last_publish = time.monotonic()
+    def refresh_training():
+        for item in train_live.values():
+            model = by_id[item["model_id"]]
+            path = _main1013_directory(model) / "resource.json"
+            if not path.exists():
+                continue
+            try:
+                row = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if row.get("pid") != item["child"].pid:
+                continue
+            model["train"].update({k: row[k] for k in ("t_env", "training_seconds", "latest_validation_D",
+                "validation_completed_episodes", "validation_measured_episodes", "validation_measured_seconds",
+                "cuda_peak_reserved_gib", "cuda_reserved_gib", "current_phase", "training_updates", "updated_at") if k in row})
+            model["train"]["rate"] = row.get("training_steps_per_second")
+    def launch_training():
+        if train_stop.is_set():
+            return
+        for gpu, slot in gpu_slots((0, 1), 3):
+            key = gpu, slot
+            if key in train_live or not train_waiting:
+                continue
+            candidate = next((i for i, identity in enumerate(train_waiting)
+                              if by_id[identity]["train"].get("retry_after", 0.) <= time.time()
+                              and not any(item["model_id"] == identity for item in train_live.values())), None)
+            if candidate is None:
+                continue
+            # Training launches first. GPU evaluators relinquish memory if needed;
+            # they never reduce this fixed three-per-card training allowance.
+            observed_memory = memory(gpu)
+            free = observed_memory["free"] if observed_memory else None
+            incoming = by_id[train_waiting[candidate]]
+            observed = [m["train"].get("cuda_peak_reserved_gib", 0.) for m in models
+                        if m["method"] == incoming["method"]]
+            need = 8. + 1.25 * max(observed, default=0.)
+            if free is None or free < max(8., need):
+                for item in eval_live.values():
+                    if item["gpu"] == gpu:
+                        item["yield_cpu"].set()
+                continue
+            model_id = train_waiting.pop(candidate)
+            model = by_id[model_id]
+            child = ctx.Process(target=_main1013_train_worker, args=(model, gpu, train_stop, results))
+            child.start()
+            model["train"]["status"] = "training"
+            train_live[key] = dict(child=child, model_id=model_id, gpu=gpu, started_at=time.time())
+            seen_results.discard(model_id)
+            event("training_started", model_id=model_id, gpu=gpu, pid=child.pid)
+    def eval_gpu_allowed(gpu):
+        if options.gpu_eval_workers_per_gpu == 0:
+            return False
+        if any(item["gpu"] == gpu and item["device"] == "cuda" for item in eval_live.values()):
+            return False
+        trainers = [item for item in train_live.values() if item["gpu"] == gpu]
+        if train_waiting and len(trainers) < 3 and not train_stop.is_set():
+            return False
+        observed_memory = memory(gpu)
+        if observed_memory is None:
+            return False
+        growth = 0.
+        for item in trainers:
+            row = by_id[item["model_id"]]["train"]
+            if (time.time() - item["started_at"] < 60 or not row.get("cuda_peak_reserved_gib")
+                    or not row.get("training_updates")):
+                return False
+            growth += max(0., row["cuda_peak_reserved_gib"] - row.get("cuda_reserved_gib", 0.))
+        # The reserve covers training growth and the next training replacement.
+        replacement = 8. if train_waiting else 0.
+        peak = max(eval_peaks.values(), default=2.)
+        return observed_memory["free"] >= 8. + growth + replacement + 1.25 * peak
+    def launch_evaluation():
+        nonlocal last_eval_model, admitted
+        admitted = sorted({item["gpu"] for item in eval_live.values()
+                           if item["device"] == "cuda" and not item["yield_cpu"].is_set()}
+                          | {gpu for gpu in (0, 1) if eval_gpu_allowed(gpu)})
+        if eval_stop.is_set():
+            return
+        while eval_waiting:
+            cpu_live = sum(item["device"] == "cpu" for item in eval_live.values())
+            gpu = next((g for g in admitted if not any(item["gpu"] == g for item in eval_live.values())), None)
+            eligible = [i for i, task in enumerate(eval_waiting) if task["id"] not in eval_live]
+            if not eligible:
+                break
+            priority = min(2 if eval_waiting[i]["pool"] == "gru_reset" else 0 for i in eligible)
+            ready_models = sorted({eval_waiting[i]["model_id"] for i in eligible
+                                   if (2 if eval_waiting[i]["pool"] == "gru_reset" else 0) == priority},
+                                  key=lambda identity: by_id[identity]["order"])
+            next_model = (ready_models[(ready_models.index(last_eval_model) + 1) % len(ready_models)]
+                          if last_eval_model in ready_models else ready_models[0])
+            candidates = sorted(eligible, key=lambda i:
+                (2 if eval_waiting[i]["pool"] == "gru_reset" else 0,
+                 eval_waiting[i]["model_id"] != next_model,
+                 by_id[eval_waiting[i]["model_id"]]["order"],
+                 0 if eval_waiting[i]["pool"] == "formal" else 1,
+                 eval_waiting[i]["part"], -eval_waiting[i]["config"][0]))
+            index = candidates[0]
+            task = eval_waiting[index]
+            device = "cuda" if gpu is not None and not task["force_cpu"] else "cpu"
+            if device == "cpu" and (cpu_live >= options.cpu_eval_workers
+                    or psutil.virtual_memory().available < (32. + 1.5 * sum(time.time() - x["started_at"] < 30
+                        for x in eval_live.values() if x["device"] == "cpu")) * 2**30):
+                if gpu is None:
+                    break
+                index = next((i for i in candidates if not eval_waiting[i]["force_cpu"]), None)
+                if index is None:
+                    break
+                task, device = eval_waiting[index], "cuda"
+            task = eval_waiting.pop(index)
+            if device == "cpu":
+                gpu = None
+            yield_cpu = ctx.Event()
+            child = ctx.Process(target=_main1013_eval_worker,
+                args=(task, by_id[task["model_id"]], device, gpu, eval_stop, yield_cpu, results))
+            child.start()
+            seen_results.discard(task["id"])
+            eval_live[task["id"]] = dict(child=child, task=task, gpu=gpu, device=device,
+                yield_cpu=yield_cpu, started_at=time.time(), progress={})
+            bank = by_id[task["model_id"]][task["pool"]]
+            if bank["status"] != "failed":
+                bank["status"] = "evaluating"
+            last_eval_model = task["model_id"]
+    def receive():
+        nonlocal report_dirty
+        while True:
+            try:
+                row = results.get_nowait()
+            except Empty:
+                break
+            kind = row.get("kind")
+            if kind == "report_result":
+                if row.get("error"):
+                    event("report_error", error=row["error"])
+                continue
+            if kind == "eval_progress":
+                item = eval_live.get(row["id"])
+                if item is None:
+                    continue
+                item["progress"] = {k: v for k, v in row.items() if k not in ("kind", "id", "model_id")}
+                if row.get("cuda_peak_reserved_gib"):
+                    eval_peaks[row["model_id"]] = max(eval_peaks.get(row["model_id"], 0.), row["cuda_peak_reserved_gib"])
+                if row.get("episode_seed") is not None and row.get("D") is not None:
+                    add_episode(by_id[row["model_id"]], row["pool"], tuple(row["config"]),
+                        int(row["episode_seed"]), row["D"], row.get("episode_wall_seconds"), row.get("device"))
+                    report_dirty = True
+                continue
+            if kind == "final_ready":
+                model = by_id[row["model_id"]]
+                try:
+                    if Path(row["checkpoint"]).resolve() != (_main1013_directory(model) / "final.pt").resolve():
+                        raise ValueError("Final-ready callback points outside this model's final checkpoint")
+                    final = _main1013_final(model)
+                    if final is None:
+                        raise ValueError("Final-ready callback has no retained eligible final")
+                    model["train"].update(final, runtime_status="finishing")
+                    release(model, "formal")
+                    event("final_ready", model_id=model["id"], checkpoint=final["final_checkpoint"])
+                    report_dirty = True
+                except Exception as error:
+                    event("final_ready_rejected", model_id=model["id"], error=str(error))
+                continue
+            seen_results.add(row.get("model_id") if kind == "train_result" else row.get("id"))
+            if kind == "train_result":
+                model = by_id[row["model_id"]]
+                retries = int(model["train"].get("automatic_retries", 0))
+                retained_final = None
+                if row["status"] != "completed":
+                    try:
+                        retained_final = _main1013_final(model)
+                    except Exception:
+                        pass
+                if retained_final:
+                    stopped_after_final = row["status"] == "stopped" and not row.get("error")
+                    model["train"].update(retained_final,
+                        runtime_status="stopped_after_final" if stopped_after_final else "post_final_error")
+                    release(model, "formal")
+                    if stopped_after_final:
+                        event("worker_stopped_after_final", model_id=model["id"])
+                    else:
+                        model["train"]["post_final_error"] = row.get("error") or f"Worker returned {row['status']} after final publication"
+                        event("post_final_error", model_id=model["id"], worker_status=row["status"],
+                              error=model["train"]["post_final_error"])
+                elif row["status"] == "retry_safe" and retries < 3 and not train_stop.is_set():
+                    failure = row["failure"]
+                    retries += 1
+                    model["train"].update(status="retry_wait", automatic_retries=retries,
+                        retry_after=time.time() + (60, 120, 240)[retries - 1], error=row.get("error"),
+                        safe_checkpoint_path=failure["safe_checkpoint_path"],
+                        safe_checkpoint_t_env=int(failure.get("safe_checkpoint_t_env", 0)),
+                        t_env=int(failure.get("safe_checkpoint_t_env", 0)))
+                    train_waiting.insert(0, model["id"])
+                    event("training_safe_retry", model_id=model["id"], attempt=retries,
+                          checkpoint=failure["safe_checkpoint_path"])
+                elif row["status"] == "completed":
+                    try:
+                        final = _main1013_final(model)
+                        if final is None:
+                            raise ValueError("Worker returned completed without a retained final")
+                        model["train"].update(final, runtime_status="completed")
+                    except Exception as error:
+                        model["train"].update(status="failed", error=str(error))
+                else:
+                    model["train"].update(status="failed" if row["status"] == "retry_safe" else row["status"], error=row.get("error"))
+                event("training_ended", model_id=model["id"], status=model["train"]["status"])
+                report_dirty = True
+            elif kind == "eval_result":
+                item = eval_live.get(row["id"])
+                if item is None:
+                    continue
+                task, model = item["task"], by_id[row["model_id"]]
+                status = row["status"]
+                if status == "retry_cpu" and not eval_stop.is_set():
+                    key = ",".join(map(str, task["config"]))
+                    task["episode_seeds"] = [s for s in task["episode_seeds"] if s not in done[model["id"], task["pool"], key]]
+                    task.update(force_cpu=True, total=len(task["episode_seeds"]))
+                    if task["episode_seeds"]:
+                        eval_waiting.append(task)
+                    event("evaluation_cpu_retry", id=task["id"])
+                elif status not in ("complete", "completed"):
+                    model[task["pool"]].update(status="stopped" if status == "stopped" else "failed", error=row.get("error"))
+                    if status != "stopped":
+                        failed_eval.add(task["id"])
+                    event("evaluation_ended", id=task["id"], status=status, error=row.get("error"))
+                report_dirty = True
+    def reap():
+        for live, is_train in ((train_live, True), (eval_live, False)):
+            for key, item in list(live.items()):
+                child = item["child"]
+                if child.is_alive():
+                    continue
+                child.join()
+                receive()
+                identity = item["model_id"] if is_train else item["task"]["id"]
+                if identity not in seen_results:
+                    model = by_id[item["model_id"] if is_train else item["task"]["model_id"]]
+                    if is_train:
+                        final = None
+                        try:
+                            final = _main1013_final(model)
+                        except Exception:
+                            pass
+                        message = f"Worker exited {child.exitcode} without a result"
+                        if final:
+                            model["train"].update(final, runtime_status="post_final_error", post_final_error=message)
+                            release(model, "formal")
+                            event("post_final_error", model_id=model["id"], error=message)
+                        else:
+                            model["train"].update(status="failed", error=message)
+                    else:
+                        model[item["task"]["pool"]].update(status="failed", error=f"Worker exited {child.exitcode} without a result")
+                        failed_eval.add(identity)
+                    event("worker_exit", id=identity, exit_code=child.exitcode)
+                del live[key]
+    def report_async():
+        nonlocal report_thread, last_report, report_dirty
+        if not report_dirty or (report_thread is not None and report_thread.is_alive()) or time.monotonic() - last_report < 300:
+            return
+        def work():
+            try:
+                from open_score.eval.report import refresh_main1013_reports
+                refresh_main1013_reports(options.output, options.supp_output)
+                results.put(dict(kind="report_result"))
+            except Exception:
+                results.put(dict(kind="report_result", error=traceback.format_exc()))
+        report_thread = threading.Thread(target=work, daemon=True)
+        report_thread.start()
+        last_report, report_dirty = time.monotonic(), False
+    try:
+        release_ready()
+        snapshot()
+        while train_live or eval_live or (train_waiting and not train_stop.is_set()) or (eval_waiting and not eval_stop.is_set()):
+            for output in (options.output, options.supp_output):
+                if (output / "stop.request").exists():
+                    train_stop.set()
+                if (output / "eval.stop.request").exists():
+                    eval_stop.set()
+            if deadline is not None and time.monotonic() >= deadline:
+                signal_stop()
+            receive()
+            reap()
+            release_ready()
+            refresh_training()
+            launch_training()
+            launch_evaluation()
+            if time.monotonic() - last_publish >= 10:
+                snapshot()
+            report_async()
+            # No long blocking wait: signals and file stop requests remain responsive.
+            time.sleep(.2)
+        receive()
+        refresh_training()
+        complete = not failed_eval and all(m["train"]["status"] == "completed" and
+                       all(m[p]["completed"] == m[p]["total"] for p in ("formal", "confirm", "gru_reset")) for m in models)
+        status = "completed" if complete else "stopped" if train_stop.is_set() or eval_stop.is_set() else "failed"
+        snapshot(status)
+        if report_thread is not None:
+            report_thread.join()
+        from open_score.eval.report import refresh_main1013_reports
+        refresh_main1013_reports(options.output, options.supp_output)
+        return 0 if complete else 130 if status == "stopped" else 1
+    except BaseException:
+        signal_stop()
+        event("runner_error", error=traceback.format_exc())
+        while train_live or eval_live:
+            receive()
+            reap()
+            refresh_training()
+            if time.monotonic() - last_publish >= 10:
+                snapshot("stopping_after_error")
+            time.sleep(.2)
+        snapshot("failed")
+        raise
+    finally:
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
+
+
+def main1013_main(options):
+    if options.stage not in ("plan", "run", "progress", "stop", "report"):
+        raise ValueError("main1013 supports plan/run/progress/stop/report")
+    if options.output.name != "main1013" or options.supp_output.name != "main1013_supp" or options.output == options.supp_output:
+        raise ValueError("Use separate outputs named main1013 and main1013_supp")
+    if options.devices != "0,1" or options.jobs_per_gpu != 3:
+        raise ValueError("main1013 fixes --devices 0,1 and --jobs-per-gpu 3 (six trainers)")
+    if options.steps != 1_000_000 or options.seeds != "0,1,2" or options.methods or options.episodes is not None:
+        raise ValueError("main1013 fixes its 21 methods/seeds, 1M budgets and evaluation quotas")
+    if options.cpu_eval_workers < 1:
+        raise ValueError("--cpu-eval-workers must be positive")
+    if not math.isfinite(options.watch_seconds) or options.watch_seconds < 0:
+        raise ValueError("--watch-seconds must be finite and nonnegative")
+    if options.max_minutes is not None and (not math.isfinite(options.max_minutes) or options.max_minutes <= 0):
+        raise ValueError("--max-minutes must be positive and finite")
+    if options.stage == "plan":
+        models = _main1013_models(options)
+        print(json.dumps(dict(suite="main1013", implementation_revision=MAIN1013_REVISION,
+            main_output=str(options.output), supp_output=str(options.supp_output),
+            main_training_models=12, supplementary_training_models=9, training_steps=21_000_000,
+            validation_episodes=105000, formal_episodes=151200, confirmation_episodes=151200,
+            eval_shard_episodes=75, eval_shards=4032, gru_reset_episodes=90,
+            resources=dict(training_per_gpu=3, training_workers=6, cpu_eval_workers=options.cpu_eval_workers,
+                gpu_eval_workers_per_gpu=options.gpu_eval_workers_per_gpu),
+            training_order=[dict(id=m["id"], output=m["output"], method=m["method"], seed=m["seed"]) for m in models],
+            method_overrides=main1013_registry(), reference_diagnostics="reference_missing; not required for new V0"),
+            ensure_ascii=False, indent=2))
+        return 0
+    if options.stage == "progress":
+        from open_score.utils.status import main1013_progress
+        return main1013_progress(options)
+    if options.stage == "stop":
+        for output in (options.output, options.supp_output):
+            output.mkdir(parents=True, exist_ok=True)
+            for name in (("stop.request",) if options.target == "train" else
+                         ("eval.stop.request",) if options.target == "eval" else ("stop.request", "eval.stop.request")):
+                (output / name).write_text("Stop at a recoverable training batch or committed evaluation episode.\n", encoding="utf-8")
+        print(f"Stop requested for {options.target}; workers preserve recoverable progress.", flush=True)
+        return 0
+    if options.stage == "report":
+        from open_score.eval.report import refresh_main1013_reports
+        refresh_main1013_reports(options.output, options.supp_output)
+        return 0
+    with process_lock(options.output / ".main1013_runner.lock") as claimed:
+        if not claimed:
+            raise ValueError("A main1013 runner already owns these output queues")
+        return main1013_run(options)
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("stage",choices=("plan","progress","train","run","mechanism","calibrate","select","eval","adaptive","counterfactual","confirm","depth","depth-eval","report"))
-    parser.add_argument("--output",type=Path,default=PROJECT/"outputs/main1009")
+    parser.add_argument("stage",choices=("plan","progress","train","run","stop","mechanism","calibrate","select","eval","adaptive","counterfactual","confirm","depth","depth-eval","report"))
+    parser.add_argument("--output",type=Path,default=None)
+    parser.add_argument("--supp-output",type=Path,default=None,help="main1013 supplementary result output")
+    parser.add_argument("--cpu-eval-workers",type=int,default=32,help="main1013 CPU evaluation process cap")
+    parser.add_argument("--gpu-eval-workers-per-gpu",type=int,choices=(0,1),default=1,help="main1013 extra evaluators per GPU")
+    parser.add_argument("--details",action="store_true",help="progress: show the complete model table")
+    parser.add_argument("--target",choices=("train","eval","all"),default="all",help="stop: queues to stop safely")
     parser.add_argument("--base-config",type=Path,default=None,help="Optional retained regir_nomem config override; default is a complete frozen literal")
     parser.add_argument("--source-output",type=Path,default=PROJECT/"outputs/main0928")
     parser.add_argument("--baseline-data",type=Path,default=PROJECT.parent/"Papers/v2/data/paper1007.json")
-    parser.add_argument("--suite",choices=("loop_candidates","references","selected"),default=None)
+    parser.add_argument("--suite",choices=("loop_candidates","references","selected","main1013"),default=None)
     parser.add_argument("--tier",choices=(*TIERS,"all"),default=None,help="Legacy refinement-tier compatibility")
     parser.add_argument("--methods")
     parser.add_argument("--seeds",default="0,1,2")
@@ -2808,9 +3579,17 @@ def main():
     parser.add_argument("--episodes",type=int,help="Legacy confirm/depth quota only; candidate protocol quotas are frozen")
     parser.add_argument("--depths",default=None,help="depth-eval uses 1..6; legacy depth defaults to 1,2,4,6,8")
     parser.add_argument("--dry-run",action="store_true",help="depth-eval: inspect checkpoints and coverage without games or writes")
-    parser.add_argument("--section",choices=("nomem-depth",),help="report: update only the NoMem depth supplement in the formal docs report")
+    parser.add_argument("--section",choices=("nomem-depth",),help="report/progress: select the NoMem R1-R6 supplement")
     parser.add_argument("--resume",action="store_true")
-    options=parser.parse_args();options.output=options.output.resolve();options.source_output=options.source_output.resolve()
+    options=parser.parse_args()
+    if options.suite=="main1013":
+        options.output=(options.output or PROJECT/"outputs/main1013").resolve()
+        options.supp_output=(options.supp_output or options.output.parent/"main1013_supp").resolve()
+        if not any(a=="--devices" or a.startswith("--devices=") for a in sys.argv):options.devices="0,1"
+        if not any(a=="--jobs-per-gpu" or a.startswith("--jobs-per-gpu=") for a in sys.argv):options.jobs_per_gpu=3
+        try:return main1013_main(options)
+        except (ValueError,KeyError,FileNotFoundError) as error:parser.error(str(error))
+    options.output=(options.output or PROJECT/"outputs/main1009").resolve();options.source_output=options.source_output.resolve()
     options.suite="legacy" if options.tier is not None and options.suite is None else options.suite or "loop_candidates"
     options.tier=options.tier or "P0"
     if options.output.name!="main1009":parser.error("New outputs must stay in a directory named main1009")
@@ -2822,7 +3601,7 @@ def main():
             raise ValueError("--max-minutes must be a positive finite value")
         if not math.isfinite(options.watch_seconds) or options.watch_seconds<0:raise ValueError("--watch-seconds must be finite and nonnegative")
         if options.dry_run and options.stage!="depth-eval":raise ValueError("--dry-run is only for depth-eval")
-        if options.section and options.stage!="report":raise ValueError("--section is only for report")
+        if options.section and options.stage not in ("report","progress"):raise ValueError("--section is only for report/progress")
         if options.stage=="report" and options.section=="nomem-depth":
             nomem_depth_report(options);return 0
         if options.stage=="progress":return progress(options)

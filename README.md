@@ -1,5 +1,73 @@
 # Open-SCORE
 
+## main1013：21个新模型，训练与评估独立并行
+
+本轮仅发布代码、冻结配置和运行说明；历史数据、模型及本轮运行产物不上传到发布分支。
+当前归并工作区的本地保存点为 `860c109`，发布分支 `experiment/main1013` 从已发布代码建立，二者不合并。
+
+主实验 `Open-SCORE/outputs/main1013` 包含 Memory-as-token、TransfQMix-aligned、No-memory、Memory-as-token-SG，
+各训练种子0/1/2，共12个模型。补充实验 `Open-SCORE/outputs/main1013_supp` 只包含基于SCOPE的
+Direct read、One round、No host，各三个种子，共9个模型。固定R4、末轮融合、SCOPE和Memory query重训不在本轮清单内。
+所有SCOPE变体采用当前状态查询、count-off和同一冻结训练协议；历史`*_sg`消融仍含记忆查询，不能改写为SCOPE单点对照。
+No-memory替换下游GRU，保留上一动作输入；No host沿用删除REFIL attention/imagined辅助训练但保留self投影残差的定义。
+
+每模型训练预算1M物理步、8个环境worker、50点ID验证（每点4配置×25场）。正式排名只用final，保留best和未完成训练恢复点。
+正式池为24配置×300场（9000–9299），确认池同配额（110000–110299）；21个新模型共105,000验证场与302,400双池评估场。
+每配置按75场分片，两个结果目录共同使用一个评估资源池。
+
+训练固定GPU0/GPU1各三个槽位，主12次先启动，后续补9次。模型完成后原子登记final，立即交给独立评估队列；
+训练进程退出后立即补位。CPU评估默认32进程，每进程一线程；GPU评估每卡额外最多一个，按训练优先和显存余量准入。
+评估不占训练槽位；GPU评估OOM仅将剩余场景转CPU。两个目录各只有一份正式`实验报告.md`及必要图表。
+有限机制采集复用指定正式场景，E1冻结GRU重置限90场；远端缺失匹配SCOPE/Memory query参考时，相应对照待补，不自动增加训练或上传权重。
+
+### 远端准备
+
+已有远端仓库`/data3/dell/Saileron/projects/ReGIR`有未提交修改，保留原目录，在新工作树执行：
+
+```bash
+git -C /data3/dell/Saileron/projects/ReGIR fetch origin experiment/main1013
+git -C /data3/dell/Saileron/projects/ReGIR worktree add --detach \
+  /data3/dell/Saileron/projects/ReGIR-main1013 FETCH_HEAD
+cd /data3/dell/Saileron/projects/ReGIR-main1013/Open-SCORE
+```
+
+运行环境使用现有`/data3/dell/Saileron/envs/saileron-smac/bin/python`，进程显式加载新工作树源码，禁用user-site；
+不修改共享环境的editable指向。HADE沿用`had-workbench-2.1.0 / rebuild-calibrated-v3-r7-target-initialization`，
+已确认环境提交`9e25a1c3`。运行中固定代码提交和环境协议。
+
+### 启动与实时进度
+
+先执行只读计划确认21个模型与资源参数，再在tmux内运行：
+
+```bash
+PYTHONPATH="$PWD" /data3/dell/Saileron/envs/saileron-smac/bin/python -B -s \
+  scripts/leaf1009.py plan --suite main1013 \
+  --output outputs/main1013 --supp-output outputs/main1013_supp
+tmux new-session -s main1013
+PYTHONPATH="$PWD" /data3/dell/Saileron/envs/saileron-smac/bin/python -B -s \
+  scripts/leaf1009.py run --suite main1013 \
+  --output outputs/main1013 --supp-output outputs/main1013_supp \
+  --devices 0,1 --jobs-per-gpu 3 --cpu-eval-workers 32 \
+  --gpu-eval-workers-per-gpu 1 --resume
+```
+
+另开SSH终端，在同一`Open-SCORE`目录查看：
+
+```bash
+PYTHONPATH="$PWD" /data3/dell/Saileron/envs/saileron-smac/bin/python -B -s \
+  scripts/leaf1009.py progress --suite main1013 \
+  --output outputs/main1013 --supp-output outputs/main1013_supp \
+  --watch-seconds 10 --details
+```
+
+面板显示训练剩余模型、正式与确认池剩余模型/场景、CPU/GPU活动worker、每模型三阶段进度、已有完整结果及ETA。
+全局ETA模拟独立训练/评估资源与模型就绪依赖，不将训练时间与评估时间相加；无实测计时时标采样中或粗估。
+`--watch-seconds 0`打印一次快照；关闭查看器不停止任务。
+
+使用相同suite/output参数的`stop --target train|eval|all`安全停止；重新运行原启动命令恢复。
+恢复时跳过已完成训练，只补缺失场景；失败、停止和缺参考模型不会计为完成。
+`report`从新结果刷新各目录同一报告，不生成第三份总报告。当前代码准备不代表21次训练或科学结论已经完成。
+
 当前实验版本为 **main0921**：固定三种子0/1/2，HAD与SMACv2共用现有训练框架。协议、运行命令和正文/附录安排见[实验计划](Open-SCORE/outputs/main0921/实验计划.md)，全部结果汇入唯一[实验报告](Open-SCORE/outputs/main0921/实验报告.md)。原 `outputs/main` 保留历史结果与恢复信息。训练允许GPU0/GPU1，按可用显存分配，HAD每卡最多3路、两卡最多6路，SMAC每卡最多2路、两卡最多4路，按实际资源准入；CPU终评与机制合计最多4个任务。
 
 本机目录按用途组织：`/data3/dell/Saileron/projects/HADE` 与 `projects/SMACv2` 保存环境源码，`envs/saileron-smac` 保存独立Python运行环境，`envs/StarCraftII` 保存游戏运行文件。适配器并列位于 `Open-SCORE/open_score/envs/`；新缓存、临时文件均限制在该工作区。必须用计划中的绝对Python路径或 `conda run -p`，不要用可能指向历史副本的环境名称。

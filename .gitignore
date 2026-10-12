@@ -13,6 +13,10 @@
 *.h5
 *.log
 
+# main1013 publishes code only; scientific outputs stay on the experiment host.
+Open-SCORE/outputs/main1013/
+Open-SCORE/outputs/main1013_supp/
+
 # Python / packaging
 __pycache__/
 *.py[cod]

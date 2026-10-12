@@ -327,11 +327,21 @@ class GraphEncoder(_EntityEncoder):
 
 
 class TemporalHead(nn.Module):
-    """GRU for DCG/GNN, retaining the persistent padded agent slots."""
+    """Temporal or same-width feedforward head with persistent agent slots."""
     def __init__(self, args, output_features=None):
         super().__init__()
         self.args = args
+        self.mode = getattr(args, "temporal_head_mode", "gru")
+        if self.mode not in ("gru", "feedforward"):
+            raise ValueError("temporal_head_mode must be gru or feedforward")
         self.rnn = nn.GRUCell(args.rnn_hidden_dim, args.rnn_hidden_dim)
+        if self.mode == "feedforward":
+            # Consume the same GRU initialization draws as the common arm,
+            # then replace it without changing the Q-head or mixer RNG stream.
+            with th.random.fork_rng(devices=[]):
+                self.feedforward = nn.Sequential(
+                    nn.Linear(args.rnn_hidden_dim, args.rnn_hidden_dim), nn.ReLU())
+            del self.rnn
         self.enemy_head = getattr(args, "action_head", None) == "common6_enemy"
         if self.enemy_head:
             self.fc_base = nn.Linear(args.rnn_hidden_dim, 6)
@@ -360,7 +370,8 @@ class TemporalHead(nn.Module):
         outputs = []
         for t in range(ts):
             alive = ~inputs["entity_mask"][:, t, :na].bool()
-            h = self.rnn(x[:, t].reshape(bs * na, hd), h)
+            current = x[:, t].reshape(bs * na, hd)
+            h = self.feedforward(current) if self.mode == "feedforward" else self.rnn(current, h)
             h = h.masked_fill(~alive.reshape(-1, 1), 0)
             outputs.append(h.reshape(bs, na, hd))
             # Replay contains complete episodes. The final observation must
@@ -373,7 +384,9 @@ class TemporalHead(nn.Module):
         bs, na, hd = x.shape
         if hidden.shape[0] != bs:
             hidden = hidden.repeat(bs // hidden.shape[0], 1, 1)
-        flat = self.rnn(x.reshape(bs * na, hd), hidden.reshape(bs * na, hd))
+        current = x.reshape(bs * na, hd)
+        flat = (self.feedforward(current) if self.mode == "feedforward" else
+                self.rnn(current, hidden.reshape(bs * na, hd)))
         flat = flat.masked_fill(~alive.reshape(-1, 1), 0)
         hidden = flat.reshape(bs, na, hd)
         return self.action_values(hidden, enemy_tokens), hidden
@@ -636,6 +649,22 @@ class GlobalBranch(nn.Module):
         self.intent_oracle_actions = None
         self.last_intent = None
         self.readout_override = None
+        self.memory_token = bool(getattr(args, "global_memory_token", False))
+        if self.memory_token:
+            if (kind != "cycle" or self.loop_core is not None or self.intent
+                    or self.rer_update != "tied"):
+                raise ValueError("global_memory_token requires the shared entity-cycle branch")
+            if hidden != 64 or dim != 64:
+                raise ValueError("global_memory_token requires a 64-dimensional GRU and token space")
+            if not getattr(args, "global_query_no_memory", False):
+                raise ValueError("Memory-token comparisons retain the current-only reader query")
+            if getattr(args, "temporal_head_mode", "gru") != "gru":
+                raise ValueError("global_memory_token requires the downstream GRU")
+            # The projection and dedicated type embedding are exclusive to the
+            # new arms; all common host/reader/mixer initialization stays fixed.
+            with th.random.fork_rng(devices=[]):
+                self.memory_token_proj = nn.Linear(hidden, dim)
+                self.memory_token_type = nn.Parameter(th.randn(1, 1, dim) * 0.02)
 
     def project(self, tokens):
         return self.token_proj(tokens)
@@ -1582,6 +1611,99 @@ class EntityAgent(ALMAAgent):
         self.last_loop_stats = {} if stats is None else stats
         return q.masked_fill(inputs["entity_mask"][:, :, :na].unsqueeze(-1), 0), h
 
+    def _compute_memory_token(self, inputs, local, tokens, key_mask, dead, types,
+                              hidden, depth, enemy_tokens=None):
+        """Rebuild each current entity set using that branch's previous GRU state.
+
+        Real, within-group and cross-group inputs occupy separate batch rows.
+        Their recurrent states are never shared, and the temporal token is
+        appended after physical masking so imagination always keeps it visible.
+        """
+        bs, ts, na, hidden_dim = local.shape
+        n_ent, dim = tokens.shape[-2:]
+        n_rows, n_keys = bs * na, n_ent + 1
+        n_act = int(self.args.n_actions) if enemy_tokens is None else 6 + enemy_tokens.shape[-2]
+        depth_t = self.global_net.expand_depth(depth, bs, ts, na, tokens.device).reshape(bs, ts, na)
+        outputs = []
+        if getattr(self.global_net, "capture_attention", False):
+            self.global_net.last_self_attn = []
+            self.global_net.self_attn.capture_attention = True
+            self.global_net.read_attn.capture_attention = True
+        for t in range(ts):
+            alive = ~dead[:, t]
+            flat_alive = alive.reshape(-1)
+            active = flat_alive.nonzero(as_tuple=False).flatten()
+            if not active.numel():
+                hidden = hidden.masked_fill(~alive.unsqueeze(-1), 0)
+                outputs.append(local.new_zeros(bs, na, n_act))
+                continue
+            h_prev = hidden
+            token_hidden = hidden.reshape(n_rows, hidden_dim)
+            if getattr(self.args, "global_memory_token_detach", False):
+                # Only the feedback edge is cut. The projection learns, and
+                # the downstream GRU keeps its ordinary temporal gradient.
+                token_hidden = token_hidden.detach()
+            temporal = (self.global_net.memory_token_proj(token_hidden).unsqueeze(1)
+                        + self.global_net.memory_token_type)
+            temporal = temporal.masked_fill(~flat_alive[:, None, None], 0)
+            tok_t = th.cat((tokens[:, t].reshape(n_rows, n_ent, dim), temporal), dim=1)
+            km_t = th.cat((key_mask[:, t].reshape(n_rows, n_ent), ~flat_alive[:, None]), dim=1)
+            # Physical role vectors stay three-dimensional. This extra token
+            # is distinguished by its learned type, never by population counts.
+            ty_t = th.cat((types[:, t].reshape(n_rows, n_ent, 3),
+                           types.new_zeros(n_rows, 1, 3)), dim=1)
+            current_depth = depth_t[:, t].reshape(-1)
+            live_states, live_mask = self.global_net.build_memories(
+                tok_t.index_select(0, active), km_t.index_select(0, active),
+                ty_t.index_select(0, active), current_depth.index_select(0, active))
+            stacked = th.stack([
+                state.new_zeros(n_rows, n_keys, dim).index_copy(0, active, state)
+                for state in live_states], dim=0)
+            mask_t = km_t if live_mask is None else km_t.new_ones(n_rows, n_keys).index_copy(
+                0, active, live_mask)
+            capture_rows = self._capture_rows(alive)
+            self.global_net._capture_read_indices = capture_rows
+            fused = self.global_net._maybe_checkpoint(
+                self.global_net._read_stacked, stacked, tok_t, km_t,
+                hidden.reshape(n_rows, hidden_dim), current_depth,
+                local[:, t].reshape(n_rows, hidden_dim), mask_t)
+            q_t, hidden = self._head.step(
+                fused.reshape(bs, na, hidden_dim), hidden, alive,
+                None if enemy_tokens is None else enemy_tokens[:, t])
+            outputs.append(q_t)
+            if capture_rows is not None:
+                def picked(tensor):
+                    return tensor.index_select(0, capture_rows).detach().cpu()
+                h0 = picked(tok_t).masked_fill(picked(km_t).unsqueeze(-1), 0)
+                observer_ids = (capture_rows % na).detach().cpu()
+                source_ids = th.arange(n_keys).expand(len(capture_rows), -1).clone()
+                row_ids = th.arange(len(capture_rows))
+                source_ids[:, 0] = observer_ids
+                source_ids[row_ids, observer_ids] = 0
+                source_ids[:, -1] = -1
+                self.last_capture.append({
+                    "time_id": int(getattr(self, "_capture_time", 0)) + t,
+                    "batch_ids": (capture_rows // na).detach().cpu(),
+                    "observer_ids": observer_ids,
+                    "H": th.cat((h0[:, None], picked(stacked.transpose(0, 1))), dim=1),
+                    "u": self.global_net.captured_reads,
+                    "alpha": self.global_net.captured_alpha,
+                    "read_attn": getattr(self.global_net, "captured_read_attn", None),
+                    "u_t": picked(fused),
+                    "h_t": picked(hidden.reshape(n_rows, hidden_dim)),
+                    "h_prev": picked(h_prev.reshape(n_rows, hidden_dim)),
+                    "q": picked(q_t.reshape(n_rows, n_act)),
+                    "key_mask": picked(km_t),
+                    "types": picked(ty_t),
+                    "origin": source_ids,
+                    "memory_token_index": n_ent,
+                    "enemy_ids": th.arange(n_ent - na, dtype=th.long),
+                })
+            self.global_net._capture_read_indices = None
+        q = th.stack(outputs, dim=1)
+        agent_mask = inputs["entity_mask"][:, :, :na]
+        return q.masked_fill(agent_mask.unsqueeze(3), 0), hidden
+
     def _compute_global(self, inputs):
         if getattr(self.global_net, "loop_core", None) is not None:
             return self._compute_loop(inputs)
@@ -1607,6 +1729,9 @@ class EntityAgent(ALMAAgent):
         kind = self.global_branch
         outputs = []
         self.global_net.last_intent = None
+        if self.global_net.memory_token:
+            return self._compute_memory_token(
+                inputs, local, tokens, key_mask, dead, types, h, depth, enemy_tokens)
         if kind in ("cycle", "slot", "feedback"):
             if getattr(self.global_net, "capture_attention", False):
                 self.global_net.last_self_attn = []
@@ -1679,6 +1804,8 @@ class EntityAgent(ALMAAgent):
                         "u": self.global_net.captured_reads,
                         "alpha": self.global_net.captured_alpha,
                         "read_attn": getattr(self.global_net, "captured_read_attn", None),
+                        "u_t": picked(fused),
+                        "h_t": picked(h.reshape(bs * na, hidden_dim)),
                         "h_prev": picked(h_prev.reshape(bs * na, hidden_dim)),
                         "q": picked(q_t.reshape(bs * na, n_act)),
                         "key_mask": picked(km_t),
@@ -1840,7 +1967,7 @@ class SharedEntityMAC(PolicyValueMixin, EntityMAC):
 
 
 def build_mac(scheme, groups, args):
-    if getattr(args, "method", None) == "transfqmix":
+    if getattr(args, "method", None) in ("transfqmix", "transfqmix_aligned"):
         from open_score.algos.transfqmix import TransfQMixMAC
         return TransfQMixMAC(scheme, groups, args)
     if args.mac == "dcg_mac":

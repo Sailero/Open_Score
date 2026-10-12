@@ -14,6 +14,19 @@ from torch import nn
 from torch.nn import functional as F
 
 
+def _entity_inputs(batch, t, args):
+    """Central entity inputs shared by actor, training mixer and eval mixer."""
+    entities = batch["entities"][:, t]
+    if not getattr(args, "transfqmix_aligned", False):
+        return entities
+    # Replay stores the ten physical features. Aligned policies also see the
+    # preceding action of each defender; attackers and targets get zeros.
+    last_actions = entities.new_zeros((*entities.shape[:-1], int(args.n_actions)))
+    if t > 0:
+        last_actions[:, :int(args.n_agents)] = batch["actions_onehot"][:, t - 1]
+    return th.cat((entities, last_actions), dim=-1)
+
+
 class _Attention(nn.Module):
     """Each head has the full embedding width, as in the author code."""
 
@@ -114,6 +127,10 @@ class TransfQMixMAC:
         self.agent_output_type = "q"
         shape = scheme.get("observer_entities", scheme["entities"])["vshape"]
         width = int(shape[-1] if isinstance(shape, (tuple, list)) else shape)
+        if getattr(args, "transfqmix_aligned", False):
+            if str(getattr(args, "env", "had")) != "had" or "observer_entities" in scheme:
+                raise ValueError("TransfQMix-aligned requires the HAD physical-entity scheme")
+            width += int(args.n_actions)
         self.agent = TransfQMixAgent(width, args)
         if self.agent.smac and "observer_entities" not in scheme:
             raise ValueError("TransfQMix SMAC actor requires native observer_entities")
@@ -147,7 +164,7 @@ class TransfQMixMAC:
         else:
             # Import at call time: the shared model module also imports MACs.
             from open_score.models.entity_encoder import relative_entity_views
-            inputs = {"entities": batch["entities"][:, t:t + 1],
+            inputs = {"entities": _entity_inputs(batch, t, self.args).unsqueeze(1),
                       "obs_mask": batch["obs_mask"][:, t:t + 1],
                       "entity_mask": absent[:, None]}
             entities, mask, _, _ = relative_entity_views(inputs, self.args)
@@ -194,7 +211,7 @@ class TransfQMixMAC:
             else:
                 with th.no_grad():
                     total, recurrent = mixer(chosen, self._decision_hidden[active],
-                        self._evaluation_hyper[active], batch["entities"][active, t],
+                        self._evaluation_hyper[active], _entity_inputs(batch, t, self.args)[active],
                         batch["entity_mask"][active, t])
                 self._evaluation_hyper[active] = recurrent
                 self._evaluation_total = q.new_zeros(batch.batch_size)
@@ -232,7 +249,10 @@ class TransfQMixMixer(nn.Module):
         self.width = int(getattr(args, "mixer_emb", 32))
         if self.width != int(getattr(args, "emb", 32)):
             raise ValueError("TransfQMix actor and mixer token widths must agree")
-        self.feat_embedding = nn.Linear(int(args.entity_shape), self.width)
+        input_shape = int(args.entity_shape)
+        if getattr(args, "transfqmix_aligned", False):
+            input_shape += int(args.n_actions)
+        self.feat_embedding = nn.Linear(input_shape, self.width)
         self.transformer = _Transformer(self.width, int(getattr(args, "mixer_heads", 4)),
             int(getattr(args, "mixer_depth", 2)), int(getattr(args, "ff_hidden_mult", 4)),
             float(getattr(args, "dropout", 0)))
@@ -288,7 +308,15 @@ class TransfQMixLearner:
             parameter.requires_grad_(False)
         self.target_mixer.requires_grad_(False)
         self.params = list(mac.parameters()) + list(self.mixer.parameters())
-        self.optimiser = th.optim.Adam(self.params, lr=args.lr, weight_decay=args.weight_decay)
+        self.aligned = bool(getattr(args, "transfqmix_aligned", False))
+        if self.aligned:
+            if float(args.td_lambda) != 0 or not args.double_q:
+                raise ValueError("TransfQMix-aligned requires one-step Double-Q")
+            self.optimiser = th.optim.RMSprop(self.params, lr=args.lr,
+                alpha=float(getattr(args, "optim_alpha", .99)),
+                eps=float(getattr(args, "optim_eps", 1e-5)), weight_decay=args.weight_decay)
+        else:
+            self.optimiser = th.optim.Adam(self.params, lr=args.lr, weight_decay=args.weight_decay)
         self.last_target_update_episode = 0
         self.log_stats_t = -args.learner_log_interval - 1
 
@@ -302,7 +330,7 @@ class TransfQMixLearner:
         for t in range(values.shape[1]):
             absent = batch["entity_mask"][:, t].bool() | ~batch["filled"][:, t].bool()
             total, recurrent = mixer(values[:, t], hidden[:, t], recurrent,
-                                     batch["entities"][:, t], absent)
+                                     _entity_inputs(batch, t, self.args), absent)
             outputs.append(total)
         return th.stack(outputs, dim=1)
 
@@ -327,7 +355,8 @@ class TransfQMixLearner:
         total = self._mix_sequence(self.mixer, chosen, hidden[:, :-1], batch)
         error = total - targets
         count = mask.sum().clamp_min(1)
-        loss = (0.5 * error.square() * mask).sum() / count
+        loss_scale = 1.0 if self.aligned else 0.5
+        loss = (loss_scale * error.square() * mask).sum() / count
         self.optimiser.zero_grad(set_to_none=True)
         loss.backward()
         norm = nn.utils.clip_grad_norm_(self.params, self.args.grad_norm_clip)

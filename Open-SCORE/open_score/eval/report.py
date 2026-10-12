@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from contextlib import contextmanager
 import csv
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import json
 import math
 import os
@@ -3017,3 +3017,525 @@ def refresh_report_async(output=DEFAULT_OUTPUT, *, run=FORMAL_RUN):
     _ASYNC_REPORT[key] = thread
     thread.start()
     return thread
+
+
+_MAIN1013_LABELS = {
+    "regir_nomem_memtoken": "E1 Memory-as-token",
+    "transfqmix_aligned": "TransfQMix-aligned",
+    "regir_nomem_ff": "No-memory",
+    "regir_nomem_memtoken_sg": "E1-SG",
+    "regir_nomem_r0": "SCOPE Direct read",
+    "regir_nomem_r1": "SCOPE One round",
+    "regir_nomem_norefil": "SCOPE No host",
+}
+_MAIN1013_GROUPS = {
+    "ID": tuple(VALIDATION_CONFIGS),
+    "K-OOD": tuple((10, 10, k) for k in (4, 6, 9, 12)),
+    "N-OOD": tuple((n, n, 2) for n in (15, 20, 25, 30, 40, 50)),
+    "Joint-OOD": tuple((n, n, k) for n in (15, 20, 30) for k in (4, 6))
+                 + ((30, 30, 9), (30, 30, 12)),
+    "All24": tuple(FINAL_CONFIGS),
+}
+
+
+def _main1013_json(path):
+    try:
+        value = json.loads(Path(path).read_text(encoding="utf-8"))
+        return value if isinstance(value, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _main1013_statistics(values):
+    return dict(mean=statistics.mean(values), sample_sd=statistics.stdev(values) if len(values) > 1 else None,
+                n=len(values), per_seed=list(values)) if values else None
+
+
+def _main1013_records(output, models):
+    """One streaming pass through only this version's episode CSVs."""
+    from open_score.utils.logging import iter_records
+    by_model = {(row["method"], int(row["seed"])): row for row in models}
+    cells, validation = defaultdict(dict), defaultdict(dict)
+    committed = set()
+    identities = defaultdict(set)
+    issues = Counter()
+    expected_configs = set(FINAL_CONFIGS)
+    for row in iter_records(output, "episodes", run=FORMAL_RUN, env="had"):
+        identity = row.get("method"), row.get("seed")
+        if identity not in by_model or not _numeric(row.get("D")):
+            continue
+        try:
+            config = config_key(row["config"])
+            scene = int(row["episode_seed"])
+        except (ValueError, TypeError, KeyError):
+            issues["invalid_scene_identity"] += 1
+            continue
+        phase, arm = row.get("phase"), row.get("arm")
+        if phase in ("train_eval", "validation"):
+            if config not in VALIDATION_CONFIGS:
+                continue
+            index = VALIDATION_CONFIGS.index(config)
+            if not 9500 + 25 * index <= scene < 9500 + 25 * (index + 1):
+                issues["validation_scene_outside_fixed_pool"] += 1
+                continue
+            point = row.get("eval_point")
+            if point is not None:
+                validation[(*identity, int(point)), config][scene] = (float(row["D"]), int(row.get("t_env") or 0))
+            continue
+        pool = ("formal" if phase == "final_eval" and arm == "formal" else
+                "confirm" if phase == "confirm_eval" and arm == "confirm" else
+                "gru_reset" if arm == "gru_reset" else None)
+        if pool is None or config not in expected_configs:
+            continue
+        start, count = (110000, 300) if pool == "confirm" else (9000, 10 if pool == "gru_reset" else 300)
+        if not start <= scene < start + count:
+            issues[pool + "_scene_outside_fixed_pool"] += 1
+            continue
+        checkpoint = row.get("checkpoint_id") or row.get("checkpoint")
+        final = re.search(r"final@(\d+)", str(checkpoint or ""))
+        wanted = by_model[identity].get("train", {}).get("checkpoint_id")
+        if not final or int(final[1]) < 1000000 or (wanted and checkpoint != wanted):
+            issues["unqualified_final_identity"] += 1
+            continue
+        identities[(*identity, pool)].add(checkpoint)
+        cells[(*identity, pool), config][scene] = float(row["D"])
+        committed.add((*identity, pool, config, scene, str(checkpoint), row.get("source_version"), row.get("protocol")))
+    results, curves = {}, defaultdict(list)
+    for model in models:
+        method, seed = model["method"], int(model["seed"])
+        result = dict(id=model["id"], method=method, seed=seed, scope=model.get("scope"), train=model.get("train", {}))
+        for pool in ("formal", "confirm", "gru_reset"):
+            configs = {config: values for (identity, config), values in cells.items() if identity == (method, seed, pool)}
+            completed = sum(len(values) for values in configs.values())
+            complete = (pool != "gru_reset" and set(configs) == expected_configs
+                        and all(len(values) == 300 for values in configs.values())
+                        and len(identities[method, seed, pool]) == 1)
+            cell_rows = {",".join(map(str, config)): dict(completed=len(values), D_sum=sum(values.values()),
+                            D=statistics.mean(values.values()) if values else None) for config, values in configs.items()}
+            means = {config: statistics.mean(values.values()) for config, values in configs.items()}
+            groups = {name: statistics.mean(means[config] for config in group)
+                      for name, group in _MAIN1013_GROUPS.items()} if complete else None
+            result[pool] = dict(status="complete" if complete else ("not_applicable" if pool == "gru_reset" and not model.get(pool, {}).get("total") else "pending"), completed=completed,
+                                total=7200 if pool != "gru_reset" else model.get(pool, {}).get("total", 0),
+                                checkpoint_ids=sorted(identities[method, seed, pool]), configs=cell_rows,
+                                groups=groups, D=groups["All24"] if groups else None)
+        reset = model.get("gru_reset", {})
+        reset_keys = {tuple(map(int, key.split(","))) for key in reset.get("configs", {})}
+        paired = {}
+        for config in reset_keys:
+            control, intervention = cells[(method, seed, "formal"), config], cells[(method, seed, "gru_reset"), config]
+            expected = set(range(9000, 9010))
+            if expected.issubset(control) and set(intervention) == expected:
+                paired[",".join(map(str, config))] = statistics.mean(intervention[scene] - control[scene] for scene in sorted(expected))
+        if reset.get("total") and len(paired) == len(reset_keys) and reset_keys:
+            result["gru_reset"].update(status="complete", paired_delta_D=paired)
+        results[model["id"]] = result
+        points = sorted({identity[2] for identity, _ in validation if identity[:2] == (method, seed)})
+        for point in points:
+            values = [validation[(method, seed, point), config] for config in VALIDATION_CONFIGS]
+            if all(len(rows) == 25 for rows in values):
+                damage = statistics.mean(statistics.mean(x[0] for x in rows.values()) for rows in values)
+                steps = max(x[1] for rows in values for x in rows.values())
+                curves[method].append(dict(seed=seed, eval_point=point, t_env=steps, D=damage, R=-damage))
+    aggregate = {}
+    methods = list(dict.fromkeys(model["method"] for model in models))
+    for method in methods:
+        aggregate[method] = {}
+        selected = {int(row["seed"]): results[row["id"]] for row in models if row["method"] == method}
+        for pool in ("formal", "confirm"):
+            if set(selected) == set(FORMAL_SEEDS) and all(selected[seed][pool]["groups"] for seed in FORMAL_SEEDS):
+                aggregate[method][pool] = {group: _main1013_statistics([selected[seed][pool]["groups"][group] for seed in FORMAL_SEEDS])
+                                           for group in _MAIN1013_GROUPS}
+            else:
+                aggregate[method][pool] = None
+    return dict(models=list(results.values()), aggregate=aggregate, validation_curves=dict(curves),
+                excluded_records=dict(issues), _committed=committed)
+
+
+def _main1013_diagnostics(output, committed):
+    """Summarize last committed captures without retaining raw float lists."""
+    import gzip
+    import numpy as np
+    path = output / "had" / "diagnostics.jsonl.gz"
+    result = dict(status="pending", coverage=[], representation_space="fused_temporal_input",
+                  V1=[], V2=[], V3=[], references_status="reference_missing",
+                  covariance="Each model's four ID configurations, 20-step bins; 90% sample covariance + 10% trace-scaled identity.",
+                  distance="RMS Mahalanobis over live decisions within an episode; scenes equally weighted within seed.",
+                  damage_curve="Physical steps 1–100; natural termination followed by zero damage.")
+    if not path.exists():
+        return result
+    captures = {}
+    issues = Counter()
+    try:
+        with gzip.open(path, "rt", encoding="utf-8") as stream:
+            for line in stream:
+                if not line.endswith("\n"):
+                    break
+                row = json.loads(line)
+                key = (row.get("method"), row.get("seed"), row.get("arm"), config_key(row["config"]),
+                       int(row["episode_seed"]), str(row.get("checkpoint_id")), row.get("source_version"), row.get("protocol"))
+                if key not in committed:
+                    continue
+                moments = {}
+                for decision in row.get("representations", []):
+                    block = min(4, max(0, int(decision.get("step", decision.get("time_id", 0))) // 20))
+                    for feature, field in (("u", "u_t"), ("h", "h_t")):
+                        values = np.asarray(decision.get(field, []), dtype=np.float64)
+                        if values.ndim != 2 or values.shape[1] != 64 or not len(values) or not np.isfinite(values).all():
+                            issues["invalid_representation"] += 1
+                            continue
+                        item = moments.setdefault((block, feature), {"n": 0, "sum": np.zeros(64), "cross": np.zeros((64, 64))})
+                        item["n"] += len(values)
+                        item["sum"] += values.sum(0)
+                        item["cross"] += values.T @ values
+                damage = [0.] * 100
+                for frame in row.get("damage_curve", []):
+                    step, value = int(frame["step"]), frame.get("step_damage")
+                    if 1 <= step <= 100 and _numeric(value):
+                        damage[step - 1] += float(value)
+                perturbations = row.get("perturbations", [])
+                alive = sum(int(item.get("alive", 0)) for item in perturbations)
+                changed = sum(float(item.get("changed_actions", float(item.get("action_change_fraction", 0)) * int(item.get("alive", 0))))
+                              for item in perturbations)
+                # Device is deliberately absent from the scientific identity.
+                # A restarted worker replaces its earlier diagnostic capture.
+                if key in captures:
+                    issues["duplicate_diagnostic_replaced"] += 1
+                captures[key] = dict(method=row["method"], seed=int(row["seed"]), config=key[3], scene=key[4],
+                                     moments=moments, damage=damage if row.get("damage_curve") else None,
+                                     perturbation=changed / alive if alive else None)
+    except (EOFError, OSError, ValueError) as error:
+        # A writer can be finishing a gzip member. Committed complete members
+        # remain usable; the next report retries the unfinished final member.
+        issues["unfinished_diagnostic_member"] += 1
+        result["read_note"] = type(error).__name__
+    grouped = defaultdict(list)
+    for row in captures.values():
+        grouped[row["method"], row["seed"], row["config"]].append(row)
+    result["coverage"] = [dict(method=method, seed=seed, config=list(config), episodes=len(rows),
+                                representation_episodes=sum(bool(row["moments"]) for row in rows),
+                                damage_episodes=sum(row["damage"] is not None for row in rows),
+                                perturbation_episodes=sum(row["perturbation"] is not None for row in rows))
+                           for (method, seed, config), rows in sorted(grouped.items())]
+    references = {}
+    for method, seed in sorted({(row["method"], row["seed"]) for row in captures.values()}):
+        id_rows = [row for config in VALIDATION_CONFIGS for row in grouped[method, seed, config] if row["moments"]]
+        if any({row["scene"] for row in grouped[method, seed, config] if row["moments"]} != set(range(9000, 9010))
+               for config in VALIDATION_CONFIGS):
+            continue
+        for block in range(5):
+            for feature in ("u", "h"):
+                entries = [row["moments"][block, feature] for row in id_rows if (block, feature) in row["moments"]]
+                n = sum(item["n"] for item in entries)
+                if n < 2:
+                    continue
+                summed = sum((item["sum"] for item in entries), np.zeros(64))
+                cross = sum((item["cross"] for item in entries), np.zeros((64, 64)))
+                mean = summed / n
+                covariance = (cross - np.outer(summed, summed) / n) / (n - 1)
+                scale = max(float(np.trace(covariance)) / 64, 1e-8)
+                regularized = .9 * covariance + .1 * scale * np.eye(64)
+                references[method, seed, block, feature] = mean, np.linalg.pinv(regularized, hermitian=True)
+    distances, damages, perturbations = defaultdict(dict), defaultdict(dict), defaultdict(dict)
+    for (method, seed, config), rows in grouped.items():
+        for block in range(5):
+            for feature in ("u", "h"):
+                reference = references.get((method, seed, block, feature))
+                values = []
+                if reference is not None:
+                    mean, inverse = reference
+                    for row in rows:
+                        moments = row["moments"].get((block, feature))
+                        if moments is None:
+                            continue
+                        centered = (moments["cross"] - np.outer(moments["sum"], mean)
+                                    - np.outer(mean, moments["sum"]) + moments["n"] * np.outer(mean, mean))
+                        square = float(np.einsum("ij,ji", inverse, centered)) / moments["n"]
+                        values.append(math.sqrt(max(0., square)))
+                if values:
+                    distances[method, config, block, feature][seed] = dict(mean=statistics.mean(values), scenes=len(values))
+        curves = [row["damage"] for row in rows if row["damage"] is not None]
+        if curves:
+            damages[method, config][seed] = dict(values=np.mean(curves, axis=0).tolist(), scenes=len(curves))
+        values = [row["perturbation"] for row in rows if row["perturbation"] is not None]
+        if values:
+            perturbations[method, config][seed] = dict(mean=statistics.mean(values), scenes=len(values))
+    for (method, config, block, feature), values in sorted(distances.items()):
+        result["V1"].append(dict(method=method, config=list(config), time_bin=block, steps=[20 * block, 20 * block + 19],
+                                  feature=feature, statistics=_main1013_statistics([values[seed]["mean"] for seed in sorted(values)]),
+                                  seeds=sorted(values), scenes_by_seed={str(seed): values[seed]["scenes"] for seed in values}))
+    for (method, config), values in sorted(damages.items()):
+        array = np.asarray([values[seed]["values"] for seed in sorted(values)])
+        result["V2"].append(dict(method=method, config=list(config), mean=array.mean(0).tolist(),
+                                  sample_sd=array.std(0, ddof=1).tolist() if len(array) > 1 else None,
+                                  seeds=sorted(values), scenes_by_seed={str(seed): values[seed]["scenes"] for seed in values}))
+    for (method, config), values in sorted(perturbations.items()):
+        result["V3"].append(dict(method=method, config=list(config), relative_rms=.01,
+                                  statistics=_main1013_statistics([values[seed]["mean"] for seed in sorted(values)]),
+                                  seeds=sorted(values), scenes_by_seed={str(seed): values[seed]["scenes"] for seed in values}))
+    result.update(status="partial" if captures else "pending", committed_unique_episodes=len(captures),
+                  complete_ID_references=len({key[:2] for key in references}), excluded_or_unfinished_records=dict(issues))
+    return result
+
+
+def _main1013_diagnostic_figures(output, data, plt):
+    diagnostics = data["diagnostics"]
+    directory, figures = output / "figures", []
+    if diagnostics["V1"]:
+        methods = sorted({row["method"] for row in diagnostics["V1"]})
+        fig, axes = plt.subplots(len(methods), 2, figsize=(12, 4 * len(methods)), squeeze=False)
+        for method, row_axes in zip(methods, axes):
+            for feature, ax in zip(("u", "h"), row_axes):
+                grouped = defaultdict(list)
+                for row in diagnostics["V1"]:
+                    if row["method"] == method and row["feature"] == feature:
+                        grouped[tuple(row["config"])].append(row)
+                for config, rows in sorted(grouped.items()):
+                    rows.sort(key=lambda row: row["time_bin"])
+                    x = [row["steps"][0] + 9.5 for row in rows]
+                    y = [row["statistics"]["mean"] for row in rows]
+                    error = [row["statistics"]["sample_sd"] or 0 for row in rows]
+                    line, = ax.plot(x, y, marker=".", label=f"N={config[0]}, K={config[2]}")
+                    ax.fill_between(x, [a - b for a, b in zip(y, error)], [a + b for a, b in zip(y, error)], color=line.get_color(), alpha=.1)
+                ax.set(title=_MAIN1013_LABELS.get(method, method) + (" / fused input" if feature == "u" else " / GRU hidden"),
+                       xlabel="Physical engagement step (20-step bins)", ylabel="RMS regularized Mahalanobis distance")
+                ax.grid(alpha=.2)
+                ax.legend(fontsize=7, ncol=2)
+        fig.tight_layout()
+        _save_figure(fig, directory / "representation_shift.png")
+        plt.close(fig)
+        figures.append("figures/representation_shift.png")
+    if diagnostics["V2"]:
+        configs = sorted({tuple(row["config"]) for row in diagnostics["V2"]})
+        columns = min(4, len(configs))
+        fig, axes = plt.subplots(math.ceil(len(configs) / columns), columns,
+                                 figsize=(4 * columns, 3 * math.ceil(len(configs) / columns)), squeeze=False)
+        for config, ax in zip(configs, axes.flat):
+            for row in diagnostics["V2"]:
+                if tuple(row["config"]) != config:
+                    continue
+                x, y = list(range(1, 101)), row["mean"]
+                label = _MAIN1013_LABELS.get(row["method"], row["method"]) + f" ({len(row['seeds'])} seeds)"
+                line, = ax.plot(x, y, label=label, linewidth=1.3)
+                if row["sample_sd"]:
+                    ax.fill_between(x, [a - b for a, b in zip(y, row["sample_sd"])],
+                                    [a + b for a, b in zip(y, row["sample_sd"])], color=line.get_color(), alpha=.12)
+            ax.set(title=f"{config[0]}v{config[1]}, K={config[2]}", xlabel="Physical step", ylabel="Step target damage")
+            ax.grid(alpha=.2)
+            ax.legend(fontsize=6)
+        for ax in list(axes.flat)[len(configs):]:
+            ax.set_visible(False)
+        fig.tight_layout()
+        _save_figure(fig, directory / "damage_over_time.png")
+        plt.close(fig)
+        figures.append("figures/damage_over_time.png")
+    if diagnostics["V3"]:
+        rows = diagnostics["V3"]
+        fig, ax = plt.subplots(figsize=(7, 4))
+        values = [100 * row["statistics"]["mean"] for row in rows]
+        errors = [100 * (row["statistics"]["sample_sd"] or 0.) for row in rows]
+        labels = [f"N={row['config'][0]}\nK={row['config'][2]}" for row in rows]
+        ax.bar(range(len(rows)), values, yerr=errors, capsize=3, alpha=.75)
+        ax.set(xticks=list(range(len(rows))), xticklabels=labels,
+               ylabel="Changed greedy actions (%)", title="E1: same-state 1% RMS hidden perturbation")
+        ax.grid(axis="y", alpha=.2)
+        _save_figure(fig, directory / "memory_sensitivity.png")
+        plt.close(fig)
+        figures.append("figures/memory_sensitivity.png")
+    paired = defaultdict(dict)
+    for model in data["models"]:
+        for config, value in model["gru_reset"].get("paired_delta_D", {}).items():
+            paired[config][model["seed"]] = value
+    if paired:
+        configs = sorted(paired, key=lambda key: tuple(map(int, key.split(","))))
+        values = [_main1013_statistics([paired[config][seed] for seed in sorted(paired[config])]) for config in configs]
+        fig, ax = plt.subplots(figsize=(7, 4))
+        ax.bar(range(len(configs)), [value["mean"] for value in values],
+               yerr=[value["sample_sd"] or 0 for value in values], capsize=3, alpha=.75)
+        for index, value in enumerate(values):
+            ax.scatter([index] * len(value["per_seed"]), value["per_seed"], s=20, color="#222222")
+        ax.axhline(0, color="#444444", linewidth=1)
+        ax.set(xticks=list(range(len(configs))), xticklabels=["N=" + key.split(",")[0] + " / K=" + key.split(",")[2] for key in configs],
+               ylabel="Paired target-damage change (reset - standard)", title="E1 frozen per-step GRU reset")
+        _save_figure(fig, directory / "gru_reset.png")
+        plt.close(fig)
+        figures.append("figures/gru_reset.png")
+    return figures
+
+
+def _main1013_figures(output, data):
+    curves = data["validation_curves"]
+    comparisons = {method: pools for method, pools in data["aggregate"].items() if any(pools.values())}
+    diagnostics = data["diagnostics"]
+    has_diagnostics = any(diagnostics[key] for key in ("V1", "V2", "V3")) or any(row["gru_reset"].get("paired_delta_D") for row in data["models"])
+    if not curves and not comparisons and not has_diagnostics:
+        return []
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    directory = output / "figures"
+    directory.mkdir(parents=True, exist_ok=True)
+    figures = []
+    if curves:
+        fig, ax = plt.subplots(figsize=(9, 5))
+        for method, observations in curves.items():
+            points = defaultdict(list)
+            for row in observations:
+                points[row["eval_point"]].append(row)
+            x, y, errors = [], [], []
+            counts = []
+            for point, rows in sorted(points.items()):
+                values = [row["R"] for row in rows]
+                x.append(statistics.mean(row["t_env"] for row in rows) / 1000000)
+                y.append(statistics.mean(values))
+                errors.append(statistics.stdev(values) if len(values) > 1 else 0.)
+                counts.append(len(rows))
+            label = _MAIN1013_LABELS.get(method, method) + f" (seeds {min(counts)}–{max(counts)})"
+            line, = ax.plot(x, y, label=label, linewidth=1.7)
+            ax.fill_between(x, [a - b for a, b in zip(y, errors)], [a + b for a, b in zip(y, errors)],
+                            color=line.get_color(), alpha=.15)
+        ax.set(xlabel="Physical environment steps (million)", ylabel="Validation reward R = -D",
+               title="Actual completed ID validation points")
+        ax.grid(alpha=.2)
+        ax.legend(fontsize=8)
+        _save_figure(fig, directory / "validation.png")
+        plt.close(fig)
+        figures.append("figures/validation.png")
+    if comparisons:
+        fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+        for ax, group in zip(axes.flat, tuple(_MAIN1013_GROUPS)[:4]):
+            labels, values, errors, samples = [], [], [], []
+            for method, pools in comparisons.items():
+                for pool in ("formal", "confirm"):
+                    if pools[pool] is None:
+                        continue
+                    result = pools[pool][group]
+                    labels.append(_MAIN1013_LABELS.get(method, method) + "\n" + pool)
+                    values.append(result["mean"])
+                    errors.append(result["sample_sd"])
+                    samples.append(result["per_seed"])
+            positions = list(range(len(values)))
+            ax.bar(positions, values, yerr=errors, alpha=.7, capsize=3)
+            for index, points in enumerate(samples):
+                ax.scatter([index - .12, index, index + .12], points, s=13, color="#222222", zorder=3)
+            ax.set(title=group, ylabel="Target damage D (lower is better)", xticks=positions, xticklabels=labels)
+            ax.tick_params(axis="x", labelsize=7)
+            ax.grid(axis="y", alpha=.2)
+        fig.tight_layout()
+        _save_figure(fig, directory / "formal_comparison.png")
+        plt.close(fig)
+        figures.append("figures/formal_comparison.png")
+    figures.extend(_main1013_diagnostic_figures(output, data, plt))
+    return figures
+
+
+def _main1013_markdown(output, data, metadata, updated_at):
+    scope = "main" if output.name == "main1013" else "supp"
+    title = "main1013：四组记忆位置补充实验" if scope == "main" else "main1013_supp：SCOPE匹配结构对照"
+    lines = [f"# {title}", "", f"更新时间：{updated_at}（北京时间）。本文件是该输出目录唯一正式Markdown报告，未完成结果记为待补。", "",
+             "## 协议与实际完成状态", "",
+             "每方法三个训练种子0/1/2，每种子1M物理环境步。训练验证共50点，四个ID配置各25场；训练过程中保留final与验证best，正式排名仅使用完成预算的final。",
+             "正式池为24配置×300场9000–9299；独立确认池为同24配置×300场110000–110299。先按场景计算配置均值，再按配置等权计算组均值，最后报告三个训练种子的均值±样本SD。任何种子未齐24×300时，不发布该方法的正式组均值。", "",
+             "一台双GPU机器，每GPU最多三个训练任务，总计六个；独立评估使用32个CPU worker及按资源准入的每GPU最多一个worker。评估吞吐与训练吞吐分开记录，不用训练和评估ETA简单相加。", ""]
+    lines += [f"环境记录：`{metadata.get('had_core_version', '待登记')}` / `{metadata.get('physics_protocol', '待登记')}`；实现版本：`{metadata.get('implementation_revision', '待登记')}`。", ""]
+    rows = []
+    for model in data["models"]:
+        train = model["train"]
+        rows.append(dict(method=_MAIN1013_LABELS.get(model["method"], model["method"]), seed=model["seed"],
+                         status=train.get("status", "pending"), t_env=train.get("t_env", 0),
+                         validation=f"{train.get('validation_completed_episodes', 0)}/5000",
+                         formal=f"{model['formal']['completed']}/7200", confirm=f"{model['confirm']['completed']}/7200",
+                         D=model["formal"]["D"], confirm_D=model["confirm"]["D"]))
+    lines += _table(rows, (("method", "方法"), ("seed", "种子"), ("status", "训练状态"), ("t_env", "物理步"),
+                          ("validation", "验证场数"), ("formal", "正式场数"), ("confirm", "确认场数"),
+                          ("D", "正式All24 D"), ("confirm_D", "确认All24 D")))
+    lines += ["", "## 正式评估与独立确认", ""]
+    rows = []
+    for method, pools in data["aggregate"].items():
+        for pool, label in (("formal", "正式"), ("confirm", "确认")):
+            row = dict(method=_MAIN1013_LABELS.get(method, method), pool=label)
+            for group in _MAIN1013_GROUPS:
+                value = pools[pool][group] if pools[pool] else None
+                row[group] = f"{value['mean']:.4f}±{value['sample_sd']:.4f}" if value else "待补"
+            rows.append(row)
+    lines += _table(rows, (("method", "方法"), ("pool", "场景池")) + tuple((group, group + " D↓") for group in _MAIN1013_GROUPS))
+    lines += ["", "## 实际学习曲线与结果图", ""]
+    main_figures = [path for path in data["figures"] if path.endswith(("validation.png", "formal_comparison.png"))]
+    if not main_figures:
+        lines.append("尚无完整验证点或三个种子完整正式评估，不生成空图或预期结果图。")
+    for figure in main_figures:
+        caption = ("已完成的ID验证点：R=-D，横轴为实际物理步；阴影为已有训练种子的样本SD，图例注明种子覆盖。"
+                   if figure.endswith("validation.png") else
+                   "完成24×300场的三个训练种子正式与确认比较；柱和误差线为均值±样本SD，小点保留三个种子。")
+        lines += [f"![{caption}]({figure})", "", caption, ""]
+    lines += ["## 记忆机制与参考证据", "",
+              "本轮不导入历史数据或参考权重。已有论文中的SCOPE（保存方法名regir_nomem）及匹配Memory query的历史结果不能自动视为本轮重评结果。参考权重缺失时，V1–V3与V4相对SCOPE对照均登记待补，不据新模型单独结果宣称表征偏移累积。", ""]
+    diagnostics = data["diagnostics"]
+    lines += [f"已提交且按科学身份去重的正常诊断回合：{diagnostics.get('committed_unique_episodes', 0)}。只分析正式池已批准的前10场；CPU/CUDA重跑不计为不同样本，gzip重复记录采用最后一条已提交身份。", "",
+              "V1按每模型四个ID配置各10场构造自身参考，分20物理步时间段。协方差采用90%样本协方差加10%平均方差单位阵收缩；先计算每场活跃决策的RMS马氏距离，再等权平均场景和训练种子。ID参考未齐40场时不计算该模型的偏移。这里u是实际送入Temporal GRU的host与关系残差融合特征，h是更新后GRU hidden，u不等同于纯关系read。", "",
+              "V2展示实际单步目标损伤；自然终止后的步填零，统计范围统一为1–100步。V3仅E1，对每状态一次1%自身hidden RMS的高斯方向扰动；先按每场活跃决策计算贪心动作变动比例，再平均场景与种子。K2两规模与K12联合条件分别标明，不把目标数改变解释为纯规模效应。", ""]
+    coverage = [dict(method=_MAIN1013_LABELS.get(row["method"], row["method"]), seed=row["seed"],
+                     config=",".join(map(str, row["config"])), episodes=row["episodes"],
+                     representation=row["representation_episodes"], damage=row["damage_episodes"],
+                     perturbation=row["perturbation_episodes"]) for row in diagnostics["coverage"]]
+    if coverage:
+        lines += _table(coverage, (("method", "方法"), ("seed", "种子"), ("config", "NR,NB,K"),
+                                  ("episodes", "已提交诊断场"), ("representation", "V1场"),
+                                  ("damage", "V2场"), ("perturbation", "V3场")))
+        lines.append("")
+    else:
+        lines += ["正常新模型诊断尚未采集，相关图表待补。", ""]
+    captions = {
+        "representation_shift.png": "V1新模型自身ID参考偏移：20步分段RMS正则马氏距离，阴影为已覆盖训练种子样本SD。SCOPE与Memory query对照待补。",
+        "damage_over_time.png": "V2新模型实际单步损伤随交战时间变化；自然终止后补零，图例注明已有种子数，阴影为种子样本SD。",
+        "memory_sensitivity.png": "V3 E1同状态1% RMS记忆扰动的贪心动作改变比例；各柱标明人数及目标数，误差为已有种子样本SD。",
+        "gru_reset.png": "V4 E1冻结逐步GRU重置与同模型标准策略的场景配对ΔD；正值表示重置后损伤增加，小点保留种子。",
+    }
+    for figure in data["figures"]:
+        caption = captions.get(Path(figure).name)
+        if caption:
+            lines += [f"![{caption}]({figure})", "", caption, ""]
+    resets = [row for row in data["models"] if row["gru_reset"]["total"]]
+    if resets:
+        lines.append("V4对E1补充冻结GRU逐步重置，独立于正式及确认池；下表仅比较同模型、配置、场景的重置与标准策略，ΔD>0表示重置后损伤增加。")
+        lines.append("")
+        paired_rows = []
+        for model in resets:
+            item = model["gru_reset"]
+            paired_rows.append(dict(seed=model["seed"], coverage=f"{item['completed']}/{item['total']}",
+                                    status=item["status"], delta=item.get("paired_delta_D", "待补")))
+        lines += _table(paired_rows, (("seed", "E1种子"), ("coverage", "独立诊断场数"), ("status", "状态"), ("delta", "各配置配对ΔD")))
+        lines.append("")
+    lines += ["原Direct read、One round、No host历史结果保留其真实历史query设置；本轮main1013_supp使用SCOPE当前状态query重新训练，不能通过改表注把旧支线写成新受控对照。",
+              "", "## 数据入口", "", "逐场记录为本目录的episodes.csv或had/episodes.csv；统一统计为[summary.json](summary.json)，实验配置为[experiment.json](experiment.json)。同一配置的重跑按checkpoint和场景身份去重，不增加独立样本数。"]
+    if data["excluded_records"]:
+        lines += ["", "未计入正式汇总的记录计数：`" + json.dumps(data["excluded_records"], ensure_ascii=False) + "`。"]
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def refresh_main1013_reports(main_output, supp_output):
+    """Two version reports, each from one pass over its new episode records."""
+    main_output, supp_output = Path(main_output), Path(supp_output)
+    state = _main1013_json(main_output / "runner_state.json")
+    models = state.get("models", []) if state.get("schema") == "main1013-runner-v1" else []
+    updated_at = datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds")
+    reports = []
+    for scope, output in (("main", main_output), ("supp", supp_output)):
+        with _report_lock(output):
+            metadata = _main1013_json(output / "experiment.json")
+            selected = [row for row in models if row.get("scope") == scope]
+            if not selected:
+                methods = list(_MAIN1013_LABELS)[:4] if scope == "main" else list(_MAIN1013_LABELS)[4:]
+                selected = [dict(id=f"{scope}/{method}/seed_{seed}", scope=scope, method=method, seed=seed,
+                                 train={"status": "pending", "t_env": 0}) for method in methods for seed in FORMAL_SEEDS]
+            data = _main1013_records(output, selected)
+            data["diagnostics"] = _main1013_diagnostics(output, data.pop("_committed"))
+            data.update(schema="main1013-report-v1", updated_at=updated_at, profile=output.name,
+                        experiment=metadata, references_status="not_imported", selection_use=False,
+                        statistics="Configuration means weighted equally; three training seeds; sample SD; final only.")
+            data["figures"] = _main1013_figures(output, data)
+            _atomic_text(output / "summary.json", json.dumps(data, ensure_ascii=False, indent=2, allow_nan=False) + "\n")
+            path = output / "实验报告.md"
+            _atomic_text(path, _main1013_markdown(output, data, metadata, updated_at))
+            reports.append(path)
+    return reports
