@@ -27,7 +27,7 @@ No-memory替换下游GRU，保留上一动作输入；No host沿用删除REFIL a
 ```bash
 git -C /data3/dell/Saileron/projects/ReGIR fetch origin experiment/main1013
 git -C /data3/dell/Saileron/projects/ReGIR worktree add --detach \
-  /data3/dell/Saileron/projects/ReGIR-main1013 FETCH_HEAD
+  /data3/dell/Saileron/projects/ReGIR-main1013 origin/experiment/main1013
 cd /data3/dell/Saileron/projects/ReGIR-main1013/Open-SCORE
 ```
 
