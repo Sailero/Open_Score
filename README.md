@@ -1,12 +1,17 @@
 # Open-SCORE
 
-当前实验版本为 **main0921**：固定三种子0/1/2，HAD与SMACv2共用现有训练框架。协议、运行命令和正文/附录安排见[实验计划](Open-SCORE/outputs/main0921/实验计划.md)，全部结果汇入唯一[实验报告](Open-SCORE/outputs/main0921/实验报告.md)。原 `outputs/main` 保留历史结果与恢复信息。训练允许GPU0/GPU1，按可用显存分配，HAD每卡最多3路、两卡最多6路，SMAC每卡最多2路、两卡最多4路，按实际资源准入；CPU终评与机制合计最多4个任务。
+主方法为 **LEAF-NoMem（`regir_nomem`）**。现有实验归并为两个结果目录：
 
-本机目录按用途组织：`/data3/dell/Saileron/projects/HADE` 与 `projects/SMACv2` 保存环境源码，`envs/saileron-smac` 保存独立Python运行环境，`envs/StarCraftII` 保存游戏运行文件。适配器并列位于 `Open-SCORE/open_score/envs/`；新缓存、临时文件均限制在该工作区。必须用计划中的绝对Python路径或 `conda run -p`，不要用可能指向历史副本的环境名称。
+| 结果 | 内容 | 正式分析 |
+|---|---|---|
+| [outputs/main](Open-SCORE/outputs/main) | NoMem、原 ReGIR 训练变体及 HAD 基线 | [主实验结果分析](docs/LEAF_主实验结果分析.md) |
+| [outputs/supp](Open-SCORE/outputs/supp) | M1–M5 循环候选、SMAC 与其他探索 | [补充实验结果分析](docs/LEAF_补充实验结果分析.md) |
 
-main0921 的 HAD 正式矩阵登记 15 个学习方法，SMACv2 登记 6 个方法；方法定义、权重身份与已完成结果分别见[实验计划](Open-SCORE/outputs/main0921/实验计划.md)和[正式报告](Open-SCORE/outputs/main0921/实验报告.md)。viewer 仍可发现本机保留的历史兼容权重。`best.pt` 是训练内验证选优档案，`final.pt` 是达到预算的终评权重；文件存在不代表该运行的正式评估已经结束。
+配套阅读：[方法与变体说明](docs/LEAF_方法与变体说明.md)讲解 NoMem 的完整计算、ReGIR 家族与五个循环候选的结构；[Baseline 与 Rule 实现说明](docs/LEAF_Baseline与Rule实现说明.md)解释七个学习基线、规则指派、随机动作及共同对手。两份说明与结果报告配套，区分实际实现、设计动机和已完成的实验证据。
 
-旧研究主线已于 **2026-09-08 16:00:19 +08:00** 确认停止；探索 final 为 Git `cc2ab86`，历史研究源码可从该提交查阅。随后的环境标定与覆盖式规则已并入 [main v1](Open-SCORE/outputs/main_v1/实验报告.md)。该轮停止决定与“仅保留规则”的描述属于历史轮次。
+数据保留来源版本、运行、环境协议、种子和实验臂；不同协议的成绩分别解释。权重位于 `<结果目录>/<环境>/<方法>/models/<训练来源>/seed_<种子>/`，保留 `final.pt`、`best.pt` 与加载配置。训练完成情况由权重 metadata 与原登记分别记录。数据、来源映射及历史表统一见各目录的 `summary.json`，实验协议见 `experiment.json`。正式归并成果以这两份报告和元数据为准。
+
+归并前的完整本地保存点为 Git `8d8fa28`，包含当时的实验数据与权重。2026-10-11 已完成旧来源、过时文档、临时文件及24个空CSV的清理，`outputs` 仅保留 `main/supp`，合计约2.80 GB。删除前核对并补齐4张独有历史曲线及1,154条科学诊断变体，正式成绩不变；归档保留159个独有final/best及加载配置。来源映射、重复计时摘要和完整清理记录见两目录 `summary.json` 的 `archive.retention_verification` 与 `archive.cleanup`。[实验记录](实验报告/实验记录.md) 维护跨版本摘要；论文包仍位于 [Papers](Papers)。本次整理尚未Git提交或推送，本地保存点不代表远端已备份归并版本。
 
 ## 环境与安装
 
@@ -18,7 +23,7 @@ HAD底层为独立仓库 [HADE](../HADE/README.md)，本仓库通过 `Open-SCORE
 & 'D:\Software\Anaconda\envs\torch310\python.exe' -m pip install -e './Open-SCORE[training]'
 ```
 
-`had-env` 声明环境依赖，`training` extra 声明七方法训练与出图所需依赖。旧Windows示例解释器为上述 `torch310`；当前Linux入口采用main0921计划中的解释器。历史环境已安装 PyTorch 2.13.0+cu130、NumPy 1.26.4、SciPy 1.15.3、Matplotlib 3.10.9、PyYAML 6.0.3；extra 不负责选择 CUDA 构建。渲染及 Workbench 界面的安装方法见其 README。
+`had-env` 声明环境依赖，`training` extra 声明七方法训练与出图所需依赖。旧Windows示例解释器为上述 `torch310`；Linux使用所在机器已配置的环境。历史环境已安装 PyTorch 2.13.0+cu130、NumPy 1.26.4、SciPy 1.15.3、Matplotlib 3.10.9、PyYAML 6.0.3；extra 不负责选择 CUDA 构建。渲染及 Workbench 界面的安装方法见其 README。
 
 本轮支持保留源码目录的可编辑安装。方法配置保留在包外的 `Open-SCORE/configs/`，命令入口保留在 `Open-SCORE/scripts/`；独立 wheel 不是当前支持的运行方式。vendored 主干及补丁内的 YAML 与已有 LICENSE 已声明为 package data，不复制包外配置来扩展发布体系。
 
@@ -63,7 +68,7 @@ API 5 通过 `red_strategy/blue_strategy` 传策略，切换架构后只提交�
 ```python
 red_strategy = {
     "architecture": "checkpoint",
-    "checkpoint": "Open-SCORE/outputs/main_v3/refil/train/seed_0/best.pt",
+    "checkpoint": "Open-SCORE/outputs/main/had/regir_nomem/models/main0928/seed_0/final.pt",
 }
 blue_strategy = {
     "architecture": "hierarchical",
@@ -107,7 +112,7 @@ observations, infos = env.reset(seed=0)
 - 伤害任务保留固定槽到整局结束。死亡槽零观测、强制空动作，但继续接收团队奖励。`agent_mask` 用于 actor，`bootstrap_mask` 用于团队 critic。死亡当步更新使用动作产生前的存活掩码。同队 `team_reward` 已是同一份团队奖励，不能再按队员相加。
 - 累计伤害、时间和维度通过 `info` 提供。任意红蓝 MARL 策略可接 Parallel 联合动作字典，或接 MPE 固定顺序动作列表；网页通过 `red_strategy/blue_strategy` 对象传入统一入口。分组适配器保留原 27 个动作编号，二维只从其中 9 个平面方向选择，与训练接口的 0–8 编号勿混用。
 
-此前环境接入轮次的 Parallel RNG、实体缓存和伤害距离过滤调整属于历史环境修改；当前跨规模训练与评估状态以[main0921 正式实验报告](Open-SCORE/outputs/main0921/实验报告.md)为准，研究判断见[项目核心分析与论文定位](docs/当前实验分析与论文主张讨论.md)。完整原生接口见 [HAD API](../Open_Score_HAD_Workbench/docs/API.md)。
+此前环境接入轮次的 Parallel RNG、实体缓存和伤害距离过滤调整属于历史环境修改；当前主方法的结果与判断见[主实验结果分析](docs/LEAF_主实验结果分析.md)，循环候选及其他环境见[补充实验结果分析](docs/LEAF_补充实验结果分析.md)。完整原生接口见 [HAD API](../Open_Score_HAD_Workbench/docs/API.md)。
 
 ```python
 from open_score.rules import make_grouping_env, RulePolicy
@@ -123,48 +128,18 @@ env.adapter.env.close()
 
 上述示例说明原生分组接口。分组环境 `survival` 保留原生时限终止与 0/1 奖励；传入 `task_mode="damage"` 后返回整个宏步的伤害奖励之和，并区分自然终止与截断。Parallel/MPE 工厂采用自己的时限语义。多目标位置、零人数、事件返回和快照格式均以 Workbench 原生 API 为准；v6 包装、奖励塑形、S2 投影及旧训练张量接口已归档。
 
-## 查看运行、停止与恢复
+## 已归档实验
 
-默认输出目录为 `Open-SCORE/outputs/main/`，正式运行标识为 `train`。合并记录通过版本、方法、运行和种子字段区分；模型、配置与控制台日志按 `<方法>/train/seed_<种子>/` 保存。唯一正式 Markdown 报告为该目录的 `实验报告.md`，图表放在 `figures/`。训练终端定期显示进度、吞吐、loss、评估进度和最近完整验证 D；报告按已落盘数据原位刷新。
+2026-10-13新增的基线输入对齐实验使用 `Open-SCORE/scripts/main1013_base.py`，仅重训SPECTra/TransfQMix各三个种子。actor与mixer补齐红方上一动作，训练与评估采用最终LEAF的共同HAD协议，同时保留基线自身优化器和TD目标。代码与远程入口已准备；尚未启动新训练或评估。唯一报告、数据和必要模型统一位于 [outputs/main_1013_base](Open-SCORE/outputs/main_1013_base)，详情见[该版本报告](Open-SCORE/outputs/main_1013_base/实验报告.md)。在远程 `Open-SCORE` 目录运行：
 
-当前训练入口使用 `--stage train` 或 `--stage single`。`--group main` 按 inventory 扫描未完成的 ReGIR / ALMA / 消融 / matched 任务，并发上限 2，但 ReGIR 类按显存一次只跑 1 路；终评与深度扫描由 `eval.py` 负责，最多 2 路。预算必须显式传 `--steps`；现有正式权重对应 100 万物理步、8 worker。学习奖励默认 `--reward-mode damage`（仅 −ΔD）。
-
-启动两条、停止两条，训练和评估互不影响。均在仓库根目录 `E:\Code\Open_Score` 执行：
-
-```powershell
-& 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 .\Open-SCORE\scripts\train.py --stage train --group main --steps 1000000 --batch-size-run 8 --resume --max-concurrent 2 --output .\Open-SCORE\outputs\main
-& 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 .\Open-SCORE\scripts\eval.py --group main --resume --max-concurrent 2 --output .\Open-SCORE\outputs\main
+```bash
+mkdir -p outputs/main_1013_base
+nohup python -u scripts/main1013_base.py run --devices 0,1 --jobs-per-gpu 3 --max-jobs 6 --resume > outputs/main_1013_base/run.log 2>&1 &
+python scripts/main1013_base.py progress --watch-seconds 3
 ```
 
-```powershell
-& 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 .\Open-SCORE\scripts\train.py --stage stop --output .\Open-SCORE\outputs\main
-& 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 .\Open-SCORE\scripts\eval.py --stage stop --output .\Open-SCORE\outputs\main
-```
+新入口会核对HAD版本和物理协议。停止用 `python scripts/main1013_base.py stop`，恢复重新执行上述 `run --resume`；关闭只读进度面板不停止任务。已有远程main1013运行不受新版本影响。
 
-恢复未完成项需要同目录存在可读的 `resume.pt`（或 `resume.prev.pt`），并加上 `--resume`。调度器跳过已有完成记录与保留模型的任务。只处理一个任务时使用 `--stage single`。
+结果目录保存已有数据与推理权重，旧任务启动、恢复和报告刷新命令已停用。历史单轮从头训练与多轮权重的单轮推理是两类不同对照，详见主报告。独有历史数据保留来源协议，未提供的原始记录如实注明。
 
-查看 ReGIR 种子 1 的日志：
-
-```powershell
-Get-Content -LiteralPath '.\Open-SCORE\outputs\main\regir\train\seed_1\console.log' -Encoding UTF8 -Tail 30 -Wait
-```
-
-从已有记录刷新同一份报告和图表：
-
-```powershell
-& 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 .\Open-SCORE\scripts\plot.py --run train
-```
-
-训练每 10 分钟以及每个验证点会把完整 `resume.pt` 刷盘，并留下上一份 `resume.prev.pt`。意外断电后 `--resume` 会先读 `resume.pt`，读不了再用 pending 或上一份。计划关机用上面的两条 stop：训练写完当前 batch，评估写完当前局。等待状态显示 `stopped` 与可恢复步数后再关闭终端。
-
-若原任务使用了 `--output`，停止与恢复也应指定相同目录。恢复时保留原方法、环境、种子、`--steps`、`--batch-size-run`、运行标识和输出目录，并增加 `--resume`。恢复点包含 replay、优化器、目标网络、随机流和进度；`best/final/latest.pt` 用于模型查看，不能替代恢复点。控制台步数可以新于可恢复步数，最多差一个保存间隔。上一轮 E0 与吞吐矩阵见 [main v2](Open-SCORE/outputs/main_v2/实验报告.md)。
-
-## 历史研究
-
-[实验记录](实验报告/实验记录.md) 维护跨版本摘要。当前正式对照归 [main](Open-SCORE/outputs/main/实验报告.md)；上一轮循环结构对照见 [main v5](Open-SCORE/outputs/main_v5/实验报告.md)；v4 距离分组与带 LN 的数量条件见 [main v4](Open-SCORE/outputs/main_v4/实验报告.md)；v3 完整五臂对照见 [main v3](Open-SCORE/outputs/main_v3/实验报告.md)；上一轮跨规模失败结果见 [main v2](Open-SCORE/outputs/main_v2/实验报告.md)；S1–v7 合并见 [main v1](Open-SCORE/outputs/main_v1/实验报告.md)；ALMA 适配补充见 [alma_probe_v3](Open-SCORE/outputs/alma_probe_v3/实验报告.md)。
-
-截至目录重组后，`outputs/main_v3` 保留完整训练权重；`main_v4` 保留上一轮新臂；`main_v5` 写入四条全局臂，去 LN 的 count 仍占用同目录的另一方法名。`main_v2` 保留逐局数据与报告、无 `.pt`。`main_v1` 与 `alma_probe_v3` 只留报告、图和记录。`assets/frozen` 仍有历史 `lcl.pt`、`dlom.pt`，当前 `load_policy` 不加载旧格式。
-
-表内路径相对 `Open-SCORE/`。历史资产仍在本地，viewer 可列出其来源与不兼容原因，但当前 `load_policy` 不加载旧 `model/actor/policy/online` 格式。部分历史 checkpoint 的反序列化还依赖已归档的 `open_score.grouping` 或 `open_score.envs.had_stage3` 模块。使用旧研究权重需同时恢复对应模型代码、配置与历史环境；`dlom.pt` 本身是结果预测器，不是完整动作策略。历史研究源码入口为探索 final `cc2ab86`，之后的修订应以相应报告和权重来源为准。多数输出资产被 Git 忽略，不属于该提交的备份范围。
-
-原始研究修改稿与 v6 原执行方案可分别从 Git `cc2ab86:固定对手下动态分组研究方案.md`、`cc2ab86:dynamic_grouping_v6_execution_plan.md` 查阅。各版实际完成量、取消项和结论以对应 `outputs/main_v*` 报告为准。
+环境建模见 [HAD 环境与问题建模](docs/HAD_环境与问题建模.md)，早期方法移植差异见 [迁移记录](docs/方案_v2/diff_log.md)。更早研究源码可从 Git `cc2ab86` 查看；本次归并不改变 HAD 物理接口或算法实现。

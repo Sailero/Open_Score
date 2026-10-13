@@ -2468,8 +2468,14 @@ def progress(options):
     from collections import deque, Counter
     from datetime import datetime, timezone, timedelta
 
-    order=("calibrate","select","budget_only","mechanism","eval","adaptive","counterfactual","confirm")
+    nomem_mode=options.section=="nomem-depth"
+    order=(NOMEM_DEPTH_SPLIT,) if nomem_mode else ("calibrate","select","budget_only","mechanism","eval","adaptive","counterfactual","confirm")
     root=options.output
+    depth_context=None
+    if nomem_mode and not options.status_only:
+        metadata=json.loads((root/"experiment.json").read_text(encoding="utf-8-sig"))
+        depth_context=nomem_depth_context(options,stored=NOMEM_DEPTH_REVISION in metadata.get("protocols",{}))
+    reused_rows=set();direct_rows=set()
     bank=defaultdict(lambda:defaultdict(set))
     costs=defaultdict(lambda:[0.,0,0.])
     history=deque(maxlen=max(11,math.ceil(300/max(options.watch_seconds,1))+1))
@@ -2481,12 +2487,14 @@ def progress(options):
     def publish_status(active,mains,slots,denied):
         host=socket.gethostname()
         snapshot=dict(host=host,updated_at=time.time(),interval=options.watch_seconds,
+            section=options.section,
             monitor_pid=os.getpid(),masters=[pid for pid,_ in mains],slots=slots,
             denied=denied,tasks=[dict(pid=pid,task=task) for pid,task in active.items()])
         # A separate snapshot per host avoids touching the evaluation runner's
         # large shared state. Unique pending paths also separate two monitors
         # on the same host (e.g. the collector and interactive viewer).
-        path=root/f".leaf1009_status_{host}.json"
+        suffix="nomem_depth_" if nomem_mode else ""
+        path=root/f".leaf1009_status_{suffix}{host}.json"
         pending=path.with_suffix(f".{os.getpid()}.pending")
         pending.write_text(json.dumps(snapshot,ensure_ascii=False),encoding="utf-8")
         os.replace(pending,path)
@@ -2496,10 +2504,13 @@ def progress(options):
         active={};lines=[];slots=0;masters=0;fresh=0
         for path in sorted(root.glob(".leaf1009_status_*.json")):
             snap=json.loads(path.read_text(encoding="utf-8"))
+            if snap.get("section")!=options.section:continue
             host=snap["host"]
             age=max(0,time.time()-snap["updated_at"])
             stale=age>max(60,3*snap.get("interval",10))
-            tasks=snap.get("tasks",[]);pids=snap.get("masters",[])
+            tasks=[item for item in snap.get("tasks",[]) if
+                (item["task"][0],item["task"][1],int(item["task"][2]),tuple(item["task"][3])) in lookup]
+            pids=snap.get("masters",[])
             label="STALE" if stale else "RUN" if tasks else "WAIT" if pids else "STOP"
             lines.append(f"{label:5} tasks={len(tasks):3} main={len(pids)} age={age:.0f}s | {host}")
             if stale:continue
@@ -2512,6 +2523,11 @@ def progress(options):
 
     def queues():
         phase=copy.copy(options)
+        if nomem_mode:
+            phase.stage="depth-eval"
+            jobs=stage_jobs(phase,("regir_nomem",),split=NOMEM_DEPTH_SPLIT,
+                arms=[f"fixed{d}" for d in NOMEM_DEPTHS],configs=FINAL_CONFIGS,start=9000,quota=300)
+            return {NOMEM_DEPTH_SPLIT:jobs},[jobs]
         groups={}
         for stage in ("calibrate","select","mechanism","eval","adaptive","counterfactual"):
             phase.stage=stage
@@ -2539,7 +2555,7 @@ def progress(options):
             if not proc.name.isdigit():continue
             try:
                 args=[a.decode(errors="replace") for a in (proc/"cmdline").read_bytes().split(b"\0") if a]
-                if any(a.endswith("leaf1009.py") for a in args) and "run" in args:
+                if any(a.endswith("leaf1009.py") for a in args) and ("depth-eval" if nomem_mode else "run") in args and "--dry-run" not in args:
                     output=args[args.index("--output")+1] if "--output" in args else str(PROJECT/"outputs/main1009")
                     cwd=Path(os.readlink(proc/"cwd"))
                     if (cwd/output).resolve()==root:
@@ -2641,11 +2657,22 @@ def progress(options):
                         offset=stream.tell()
                         try:row=json.loads(line)
                         except (ValueError,UnicodeDecodeError):bad+=1;continue
-                        if row.get("protocol") not in (REVISION,MECHANISM_REVISION):continue
+                        if nomem_mode:
+                            mapped=nomem_depth_rows(options,depth_context,[row])
+                            if not mapped:continue
+                            row=mapped[0]
+                        elif row.get("protocol") not in (REVISION,MECHANISM_REVISION):continue
                         task=(row["split"],row["method"],int(row["seed"]),config_tuple(row["config"]))
                         arm="completed_scene" if row["split"]=="counterfactual" else row["arm"]
                         if row["split"]=="counterfactual" and not row.get("scene_complete"):continue
                         scene=int(row["episode_seed"])
+                        if nomem_mode:
+                            identity=(task,arm,scene)
+                            if row.get("reused"):
+                                if identity in direct_rows:continue
+                                reused_rows.add(identity)
+                            else:
+                                direct_rows.add(identity);reused_rows.discard(identity)
                         if scene in bank[task][arm]:continue
                         bank[task][arm].add(scene)
                         seconds=row.get("episode_wall_seconds")
@@ -2745,11 +2772,15 @@ def progress(options):
             finished=sum(done[t]==totals[t] for t in lookup)
             fraction=sum(done[t]/totals[t] for t in lookup)/max(len(lookup),1)
             filled=int(fraction*24)
-            lines=["LEAF main1009  |  "+stamp.strftime("%m-%d %H:%M:%S UTC+08"),
+            lines=["LEAF main1009"+(" NoMem R1-R6" if nomem_mode else "")+"  |  "+stamp.strftime("%m-%d %H:%M:%S UTC+08"),
                 f"{'集群' if options.cluster else '本机'}正在运行: {len(active)} 个任务  |  并发上限: {slots or '未知'}  |  每 {options.watch_seconds:g} 秒刷新",
                 f"整体任务进度: [{'#'*filled+'.'*(24-filled)}] {100*fraction:.1f}% (含部分完成)",
                 f"完整任务: {finished}/{len(lookup)}  |  未完整完成: {len(lookup)-finished}",
                 "当前阶段: "+(" / ".join(f"{s} ({n}任务)" for s,n in running_stages.items()) or "未识别到运行任务")]
+            if nomem_mode:
+                logical=sum(done.values());quota=sum(totals.values());reused=len(reused_rows)
+                new_done=logical-reused;new_quota=quota-reused
+                lines.insert(3,f"新增评估: {new_done:,}/{new_quota:,} ({100*new_done/max(new_quota,1):.1f}%) | 复用R4: {reused:,} | 全矩阵: {logical:,}/{quota:,}")
             if options.cluster:
                 lines.append(f"状态上报: {fresh_hosts} 台在线 | RUN=有任务 WAIT=主控等待 STOP=无主控 STALE=上报过期")
                 lines.extend(host_lines)
@@ -2761,9 +2792,18 @@ def progress(options):
                 lines.extend([f"整轮剩余(估计): 约 {fmt(middle)}  |  推算范围: {fmt(lower)} - {fmt(upper)}",
                     "预计结束: "+finish.strftime("%m-%d %H:%M 北京时间")])
             else:lines.extend(["整轮剩余: 等待运行时间/设备采样","预计结束: 暂不可估算"])
-            lines.extend([f"耗时实测覆盖: {100*direct/max(priced,1):.1f}%  |  "+("粗估，仍含未测规模/模型" if direct<.8*priced else "仍受负载和对局长度影响"),
-                "", "Stage           Done/Quota           %   Tasks    Run   Stage ETA"])
-            for stage in order:
+            lines.extend([f"耗时实测覆盖: {100*direct/max(priced,1):.1f}%  |  "+("粗估，仍含未测规模/模型" if direct<.8*priced else "仍受负载和对局长度影响"),""])
+            if nomem_mode:
+                lines.append("Depth           Done/Quota           %   Complete cells")
+                for depth in NOMEM_DEPTHS:
+                    arm=f"fixed{depth}"
+                    n=sum(j["quota"]-remaining[t][arm] for t,j in lookup.items())
+                    total=sum(j["quota"] for j in lookup.values())
+                    cells=sum(remaining[t][arm]==0 for t in lookup)
+                    lines.append(f"R{depth:<14} {str(n)+'/'+str(total):17} {100*n/total:5.1f} {cells}/{len(lookup)}")
+            else:
+                lines.append("Stage           Done/Quota           %   Tasks    Run   Stage ETA")
+            for stage in (() if nomem_mode else order):
                 tasks=[key(j) for j in groups[stage]]
                 n=sum(done[t] for t in tasks);total=sum(totals[t] for t in tasks)
                 complete=sum(done[t]==totals[t] for t in tasks)
@@ -2774,7 +2814,7 @@ def progress(options):
             if not options.cluster and len(mains)>1:alerts.append("多个主控: ETA可能不准")
             if denied:alerts.append("进程访问受限")
             if bad:alerts.append(f"异常记录{bad}行")
-            lines.extend(["", "任务比例不等于时间比例；反事实按完整场景计。",
+            lines.extend(["", "复用R4不消耗新增对局；全部完成需全矩阵129,600场。" if nomem_mode else "任务比例不等于时间比例；反事实按完整场景计。",
                 " | ".join(alerts) if alerts else "ETA为推算，不是保证的上下界。",
                 "Ctrl+C 只退出查看器，后台评估继续运行。"])
             render(lines)
@@ -2808,7 +2848,7 @@ def main():
     parser.add_argument("--episodes",type=int,help="Legacy confirm/depth quota only; candidate protocol quotas are frozen")
     parser.add_argument("--depths",default=None,help="depth-eval uses 1..6; legacy depth defaults to 1,2,4,6,8")
     parser.add_argument("--dry-run",action="store_true",help="depth-eval: inspect checkpoints and coverage without games or writes")
-    parser.add_argument("--section",choices=("nomem-depth",),help="report: update only the NoMem depth supplement in the formal docs report")
+    parser.add_argument("--section",choices=("nomem-depth",),help="report/progress: select the NoMem R1-R6 supplement")
     parser.add_argument("--resume",action="store_true")
     options=parser.parse_args();options.output=options.output.resolve();options.source_output=options.source_output.resolve()
     options.suite="legacy" if options.tier is not None and options.suite is None else options.suite or "loop_candidates"
@@ -2822,7 +2862,7 @@ def main():
             raise ValueError("--max-minutes must be a positive finite value")
         if not math.isfinite(options.watch_seconds) or options.watch_seconds<0:raise ValueError("--watch-seconds must be finite and nonnegative")
         if options.dry_run and options.stage!="depth-eval":raise ValueError("--dry-run is only for depth-eval")
-        if options.section and options.stage!="report":raise ValueError("--section is only for report")
+        if options.section and options.stage not in ("report","progress"):raise ValueError("--section is only for report/progress")
         if options.stage=="report" and options.section=="nomem-depth":
             nomem_depth_report(options);return 0
         if options.stage=="progress":return progress(options)

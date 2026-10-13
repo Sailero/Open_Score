@@ -54,6 +54,11 @@ def schema_for(output, stream_name):
     if stream_name == "episodes":
         extra += ("battle_won", "return", "source_version", "dup_pursuit_frac", "intent_stats",
                   "intent_override", "protocol")
+        metadata = root / "experiment.json"
+        if metadata.exists() and json.loads(metadata.read_text(encoding="utf-8")).get("profile") == "main1013_base":
+            # Retain committed episode timing with its count for resumable ETA;
+            # unknown extra row keys otherwise do not enter a shared CSV.
+            extra += ("episode_wall_seconds",)
     if stream_name in ("learning", "trajectories", "progress"):
         extra += ("source_version", "protocol")
     if stream_name == "timing":

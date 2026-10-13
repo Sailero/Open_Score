@@ -77,7 +77,7 @@ MAIN_OVERRIDES = {
                     "grad_norm_clip": 10, "buffer_size": 5000, "batch_size": 32,
                     "training_iters": 1,
                     "epsilon_start": 1., "epsilon_finish": .05, "epsilon_anneal_time": 100000,
-                    "target_update_interval": 200, "entity_last_action": False,
+                    "target_update_interval": 200, "entity_last_action": True,
                     "obs_agent_id": False, "obs_last_action": False,
                     "emb": 32, "heads": 4, "depth": 2, "mixer_emb": 32,
                     "mixer_heads": 4, "mixer_depth": 2, "ff_hidden_mult": 4,
@@ -528,7 +528,7 @@ def _atomic_save(value, path, *, keep_previous=False):
     _fsync_dir(path.parent)
 
 
-def _load_resume(run_dir, *, require_complete=False):
+def _load_resume(run_dir, *, require_complete=False, strict_complete=False):
     import torch
     candidates = [path for path in resume_files(run_dir) if path.exists()]
     if not candidates:
@@ -542,6 +542,9 @@ def _load_resume(run_dir, *, require_complete=False):
             continue
         if not isinstance(saved, dict) or any(key not in saved for key in ("replay", "runner", "rng", "networks")):
             errors.append(f"{path.name}: incomplete checkpoint")
+            continue
+        if strict_complete and saved.get("transaction_complete") is not True:
+            errors.append(f"{path.name}: checkpoint has no explicit complete-batch boundary")
             continue
         if require_complete and (saved.get("transaction_complete") is False or
                 (saved.get("transaction_complete") is not True and
@@ -617,6 +620,8 @@ def train(name, cfg):
     args = load_config(name, cfg)
     from open_score.eval import experiment
     profile = getattr(args, "profile", None) == experiment.PROFILE
+    base_profile = getattr(args, "profile", None) == "main1013_base"
+    transactional = profile or base_profile
     if profile:
         if (name not in experiment.methods(args.env)
                 or int(args.seed) not in experiment.method_seeds(args.env, name)):
@@ -625,6 +630,10 @@ def train(name, cfg):
             raise ValueError(f"{experiment.PROFILE} requires run=train and its frozen environment budget")
         args.skip_final_eval = True
         args.implementation_revision = experiment.IMPLEMENTATION_REVISION
+    if base_profile:
+        # This profile has its own protocol, independent of the main0923 matrix.
+        # Even the last partial collection batch owes eight learner updates.
+        args.training_iters = 8
     if int(args.t_max) <= 0:
         raise ValueError("t_max must be an explicitly selected positive physical-step budget")
     output = Path(args.output)
@@ -633,9 +642,9 @@ def train(name, cfg):
                else output / name / args.run / f"seed_{args.seed}")
     if any(path.exists() for path in resume_files(run_dir)) and not args.resume:
         raise FileExistsError(f"Existing run: {run_dir}; use --resume to continue it")
-    if profile and not args.resume and any((run_dir / filename).exists()
+    if transactional and not args.resume and any((run_dir / filename).exists()
                                            for filename in ("config.json", "final.pt", "best.pt")):
-        raise FileExistsError(f"Existing {experiment.PROFILE} run must not be overwritten: {run_dir}")
+        raise FileExistsError(f"Existing {args.profile} run must not be overwritten: {run_dir}")
     if args.resume and getattr(args, "global_branch", None) not in (None, False, "off", "none", ""):
         saved_cfg_path = run_dir / "config.json"
         if saved_cfg_path.exists():
@@ -722,7 +731,7 @@ def train(name, cfg):
         state["measurement_peak_cuda_gib"] = max(state.get("measurement_peak_cuda_gib", 0), resource_latest.get("cuda_peak_allocated_gib", 0))
         state["measurement_peak_private_gib"] = max(state.get("measurement_peak_private_gib", 0), private / 2**30)
         state["measurement_peak_rss_gib"] = max(state.get("measurement_peak_rss_gib", 0), rss / 2**30)
-        if profile:
+        if transactional:
             experiment.atomic_json(run_dir / "resource.json", dict(
                 env=args.env, method=name, seed=int(args.seed),
                 t_env=int(runner.t_env) if runner is not None else 0, budget_steps=int(args.t_max),
@@ -741,7 +750,8 @@ def train(name, cfg):
                 validation_measured_episodes=int(state["validation_measured_episodes"]),
                 validation_measured_seconds=state["validation_measured_seconds"],
                 validation_total_episodes=(experiment.validation_point_count(args.env)
-                    * (100 if args.env == "had" else 128)),
+                    * (100 if args.env == "had" else 128) if profile else
+                    len(evaluation_thresholds(args.t_max)) * len(validation_jobs(1))),
                 eval_completed=eval_progress["completed"], eval_total=eval_progress["total"],
                 grad_spikes=int(state.get("grad_spikes", 0)),
                 grad_norm_last=getattr(learner_ref.get("learner"), "last_metrics", {}).get("grad_norm"),
@@ -770,12 +780,18 @@ def train(name, cfg):
         # model storage, so an initialization OOM can still name its safe source.
         saved = loaded_from = None
         if args.resume:
-            saved, loaded_from = _load_resume(run_dir, require_complete=profile)
+            saved, loaded_from = _load_resume(run_dir, require_complete=profile,
+                                             strict_complete=base_profile)
             if saved is None:
-                if profile:
-                    raise FileNotFoundError(f"Requested {experiment.PROFILE} resume has no recoverable checkpoint: {run_dir}")
+                if transactional:
+                    raise FileNotFoundError(f"Requested {args.profile} resume has no recoverable checkpoint: {run_dir}")
                 print(f"[{name}] no resume checkpoint; start this arm from step 0", flush=True)
                 args.resume = False
+            elif base_profile:
+                # Initialization can fail before the runner/model is ready.
+                # Retain the already validated CPU recovery source in that case.
+                safe_checkpoint_path = loaded_from
+                safe_checkpoint_t_env = saved_t_env = int(saved["progress"]["t_env"])
         _set_seed(args.seed, False)
         if args.device == "cuda" and not th.cuda.is_available():
             raise RuntimeError("CUDA was requested but is not available")
@@ -786,7 +802,8 @@ def train(name, cfg):
         if saved is not None:
             saved_config = saved["config"]
             current = vars(args)
-            mutable = RESUME_MUTABLE - {"implementation_revision"} if profile else RESUME_MUTABLE
+            mutable = (RESUME_MUTABLE - {"implementation_revision", "t_max"} if base_profile else
+                       RESUME_MUTABLE - {"implementation_revision"} if profile else RESUME_MUTABLE)
             differing = sorted(key for key in set(saved_config) | set(current)
                                if key not in mutable
                                and saved_config.get(key, RESUME_DEFAULTS.get(key)) != current.get(key))
@@ -795,9 +812,11 @@ def train(name, cfg):
                     "Resume configuration differs: " + ", ".join(differing)
                     + ". Old replay data may not be mixed with a changed experiment;"
                     " start a new --run instead.")
-            if profile and loaded_from.name == "resume.pt.pending":
+            if ((transactional and loaded_from.name == "resume.pt.pending") or
+                    (base_profile and loaded_from.name == "resume.prev.pt")):
                 # A readable pending snapshot can be the only surviving full
-                # save. Commit it before the next save reuses the pending path.
+                # save. Promote a recovered previous snapshot too, so rotation
+                # cannot replace that safe source with an unreadable resume.
                 committed = run_dir / "resume.pt"
                 os.replace(loaded_from, committed)
                 _fsync_dir(run_dir)
@@ -814,6 +833,30 @@ def train(name, cfg):
         runner.setup(scheme, groups, preprocess, mac)
         learner = build_learner(mac, model_scheme, logger, args)
         learner_ref["learner"] = learner
+        if base_profile:
+            expected_env = dict(entity_shape=10, n_actions=9, n_agents=10, n_entities=23)
+            mismatches = [f"{key}={env_info.get(key)!r} (expected {expected})"
+                          for key, expected in expected_env.items() if env_info.get(key) != expected]
+            expected_flags = dict(env="had", feature_layout="had", entity_pad="train",
+                                  entity_last_action=True, obs_last_action=False, obs_agent_id=False)
+            mismatches.extend(f"{key}={getattr(args, key, None)!r} (expected {expected!r})"
+                              for key, expected in expected_flags.items()
+                              if getattr(args, key, None) != expected)
+            embeddings = []
+            if name == "spectra":
+                embeddings.extend((f"agent.{key}", getattr(mac.agent, key, None)) for key in
+                                  ("own_embedding", "allies_embedding", "enemies_embedding", "targets_embedding"))
+                for hyper_name in ("hyper_w1", "hyper_w2"):
+                    hyper = getattr(learner.mixer, hyper_name, None)
+                    embeddings.extend((f"mixer.{hyper_name}.{key}", getattr(hyper, key, None)) for key in
+                                      ("agent_embedding", "enemy_embedding", "target_embedding"))
+            elif name == "transfqmix":
+                embeddings = [("agent.feat_embedding", getattr(mac.agent, "feat_embedding", None)),
+                              ("mixer.feat_embedding", getattr(learner.mixer, "feat_embedding", None))]
+            mismatches.extend(f"{label}.in_features={getattr(layer, 'in_features', None)!r} (expected 19)"
+                              for label, layer in embeddings if getattr(layer, "in_features", None) != 19)
+            if mismatches:
+                raise ValueError("main1013_base input contract differs: " + "; ".join(mismatches))
         if args.device == "cuda":
             th.cuda.manual_seed_all(args.seed)
             learner.cuda()
@@ -858,12 +901,12 @@ def train(name, cfg):
 
         def save(kind, full=False):
             nonlocal saved_t_env, last_save, safe_checkpoint_path, safe_checkpoint_t_env
-            if profile and full and not transaction_complete:
+            if transactional and full and not transaction_complete:
                 raise RuntimeError("Cannot save a partial collection/update transaction as a valid resume")
             value = dict(config=vars(args), env_info=env_info, networks=_network_state(learner),
                          progress={**state, "t_env": runner.t_env,
                                    "elapsed_seconds": state["elapsed_seconds"] + time.monotonic() - started})
-            if profile:
+            if transactional:
                 if kind == "final":
                     if "final_artifact_id" not in state:
                         state["final_artifact_id"] = experiment.new_artifact_id()
@@ -877,7 +920,16 @@ def train(name, cfg):
                                       torch=th.get_rng_state(),
                                       cuda=th.cuda.get_rng_state_all() if args.device == "cuda" else []))
             path = run_dir / f"{kind}.pt"
-            _atomic_save(value, path, keep_previous=(kind == "resume" and full))
+            try:
+                _atomic_save(value, path, keep_previous=(kind == "resume" and full))
+            except BaseException:
+                if base_profile and full and safe_checkpoint_path == path and not path.exists():
+                    previous = path.with_name(path.stem + ".prev" + path.suffix)
+                    if previous.is_file():
+                        # Rotation succeeded but committing the pending write
+                        # failed; the last full boundary now lives in .prev.
+                        safe_checkpoint_path = previous
+                raise
             if full:
                 saved_t_env = runner.t_env
                 safe_checkpoint_path, safe_checkpoint_t_env = path, int(runner.t_env)
@@ -891,7 +943,7 @@ def train(name, cfg):
             if transaction_phase == "collecting" and not evaluating:
                 collection_steps_seen = max(collection_steps_seen, int(in_flight))
             if ((stop_event is not None and stop_event.is_set()) or (output / "stop.request").exists()
-                    or (profile and (run_dir / "pause.request").exists())):
+                    or (transactional and (run_dir / "pause.request").exists())):
                 stop_requested = True
             now = time.monotonic()
             if now - last_progress < args.progress_interval:
@@ -940,12 +992,12 @@ def train(name, cfg):
                    th.cuda.get_rng_state_all() if args.device == "cuda" else [])
             runner_state = runner.state_dict()
             previous = read_records(output, "episodes", run=args.run, method=name, seed=args.seed,
-                                    env=args.env if profile else None)
+                                    env=args.env if transactional else None)
             pending = remaining_jobs(jobs, previous)
             eval_progress.update(completed=len(jobs) - len(pending), total=len(jobs))
             validation_clock = time.monotonic()
             validation_base = (int(jobs[0].get("eval_point", 1)) - 1) * len(jobs) if jobs else 0
-            if profile:
+            if transactional:
                 state["validation_completed_episodes"] = validation_base + len(jobs) - len(pending)
             fresh = []
             try:
@@ -960,7 +1012,7 @@ def train(name, cfg):
                         if job.get("retain_trajectory") and trajectory is not None:
                             record.trajectories([{**job, "trajectory": trajectory}])
                     record.episodes(rows)
-                    if profile:
+                    if transactional:
                         eval_progress["completed"] += len(rows)
                         state["validation_completed_episodes"] = validation_base + eval_progress["completed"]
                         # Commit the pair only after the corresponding rows are
@@ -1012,7 +1064,7 @@ def train(name, cfg):
                 if stop_requested:
                     break
 
-        if profile and safe_checkpoint_path is None:
+        if transactional and safe_checkpoint_path is None:
             # Even an OOM in the very first environment/actor interaction can
             # return to the original weights, empty replay and exact seed state.
             save("resume", full=True)
@@ -1034,10 +1086,11 @@ def train(name, cfg):
             state["episode_num"] += episode_batch.batch_size
             update_metrics = []
             if replay.can_sample(args.batch_size):
-                updates_due = episode_batch.batch_size if name == "transfqmix" else args.training_iters
+                updates_due = (episode_batch.batch_size if name == "transfqmix" and not base_profile
+                               else args.training_iters)
                 for _ in range(updates_due):
                     heartbeat()
-                    if stop_requested and not profile and name != "transfqmix":
+                    if stop_requested and not transactional and name != "transfqmix":
                         break
                     sample = replay.sample(args.batch_size)
                     max_t = int(sample.max_t_filled().item())
@@ -1047,12 +1100,12 @@ def train(name, cfg):
                     state["updates"] += 1
                     first_session_update = not observed_update
                     observed_update = True
-                    if profile and first_session_update:
+                    if transactional and first_session_update:
                         sample_resources()
                     if isinstance(metrics, dict):
                         update_metrics.append(metrics)
                     heartbeat()
-                    if stop_requested and not profile and name != "transfqmix":
+                    if stop_requested and not transactional and name != "transfqmix":
                         break
                     if args.hier_agent["task_allocation"] == "aql":
                         # ALMA trains the allocation layer on its own draw, so
@@ -1070,7 +1123,7 @@ def train(name, cfg):
             transaction_complete = True
             transaction_phase = "idle"
             session_complete_batches += 1
-            if profile and (state["updates"] == 0 or
+            if transactional and (state["updates"] == 0 or
                             (state["updates"] > 0 and
                              (updates_before_batch == 0 or session_complete_batches == 1))):
                 # Warmup replay must survive a first-update OOM, and the first
@@ -1113,7 +1166,7 @@ def train(name, cfg):
             heartbeat()
             if time.monotonic() - last_save >= args.resume_interval:
                 save("resume", full=True)
-                if profile:
+                if transactional:
                     sample_resources()
             if time.monotonic() - last_report >= args.report_interval:
                 refresh_report_safe()
@@ -1169,12 +1222,12 @@ def train(name, cfg):
     except BaseException as error:
         oom = _cuda_oom_details(error)
         state["status"] = "failed"
-        if not profile and runner is not None and "save" in locals():
+        if not transactional and runner is not None and "save" in locals():
             try:
                 save("resume", full=True)
             except BaseException:
                 pass
-        if profile:
+        if transactional:
             # Never run save() here on OOM: replay, optimizer, targets, or the
             # worker RNG may already belong to a partially advanced transaction.
             # CPU metadata and allocator counters do not need fresh GPU tensors.
@@ -1209,6 +1262,9 @@ def train(name, cfg):
         raise
     finally:
         if runner is not None:
+            if base_profile:
+                runner.progress_callback = None
+                runner.value_callback = None
             runner.close_env()
         for sig, handler in old_signals.items():
             signal.signal(sig, handler)

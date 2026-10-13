@@ -3,6 +3,7 @@ Migrated to ALMA entity batches; Adam, Double-Q, TD(lambda) and half-MSE retaine
 """
 import copy
 import time
+from types import SimpleNamespace
 
 import torch as th
 from torch.optim import RMSprop, Adam
@@ -12,9 +13,14 @@ from .spectra_mixer import SPECTraMixer
 from .rl_utils import build_td_lambda_targets
 
 
-def mixer_inputs(batch, stop=None):
-    return {"entities": batch["entities"][:, :stop],
-            "entity_mask": batch["entity_mask"][:, :stop]}
+def mixer_inputs(batch, args, stop=None):
+    from controllers.entity_controller import EntityMAC
+    # Reuse the actor's previous-action alignment, including the final
+    # bootstrap observation. Only the first n_agents entity rows get actions.
+    end = slice(0, stop).indices(batch.max_seq_length)[1]
+    controller = SimpleNamespace(args=args, n_agents=args.n_agents)
+    inputs, _ = EntityMAC._build_inputs(controller, batch, slice(0, end))
+    return {key: inputs[key] for key in ("entities", "entity_mask")}
 
 
 def calculate_target_q(target_mac, batch, n_agents, enable_parallel_computing=False, thread_num=4):
@@ -43,7 +49,7 @@ def calculate_n_step_td_target(args, target_mixer, target_max_qvals, batch, rewa
         # Set target mixing net to testing mode
         target_mixer.eval()
         # Calculate n-step Q-Learning targets
-        target_max_qvals = target_mixer(target_max_qvals, mixer_inputs(batch)) 
+        target_max_qvals = target_mixer(target_max_qvals, mixer_inputs(batch, args))
         if q_lambda:
             raise NotImplementedError("The frozen SPECTra configuration uses TD-lambda, not Q-lambda")
         else:
@@ -155,7 +161,7 @@ class NQLearner:
         # Set mixing net to training mode
         self.mixer.train()
         # Mixer
-        joint_qval = self.mixer(chosen_action_qvals, mixer_inputs(batch, stop=-1))
+        joint_qval = self.mixer(chosen_action_qvals, mixer_inputs(batch, self.args, stop=-1))
 
         if self.args.mixer.find("qmix") != -1 and self.enable_parallel_computing:
             targets = targets.get()

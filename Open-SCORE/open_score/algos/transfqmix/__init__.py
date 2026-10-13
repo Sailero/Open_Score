@@ -114,6 +114,8 @@ class TransfQMixMAC:
         self.agent_output_type = "q"
         shape = scheme.get("observer_entities", scheme["entities"])["vshape"]
         width = int(shape[-1] if isinstance(shape, (tuple, list)) else shape)
+        if args.entity_last_action:
+            width += int(args.n_actions)
         self.agent = TransfQMixAgent(width, args)
         if self.agent.smac and "observer_entities" not in scheme:
             raise ValueError("TransfQMix SMAC actor requires native observer_entities")
@@ -128,6 +130,13 @@ class TransfQMixMAC:
         self._evaluation_hyper = None
         self._evaluation_t = None
         return self.hidden_states
+
+    def _build_inputs(self, batch, t, target=False, imagine_inps=None):
+        # Import at call time to keep the controller/model registry acyclic.
+        # EntityMAC supplies the same Red-only a[t-1] contract as LEAF/REFIL.
+        from controllers.entity_controller import EntityMAC
+        return EntityMAC._build_inputs(self, batch, t, target=target,
+                                       imagine_inps=imagine_inps)
 
     def _step(self, batch, t):
         absent = batch["entity_mask"][:, t].bool()
@@ -147,9 +156,8 @@ class TransfQMixMAC:
         else:
             # Import at call time: the shared model module also imports MACs.
             from open_score.models.entity_encoder import relative_entity_views
-            inputs = {"entities": batch["entities"][:, t:t + 1],
-                      "obs_mask": batch["obs_mask"][:, t:t + 1],
-                      "entity_mask": absent[:, None]}
+            inputs, _ = self._build_inputs(batch, slice(t, t + 1))
+            inputs["entity_mask"] = absent[:, None]
             entities, mask, _, _ = relative_entity_views(inputs, self.args)
         q, hidden = self.agent(entities, mask, self.hidden_states, dead.flatten())
         self.hidden_states = hidden.reshape(batch.batch_size, self.n_agents, -1)
@@ -192,10 +200,11 @@ class TransfQMixMAC:
             if self._evaluation_t == t:
                 total = self._evaluation_total[active]
             else:
+                inputs, _ = self._build_inputs(batch, slice(t, t + 1))
                 with th.no_grad():
                     total, recurrent = mixer(chosen, self._decision_hidden[active],
-                        self._evaluation_hyper[active], batch["entities"][active, t],
-                        batch["entity_mask"][active, t])
+                        self._evaluation_hyper[active], inputs["entities"][active, 0],
+                        inputs["entity_mask"][active, 0])
                 self._evaluation_hyper[active] = recurrent
                 self._evaluation_total = q.new_zeros(batch.batch_size)
                 self._evaluation_total[active] = total.flatten()
@@ -232,7 +241,10 @@ class TransfQMixMixer(nn.Module):
         self.width = int(getattr(args, "mixer_emb", 32))
         if self.width != int(getattr(args, "emb", 32)):
             raise ValueError("TransfQMix actor and mixer token widths must agree")
-        self.feat_embedding = nn.Linear(int(args.entity_shape), self.width)
+        input_width = int(args.entity_shape)
+        if args.entity_last_action:
+            input_width += int(args.n_actions)
+        self.feat_embedding = nn.Linear(input_width, self.width)
         self.transformer = _Transformer(self.width, int(getattr(args, "mixer_heads", 4)),
             int(getattr(args, "mixer_depth", 2)), int(getattr(args, "ff_hidden_mult", 4)),
             float(getattr(args, "dropout", 0)))
@@ -298,11 +310,12 @@ class TransfQMixLearner:
 
     def _mix_sequence(self, mixer, values, hidden, batch):
         recurrent = mixer.init_hidden(batch.batch_size)
+        inputs, _ = self.mac._build_inputs(batch, slice(0, values.shape[1]))
         outputs = []
         for t in range(values.shape[1]):
             absent = batch["entity_mask"][:, t].bool() | ~batch["filled"][:, t].bool()
             total, recurrent = mixer(values[:, t], hidden[:, t], recurrent,
-                                     batch["entities"][:, t], absent)
+                                     inputs["entities"][:, t], absent)
             outputs.append(total)
         return th.stack(outputs, dim=1)
 
