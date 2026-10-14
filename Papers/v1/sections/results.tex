@@ -1,0 +1,29 @@
+\section{Experimental Evaluation}
+\label{sec:results}
+\noindent\textbf{Setup.}
+We evaluate HAD target protection against the fixed reactive attacker with public entity-state observations. Training samples balanced teams, $N_R=N_B\in\{4,6,8,10\}$, and $K\in\{1,2,3\}$, under a nominal budget of $10^6$ environment steps. LEAF enables typed-count inputs and the query-memory stop-gradient, samples training depths from one through four, and ordinarily executes four rounds. Final-checkpoint parameters remain frozen throughout evaluation.
+
+Each checkpoint is evaluated on $24$ configurations with $300$ held-out scenes per configuration, shared across methods. ID comprises $(4,4,2)$, $(6,6,2)$, $(8,8,2)$, and $(10,10,3)$. $N$-OOD uses $(N,N,2)$ with $N\in\{15,20,25,30,40,50\}$; $K$-OOD uses $(10,10,K)$ with $K\in\{4,6,9,12\}$. Joint OOD combines $N\in\{15,20,30\}$ with $K\in\{4,6\}$ and adds $(30,30,9)$ and $(30,30,12)$. Two further configurations, $(5,5,2)$ and $(10,10,2)$, support diagnostic comparisons.
+
+The primary metric is accumulated target damage; lower values indicate better protection. Each seed first averages scenes within configurations, then configurations within a group. The overall score $O$ equally averages the three OOD groups within each seed. We report arithmetic means and sample standard deviations across trained seeds: three for LEAF and external learned baselines, and five for ARR and the independent one-round comparator. Matched-depth comparisons use their three common seeds. Thus, a trained policy is the unit of statistical variation.
+
+\subsection{Transfer Across Vehicle and Target Populations}
+LEAF improves target protection across the evaluated population shifts. Table~\ref{tab:had-main} summarizes the group results, while the configuration-level view follows the same frozen policies as team size, target count, or both increase. LEAF achieves lower mean damage than REFIL throughout the evaluated configurations. This consistent direction connects the group-level result to performance across individual deployment settings, supporting the reuse of one shared policy as the scene population changes.
+
+The table also places this improvement alongside external learned methods, an enlarged REFIL capacity control, and internal architectural comparators. ARR retains repeated processing and individual reading while anchoring attention keys and values to the initial encoding. LEAF obtains lower damage on the common-seed comparison with ARR. These comparisons characterize the complete learned policies under the stated HAD interaction budget and provide context for the training and reading analyses below.
+
+\input{sections/publication_tables}
+
+\draftfigure{E1: Population-transfer results}{Plot three aligned panels for team-size, target-count, and joint shifts using the audited per-configuration data. Select the core comparison curves, show arithmetic seed means and sample-SD bands, and label actual seed counts. Additional completed baselines remain in Table~\ref{tab:had-main}.}
+
+\subsection{Training Across Depths and One-Round Execution}
+Multi-depth training yields a stronger policy when deployment is restricted to a single entity update. We compare LEAF with an independently trained one-round model, executing both at the same depth on common seeds and evaluation scenes. LEAF achieves lower damage consistently across these matched settings. The saved configurations share network width, count inputs, query memory, the REFIL host, and the nominal interaction budget; training computation varies with unfolding depth.
+
+The comparison concerns the quality of the complete learned shallow policy. Its encoder, entity update, reader, and recurrent decision network adapt jointly during training. Sampling depth exposes these components to both direct decisions from early representations and longer sequences of contextual processing. The result connects this training design to effective shallow execution. A separate frozen-policy depth scan shows configuration-dependent changes as execution rounds are added, making deployment depth a choice informed by the intended operating setting.
+
+\subsection{Use of Intermediate States and Temporal History}
+Paired readout interventions show that the early intermediate reads actively influence current decisions. We preserve the observation and reconstructed recurrent history while changing the reads entering fusion, renormalizing the retained weights. Keeping the earliest pair preserves most sampled actions; selecting only the first read or removing the second produces larger changes. Closed-loop evaluations also reveal scene-dependent outcomes under different readout choices. Together, these observations connect intermediate-state access to the behavior of the deployed policy.
+
+Temporal history also participates through the reading query. A paired intervention zeros its historical component while preserving the physical observation and incoming GRU state. The resulting action changes occur in both training-range and larger-team settings, and initial zero-history states provide an unchanged control. Complementary held-out probes recover geometric threat information more effectively after the first learned entity update than from the input encoding and corresponding random features. These measurements describe accessible information in the entity states and the reader's use of temporal context during action selection.
+
+\draftfigure{E2: Training depth and information use}{Combine three panels: matched one-round execution after sampled-depth versus one-round training; same-state action changes under selected readout interventions; and query-history interventions at training-range and larger-team configurations. Show individual model seeds and arithmetic means with sample SD. Identify the fixed inputs and changed component in each intervention panel.}

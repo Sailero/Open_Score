@@ -1,0 +1,48 @@
+﻿\RequirePackage[T1]{fontenc}
+\documentclass[journal,10pt]{IEEEtran}
+\usepackage{mathptmx}
+\usepackage{amsmath,amssymb,booktabs,array,multirow}
+\usepackage{graphicx,xcolor}
+\usepackage{placeins}
+\usepackage{cite,url}
+\usepackage[hidelinks]{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,calc}
+\newcommand{\LEAF}{\textsc{LEAF}}
+\hyphenation{multi-agent gene-ra-li-za-tion re-pre-sen-ta-tion}
+\hypersetup{pdftitle={LEAF: Reusable Threat Context for Zero-Shot Multi-Target Defense},pdfauthor={}}
+\begin{document}
+\raggedbottom
+\title{LEAF: Reusable Threat Context for Zero-Shot Multi-Target Defense}
+\author{Anonymous Authors}
+\bstctlcite{leafBibliographyControl}
+\maketitle
+\markboth{Anonymous Manuscript Submitted for Review}{LEAF: Reusable Threat Context for Multi-Target Defense}
+\begin{abstract}
+In multi-target defense, deployment populations often differ from those seen during training. Variable-size entity inputs accommodate this change, but effective protection also requires interpreting an attacker together with the target it approaches and the teammates already covering that target. We propose Looped Entity Attention Fusion (LEAF), which constructs this threat context through a shared iterative attention operator. Training samples the refinement depth and fuses intermediate reads. Each defender queries the context using its current self representation, while recurrent memory enters downstream. In SkyHAD, policies trained with at most ten vehicles per team and three targets transfer without retraining to fifty vehicles per team or twelve targets. Across three training seeds, LEAF reduces mean target damage relative to REFIL by 0.800, 1.635, and 2.211 in target-count, team-size, and joint extrapolation, respectively, and leads all compared learned baselines in each group. Historical design comparisons favor current-state reading, while frozen interventions show dependence on constructed context and downstream memory. Frozen execution from one to six rounds, including depths beyond training, preserves similar aggregate protection; normal reads place approximately 99\% of fusion weight on the first two stages. Permutation analysis and a finite-depth action-stability bound clarify the architecture's structural support. Together, the results connect reusable current-scene processing to population transfer, higher interception, and lower target-damage incidence.
+\end{abstract}
+\noindent\textbf{Note to Practitioners---}
+A protection controller may face different numbers of vehicles and assets at deployment. LEAF trains a shared policy on small engagements and reuses its parameters on larger entity sets. Its current-scene encoder and downstream recurrent policy separate scene interpretation from temporal inference. The experiments measure accumulated target damage, interception, and friendly-collision mortality. They use a planar simulation with public entity-state observations and a fixed reactive attacker, so the results establish transfer under this interface. Execution depth is an externally selected budget; learned stage fusion combines information and does not stop computation automatically.
+\par
+\begin{IEEEkeywords}
+Multi-agent reinforcement learning, population generalization, entity attention, target protection, iterative refinement.
+\end{IEEEkeywords}
+\input{sections/introduction}
+\input{sections/related_work}
+\input{sections/problem}
+\begin{figure*}[!t]
+\centering
+\resizebox{\textwidth}{!}{\input{figures/framework}}
+\caption{LEAF at one defender decision. The same context-update operator refines the receiver-relative entity set across rounds. A fixed current-self query reads each stage, and learned fusion augments the host feature before the temporal GRU updates once. Context states are reinitialized at every physical step; only temporal memory persists. Training samples one to four rounds, formal comparison uses four, and frozen-depth analysis evaluates one to six.}
+\label{fig:framework}
+\end{figure*}
+\input{sections/method}
+\input{sections/results}
+\FloatBarrier
+\input{sections/conclusion}
+\section*{Acknowledgment}
+OpenAI Codex assisted with manuscript drafting and figure preparation. The conceptual illustration in Fig.~\ref{fig:motivation} was generated with ImageGen; experimental plots use the recorded results.
+\bibliographystyle{IEEEtran}
+\IEEEtriggeratref{19}
+\bibliography{references}
+\end{document}

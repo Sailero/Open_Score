@@ -1,0 +1,103 @@
+\section{Looped Entity Attention Fusion}
+\label{sec:method}
+An attacker's urgency depends on the asset it threatens and the teammates already covering that asset. LEAF develops this threat context before the acting defender reads it. We organize its computation into four modules: entity-context construction (C), current-self querying and reading (Q), intermediate-stage fusion (F), and host-feature integration with temporal decision memory (H). Shared parameters and sampled training depths determine how the context operator is learned and reused. Context processing takes place within one physical decision; the downstream GRU carries memory across decisions. Figure~\ref{fig:framework} shows these information paths, and Section~\ref{subsec:ablation} maps the trained ablations to the four modules.
+
+\subsection{Receiver-Relative Entities and Host Features}
+At time $t$, defender $i$ receives an entity matrix $X_{i,t}$. The self row retains absolute position and velocity; other rows express them relative to this defender. Features also include entity type, health, alive status, target damage, and defenders' previous actions. Let $m_{i,t,e}=1$ denote an excluded entity. Unobserved, dead, and padding entities cannot act as keys, and $\operatorname{Mask}_m$ zeros their working states. REFIL's imagined branches add their partition masks; these masks also apply to the relational path.
+
+A shared rowwise encoder produces 128-dimensional tokens $Z_{i,t}$. Two paths use these same tokens: the REFIL host pools them with self-conditioned attention to form a 64-dimensional local feature $\ell_{i,t}$; the relational path retains the entity set,
+\begin{equation}
+ E_{i,t}=W_g Z_{i,t}+b_g,\qquad
+ H^{(0)}_{i,t}=\operatorname{Mask}_{m_{i,t}}(E_{i,t}),
+ \label{eq:workspace}
+\end{equation}
+with working width $d=64$. Thus contextual processing begins from individual entities, not from the already pooled host feature. All defenders share parameters but construct their own relative views. The entity states are initialized anew at each observation and receive no preceding GRU state.
+
+\subsection{Shared Contextual Refinement}
+Suppressing $i,t$, LEAF applies the same operator $F_\theta$ for $L$ rounds:
+\begin{align}
+ J^{(r)}&=\operatorname{LN}_a(H^{(r-1)}),\nonumber\\
+ \widetilde H^{(r)}&=H^{(r-1)}+
+       \operatorname{MHA}_{\theta}(J^{(r)},H^{(r-1)},H^{(r-1)};m),\nonumber\\
+ H^{(r)}&=\operatorname{Mask}_{m}\!\left[\widetilde H^{(r)}+
+       \operatorname{FFN}_{\theta}(\operatorname{LN}_f(\widetilde H^{(r)}))\right].
+ \label{eq:loop}
+\end{align}
+Here layer normalization and the feedforward network act rowwise. Masked multihead attention uses four heads, and the feedforward hidden width is $2d$. Its queries use normalized states; keys and values use the preceding states directly. This combination lets an attacker token incorporate target and teammate context before a defender selects information from it. Later rounds reconsider already contextualized representations with the same transformation, following the shared-depth principle of Universal Transformers~\cite{dehghani2019universal}.
+
+All permitted entities can interact in the first round. Increasing $r$ therefore changes the processing of a scene already globally accessible to the receiver; it does not expose a successively larger graph neighborhood. Neither the residual architecture nor parameter sharing implies convergence or monotonic improvement with depth. The benefit sought is a reusable contextual transformation, assessed through separately trained variants and frozen-depth evaluation.
+
+\subsection{Current-State Reading and Stage Fusion}
+One query, fixed throughout the current decision, reads every stage:
+\begin{align}
+ q_{i,t}&=W_q H^{(0)}_{i,t,\mathrm{self}}+b_q,\nonumber\\
+ u_{i,t}^{(r)}&=\operatorname{MHA}_{\mathrm{read}}
+          (q_{i,t},H_{i,t}^{(r)},H_{i,t}^{(r)};m_{i,t}).
+ \label{eq:read}
+\end{align}
+This affine query uses the current self token, with the temporal-state input fixed to zero. The token obeys the relational mask, including in imagined branches. Context-update and reader parameters are distinct, and each is shared across rounds. The reader converts scene context into a receiver-specific feature without updating the query from either the loop state or temporal memory.
+
+A shared linear scorer combines the intermediate reads:
+\begin{align}
+ s_r&=w_s^\top u^{(r)}+b_s,\qquad
+ \alpha_r^{[L]}=\frac{\exp(s_r)}{\sum_{j=1}^{L}\exp(s_j)},\nonumber\\
+ u_{[L]}&=\sum_{r=1}^{L}\alpha_r^{[L]}u^{(r)}.
+ \label{eq:fusion}
+\end{align}
+The scorer sees only its stage's read; receiver information enters through that read. As in intermediate-representation aggregation~\cite{xu2018jk}, this preserves access to earlier features instead of requiring the final stage to carry all useful information. Entity attention selects information within a stage, whereas Eq.~\eqref{eq:fusion} weights stages. All $L$ updates are executed: the weights implement information fusion, not a stopping rule.
+
+The host feature and fused read jointly enter the recurrent decision network,
+\begin{align}
+ \ell'_{i,t}&=\ell_{i,t}+W_f u_{[L],i,t}+b_f,\nonumber\\
+ h_{i,t}&=\operatorname{GRU}_{\mathrm{time}}(\ell'_{i,t},h_{i,t-1}),\nonumber\\
+ Q_i(\tau_{i,t},\cdot)&=W_o h_{i,t}+b_o.
+ \label{eq:decision}
+\end{align}
+The projection $W_f,b_f$ is zero-initialized and then trained jointly with both feature paths. The 64-dimensional GRU updates once per physical decision, integrating temporal information as in recurrent value learning~\cite{hausknecht2015drqn}. The policy selects the highest-valued legal maneuver; it has no explicit defender--attacker assignment output.
+
+This placement gives an exact, limited form of memory isolation. For fixed parameters, depth, mask, and observed features, including the previous-action features,
+\begin{equation}
+ \left.\frac{\partial u_{[L],i,t}}{\partial h_{i,t-1}}\right|_{X_{i,t},m_{i,t}}=0.
+ \label{eq:memory-isolation}
+\end{equation}
+Indeed, neither initialization, contextual updates, query, nor fusion uses $h_{i,t-1}$. Action values can still depend on it through the GRU. This is a statement about the instantaneous computation, not statistical independence from history. The memory-query variant supplies a stopped-gradient $h_{i,t-1}$ to Eq.~\eqref{eq:read}; stopping its gradient does not remove its forward influence. Both policies retain temporal memory.
+
+\subsection{Training Across Depths}
+Collection samples $L$ uniformly from $\{1,2,3,4\}$ per environment and holds it fixed for an episode. Replay independently samples one depth per minibatch, used consistently by the online, target, and imagined branches. With REFIL's main and imagined temporal-difference losses~\cite{iqbal2021refil}, this optimizes
+\begin{equation}
+ \mathcal L=\mathbb E_L
+ \left[(1-\lambda)\mathcal L_{\mathrm{TD}}^{[L]}
+       +\lambda\mathcal L_{\mathrm{imagined}}^{[L]}\right],\quad\lambda=0.5.
+ \label{eq:td-loss}
+\end{equation}
+Each sampled depth supervises a complete fused policy. The shared operator is consequently trained both on initial tokens and on its own intermediate outputs, and the scorer is trained with different available stage sets. The host's FlexQMIX mixer, imagined grouping, and value-learning protocol are retained. Training may use potential shaping; formal evaluation measures unshaped target damage, $R=-D$. Deployment uses only the main branch and no mixer.
+
+The formal policy uses final weights and $L=4$. Frozen evaluations at $L=1$--$4$ vary depth within the training range; $L=5,6$ examine depth extrapolation. These differ from training a one-round policy or a fixed four-round policy from scratch. Parameter count is independent of population and shared unfolding depth, but dense contextual updates cost $O(L(M^2d+Md^2))$ per receiver for $M$ entity slots. Variable input size and execution depth are architectural capabilities; their protection performance requires empirical evaluation.
+
+\subsection{Structural Properties and a Finite-Depth Bound}
+We state what the architecture guarantees, separately from its empirical generalization. Consider deterministic evaluation with at least one permitted key and fixed observed features and entering temporal state.
+
+\noindent\textbf{Proposition 1 (masked set consistency).}
+Let $P$ permute entity rows while preserving the receiver's self row, with masks and all row features permuted together. At every depth, $H^{(r)}(PX,Pm)=P H^{(r)}(X,m)$, while $u_{[L]}$ and the defender's action values are unchanged.
+
+\emph{Proof.} Rowwise encoding, normalization, and feedforward maps commute with $P$. Masked attention satisfies
+\begin{equation}
+ \operatorname{MHA}(PQ,PK,PV;Pm)
+ =P\operatorname{MHA}(Q,K,V;m),
+ \label{eq:permutation}
+\end{equation}
+because rowwise softmax commutes with simultaneous permutation of score rows and columns. Residual addition and masking preserve this property, giving induction over Eq.~\eqref{eq:loop}. The fixed self query is unchanged; permuting its keys and values leaves each read unchanged. Fusion, host pooling, and Eq.~\eqref{eq:decision} then preserve action values. This is the masked receiver-specific form of attention's set symmetry~\cite{lee2019settransformer}.\hfill$\square$
+
+\noindent\textbf{Proposition 2 (prefix-fusion stability).}
+Compare depths $p<L$ at the same input and entering memory. Define omitted fusion mass $\beta=\sum_{r=p+1}^{L}\alpha_r^{[L]}$ and $\Delta=\max_{p<r\leq L}\|u^{(r)}-u_{[p]}\|$. Then
+\begin{equation}
+ \|u_{[L]}-u_{[p]}\|\leq\beta\Delta.
+ \label{eq:prefix-bound}
+\end{equation}
+If the downstream map in Eq.~\eqref{eq:decision} is $\kappa$-Lipschitz from the chosen read norm to the action-value infinity norm on the connecting segment, the legal greedy action is unchanged whenever its depth-$L$ action-value margin exceeds $2\kappa\beta\Delta$.
+
+\emph{Proof.} Shared updates and scoring leave prefix reads and scores unchanged, so $\alpha_r^{[p]}=\alpha_r^{[L]}/(1-\beta)$ for $r\leq p$. Hence
+$u_{[L]}-u_{[p]}=\sum_{r=p+1}^{L}\alpha_r^{[L]}(u^{(r)}-u_{[p]})$.
+The triangle inequality proves Eq.~\eqref{eq:prefix-bound}. Each action value changes by at most $\kappa\beta\Delta$; a larger-than-double margin preserves the maximizer.\hfill$\square$
+
+The second result is local to a fixed decision and conditional on the stated sensitivity bound. It connects the readout weights and frozen-depth comparisons in Section~\ref{sec:results}: small late-stage weights alone do not establish negligible action effects, since feature displacement and decision margin also matter. Neither proposition guarantees reward transfer, closed-loop trajectory agreement, or convergence at arbitrary depth.

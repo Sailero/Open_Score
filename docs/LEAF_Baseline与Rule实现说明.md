@@ -1,6 +1,6 @@
 # LEAF 对比基线与 Rule 实现说明
 
-更新：2026-10-13。本文说明 **HAD 主实验中的学习基线、Rule 和 Random 实际怎样计算与训练**，依据现有源码、保留权重的 config.json 和归并后的实验登记。它与[方法与变体说明](LEAF_方法与变体说明.md)、[主实验结果分析](LEAF_主实验结果分析.md)配套阅读：前者介绍 NoMem 及其变体，后者给出成绩与统计；本文负责解释对手方法的实现。
+更新：2026-10-14。本文说明 **HAD 主实验中的学习基线、Rule 和 Random 实际怎样计算与训练**，依据现有源码、保留权重的 config.json 和归并后的实验登记。它与[方法与变体说明](LEAF_方法与变体说明.md)、[主实验结果分析](LEAF_主实验结果分析.md)配套阅读：前者介绍 NoMem 及其变体，后者给出成绩与统计；本文负责解释对手方法的实现。
 
 ## 1. 总结：主实验到底在和什么比较
 
@@ -66,7 +66,7 @@ $$
 
 REFIL、REFIL-matched、QMIX-Atten、DCG、ALMA 启用 entity_last_action：红方实体追加上一动作9维 one-hot，蓝方和目标的这一段为零，首步为零。因此这些 actor 的输入宽度是 **19**。归档 SPECTra 和 TransfQMix 权重使用基础 **10维**输入。这是确定的信息条件差异，不能仅凭旧成绩断言其影响大小。
 
-`main_1013_base` 将当前 HAD 两个基线的 actor、online/target mixer 和冻结评估输入统一补齐为19维，读取实际执行的 `actions_onehot[t-1]`，不读取本步动作。新投影从头训练；加载历史 `entity_last_action=false` 权重仍使用10维。SMACv2 保留原生输入，开关仍关闭。obs_last_action=false 与 entity_last_action=true 可以同时成立，它们是不同开关；当前七方法均不额外附加 agent ID。运行和结果状态见该版本唯一[实验报告](../Open-SCORE/outputs/main_1013_base/实验报告.md)。
+`main1013_base` 将当前 HAD 两个基线的 actor、online/target mixer 和冻结评估输入统一补齐为19维，读取实际执行的 `actions_onehot[t-1]`，不读取本步动作。新投影从头训练；加载历史 `entity_last_action=false` 权重仍使用10维。SMACv2 保留原生输入，开关仍关闭。obs_last_action=false 与 entity_last_action=true 可以同时成立，它们是不同开关；当前七方法均不额外附加 agent ID。六个模型及其验证、正式与确认评估均已完成并归入main；结果和历史10维对照统一见[主报告](LEAF_主实验结果分析.md)，当前比较使用`paper_current`。
 
 actor 的相对实体视图和训练 mixer 的集中式绝对实体表也不是同一个张量。基础特征与视图转换见[features.py](../Open-SCORE/open_score/envs/features.py)和[entity_encoder.py](../Open-SCORE/open_score/models/entity_encoder.py)。
 
@@ -263,7 +263,7 @@ DCG 的“八轮”是动作图上的优化消息；LEAF 的 R1–R4 是动作 Q
 
 ### 6.1 actor：类型投影、一次自身查询、GRU
 
-归档权重输入是10维自身中心实体视图，不含上一动作或 agent ID。self、ally、enemy、target 使用四套 Linear(10,64) 类型投影，再合成一个集合；`main_1013_base` 的四套投影改为 Linear(19,64)，SAQA、GRU和动作头保持原结构：
+归档权重输入是10维自身中心实体视图，不含上一动作或 agent ID。self、ally、enemy、target 使用四套 Linear(10,64) 类型投影，再合成一个集合；`main1013_base` 的四套投影改为 Linear(19,64)，SAQA、GRU和动作头保持原结构：
 
 $$
 z_i=\operatorname{LayerNorm}\!\left[
@@ -358,7 +358,7 @@ sel_task_upd=true 指自回归过程更新被选中 task 的 embedding，**不�
 
 ### 8.1 actor 的记忆怎样更新
 
-归档权重输入10维实体，不附加上一动作或 ID，所有类型共用 Linear(10,32)。`main_1013_base` 补齐实体上一动作后使用 Linear(19,32)，actor 和中央 mixer 同步接入，仍不附加 ID。每个红方保存一个32维 memory token，首步为零。每步将上一 token 放在实体 token 前：
+归档权重输入10维实体，不附加上一动作或 ID，所有类型共用 Linear(10,32)。`main1013_base` 补齐实体上一动作后使用 Linear(19,32)，actor 和中央 mixer 同步接入，仍不附加 ID。每个红方保存一个32维 memory token，首步为零。每步将上一 token 放在实体 token 前：
 
 ```text
 [上一步 memory token, 当前自身与其他有效实体 tokens]
@@ -546,13 +546,13 @@ open_score.rules 同时导出原生 RulePolicy 与本项目 CoveragePolicy，容
 | REFIL-matched | 19 | GRU64 | RMSprop / 5e−4 | 一步 Double-Q | 100,000 | λ=0.5 |
 | QMIX-Atten | 19 | GRU64 | RMSprop / 5e−4 | 一步 Double-Q | 100,000 | 关闭 |
 | DCG | 19 | GRU64 | RMSprop / 5e−4 | 图价值一步 Double-Q | 50,000 | 关闭 |
-| SPECTra | 10 | GRU64 | Adam / 1e−3 | Double-Q + TD(λ=0.6) | 100,000 | 关闭 |
+| SPECTra | 19 | GRU64 | Adam / 1e−3 | Double-Q + TD(λ=0.6) | 100,000 | 关闭 |
 | ALMA | 19 | GRU64 | RMSprop / 5e−4；另有 AQL 两优化器 | 一步 Double-Q；另有分配目标 | 100,000 | 关闭 |
-| TransfQMix | 10 | token32 | Adam / 1e−3 | Double-Q + TD(λ=0.6) | 100,000 | 关闭 |
+| TransfQMix | 19 | token32 | Adam / 1e−3 | Double-Q + TD(λ=0.6) | 100,000 | 关闭 |
 
 共同保存设置为 γ=0.99、replay 容量5,000回合、batch=32、梯度裁剪10、目标网络每200回合硬更新、ε从1降至0.05、每训练种子1M物理环境步。RMSprop 的 alpha=0.99、eps=1e−5。
 
-以上表格描述保留权重的历史配置。新增 `main_1013_base` 仅重训 SPECTra/TransfQMix 三种子，共6模型：输入统一19维、8个环境进程、每可采样收集批更新8次（含预算末批），其余共同控制与最终LEAF对齐；保留基线自身 Adam/1e−3、TD(λ=0.6)和核心结构。SPECTra作者GRF的探索退火为500k，而本实验共享100k；作者SMACv2也有100k配置。原GRF每采集8局更新1次，本实验改为8次。TransfQMix原单进程每局1次，此处按8局批次执行。该适配不宣称完整论文复现或充分调参；正式与确认仍用独立场景、只评分完成训练的final。
+以上表格中SPECTra/TransfQMix采用已完成的`main1013_base`权重配置，其余方法沿用既有配置；旧10维权重另作历史保留。本次仅重训 SPECTra/TransfQMix 三种子，共6模型：输入统一19维、8个环境进程、每可采样收集批更新8次（含预算末批），其余共同控制与最终LEAF对齐；保留基线自身 Adam/1e−3、TD(λ=0.6)和核心结构。SPECTra作者GRF的探索退火为500k，而本实验共享100k；作者SMACv2也有100k配置。原GRF每采集8局更新1次，本实验改为8次。TransfQMix原单进程每局1次，此处按8局批次执行。该适配不宣称完整论文复现或充分调参；正式与确认采用独立场景、只评分完成训练的final；每模型保留5,000条验证、正式/确认各7,200条记录，总计116,400条，已归并到main。
 
 **更新次数应看执行入口。** 普通方法当前按 training_iters=8 更新；TransfQMix 虽保存 training_iters=1，入口特判按实际收集 episode_batch.batch_size 更新，通常8局对应8次。不得据该保存字段推断 TransfQMix 每批只训练一次。ALMA 的分配更新另计，REFIL 的三个训练分支也额外消耗计算。
 
@@ -583,7 +583,7 @@ $$
 
 ### 10.3 正式结果如何对应这些实现
 
-主学习比较使用三个训练种子0/1/2、final.pt；正式池为24配置，每配置每训练种子300场，共同场景编号9000–9299。分组为 ID、K-OOD、N-OOD、Joint-OOD 和额外配置。best.pt 不替代正式 final.pt。
+主学习比较取`paper_current`：SPECTra/TransfQMix使用19维`main1013_base`结果，其余沿用原主表；旧10维`paper1007`独立保留。各学习方法使用三个训练种子0/1/2、final.pt；正式池为24配置，每配置每训练种子300场，共同场景编号9000–9299。分组为 ID、K-OOD、N-OOD、Joint-OOD 和额外配置。best.pt 不替代正式 final.pt。
 
 Rule / Random 不训练，每方法24×300=7,200场；误差按场景统计，**不是三个训练种子的标准差**。归并重复包不增加独立样本数。
 
@@ -601,11 +601,11 @@ Rule / Random 不训练，每方法24×300=7,200场；误差按场景统计，**
 | REFIL-matched | [config.json](../Open-SCORE/outputs/main/had/refil_matched/models/main0921/seed_0/config.json) |
 | QMIX-Atten | [config.json](../Open-SCORE/outputs/main/had/b2_qmix_atten/models/main0921/seed_0/config.json) |
 | DCG | [config.json](../Open-SCORE/outputs/main/had/dcg/models/main0921/seed_0/config.json) |
-| SPECTra | [config.json](../Open-SCORE/outputs/main/had/spectra/models/main0921/seed_0/config.json) |
+| SPECTra | [config.json](../Open-SCORE/outputs/main/had/spectra/models/main1013_base/seed_0/config.json) |
 | ALMA | [config.json](../Open-SCORE/outputs/main/had/alma/models/main0921/seed_0/config.json) |
-| TransfQMix | [config.json](../Open-SCORE/outputs/main/had/transfqmix/models/main0921/seed_0/config.json) |
+| TransfQMix | [config.json](../Open-SCORE/outputs/main/had/transfqmix/models/main1013_base/seed_0/config.json) |
 
-日期形式的模型来源路径只用于追溯；报告方法名称仍使用表中的结构名。QMIX-Atten 的另一历史目录有错误 SMAC 环境登记，不能用其26动作、5M步配置替代本表的 HAD 保存配置。
+新基线的加载配置、final.pt和best.pt按`main/had/<方法>/models/main1013_base/seed_<种子>`保存，未覆盖旧10维权重。日期形式的模型来源路径只用于追溯；报告方法名称仍使用表中的结构名。QMIX-Atten 的另一历史目录有错误 SMAC 环境登记，不能用其26动作、5M步配置替代本表的 HAD 保存配置。
 
 当前代码分派见[algos 入口](../Open-SCORE/open_score/algos/__init__.py)与[模型 builder](../Open-SCORE/open_score/models/entity_encoder.py)；冻结模型的身份、动作与时间状态适配见[entity_env.py](../Open-SCORE/open_score/envs/entity_env.py)。
 

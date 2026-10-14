@@ -1,0 +1,34 @@
+{
+  "source_study": "tmp/tmp_analysis_0928/round_study",
+  "source_report": "REPORT.md",
+  "model_seeds": [
+    0,
+    1,
+    2
+  ],
+  "readout_intervention": {
+    "trajectories": 30,
+    "observer_decisions": 675,
+    "same_factual_history": true,
+    "remaining_weights": "renormalized"
+  },
+  "matched_execution": {
+    "rounds": 1,
+    "scenes_per_seed_config": 300,
+    "training_interactions": "matched 1M",
+    "training_flops": "not matched"
+  },
+  "semantic_probes": {
+    "trajectories": 60,
+    "id_train": 24,
+    "id_validation": 12,
+    "ood_per_config": 8,
+    "states_per_checkpoint": 451,
+    "status": "exploratory; separate from original larger probe bank"
+  },
+  "gradient_paths": {
+    "observer_decisions": 36,
+    "objective": "frozen greedy-minus-runner-up Q margin, not TD loss"
+  },
+  "raw_source_scripts": "retained in source_study/scripts; compact paper data reproduce plotted summaries"
+}

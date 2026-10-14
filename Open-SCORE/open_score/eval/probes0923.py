@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .experiment import atomic_json, checkpoint_info, read_json, run_directory, test_depth
+from .experiment import atomic_json, checkpoint_info, environment_directory, read_json, run_directory, test_depth
 from .relationship_probe import (ProbeStopped, _check_stop, _lock, _progress,
                                  _random_policy, _read_trajectory, _scene_name,
                                  extract_scene, scene_jobs)
@@ -40,7 +40,7 @@ def _as_bool(mask):
 
 
 def _complete_path(output, kind, method, seed):
-    return Path(output) / "probe" / kind / f"{method}_s{int(seed)}.complete.json"
+    return environment_directory(output) / "probe" / kind / f"{method}_s{int(seed)}.complete.json"
 
 
 def probe_complete(output, kind, method, seed, checkpoint_id=None):
@@ -80,7 +80,7 @@ def _load_policy(output, method, seed):
 
 
 def _iter_scenes(policy, output, stop_requested, on_progress, extras=True):
-    root = Path(output) / "probe" / "trajectories"
+    root = environment_directory(output) / "probe" / "trajectories"
     jobs = scene_jobs()
     for index, job in enumerate(jobs):
         _check_stop(stop_requested)
@@ -245,7 +245,7 @@ def r_squared(y, predicted):
 def _run_or_reuse(output, kind, method, seed, stop_requested, on_progress, fit):
     import torch
     torch.set_num_threads(1)
-    root = Path(output) / "probe"
+    root = environment_directory(output) / "probe"
     try:
         policy, info = _load_policy(output, method, seed)
         marker = _complete_path(output, kind, method, seed)
@@ -337,7 +337,7 @@ def evaluate_coverage_probe(*, output, method, seed, stop_requested=None, on_pro
                                              round=r, split=split, config=config, n=int(selected.sum()),
                                              auc=_auc(y[selected], pred), acc=_accuracy(y[selected], pred),
                                              alpha=alpha))
-        _rewrite_csv(Path(output) / "probe" / "coverage.csv", (method, int(seed)), rows, fields, stop)
+        _rewrite_csv(environment_directory(output) / "probe" / "coverage.csv", (method, int(seed)), rows, fields, stop)
         return rows
 
     return _run_or_reuse(output, "coverage", method, seed, stop_requested, on_progress, fit)
@@ -431,7 +431,7 @@ def evaluate_dynamics(*, output, method, seed, stop_requested=None, on_progress=
                                  token_n=int(acc["token_n"][r]),
                                  mean_norm=float(np.linalg.norm(acc["token_sum"][r] / max(acc["token_n"][r], 1))),
                                  sum_sq=float(acc["token_sq"][r]), shift_from_10v10=shift))
-        _rewrite_csv(Path(output) / "probe" / "dynamics.csv", (method, int(seed)), rows, fields, stop)
+        _rewrite_csv(environment_directory(output) / "probe" / "dynamics.csv", (method, int(seed)), rows, fields, stop)
         return rows
 
     return _run_or_reuse(output, "dynamics", method, seed, stop_requested, on_progress, fit)
@@ -446,7 +446,7 @@ def evaluate_deep_rounds(*, output, method, seed, stop_requested=None, on_progre
         net = getattr(policy.mac.agent, "global_net", None)
         if net is None or getattr(policy.args, "rer_update", "tied") == "untied4":
             rows = []
-            _rewrite_csv(Path(output) / "probe" / "deep_rounds.csv", (method, int(seed)), rows, fields, stop)
+            _rewrite_csv(environment_directory(output) / "probe" / "deep_rounds.csv", (method, int(seed)), rows, fields, stop)
             return rows
         picked, seen = [], Counter()
         for job in scene_jobs():
@@ -458,7 +458,7 @@ def evaluate_deep_rounds(*, output, method, seed, stop_requested=None, on_progre
         with torch.inference_mode():
             for index, job in enumerate(picked):
                 _check_stop(stop)
-                trajectory = _read_trajectory(Path(output) / "probe" / "trajectories"
+                trajectory = _read_trajectory(environment_directory(output) / "probe" / "trajectories"
                                               / f"{_scene_name(job)}.json.gz")
                 feature = extract_scene(policy, trajectory, stop_requested=stop, extras=True)
                 _progress(progress, phase="deep_rounds", completed=index + 1, total=len(picked))
@@ -501,7 +501,7 @@ def evaluate_deep_rounds(*, output, method, seed, stop_requested=None, on_progre
                 ratio = norms[r] / norms[r - 1] if r and norms[r - 1] else ""
                 rows.append(dict(method=method, seed=int(seed), config=cfg, round=r, n=int(bucket["n"]),
                                  norm=norm, ratio=ratio, cosine=cos[r]))
-        _rewrite_csv(Path(output) / "probe" / "deep_rounds.csv", (method, int(seed)), rows, fields, stop)
+        _rewrite_csv(environment_directory(output) / "probe" / "deep_rounds.csv", (method, int(seed)), rows, fields, stop)
         return rows
 
     return _run_or_reuse(output, "deep_rounds", method, seed, stop_requested, on_progress, fit)
@@ -577,7 +577,7 @@ def evaluate_global_probe(*, output, method, seed, stop_requested=None, on_progr
                                  ("shuffled_labels", trained)):
             rows += fit_feature(samples, control, "h_mean", lambda s: s["pooled"], stop)
             rows += fit_feature(samples, control, "readout", lambda s: s["read"], stop)
-        _rewrite_csv(Path(output) / "probe" / "global_results.csv", (method, int(seed)), rows, fields, stop)
+        _rewrite_csv(environment_directory(output) / "probe" / "global_results.csv", (method, int(seed)), rows, fields, stop)
         return rows
 
     return _run_or_reuse(output, "global_probe", method, seed, stop_requested, on_progress, fit)
@@ -626,7 +626,7 @@ def evaluate_readout_attention(*, output, method, seed, stop_requested=None, on_
                      share_teammate=b["teammate"] / b["n"], share_target=b["target"] / b["n"],
                      share_other=b["other"] / b["n"])
                 for (cfg, r), b in sorted(acc.items())]
-        _rewrite_csv(Path(output) / "probe" / "readout_attention.csv", (method, int(seed)), rows, fields, stop)
+        _rewrite_csv(environment_directory(output) / "probe" / "readout_attention.csv", (method, int(seed)), rows, fields, stop)
         return rows
 
     return _run_or_reuse(output, "readout_attention", method, seed, stop_requested, on_progress, fit)
@@ -714,7 +714,7 @@ def evaluate_intent_accuracy(*, output, method, seed, stop_requested=None, on_pr
                     nll = sum(item["nll"] * item["n"] for item in bundle) / max(n, 1)
                 written.append(dict(method=method, seed=int(seed), control=control, config=config,
                                     round=round_id, n=n, acc=acc, nll=nll))
-        _rewrite_csv(Path(output) / "probe" / "intent.csv", (method, int(seed)), written, fields, stop)
+        _rewrite_csv(environment_directory(output) / "probe" / "intent.csv", (method, int(seed)), written, fields, stop)
         return written
 
     return _run_or_reuse(output, "intent_accuracy", method, seed, stop_requested, on_progress, fit)

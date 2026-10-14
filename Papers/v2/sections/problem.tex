@@ -1,0 +1,47 @@
+\section{Problem Formulation and Preliminaries}
+\label{sec:problem}
+\subsection{Cooperative Target Protection}
+We study a planar attack--defense simulator (HAD) in which defenders coordinate their actions against incoming attackers across a changing set of protected targets. Let $\mathcal R$, $\mathcal B$, and $\mathcal T$ denote the defender, attacker, and target sets, with initial configuration $\mathbf n=(N_R,N_B,K)$. Targets occupy the left portion of the arena; attackers approach from the right, and defenders distribute their responses between interception and target coverage. Population transfer changes the sizes of these sets while preserving the interaction rules.
+
+Vehicles choose among eight normalized acceleration directions and zero acceleration. Close vehicle encounters can remove both participants, while automatic firing allows defenders to engage attackers and attackers to damage targets. Targets remain as damage accumulates. The simulator continues after the final defender disappears and ends when all attackers have disappeared or the episode horizon is reached. Table~\ref{tab:environment} collects the physical interface used by all policies.
+
+\begin{table}[t]
+\centering\footnotesize
+\caption{HAD physical interface. Damage-event ordering and terminal reward handling follow the common simulator.}
+\label{tab:environment}
+\begin{tabular}{@{}ll@{}}\toprule
+Quantity & Setting\\\midrule
+Arena & $5000\times5000$ m\\
+Decision interval / horizon & 1 s / 100 steps\\
+Acceleration limit & $40\,\mathrm{m/s^2}$\\
+Vehicle speed range & $35$--$120\,\mathrm{m/s}$\\
+Swept collision distance & 20 m\\
+Automatic firing separation & Below 200 m, pre-movement\\
+Damage profile & Unit core to 200 m; linear to 0 at 400 m\\
+\bottomrule\end{tabular}
+\end{table}
+
+Public observations contain entity positions, velocities, types, health or alive status, and target damage. The fixed reactive attacker controller selects a target using public defender coverage and distances, then carries out a rush and periodically revises its assignment. That assignment is private. Recent motion therefore provides useful context for interpreting the attackers' evolving objectives.
+
+Let $\Delta d_{k,t}$ be damage to target $k$ at step $t$. The physical step reward and unshaped episode reward are
+\begin{equation}
+\Delta D_t=\sum_{k\in\mathcal T}\Delta d_{k,t},\qquad
+r_t=-\Delta D_t,\qquad R=\sum_t r_t=-D.
+\label{eq:damage}
+\end{equation}
+Here $D=\sum_t\Delta D_t$. Higher episode reward $R$ indicates better protection, and $R=0$ denotes no target damage. Comparisons use identical configurations and initial-scene conditions.
+
+\subsection{Population Generalization}
+With the attacker controller $\pi_B$ fixed, the team faces a family of cooperative partially observable decision processes indexed by $\mathbf n$. Defender $i$ acts from its observation--action history $\tau_{i,t}$ through a shared policy $\pi_\theta$, maintaining its own temporal state. The latent state includes the private attacker assignment.
+
+Training samples small engagements. Evaluation freezes $\theta$ and varies vehicle populations, target populations, or both, while retaining the physical rules, action semantics, and attacker controller. The quantity of interest is $\mathbb E[R\mid\mathbf n,\pi_\theta,\pi_B]$ across held-out configurations. This formulation connects population transfer to a concrete control requirement: distributing defensive responses among a changing set of interacting entities.
+
+\subsection{Entity-Factorized Cooperative Learning}
+LEAF builds on REFIL's entity-based utility network and imagined decomposition~\cite{iqbal2021refil}. A shared encoder and masked attention produce a base feature $\ell_{i,t}$ for each defender. A recurrent utility network combines that feature with individual memory to produce $Q_i(\tau_{i,t},a_{i,t})$. Centralized training uses a scene-conditioned monotonic mixer,
+\begin{equation}
+Q_{\mathrm{tot}}(x_t,\boldsymbol a_t)=f_{\mathrm{mix}}(Q_1,\ldots,Q_{N_R};x_t),
+\quad\frac{\partial Q_{\mathrm{tot}}}{\partial Q_i}\geq0,
+\end{equation}
+so individual greedy actions are consistent with a maximizer of the represented joint value over legal action sets~\cite{rashid2018qmix}.
+
+REFIL draws random entity partitions and forms in-group and out-group masked views of each recorded sequence. These views produce an auxiliary team value that shares the main branch's temporal-difference target. LEAF retains this learning interface and augments the feature entering the recurrent utility network. Each branch applies its entity mask and reconstructs its temporal history with shared parameters. Deployment uses the main branch.

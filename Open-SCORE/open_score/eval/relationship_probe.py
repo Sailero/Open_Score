@@ -145,7 +145,8 @@ def collect_state_bank(output, stop_requested=None, on_progress=None):
     from open_score.algos import load_policy
     from open_score.eval.anchors import BLUE_STRATEGY
     from open_score.rules import register_end_to_end_policy, run_episode
-    root = Path(output) / "probe"
+    from .experiment import environment_directory
+    root = environment_directory(output) / "probe"
     with _lock(root / "collection.lock", stop_requested):
         identities = {method: checkpoint_info(run_directory(output, method, 0) / "final.pt",
                                               method=method, seed=0, env="had")
@@ -443,7 +444,8 @@ def evaluate_probe(*, output, seed, stop_requested=None, on_progress=None, colle
     import torch
     torch.set_num_threads(1)
     from open_score.algos import load_policy
-    root = Path(output) / "probe"
+    from .experiment import environment_directory
+    root = environment_directory(output) / "probe"
     if int(seed) not in (0, 1, 2):
         raise ValueError("Probe model seeds are frozen to 0,1,2")
     try:

@@ -1,0 +1,181 @@
+method,seed,group,configs,D_mean
+alma,0,ID,4,1.53786646733
+alma,0,N-OOD,6,3.74034732892
+alma,0,K-OOD,4,3.40446965301
+alma,0,Joint OOD,8,5.34547479343
+alma,1,ID,4,1.158939428
+alma,1,N-OOD,6,2.80499030934
+alma,1,K-OOD,4,2.73762774804
+alma,1,Joint OOD,8,4.35401244607
+alma,2,ID,4,1.28111533148
+alma,2,N-OOD,6,4.27093292475
+alma,2,K-OOD,4,2.92457125182
+alma,2,Joint OOD,8,6.42533835913
+b2_qmix_atten,0,ID,4,3.87070864644
+b2_qmix_atten,0,N-OOD,6,8.42930151058
+b2_qmix_atten,0,K-OOD,4,7.7033450557
+b2_qmix_atten,0,Joint OOD,8,11.4932436026
+b2_qmix_atten,1,ID,4,1.05342783072
+b2_qmix_atten,1,N-OOD,6,2.24444724639
+b2_qmix_atten,1,K-OOD,4,2.77383628711
+b2_qmix_atten,1,Joint OOD,8,3.56324735282
+b2_qmix_atten,2,ID,4,2.02901878023
+b2_qmix_atten,2,N-OOD,6,4.7418509968
+b2_qmix_atten,2,K-OOD,4,4.54966817487
+b2_qmix_atten,2,Joint OOD,8,7.18966860731
+dcg,0,ID,4,1.91812156553
+dcg,0,N-OOD,6,3.10909857377
+dcg,0,K-OOD,4,4.20309901976
+dcg,0,Joint OOD,8,5.49701817075
+dcg,1,ID,4,2.50971009859
+dcg,1,N-OOD,6,8.05603697186
+dcg,1,K-OOD,4,7.95287778239
+dcg,1,Joint OOD,8,12.5877287381
+dcg,2,ID,4,1.65670218282
+dcg,2,N-OOD,6,3.89881082484
+dcg,2,K-OOD,4,5.35968097609
+dcg,2,Joint OOD,8,6.19208975075
+refil,0,ID,4,0.685670114196
+refil,0,N-OOD,6,2.18945634427
+refil,0,K-OOD,4,1.46654379412
+refil,0,Joint OOD,8,3.00349271545
+refil,1,ID,4,0.68909814342
+refil,1,N-OOD,6,2.49621659342
+refil,1,K-OOD,4,1.85593972747
+refil,1,Joint OOD,8,3.60962535218
+refil,2,ID,4,0.771569547882
+refil,2,N-OOD,6,1.94232529299
+refil,2,K-OOD,4,2.06595734906
+refil,2,Joint OOD,8,3.31199512759
+refil_matched,0,ID,4,0.854455039149
+refil_matched,0,N-OOD,6,2.50019264815
+refil_matched,0,K-OOD,4,2.68978011222
+refil_matched,0,Joint OOD,8,4.994550236
+refil_matched,1,ID,4,0.787298803767
+refil_matched,1,N-OOD,6,1.91351576338
+refil_matched,1,K-OOD,4,2.17253230454
+refil_matched,1,Joint OOD,8,3.49810565635
+refil_matched,2,ID,4,1.10135087175
+refil_matched,2,N-OOD,6,2.39206427239
+refil_matched,2,K-OOD,4,2.61519599846
+refil_matched,2,Joint OOD,8,4.01587574544
+regir_kv0_intent_sg,0,ID,4,0.579562899298
+regir_kv0_intent_sg,0,N-OOD,6,0.782607855869
+regir_kv0_intent_sg,0,K-OOD,4,1.45045133367
+regir_kv0_intent_sg,0,Joint OOD,8,1.4430642645
+regir_kv0_intent_sg,1,ID,4,0.402049745779
+regir_kv0_intent_sg,1,N-OOD,6,0.618182467961
+regir_kv0_intent_sg,1,K-OOD,4,1.36140471413
+regir_kv0_intent_sg,1,Joint OOD,8,1.51342500337
+regir_kv0_intent_sg,2,ID,4,0.310137019212
+regir_kv0_intent_sg,2,N-OOD,6,0.771787038186
+regir_kv0_intent_sg,2,K-OOD,4,0.854676829351
+regir_kv0_intent_sg,2,Joint OOD,8,1.49610063273
+regir_kv0_intent_sg,3,ID,4,0.613405028856
+regir_kv0_intent_sg,3,N-OOD,6,1.32157840191
+regir_kv0_intent_sg,3,K-OOD,4,2.00880100114
+regir_kv0_intent_sg,3,Joint OOD,8,2.48397050569
+regir_kv0_intent_sg,4,ID,4,0.400365114934
+regir_kv0_intent_sg,4,N-OOD,6,0.897470942584
+regir_kv0_intent_sg,4,K-OOD,4,0.912206721605
+regir_kv0_intent_sg,4,Joint OOD,8,1.46369391598
+regir_kv0_nomem,0,ID,4,0.664874521398
+regir_kv0_nomem,0,N-OOD,6,1.21650711712
+regir_kv0_nomem,0,K-OOD,4,1.73423890074
+regir_kv0_nomem,0,Joint OOD,8,1.94407102181
+regir_kv0_nomem,1,ID,4,0.320825565385
+regir_kv0_nomem,1,N-OOD,6,0.479860191795
+regir_kv0_nomem,1,K-OOD,4,1.08615326573
+regir_kv0_nomem,1,Joint OOD,8,1.31883161835
+regir_kv0_nomem,2,ID,4,0.428423249484
+regir_kv0_nomem,2,N-OOD,6,0.613013640229
+regir_kv0_nomem,2,K-OOD,4,0.905128799546
+regir_kv0_nomem,2,Joint OOD,8,0.889489089518
+regir_kv0_sg,0,ID,4,0.436648747423
+regir_kv0_sg,0,N-OOD,6,1.20829234143
+regir_kv0_sg,0,K-OOD,4,1.14347729919
+regir_kv0_sg,0,Joint OOD,8,1.97406757635
+regir_kv0_sg,1,ID,4,0.357726959242
+regir_kv0_sg,1,N-OOD,6,0.623990194317
+regir_kv0_sg,1,K-OOD,4,1.15703487716
+regir_kv0_sg,1,Joint OOD,8,1.23886014705
+regir_kv0_sg,2,ID,4,0.306164795531
+regir_kv0_sg,2,N-OOD,6,0.428856285367
+regir_kv0_sg,2,K-OOD,4,0.747692336913
+regir_kv0_sg,2,Joint OOD,8,0.809603774725
+regir_kv0_sg,3,ID,4,0.388674080234
+regir_kv0_sg,3,N-OOD,6,2.03218661603
+regir_kv0_sg,3,K-OOD,4,1.23711877636
+regir_kv0_sg,3,Joint OOD,8,1.6624550874
+regir_kv0_sg,4,ID,4,0.575829943538
+regir_kv0_sg,4,N-OOD,6,0.891498187579
+regir_kv0_sg,4,K-OOD,4,1.23891475181
+regir_kv0_sg,4,Joint OOD,8,1.68555033774
+regir_r0_sg,0,ID,4,1.29400377716
+regir_r0_sg,0,N-OOD,6,3.58872782502
+regir_r0_sg,0,K-OOD,4,2.87899951943
+regir_r0_sg,0,Joint OOD,8,5.19827641544
+regir_r0_sg,1,ID,4,1.07696606552
+regir_r0_sg,1,N-OOD,6,2.47006577419
+regir_r0_sg,1,K-OOD,4,2.34265478511
+regir_r0_sg,1,Joint OOD,8,3.80166553764
+regir_r0_sg,2,ID,4,0.605364193643
+regir_r0_sg,2,N-OOD,6,1.91754684321
+regir_r0_sg,2,K-OOD,4,1.3013967705
+regir_r0_sg,2,Joint OOD,8,2.29602426407
+regir_r1_sg,0,ID,4,0.836799597608
+regir_r1_sg,0,N-OOD,6,3.39142882927
+regir_r1_sg,0,K-OOD,4,1.68626032269
+regir_r1_sg,0,Joint OOD,8,3.39701859762
+regir_r1_sg,1,ID,4,1.52493201641
+regir_r1_sg,1,N-OOD,6,3.42228898774
+regir_r1_sg,1,K-OOD,4,2.90653234493
+regir_r1_sg,1,Joint OOD,8,4.31790639056
+regir_r1_sg,2,ID,4,0.563257744853
+regir_r1_sg,2,N-OOD,6,2.2222350872
+regir_r1_sg,2,K-OOD,4,1.2385178103
+regir_r1_sg,2,Joint OOD,8,2.9018578249
+regir_r1_sg,3,ID,4,0.388925372163
+regir_r1_sg,3,N-OOD,6,0.68730762172
+regir_r1_sg,3,K-OOD,4,0.955478783263
+regir_r1_sg,3,Joint OOD,8,1.27039265229
+regir_r1_sg,4,ID,4,0.451680927475
+regir_r1_sg,4,N-OOD,6,0.864378815442
+regir_r1_sg,4,K-OOD,4,1.17225525673
+regir_r1_sg,4,Joint OOD,8,1.40847696333
+regir_sg,0,ID,4,0.44502225575
+regir_sg,0,N-OOD,6,1.36526464821
+regir_sg,0,K-OOD,4,0.950731315435
+regir_sg,0,Joint OOD,8,1.8723070233
+regir_sg,1,ID,4,0.210212626852
+regir_sg,1,N-OOD,6,0.436829640764
+regir_sg,1,K-OOD,4,0.693318365769
+regir_sg,1,Joint OOD,8,0.882918713389
+regir_sg,2,ID,4,0.25978461484
+regir_sg,2,N-OOD,6,0.432141806953
+regir_sg,2,K-OOD,4,0.442052193263
+regir_sg,2,Joint OOD,8,0.636033244292
+spectra,0,ID,4,2.73348172835
+spectra,0,N-OOD,6,5.22163354988
+spectra,0,K-OOD,4,6.76628019005
+spectra,0,Joint OOD,8,11.127693502
+spectra,1,ID,4,2.59377662721
+spectra,1,N-OOD,6,7.98096674146
+spectra,1,K-OOD,4,6.3620701993
+spectra,1,Joint OOD,8,10.8637094889
+spectra,2,ID,4,2.65937212776
+spectra,2,N-OOD,6,6.16272721421
+spectra,2,K-OOD,4,7.67067288754
+spectra,2,Joint OOD,8,11.5600513125
+transfqmix,0,ID,4,1.90877947011
+transfqmix,0,N-OOD,6,6.53260979029
+transfqmix,0,K-OOD,4,4.69925475106
+transfqmix,0,Joint OOD,8,8.69723987852
+transfqmix,1,ID,4,2.37618541837
+transfqmix,1,N-OOD,6,6.72993511574
+transfqmix,1,K-OOD,4,8.17977575147
+transfqmix,1,Joint OOD,8,13.7945364341
+transfqmix,2,ID,4,2.18534745306
+transfqmix,2,N-OOD,6,5.41612430036
+transfqmix,2,K-OOD,4,5.50586538277
+transfqmix,2,Joint OOD,8,9.29813757834

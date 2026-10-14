@@ -1,0 +1,121 @@
+\section{Looped Entity Attention Fusion}
+\label{sec:method}
+LEAF repeatedly updates a receiver-relative entity set with one shared attention block, reads every intermediate set using the defender's self representation and temporal memory, and fuses the reads before updating the recurrent utility network. Figure~\ref{fig:framework} gives the complete information flow.
+
+\subsection{Receiver-Relative Entity Workspace}
+At time $t$, defender $i$ receives an entity matrix $X_{i,t}$ and a mask $m_{i,t,e}\in\{0,1\}$ indicating permitted key rows. The main branch uses the public entities, while imagined branches impose their additional partition masks. Other entities are encoded relative to defender $i$; its self row retains absolute features. Inputs contain normalized planar positions and velocities, alive/health information, target damage, entity type, and previous-action features. A shared encoder gives entity embeddings $e_{i,t,e}$ and the REFIL feature $\ell_{i,t}$.
+
+The LEAF workspace has width $d=64$. On valid rows its initial representation is
+\begin{equation}
+ H^{(0)}_{i,t,e}=W_g e_{i,t,e}+b_g.
+ \label{eq:workspace}
+\end{equation}
+The projected self token is retained for query construction under the branch convention, and entity interactions use the permitted-key mask. Excluded rows have no key contribution and are zeroed after each shared update. Each defender thus has a receiver-relative workspace, with common network parameters across defenders and branches. A new observation initializes a new workspace.
+
+Population information enters through a bounded typed-count encoding. Let $n_R$, $n_B$, and $n_T$ be the numbers of permitted defenders, attackers, and targets under the current mask. Define
+\begin{align}
+ \rho(n)&=\left[\left(\frac{(n-1)_+}{(n-1)_++2}\right)^2,
+                   \mathbb I[n=0]\right],\nonumber\\
+ z_i&=\operatorname{MLP}\bigl([\rho(n_R);\rho(n_B);\rho(n_T)]\bigr),
+ \label{eq:counts}
+\end{align}
+where $(v)_+=\max(v,0)$ and $\mathbb I[\cdot]$ is an indicator. The first coordinate summarizes increasing population size, and the second distinguishes an empty set from a singleton. This encoding conditions the entity-update queries. Typed-count injection is enabled in all evaluated LEAF checkpoints.
+
+\subsection{Repeated Contextual Entity Updates}
+Suppressing defender, time, and branch indices, one round applies
+\begin{align}
+ J^{(r)}&=\operatorname{LN}_a(H^{(r-1)})
+              +\mathbf1(W_cz+b_c)^\top,\nonumber\\
+ \widetilde H^{(r)}&=H^{(r-1)}
+       +\operatorname{MHA}_{\theta}(J^{(r)},H^{(r-1)},H^{(r-1)};m),\nonumber\\
+ H^{(r)}&=\operatorname{Mask}_{m}\!\left[\widetilde H^{(r)}
+       +\operatorname{FFN}_{\theta}
+                  (\operatorname{LN}_f(\widetilde H^{(r)}))\right].
+ \label{eq:loop}
+\end{align}
+Here $\operatorname{LN}$ denotes rowwise layer normalization, $\operatorname{MHA}(Q,K,V;m)$ is masked multihead attention, and $\operatorname{Mask}_m$ zeros excluded rows. The vector $\mathbf1$ broadcasts the count feature over entity queries. An empty permitted-key set returns a zero attention aggregate. The same update parameters are reused for $r=1,\ldots,R$. Keys and values at round $r$ are the representations from round $r-1$, so the operator acts on the context produced by its preceding application.
+
+Within the permitted set, attention connects every valid entity to every other valid entity from the first round onward. Later rounds therefore refine already contextualized features. Entity rows retain their identities, and every intermediate set $H^{(1)},\ldots,H^{(R)}$ remains available to the reader. This organization follows shared relational processing~\cite{zambaldi2019relational,dehghani2019universal} and gives the decision stage access to several stages of that processing. The anchored-key/value comparator ARR instead supplies $H^{(0)}$ as keys and values at each update.
+
+\subsection{History-Conditioned Reading and Fusion}
+The receiver constructs one query from its initial self token and previous temporal memory:
+\begin{align}
+ q_{i,t}&=W_q[H^{(0)}_{i,t,\mathrm{self}};
+                    \operatorname{sg}(h_{i,t-1})]+b_q,\nonumber\\
+ u_{i,t}^{(r)}&=\operatorname{MHA}_{\mathrm{read}}
+                  (q_{i,t},H_{i,t}^{(r)},H_{i,t}^{(r)};m_{i,t}).
+ \label{eq:read}
+\end{align}
+The readout $u_{i,t}^{(r)}\in\mathbb R^{64}$ summarizes round $r$ for defender $i$. The same query and reader parameters are used for every round at the current decision. Each read attends directly to its corresponding entity set. The stop-gradient operator $\operatorname{sg}$ preserves the forward value of the GRU state and blocks the gradient through its query-input copy. Backpropagation through the GRU's temporal recurrence remains active. This query stop-gradient is used by every evaluated LEAF checkpoint.
+
+A shared scalar scoring map assigns weights to the available reads:
+\begin{equation}
+ \alpha_{i,t}^{(r)}=
+ \frac{\exp(w_s^\top u_{i,t}^{(r)}+b_s)}
+ {\sum_{j=1}^{R}\exp(w_s^\top u_{i,t}^{(j)}+b_s)},\qquad
+ u_{i,t}=\sum_{r=1}^{R}\alpha_{i,t}^{(r)}u_{i,t}^{(r)}.
+ \label{eq:fusion}
+\end{equation}
+These nonnegative weights sum to one. Entity attention within a round determines what the defender reads, and cross-round fusion determines how those summaries contribute to its decision feature. Both depend on the receiver through its self state and memory. Preserving intermediate representations supports selection across processing depth~\cite{xu2018jk}; the learned scores determine their contribution in each observed situation.
+
+The fused read augments the REFIL feature through a residual projection:
+\begin{align}
+ \ell'_{i,t}&=\ell_{i,t}+W_f u_{i,t}+b_f,\nonumber\\
+ h_{i,t}&=\operatorname{GRU}(\ell'_{i,t},h_{i,t-1}),\nonumber\\
+ Q_i(\tau_{i,t},\cdot)&=W_o h_{i,t}+b_o.
+ \label{eq:decision}
+\end{align}
+The projection $W_fu+b_f$ is initialized to zero, so learning starts from the original feature path and jointly adapts both paths thereafter. Each branch updates the GRU once per defender decision at a physical time step. Its hidden state persists to the next observation, while the entity workspace is rebuilt from that observation. Thus $r$ indexes repeated computation at one decision and $t$ indexes physical evolution. All rounds are computed before fusion; small fusion weights affect information use while the chosen depth $R$ determines the computation performed.
+
+
+
+\subsection{Learning Across Processing Depths}
+Collection samples $R$ uniformly from $\{1,2,3,4\}$ and holds it fixed for an episode. Replay independently samples one depth per training batch and uses that depth for the online main and imagined branches and the target network. At depth one, the shared update directly supplies the value objective. At larger depths, its output also becomes the input to subsequent applications. Consequently, the same parameters learn through both short decision paths and longer sequences of contextual updates. Standard deployment fixes $R=4$.
+
+Learning retains the shared potential-shaped reward used by the REFIL host:
+\begin{align}
+ \widetilde r_t&=-\Delta D_t+\gamma\Phi(s_{t+1})-\Phi(s_t),\nonumber\\
+ \Phi(s)&=-\sum_{j\in\mathcal B_{\mathrm{alive}}}
+ \operatorname{clip}\!\left(1-\frac{\min_{k\in\mathcal T}\|p_j-p_k\|}{4000},0,1\right),
+ \label{eq:shaping}
+\end{align}
+where $p_j$ and $p_k$ are attacker and target positions, $\operatorname{clip}(a,0,1)$ truncates $a$ to $[0,1]$, and $\gamma=0.99$. This potential supplies a dense proximity signal during learning. Evaluation uses physical damage $D$ in Eq.~\eqref{eq:damage}.
+
+Natural termination zeros the bootstrap; time-limit transitions retain a valid successor. If the last defender disappears, the discounted reward tail from the remaining physical simulation is folded into the final defender decision transition. Let $\bar r_t$ be the resulting replay reward and $b_t$ its bootstrap multiplier, with $b_t=\gamma$ for an ordinary nonterminal transition and $b_t=0$ after natural termination. Online utilities select legal greedy successor actions $\boldsymbol a^*_{t+1}$, and the target network evaluates
+\begin{equation}
+ y_t=\bar r_t+b_t
+ Q^-_{\mathrm{tot}}(x_{t+1},\boldsymbol a^*_{t+1}).
+ \label{eq:td-target}
+\end{equation}
+With $Q_{\mathrm{main},t}=Q_{\mathrm{tot},t}$ and imagined value $Q_{\mathrm{aux},t}$, the loss is
+\begin{align}
+ \mathcal L&=(1-\lambda)\mathcal L_{\mathrm{main}}
+                  +\lambda\mathcal L_{\mathrm{aux}},\qquad\lambda=0.5,\nonumber\\
+ \mathcal L_k&=\mathbb E_{\mathrm{replay}}\!
+ \left[\frac{\sum_t v_t(Q_{k,t}-y_t)^2}{\sum_t v_t}\right],
+ \quad k\in\{\mathrm{main},\mathrm{aux}\},
+ \label{eq:td-loss}
+\end{align}
+where $v_t$ marks valid transitions and $y_t$ is detached during optimization. The main and imagined branches reconstruct their masked histories with shared parameters. Deployment uses the main branch. Algorithm~\ref{alg:leaf} summarizes one decision.
+
+\begin{algorithm}[!t]
+\caption{LEAF at one defender decision}
+\label{alg:leaf}
+\begin{algorithmic}[1]
+\Require Entity features $X_{i,t}$, mask $m_{i,t}$, memory $h_{i,t-1}$, depth $R$
+\State Encode entities and compute base feature $\ell_{i,t}$
+\State Initialize workspace, typed counts, and query $q_{i,t}$
+\For{$r=1,\ldots,R$}
+\State Update $H_{i,t}^{(r)}$ with the shared block, Eq.~\eqref{eq:loop}
+\State Read $u_{i,t}^{(r)}$ with $q_{i,t}$, Eq.~\eqref{eq:read}
+\EndFor
+\State Fuse reads and add the residual to $\ell_{i,t}$
+\State Update the GRU once and compute action values
+\State \Return $\arg\max_{a\in\mathcal U_{i,t}}Q_i(\tau_{i,t},a)$ and $h_{i,t}$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Execution Properties}
+Shared rowwise maps and masked attention preserve entity identities throughout refinement and support variable-size sets. Permuting the non-self entities together with their masks permutes every intermediate workspace while leaving the receiver query and the resulting action values unchanged. This consistency follows through the recurrent policy from identical initial memory.
+
+For $M$ padded entity slots and width $d$, dense refinement costs $O(R(M^2d+Md^2))$ per receiver. Parameters are shared across rounds, while computation grows with the chosen unfolding depth. The implementation forms receiver-relative views for live defenders. The execution-depth study therefore examines the protection quality obtained at different lengths of the same learned computation path.

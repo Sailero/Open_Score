@@ -1,17 +1,21 @@
 # Open-SCORE
 
-主方法为 **LEAF-NoMem（`regir_nomem`）**。现有实验归并为两个结果目录：
+主方法统一称为 **LEAF**，内部注册名 `regir_nomem` 保留用于加载权重和追溯数据。多目标攻防中，攻击者、目标与队友共同构成威胁情境；LEAF 的设计目标是让同一个策略适应部署实体规模和可用关系推理深度的变化。
 
 | 结果 | 内容 | 正式分析 |
 |---|---|---|
-| [outputs/main](Open-SCORE/outputs/main) | NoMem、原 ReGIR 训练变体及 HAD 基线 | [主实验结果分析](docs/LEAF_主实验结果分析.md) |
-| [outputs/supp](Open-SCORE/outputs/supp) | M1–M5 循环候选、SMAC 与其他探索 | [补充实验结果分析](docs/LEAF_补充实验结果分析.md) |
+| [outputs/main](Open-SCORE/outputs/main) | LEAF、七个核心变体、HAD基线（含19维重训）、冻结深度与独立确认 | [主实验结果分析](docs/LEAF_主实验结果分析.md) |
+| [outputs/backup](Open-SCORE/outputs/backup) | 历史探索、旧协议、旧 probe 与其他环境结果 | 同一[补充实验结果分析](docs/LEAF_补充实验结果分析.md) |
 
-配套阅读：[方法与变体说明](docs/LEAF_方法与变体说明.md)讲解 NoMem 的完整计算、ReGIR 家族与五个循环候选的结构；[Baseline 与 Rule 实现说明](docs/LEAF_Baseline与Rule实现说明.md)解释七个学习基线、规则指派、随机动作及共同对手。两份说明与结果报告配套，区分实际实现、设计动机和已完成的实验证据。
+配套阅读：[方法与变体说明](docs/LEAF_方法与变体说明.md)讲解 LEAF 的威胁情境构建、接收者读取、时序记忆及七个历史设计变体；[Baseline 与 Rule 实现说明](docs/LEAF_Baseline与Rule实现说明.md)解释七个学习基线、规则指派、随机动作及共同对手。历史结构与协议的讨论集中在补充分析中。
 
-数据保留来源版本、运行、环境协议、种子和实验臂；不同协议的成绩分别解释。权重位于 `<结果目录>/<环境>/<方法>/models/<训练来源>/seed_<种子>/`，保留 `final.pt`、`best.pt` 与加载配置。训练完成情况由权重 metadata 与原登记分别记录。数据、来源映射及历史表统一见各目录的 `summary.json`，实验协议见 `experiment.json`。正式归并成果以这两份报告和元数据为准。
+论文当前整理版为 [LEAF v4](Papers/v4/README.md)：[PDF](Papers/v4/main.pdf)、[LaTeX 主文件](Papers/v4/main.tex)。实验按对比、历史设计比较、机制和补充分析四小节组织；图表以现有正式报告的数据与方法定义为准，容量及精炼设计参照放在补充分析。历史论文保留在 `Papers/v1`–`v3`。
 
-归并前的完整本地保存点为 Git `8d8fa28`，包含当时的实验数据与权重。2026-10-11 已完成旧来源、过时文档、临时文件及24个空CSV的清理，`outputs` 仅保留 `main/supp`，合计约2.80 GB。删除前核对并补齐4张独有历史曲线及1,154条科学诊断变体，正式成绩不变；归档保留159个独有final/best及加载配置。来源映射、重复计时摘要和完整清理记录见两目录 `summary.json` 的 `archive.retention_verification` 与 `archive.cleanup`。[实验记录](实验报告/实验记录.md) 维护跨版本摘要；论文包仍位于 [Papers](Papers)。本次整理尚未Git提交或推送，本地保存点不代表远端已备份归并版本。
+原 `outputs/supp` 的现有成果全部属于本轮归档范围，已并入 backup；当前没有保留补充成果，不生成空目录或占位数据。
+
+数据保留来源版本、运行、环境协议、种子和实验臂；不同协议的成绩分别解释。权重位于 `<结果目录>/<环境>/<方法>/models/<训练来源>/seed_<种子>/`，保留 `final.pt`、`best.pt` 与加载配置。训练完成情况由权重 metadata 与原登记分别记录。数据、来源映射及历史表统一见各目录的 `summary.json`，实验协议见 `experiment.json`。正式归并成果以这两份报告和元数据为准。 Git 发布包含代码、论文、报告、聚合统计与图片；逐局数据、权重、恢复点及原始输入/计时列表保留本地。
+
+本轮整理前的完整本地保存点为 Git `860c109`，更早快照为 `8d8fa28`。归档保留独有数据、final/best 与加载配置；当前主表依赖的共享基线权重仍由 main 保存，backup 通过索引引用同一份权重。迁移、来源映射与记录覆盖见各目录元数据。[实验记录](实验报告/实验记录.md) 维护跨版本摘要；[论文包](Papers) 保留历版原稿，当前 v4 基于已归并结果重整正文与图片，不自动上传历史数据。
 
 ## 环境与安装
 
@@ -130,15 +134,11 @@ env.adapter.env.close()
 
 ## 已归档实验
 
-2026-10-13新增的基线输入对齐实验使用 `Open-SCORE/scripts/main1013_base.py`，仅重训SPECTra/TransfQMix各三个种子。actor与mixer补齐红方上一动作，训练与评估采用最终LEAF的共同HAD协议，同时保留基线自身优化器和TD目标。代码与远程入口已准备；尚未启动新训练或评估。唯一报告、数据和必要模型统一位于 [outputs/main_1013_base](Open-SCORE/outputs/main_1013_base)，详情见[该版本报告](Open-SCORE/outputs/main_1013_base/实验报告.md)。在远程 `Open-SCORE` 目录运行：
+2026-10-14，SPECTra和TransfQMix的基线输入对齐实验已完成六个模型的训练、50点验证、正式及独立确认评估，116,400条逐局记录和必要final/best模型已归入 [outputs/main](Open-SCORE/outputs/main)，原`outputs/main_1013_base`目录已删除。唯一正式结果分析并入[主报告](docs/LEAF_主实验结果分析.md)，不保留重复版本报告。当前比较及v4出图使用`had/aggregates.json`内的`paper_current`，历史`paper1007`和旧10维权重独立保留。
 
-```bash
-mkdir -p outputs/main_1013_base
-nohup python -u scripts/main1013_base.py run --devices 0,1 --jobs-per-gpu 3 --max-jobs 6 --resume > outputs/main_1013_base/run.log 2>&1 &
-python scripts/main1013_base.py progress --watch-seconds 3
-```
+新模型的actor与online/target mixer补齐红方上一动作，采用19维输入、8环境及每收集批8次更新；共同HAD任务与采样控制对齐最终LEAF，保留基线自身Adam/1e−3、TD(λ=0.6)、半MSE及核心结构。正式All24损伤为SPECTra **6.2871±0.0289**、TransfQMix **4.2518±0.7733**；新终评未保存碰撞和拦截指标。模型与配置位于`main/had/<方法>/models/main1013_base/seed_<种子>`。本次更新没有新增训练或评估，也不删除远端工作树。
 
-新入口会核对HAD版本和物理协议。停止用 `python scripts/main1013_base.py stop`，恢复重新执行上述 `run --resume`；关闭只读进度面板不停止任务。已有远程main1013运行不受新版本影响。
+运行入口仍为`Open-SCORE/scripts/main1013_base.py`，保留用于追溯和既有远程任务；本地归并目录无需重新启动该实验。Git发布代码、论文、报告、汇总统计及图片，原始数据、模型和恢复点不随本次发布上传。
 
 结果目录保存已有数据与推理权重，旧任务启动、恢复和报告刷新命令已停用。历史单轮从头训练与多轮权重的单轮推理是两类不同对照，详见主报告。独有历史数据保留来源协议，未提供的原始记录如实注明。
 

@@ -1,0 +1,408 @@
+{
+  "audit_at": "2026-09-28T23:21:46+08:00",
+  "latest_source_cutoff": {
+    "main0923_aggregates_created_at": "2026-09-28T23:21:18+08:00",
+    "main0923_inventory_scanned_at": "2026-09-28T23:21:03+08:00",
+    "main0928_import_packed_at": "2026-09-28T19:24:12+0800"
+  },
+  "source_paths": {
+    "main0923_experiment": "source/experiment.json",
+    "main0923_inventory": "source/inventory.json",
+    "main0923_aggregates": "source/aggregates.json",
+    "main0923_scheduler_smac": "source/scheduler.eval.smacv2.json",
+    "main0928_import_manifest": "source/manifest.json",
+    "main0928_plan": "source/实验计划.md",
+    "v1_per_seed_groups": "source/per_seed_groups.csv",
+    "v1_had_table": "source/results_tables.tex",
+    "v1_smac_placeholder": "source/results.tex"
+  },
+  "protocol": {
+    "had": {
+      "train_budget_steps": 1000000,
+      "final_configs": 24,
+      "episodes_per_config_per_seed": 300,
+      "final_episodes_per_seed": 7200,
+      "metric": "target damage D; lower is better",
+      "official_checkpoint": "final"
+    },
+    "smacv2": {
+      "train_budget_steps": 5000000,
+      "final_configs": 8,
+      "episodes_per_config_per_seed": 300,
+      "final_episodes_per_seed": 2400,
+      "metric": "battle_won; higher is better",
+      "official_checkpoint": "final",
+      "paper_final_target_training_seeds": 5,
+      "paper_target_source": "explicit user preference relayed by manuscript lead",
+      "current_main0923_queued_seeds": [
+        0,
+        1,
+        2
+      ],
+      "current_main0928_plan_seeds": [
+        0,
+        1,
+        2
+      ]
+    }
+  },
+  "main0923": {
+    "branch": "A",
+    "integrity_ok": true,
+    "had_native_final_tasks": {
+      "complete": 24,
+      "waiting": 36
+    },
+    "had_imported_baseline_checkpoint_seed_pairs": 21,
+    "had_complete_method_seed_pairs": 45,
+    "had_results": {
+      "alma": {
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "n": 3,
+        "group_iqm": {
+          "ID": 1.325973742269731,
+          "N-OOD": 3.6054235210031114,
+          "K-OOD": 3.0222228842872387,
+          "联合 OOD": 5.374941866206811
+        },
+        "ood_per_seed": {
+          "0": 4.163430591785345,
+          "1": 3.298876834482025,
+          "2": 4.540280845229791
+        },
+        "ood_iqm": 4.000862757165721
+      },
+      "b2_qmix_atten": {
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "n": 3,
+        "group_iqm": {
+          "ID": 2.3177184191298754,
+          "N-OOD": 5.138533251256182,
+          "K-OOD": 5.008949839230407,
+          "联合 OOD": 7.415386520896289
+        },
+        "ood_per_seed": {
+          "0": 9.208630056281942,
+          "1": 2.8605102954387953,
+          "2": 5.49372925966214
+        },
+        "ood_iqm": 5.854289870460959
+      },
+      "dcg": {
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "n": 3,
+        "group_iqm": {
+          "ID": 2.02817794897752,
+          "N-OOD": 5.021315456825612,
+          "K-OOD": 5.838552592745207,
+          "联合 OOD": 8.092278886539932
+        },
+        "ood_per_seed": {
+          "0": 4.269738588094931,
+          "1": 9.532214497455636,
+          "2": 5.150193850560186
+        },
+        "ood_iqm": 6.317382312036917
+      },
+      "refil": {
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "n": 3,
+        "group_iqm": {
+          "ID": 0.7154459351661243,
+          "N-OOD": 2.2093327435606986,
+          "K-OOD": 1.7961469568830217,
+          "联合 OOD": 3.3083710650761198
+        },
+        "ood_per_seed": {
+          "0": 2.2198309512801733,
+          "1": 2.6539272243583945,
+          "2": 2.4400925898812726
+        },
+        "ood_iqm": 2.43795025517328
+      },
+      "refil_matched": {
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "n": 3,
+        "group_iqm": {
+          "ID": 0.9143682382235901,
+          "N-OOD": 2.268590894640417,
+          "K-OOD": 2.4925028050746305,
+          "联合 OOD": 4.169510545931728
+        },
+        "ood_per_seed": {
+          "0": 3.3948409987928136,
+          "1": 2.5280512414255196,
+          "2": 3.0077120054284427
+        },
+        "ood_iqm": 2.976868081882259
+      },
+      "regir_kv0_intent_sg": {
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "n": 5,
+        "group_iqm": {
+          "ID": 0.4606592533371828,
+          "N-OOD": 0.8172886122130935,
+          "K-OOD": 1.2413542564674014,
+          "联合 OOD": 1.491073184023863
+        },
+        "ood_per_seed": {
+          "0": 1.2253744846803911,
+          "1": 1.1643373951516267,
+          "2": 1.0408548334221435,
+          "3": 1.9381166362458557,
+          "4": 1.0911238600552429
+        },
+        "ood_iqm": 1.1602785799624202
+      },
+      "regir_kv0_nomem": {
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "n": 3,
+        "group_iqm": {
+          "ID": 0.47137444542236145,
+          "N-OOD": 0.7697936497140939,
+          "K-OOD": 1.241840322003549,
+          "联合 OOD": 1.3841305765573602
+        },
+        "ood_per_seed": {
+          "0": 1.6316056798876069,
+          "1": 0.9616150252895866,
+          "2": 0.8025438430978095
+        },
+        "ood_iqm": 1.1319215160916676
+      },
+      "regir_kv0_sg": {
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "n": 5,
+        "group_iqm": {
+          "ID": 0.39434992896618243,
+          "N-OOD": 0.9079269077765791,
+          "K-OOD": 1.1792103175724322,
+          "联合 OOD": 1.5289551907305858
+        },
+        "ood_per_seed": {
+          "0": 1.4419457389908779,
+          "1": 1.0066284061770452,
+          "2": 0.6620507990017376,
+          "3": 1.6439201599304318,
+          "4": 1.2719877590435664
+        },
+        "ood_iqm": 1.2401873014038298
+      },
+      "regir_r0_sg": {
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "n": 3,
+        "group_iqm": {
+          "ID": 0.9921113454401347,
+          "N-OOD": 2.6587801474758748,
+          "K-OOD": 2.174350358346827,
+          "联合 OOD": 3.7653220723840897
+        },
+        "ood_per_seed": {
+          "0": 3.888667919964254,
+          "1": 2.8714620323140374,
+          "2": 1.8383226259285
+        },
+        "ood_iqm": 2.8661508594022638
+      },
+      "regir_r1_sg": {
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "n": 5,
+        "group_iqm": {
+          "ID": 0.617246089978576,
+          "N-OOD": 2.159347577303533,
+          "K-OOD": 1.3656777965711424,
+          "联合 OOD": 2.569117795286218
+        },
+        "ood_per_seed": {
+          "0": 2.8249025831929426,
+          "1": 3.548909241074833,
+          "2": 2.1208702407995075,
+          "3": 0.9710596857572344,
+          "4": 1.1483703451684433
+        },
+        "ood_iqm": 2.0313810563869645
+      },
+      "regir_sg": {
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "n": 3,
+        "group_iqm": {
+          "ID": 0.30500649914723155,
+          "N-OOD": 0.7447453653079986,
+          "K-OOD": 0.6953672914888237,
+          "联合 OOD": 1.1304196603283199
+        },
+        "ood_per_seed": {
+          "0": 1.3961009956482078,
+          "1": 0.6710222399742044,
+          "2": 0.5034090815027302
+        },
+        "ood_iqm": 0.8568441057083808
+      },
+      "spectra": {
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "n": 3,
+        "group_iqm": {
+          "ID": 2.662210161105424,
+          "N-OOD": 6.455109168516036,
+          "K-OOD": 6.933007758961737,
+          "联合 OOD": 11.183818101122109
+        },
+        "ood_per_seed": {
+          "0": 7.70520241396052,
+          "1": 8.402248809894099,
+          "2": 8.464483804745266
+        },
+        "ood_iqm": 8.190645009533295
+      },
+      "transfqmix": {
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "n": 3,
+        "group_iqm": {
+          "ID": 2.1567707805102683,
+          "N-OOD": 6.226223068797233,
+          "K-OOD": 6.128298628434514,
+          "联合 OOD": 10.596637963636415
+        },
+        "ood_per_seed": {
+          "0": 6.6430348066235645,
+          "1": 9.568082433755288,
+          "2": 6.740042420489307
+        },
+        "ood_iqm": 7.65038655362272
+      }
+    },
+    "leaf": {
+      "method_key": "regir_sg",
+      "model_seeds": [
+        0,
+        1,
+        2
+      ],
+      "checkpoint_count_settings": {
+        "0": {
+          "path": "source/config.json",
+          "skip_count_inject": false
+        },
+        "1": {
+          "path": "source/config.json",
+          "skip_count_inject": false
+        },
+        "2": {
+          "path": "source/config.json",
+          "skip_count_inject": false
+        }
+      },
+      "interpretation": "historical counts-on LEAF; cannot relabel as counts-off"
+    },
+    "smacv2": {
+      "train_task_status": {
+        "pending": 24
+      },
+      "final_task_status": {
+        "waiting": 24
+      },
+      "scheduler_completed_final_tasks": 0,
+      "final_checkpoint_files": 0,
+      "eligible_formal_win_rate_cells": 0,
+      "best_or_resume_are_not_final": true
+    }
+  },
+  "main0928": {
+    "source_profile_for_imports": "main0921",
+    "imported_baseline_methods": [
+      "refil",
+      "refil_matched",
+      "b2_qmix_atten",
+      "dcg",
+      "spectra",
+      "alma",
+      "transfqmix"
+    ],
+    "imported_baseline_model_seed_pairs": 21,
+    "imported_checkpoint_ids_match_main0923": true,
+    "imported_episode_rows": 165600,
+    "new_experiment_json_exists": false,
+    "new_leaf_final_files": 0,
+    "new_formal_evaluation_cells": 0,
+    "planned_leaf_count_setting": "skip_count_inject=True (counts-off); no trained/evaluated final locally"
+  },
+  "comparison_with_v1": {
+    "v1_complete_method_count": 13,
+    "v1_per_seed_group_rows_checked": 180,
+    "all_v1_completed_had_seed_group_values_match_latest_main0923": true,
+    "max_absolute_value_difference": 4.68141081455542e-11,
+    "new_complete_had_method_seed_pairs": [],
+    "new_formal_smac_cells": [],
+    "paper_ready_new_comparison_table": false
+  },
+  "paper_use": {
+    "can_include": [
+      "Retain the LEAF_v1 HAD formal comparison with historical counts-on LEAF and actual per-method seed counts.",
+      "Keep five seeds as the final paper target for SMAC while describing the current three-seed local queue and zero completed formal test cells."
+    ],
+    "cannot_include": [
+      "Treat main0928 imported main0921 baseline slices as a new independent evaluation.",
+      "Assign counts-off main0928 performance to main0923 counts-on LEAF.",
+      "Use SMAC best.pt/resume.pt, training-period validation curves, pilots, or partial tasks as formal final test results."
+    ]
+  },
+  "older_output_note": "main0921 and pack4090 are older/partial source snapshots and add no post-v1 completed LEAF or SMAC final result."
+}

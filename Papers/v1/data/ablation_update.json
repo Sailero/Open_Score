@@ -1,0 +1,1245 @@
+{
+  "schema_version": 1,
+  "audited_at_utc": "2026-09-28T15:24:29.596405+00:00",
+  "scope": "HAD ablations and method variants; read-only audit of existing outputs",
+  "sources": {
+    "v1_results": "source/results.tex",
+    "v1_protocol": "source/protocol.tex",
+    "v1_aggregate_snapshot": "source/snapshot_aggregates.json",
+    "current_main0923_aggregate": "source/aggregates.json",
+    "current_main0923_inventory": "source/inventory.json",
+    "main0928_plan": "source/实验计划.md",
+    "main0928_imported_manifest": "source/manifest.json",
+    "pack4090_remaining_jobs": "source/remaining_jobs.json"
+  },
+  "new_complete_formal_results_since_v1": [],
+  "main0923": {
+    "profile": "main0923_sg_v1",
+    "counts_enabled_historical": true,
+    "had_groups_exactly_equal_v1_frozen_snapshot": true,
+    "latest_aggregate_stat": {
+      "bytes": 38121,
+      "mtime_ns": 1790608946192026771
+    },
+    "method_status": {
+      "regir_sg": {
+        "checkpoint_seeds": [
+          0,
+          1,
+          2
+        ],
+        "final_file_seeds": [
+          0,
+          1,
+          2
+        ],
+        "resume_only_or_resume_file_seeds": [],
+        "formal_group_complete_seeds": {
+          "ID": [
+            0,
+            1,
+            2
+          ],
+          "N-OOD": [
+            0,
+            1,
+            2
+          ],
+          "K-OOD": [
+            0,
+            1,
+            2
+          ],
+          "联合 OOD": [
+            0,
+            1,
+            2
+          ]
+        },
+        "task_status": {
+          "train": {
+            "complete": 3
+          },
+          "final": {
+            "complete": 3
+          }
+        },
+        "all_four_formal_groups_complete_seeds": [
+          0,
+          1,
+          2
+        ]
+      },
+      "regir_r0_sg": {
+        "checkpoint_seeds": [
+          0,
+          1,
+          2
+        ],
+        "final_file_seeds": [
+          0,
+          1,
+          2
+        ],
+        "resume_only_or_resume_file_seeds": [],
+        "formal_group_complete_seeds": {
+          "ID": [
+            0,
+            1,
+            2
+          ],
+          "N-OOD": [
+            0,
+            1,
+            2
+          ],
+          "K-OOD": [
+            0,
+            1,
+            2
+          ],
+          "联合 OOD": [
+            0,
+            1,
+            2
+          ]
+        },
+        "task_status": {
+          "train": {
+            "complete": 3
+          },
+          "final": {
+            "complete": 3
+          }
+        },
+        "all_four_formal_groups_complete_seeds": [
+          0,
+          1,
+          2
+        ]
+      },
+      "regir_r1_sg": {
+        "checkpoint_seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "final_file_seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "resume_only_or_resume_file_seeds": [],
+        "formal_group_complete_seeds": {
+          "ID": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "N-OOD": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "K-OOD": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "联合 OOD": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "task_status": {
+          "train": {
+            "complete": 5
+          },
+          "final": {
+            "complete": 5
+          }
+        },
+        "all_four_formal_groups_complete_seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "regir_kv0_sg": {
+        "checkpoint_seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "final_file_seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "resume_only_or_resume_file_seeds": [],
+        "formal_group_complete_seeds": {
+          "ID": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "N-OOD": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "K-OOD": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "联合 OOD": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "task_status": {
+          "train": {
+            "complete": 5
+          },
+          "final": {
+            "complete": 5
+          }
+        },
+        "all_four_formal_groups_complete_seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "regir_kv0_nomem": {
+        "checkpoint_seeds": [
+          0,
+          1,
+          2
+        ],
+        "final_file_seeds": [
+          0,
+          1,
+          2
+        ],
+        "resume_only_or_resume_file_seeds": [
+          1,
+          2
+        ],
+        "formal_group_complete_seeds": {
+          "ID": [
+            0,
+            1,
+            2
+          ],
+          "N-OOD": [
+            0,
+            1,
+            2
+          ],
+          "K-OOD": [
+            0,
+            1,
+            2
+          ],
+          "联合 OOD": [
+            0,
+            1,
+            2
+          ]
+        },
+        "task_status": {
+          "train": {
+            "complete": 3
+          },
+          "final": {
+            "complete": 3
+          }
+        },
+        "all_four_formal_groups_complete_seeds": [
+          0,
+          1,
+          2
+        ]
+      },
+      "regir_kv0_norefil_sg": {
+        "checkpoint_seeds": [],
+        "final_file_seeds": [],
+        "resume_only_or_resume_file_seeds": [
+          0,
+          1,
+          2
+        ],
+        "formal_group_complete_seeds": {
+          "ID": [],
+          "N-OOD": [],
+          "K-OOD": [],
+          "联合 OOD": []
+        },
+        "task_status": {
+          "train": {
+            "pending": 3
+          },
+          "final": {
+            "waiting": 3
+          }
+        },
+        "all_four_formal_groups_complete_seeds": []
+      },
+      "regir_kv0_fixed4_sg": {
+        "checkpoint_seeds": [],
+        "final_file_seeds": [],
+        "resume_only_or_resume_file_seeds": [],
+        "formal_group_complete_seeds": {
+          "ID": [],
+          "N-OOD": [],
+          "K-OOD": [],
+          "联合 OOD": []
+        },
+        "task_status": {
+          "train": {
+            "pending": 3
+          },
+          "final": {
+            "waiting": 3
+          }
+        },
+        "all_four_formal_groups_complete_seeds": []
+      },
+      "regir_kv0_nocount_sg": {
+        "checkpoint_seeds": [],
+        "final_file_seeds": [],
+        "resume_only_or_resume_file_seeds": [],
+        "formal_group_complete_seeds": {
+          "ID": [],
+          "N-OOD": [],
+          "K-OOD": [],
+          "联合 OOD": []
+        },
+        "task_status": {
+          "train": {
+            "pending": 3
+          },
+          "final": {
+            "waiting": 3
+          }
+        },
+        "all_four_formal_groups_complete_seeds": []
+      },
+      "regir_fixed4_sg": {
+        "checkpoint_seeds": [],
+        "final_file_seeds": [],
+        "resume_only_or_resume_file_seeds": [],
+        "formal_group_complete_seeds": {
+          "ID": [],
+          "N-OOD": [],
+          "K-OOD": [],
+          "联合 OOD": []
+        },
+        "task_status": {
+          "train": {
+            "pending": 3
+          },
+          "final": {
+            "waiting": 3
+          }
+        },
+        "all_four_formal_groups_complete_seeds": []
+      },
+      "regir_untied4_sg": {
+        "checkpoint_seeds": [],
+        "final_file_seeds": [],
+        "resume_only_or_resume_file_seeds": [
+          0,
+          1,
+          2
+        ],
+        "formal_group_complete_seeds": {
+          "ID": [],
+          "N-OOD": [],
+          "K-OOD": [],
+          "联合 OOD": []
+        },
+        "task_status": {
+          "train": {
+            "pending": 3
+          },
+          "final": {
+            "waiting": 3
+          }
+        },
+        "all_four_formal_groups_complete_seeds": []
+      },
+      "regir_kv0_intent_sg": {
+        "checkpoint_seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "final_file_seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "resume_only_or_resume_file_seeds": [],
+        "formal_group_complete_seeds": {
+          "ID": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "N-OOD": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "K-OOD": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "联合 OOD": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "task_status": {
+          "train": {
+            "complete": 5
+          },
+          "final": {
+            "complete": 5
+          }
+        },
+        "all_four_formal_groups_complete_seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "regir_kv0_intent_noaux_sg": {
+        "checkpoint_seeds": [],
+        "final_file_seeds": [],
+        "resume_only_or_resume_file_seeds": [],
+        "formal_group_complete_seeds": {
+          "ID": [],
+          "N-OOD": [],
+          "K-OOD": [],
+          "联合 OOD": []
+        },
+        "task_status": {
+          "train": {
+            "pending": 3
+          },
+          "final": {
+            "waiting": 3
+          }
+        },
+        "all_four_formal_groups_complete_seeds": []
+      },
+      "regir_kv0_intent_nomem": {
+        "checkpoint_seeds": [],
+        "final_file_seeds": [],
+        "resume_only_or_resume_file_seeds": [],
+        "formal_group_complete_seeds": {
+          "ID": [],
+          "N-OOD": [],
+          "K-OOD": [],
+          "联合 OOD": []
+        },
+        "task_status": {
+          "train": {
+            "pending": 3
+          },
+          "final": {
+            "waiting": 3
+          }
+        },
+        "all_four_formal_groups_complete_seeds": []
+      },
+      "regir_intent_sg": {
+        "checkpoint_seeds": [],
+        "final_file_seeds": [],
+        "resume_only_or_resume_file_seeds": [],
+        "formal_group_complete_seeds": {
+          "ID": [],
+          "N-OOD": [],
+          "K-OOD": [],
+          "联合 OOD": []
+        },
+        "task_status": {
+          "train": {
+            "pending": 3
+          },
+          "final": {
+            "waiting": 3
+          }
+        },
+        "all_four_formal_groups_complete_seeds": []
+      },
+      "regir_kv0_intent_norefil_sg": {
+        "checkpoint_seeds": [],
+        "final_file_seeds": [],
+        "resume_only_or_resume_file_seeds": [],
+        "formal_group_complete_seeds": {
+          "ID": [],
+          "N-OOD": [],
+          "K-OOD": [],
+          "联合 OOD": []
+        },
+        "task_status": {
+          "train": {
+            "pending": 3
+          },
+          "final": {
+            "waiting": 3
+          }
+        },
+        "all_four_formal_groups_complete_seeds": []
+      }
+    },
+    "current_complete_scores": {
+      "regir_sg": {
+        "ID": {
+          "seeds": [
+            0,
+            1,
+            2
+          ],
+          "source_trimmed_mean": 0.30500649914723155,
+          "per_seed": [
+            0.44502225574959275,
+            0.21021262685168463,
+            0.25978461484041726
+          ]
+        },
+        "N-OOD": {
+          "seeds": [
+            0,
+            1,
+            2
+          ],
+          "source_trimmed_mean": 0.7447453653079986,
+          "per_seed": [
+            1.3652646482063917,
+            0.4368296407644328,
+            0.4321418069531715
+          ]
+        },
+        "K-OOD": {
+          "seeds": [
+            0,
+            1,
+            2
+          ],
+          "source_trimmed_mean": 0.6953672914888237,
+          "per_seed": [
+            0.9507313154345767,
+            0.6933183657687348,
+            0.4420521932631598
+          ]
+        },
+        "Joint OOD": {
+          "seeds": [
+            0,
+            1,
+            2
+          ],
+          "source_trimmed_mean": 1.1304196603283199,
+          "per_seed": [
+            1.872307023303655,
+            0.8829187133894455,
+            0.6360332442918594
+          ]
+        },
+        "O": {
+          "seeds": [
+            0,
+            1,
+            2
+          ],
+          "per_seed": {
+            "0": 1.3961009956482078,
+            "1": 0.6710222399742044,
+            "2": 0.5034090815027302
+          },
+          "source_trimmed_mean": 0.8568441057083808,
+          "matched_seed_0_2_mean": 0.8568441057083808
+        }
+      },
+      "regir_r0_sg": {
+        "ID": {
+          "seeds": [
+            0,
+            1,
+            2
+          ],
+          "source_trimmed_mean": 0.9921113454401347,
+          "per_seed": [
+            1.2940037771563868,
+            1.0769660655211273,
+            0.6053641936428902
+          ]
+        },
+        "N-OOD": {
+          "seeds": [
+            0,
+            1,
+            2
+          ],
+          "source_trimmed_mean": 2.6587801474758748,
+          "per_seed": [
+            3.5887278250244257,
+            2.470065774188816,
+            1.9175468432143816
+          ]
+        },
+        "K-OOD": {
+          "seeds": [
+            0,
+            1,
+            2
+          ],
+          "source_trimmed_mean": 2.174350358346827,
+          "per_seed": [
+            2.8789995194303963,
+            2.342654785108375,
+            1.30139677050171
+          ]
+        },
+        "Joint OOD": {
+          "seeds": [
+            0,
+            1,
+            2
+          ],
+          "source_trimmed_mean": 3.7653220723840897,
+          "per_seed": [
+            5.19827641543794,
+            3.8016655376449204,
+            2.2960242640694086
+          ]
+        },
+        "O": {
+          "seeds": [
+            0,
+            1,
+            2
+          ],
+          "per_seed": {
+            "0": 3.888667919964254,
+            "1": 2.8714620323140374,
+            "2": 1.8383226259285002
+          },
+          "source_trimmed_mean": 2.8661508594022638,
+          "matched_seed_0_2_mean": 2.8661508594022638
+        }
+      },
+      "regir_r1_sg": {
+        "ID": {
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "source_trimmed_mean": 0.617246089978576,
+          "per_seed": [
+            0.8367995976076259,
+            1.5249320164056945,
+            0.5632577448532878,
+            0.3889253721633963,
+            0.4516809274748143
+          ]
+        },
+        "N-OOD": {
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "source_trimmed_mean": 2.159347577303533,
+          "per_seed": [
+            3.391428829270621,
+            3.42228898773829,
+            2.2222350871980905,
+            0.6873076217199126,
+            0.8643788154418875
+          ]
+        },
+        "K-OOD": {
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "source_trimmed_mean": 1.3656777965711424,
+          "per_seed": [
+            1.6862603226855128,
+            2.9065323449254112,
+            1.2385178102979546,
+            0.9554787832633443,
+            1.1722552567299604
+          ]
+        },
+        "Joint OOD": {
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "source_trimmed_mean": 2.569117795286218,
+          "per_seed": [
+            3.3970185976226945,
+            4.317906390560799,
+            2.9018578249024776,
+            1.2703926522884463,
+            1.408476963333482
+          ]
+        },
+        "O": {
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "per_seed": {
+            "0": 2.8249025831929426,
+            "1": 3.548909241074833,
+            "2": 2.1208702407995075,
+            "3": 0.9710596857572344,
+            "4": 1.1483703451684433
+          },
+          "source_trimmed_mean": 2.0313810563869645,
+          "matched_seed_0_2_mean": 2.831560688355761
+        }
+      },
+      "regir_kv0_sg": {
+        "ID": {
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "source_trimmed_mean": 0.39434992896618243,
+          "per_seed": [
+            0.43664874742260296,
+            0.35772695924170383,
+            0.3061647955309612,
+            0.3886740802342403,
+            0.5758299435376134
+          ]
+        },
+        "N-OOD": {
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "source_trimmed_mean": 0.9079269077765791,
+          "per_seed": [
+            1.20829234143422,
+            0.6239901943170015,
+            0.42885628536723236,
+            2.0321866160255193,
+            0.8914981875785161
+          ]
+        },
+        "K-OOD": {
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "source_trimmed_mean": 1.1792103175724322,
+          "per_seed": [
+            1.143477299191372,
+            1.1570348771623573,
+            0.7476923369126354,
+            1.2371187763635674,
+            1.2389147518144106
+          ]
+        },
+        "Joint OOD": {
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "source_trimmed_mean": 1.5289551907305858,
+          "per_seed": [
+            1.9740675763470419,
+            1.2388601470517764,
+            0.8096037747253451,
+            1.6624550874022086,
+            1.6855503377377725
+          ]
+        },
+        "O": {
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "per_seed": {
+            "0": 1.4419457389908779,
+            "1": 1.006628406177045,
+            "2": 0.6620507990017376,
+            "3": 1.6439201599304318,
+            "4": 1.2719877590435664
+          },
+          "source_trimmed_mean": 1.2401873014038298,
+          "matched_seed_0_2_mean": 1.0368749813898868
+        }
+      },
+      "regir_kv0_nomem": {
+        "ID": {
+          "seeds": [
+            0,
+            1,
+            2
+          ],
+          "source_trimmed_mean": 0.47137444542236145,
+          "per_seed": [
+            0.664874521398208,
+            0.3208255653848262,
+            0.42842324948405014
+          ]
+        },
+        "N-OOD": {
+          "seeds": [
+            0,
+            1,
+            2
+          ],
+          "source_trimmed_mean": 0.7697936497140939,
+          "per_seed": [
+            1.216507117118239,
+            0.47986019179500056,
+            0.6130136402290423
+          ]
+        },
+        "K-OOD": {
+          "seeds": [
+            0,
+            1,
+            2
+          ],
+          "source_trimmed_mean": 1.241840322003549,
+          "per_seed": [
+            1.7342389007365684,
+            1.086153265727667,
+            0.9051287995464116
+          ]
+        },
+        "Joint OOD": {
+          "seeds": [
+            0,
+            1,
+            2
+          ],
+          "source_trimmed_mean": 1.3841305765573602,
+          "per_seed": [
+            1.944071021808013,
+            1.3188316183460926,
+            0.8894890895179748
+          ]
+        },
+        "O": {
+          "seeds": [
+            0,
+            1,
+            2
+          ],
+          "per_seed": {
+            "0": 1.6316056798876069,
+            "1": 0.9616150252895868,
+            "2": 0.8025438430978096
+          },
+          "source_trimmed_mean": 1.1319215160916678,
+          "matched_seed_0_2_mean": 1.1319215160916678
+        }
+      },
+      "regir_kv0_intent_sg": {
+        "ID": {
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "source_trimmed_mean": 0.4606592533371828,
+          "per_seed": [
+            0.5795628992977666,
+            0.40204974577938624,
+            0.3101370192124435,
+            0.613405028855942,
+            0.4003651149343954
+          ]
+        },
+        "N-OOD": {
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "source_trimmed_mean": 0.8172886122130935,
+          "per_seed": [
+            0.7826078558689625,
+            0.6181824679608768,
+            0.771787038186078,
+            1.3215784019089485,
+            0.8974709425842399
+          ]
+        },
+        "K-OOD": {
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "source_trimmed_mean": 1.2413542564674014,
+          "per_seed": [
+            1.4504513336694154,
+            1.3614047141277432,
+            0.854676829351467,
+            2.0088010011394393,
+            0.9122067216050455
+          ]
+        },
+        "Joint OOD": {
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "source_trimmed_mean": 1.491073184023863,
+          "per_seed": [
+            1.4430642645027956,
+            1.51342500336626,
+            1.4961006327288853,
+            2.4839705056891788,
+            1.463693915976443
+          ]
+        },
+        "O": {
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "per_seed": {
+            "0": 1.2253744846803911,
+            "1": 1.1643373951516267,
+            "2": 1.0408548334221435,
+            "3": 1.9381166362458555,
+            "4": 1.0911238600552429
+          },
+          "source_trimmed_mean": 1.1602785799624202,
+          "matched_seed_0_2_mean": 1.1435222377513872
+        }
+      }
+    },
+    "saved_train_config_identity": {
+      "regir_sg": {
+        "profile": "main0923",
+        "implementation_revision": "main0923_sg_v1",
+        "skip_count_inject": false,
+        "rer_update": "tied",
+        "global_query_detach_memory": true,
+        "global_query_no_memory": false,
+        "global_depths": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "global_eval_depth": 4,
+        "config_path": "source/config.json"
+      },
+      "regir_kv0_sg": {
+        "profile": "main0923",
+        "implementation_revision": "main0923_sg_v1",
+        "skip_count_inject": false,
+        "rer_update": "kv0",
+        "global_query_detach_memory": true,
+        "global_query_no_memory": false,
+        "global_depths": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "global_eval_depth": 4,
+        "config_path": "source/config.json"
+      },
+      "regir_kv0_nomem": {
+        "profile": "main0923",
+        "implementation_revision": "main0923_sg_v1",
+        "skip_count_inject": false,
+        "rer_update": "kv0",
+        "global_query_detach_memory": false,
+        "global_query_no_memory": true,
+        "global_depths": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "global_eval_depth": 4,
+        "config_path": "source/config.json"
+      }
+    },
+    "interpretation": "R0 and independent R1 are completed counts-on structural comparators already in v1; ARR is the anchored variant. ARR-NoMem is an anchored-family proxy, not a LEAF memory ablation."
+  },
+  "main0928": {
+    "profile": "main0928 planned counts-off Looped campaign",
+    "plan_skip_count_inject": true,
+    "local_execution_queue_seeds": [
+      0,
+      1,
+      2
+    ],
+    "planned_new_had_methods": [
+      "Looped",
+      "NoREFIL",
+      "R0",
+      "R1",
+      "NoMem",
+      "Last",
+      "Fixed4",
+      "ARR",
+      "Untied4",
+      "+count"
+    ],
+    "exists": {
+      "experiment.json": false,
+      "inventory.json": false,
+      "aggregates.json": false,
+      "episodes.csv": false,
+      "实验报告.md": false
+    },
+    "newly_trained_final_file_count": 0,
+    "imported_main0921_baseline_final_file_count": 21,
+    "imported_baseline_methods": [
+      "alma",
+      "b2_qmix_atten",
+      "dcg",
+      "refil",
+      "refil_matched",
+      "spectra",
+      "transfqmix"
+    ],
+    "formal_new_method_results_complete": false,
+    "interpretation": "The imported 21 baseline weights and episode slices are historical main0921 data, not trained main0928 Looped/ablation results."
+  },
+  "pack4090": {
+    "source": "source/main0923",
+    "created_at": "2026-09-27 18:48:55",
+    "has_aggregates_json": false,
+    "has_inventory_json": false,
+    "new_complete_ablation_result_claimed": false,
+    "interpretation": "Historical transport pack sourced from main0923; no independent current formal aggregate."
+  },
+  "seed_semantics": {
+    "user_final_target_per_learned_method": 5,
+    "main0928_local_execution_queue_per_new_had_method": 3,
+    "main0923_actual_complete": {
+      "LEAF": 3,
+      "R0": 3,
+      "R1": 5,
+      "ARR": 5,
+      "ARR_NoMem": 3
+    },
+    "do_not_pool_reason": "main0923 LEAF and ARR train configs have skip_count_inject=false, while main0928 plans count-off Looped with skip_count_inject=true; same code key regir_sg does not imply same treatment."
+  },
+  "direct_LEAF_ablation_assessment": {
+    "historical_completed_structural_controls": [
+      "regir_r0_sg",
+      "regir_r1_sg",
+      "regir_kv0_sg"
+    ],
+    "new_component_removals_complete": [],
+    "pending_direct_controls": [
+      "regir_fixed4_sg",
+      "regir_untied4_sg"
+    ],
+    "main0928_planned_direct_component_controls": [
+      "NoREFIL",
+      "NoMem",
+      "Last",
+      "Fixed4",
+      "+count"
+    ],
+    "claim": "No new completed direct LEAF component ablation is available in the audited outputs."
+  },
+  "ARR_proxy_assessment": {
+    "full_reference": "regir_kv0_sg",
+    "completed_proxy": "regir_kv0_nomem",
+    "completed_proxy_actual_seeds": [
+      0,
+      1,
+      2
+    ],
+    "pending_proxies": [
+      "regir_kv0_norefil_sg",
+      "regir_kv0_fixed4_sg",
+      "regir_kv0_nocount_sg"
+    ],
+    "exclude_from_ARR_proxy_family": [
+      "regir_fixed4_sg"
+    ],
+    "matched_seed_0_2_O": {
+      "ARR": 1.0368749813898868,
+      "ARR_NoMem": 1.1319215160916678
+    },
+    "paper_action": "Retain v1 ARR versus ARR-NoMem as a clearly marked proxy with actual n; leave uncompleted rows TBD. Do not interpret ARR proxy differences as LEAF ablations."
+  },
+  "paper_action": "No new numerical ablation table is warranted. Retain v1 results with correct actual n and protocol labels; do not merge main0928 planned counts-off arms into main0923 counts-on LEAF rows.",
+  "IAR_no_intent_assessment": {
+    "IAR_full_method": "regir_kv0_intent_sg",
+    "IAR_full_complete_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "no_intent_comparator": "regir_kv0_sg",
+    "separate_IAR_NoIntent_training_arm_present": false,
+    "other_IAR_component_variants_complete": false,
+    "interpretation": "Existing ARR is the no-intent architectural comparator for IAR, already present in v1; no new IAR-NoIntent data appeared."
+  },
+  "legacy_no_sg_exclusion": {
+    "source_report": "source/实验报告.md",
+    "methods_with_old_results": [
+      "regir_fixed4",
+      "regir_untied4"
+    ],
+    "reason": "Historical no-SG protocol; not a direct counts-on main0923 or counts-off main0928 LEAF ablation."
+  },
+  "source_locations": {
+    "v1_proxy_interpretation": {
+      "path": "source/results.tex",
+      "line": 30
+    },
+    "v1_actual_seed_protocol": {
+      "path": "source/protocol.tex",
+      "line": 5
+    },
+    "main0923_LEAF_counts_enabled": {
+      "path": "source/config.json",
+      "line": 144
+    },
+    "main0923_ARR_anchored_update": {
+      "path": "source/config.json",
+      "line": 121
+    },
+    "main0923_ARR_NoMem": {
+      "path": "source/config.json",
+      "line": 122
+    },
+    "main0923_LEAF_aggregate": {
+      "path": "source/aggregates.json",
+      "line": 830
+    },
+    "main0923_ARR_aggregate": {
+      "path": "source/aggregates.json",
+      "line": 588
+    },
+    "main0923_ARR_NoMem_aggregate": {
+      "path": "source/aggregates.json",
+      "line": 924
+    },
+    "main0923_NoREFIL_incomplete_report": {
+      "path": "source/实验报告.md",
+      "line": 492
+    },
+    "main0928_counts_off_plan": {
+      "path": "source/实验计划.md",
+      "line": 8
+    },
+    "main0928_local_three_seed_matrix": {
+      "path": "source/实验计划.md",
+      "line": 13
+    },
+    "main0928_imports_only_description": {
+      "path": "source/实验计划.md",
+      "line": 20
+    }
+  }
+}

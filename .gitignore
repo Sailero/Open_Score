@@ -2,6 +2,8 @@
 *.csv
 *.tsv
 *.parquet
+*.jsonl
+*.jsonl.gz
 
 # Model weights and arrays
 *.pt

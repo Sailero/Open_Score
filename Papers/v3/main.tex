@@ -1,0 +1,47 @@
+\RequirePackage[T1]{fontenc}
+\documentclass[journal,10pt]{IEEEtran}
+\usepackage{mathptmx}
+\usepackage{amsmath,amssymb,booktabs,array,multirow}
+\usepackage{graphicx,xcolor}
+\usepackage{placeins}
+\usepackage{algorithm,algpseudocode}
+\usepackage{cite,url}
+\usepackage[hidelinks]{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,calc}
+\newcommand{\LEAF}{\textsc{LEAF}}
+\hyphenation{multi-agent gene-ra-li-za-tion re-pre-sen-ta-tion}
+\hypersetup{pdftitle={LEAF: Looped Entity Attention Fusion for Population-Generalizable Multi-Agent Defense},pdfauthor={}}
+\begin{document}
+\title{LEAF: Looped Entity Attention Fusion for Population-Generalizable Multi-Agent Defense}
+\author{Anonymous Authors}
+\bstctlcite{leafBibliographyControl}
+\maketitle
+\markboth{Anonymous Manuscript Submitted for Review}{LEAF: Looped Entity Attention Fusion}
+\begin{abstract}
+Cooperative target protection requires defenders to interpret threats in the context of nearby teammates and protected assets as their populations change. We propose Looped Entity Attention Fusion (LEAF), a receiver-conditioned relational encoder for cooperative value learning. A shared attention block iteratively updates the entity representations, a query derived from the acting defender reads each intermediate representation, and learned fusion combines these reads before a recurrent decision network. This design couples current-scene contextual processing with intermediate-stage access while retaining temporal memory downstream. In SkyHAD, policies trained with at most ten vehicles per team and three targets are evaluated without retraining on 24 configurations reaching 50 vehicles per team and 12 targets. Across three training seeds, LEAF improves mean reward over REFIL by 0.800, 1.635, and 2.211 in target-count, team-size, and joint extrapolation, respectively. Trained architectural comparisons favor contextual processing before reading and current-state queries with downstream memory. Normal forward records show receiver-specific fusion concentrated on early contextual reads, while evaluations across trained depths characterize scene-dependent refinement. At 50 vehicles per team and two targets, attacker interception increases from 72.27\% to 78.68\%, while the incidence of target damage decreases from 70.56\% to 28.11\%. These results support relational encoding as a practical approach to population transfer in cooperative defense.
+\end{abstract}
+\noindent\textbf{Note to Practitioners---}
+A cooperative protection controller may need to operate with different numbers of defending vehicles, incoming threats, and protected assets. LEAF uses a shared policy that accepts a variable-size set of observed entity states. Each defender builds the current scene context, reads it from its own perspective, and combines it with a recurrent temporal state to choose an action. The controller is trained on small engagements and reused with frozen parameters in larger ones. Evaluation measures both protected-asset reward and friendly-collision mortality, allowing the two operational outcomes to be assessed together. The study uses the planar vehicle model in SkyHAD with public entity-state observations and a reactive attacker. This interface suits simulation-based assessment of cooperative protection strategies and can serve as the policy layer when integrating platform-specific sensing and actuation.
+\par
+\begin{IEEEkeywords}
+Multi-agent reinforcement learning, cooperative control, population generalization, entity attention, target protection.
+\end{IEEEkeywords}
+\input{sections/introduction}
+\input{sections/related_work}
+\input{sections/problem}
+\begin{figure*}[!t]
+\centering
+\resizebox{\textwidth}{!}{\input{figures/framework}}
+\caption{LEAF at one defender decision. A shared contextual-update block processes the receiver-relative entities for $L$ rounds. The defender's self-state query reads each intermediate representation, and learned fusion combines the resulting summaries. The fused read augments the REFIL feature before one GRU update. The loop processes the current observation; the GRU carries memory between observations. Training samples $L\in\{1,2,3,4\}$ and formal evaluation uses $L=4$.}
+\label{fig:framework}
+\end{figure*}
+\input{sections/method}
+\input{sections/results}
+\FloatBarrier
+\input{sections/conclusion}
+\section*{Acknowledgment}
+OpenAI Codex assisted with manuscript drafting, code-assisted analysis, and figure preparation.
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+\end{document}

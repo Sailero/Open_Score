@@ -1,0 +1,47 @@
+\begin{tikzpicture}[x=1cm,y=1cm,>=Stealth,
+ box/.style={draw=blue!45!black,rounded corners=2pt,fill=blue!4,align=center,font=\small,minimum height=.76cm},
+ smallbox/.style={box,minimum width=1.42cm},
+ flow/.style={->,thick,draw=black!65},
+ queryflow/.style={->,thick,draw=orange!70!black},
+ every node/.style={font=\small}]
+\node[box,minimum width=2.0cm] (obs) at (0,0) {Current entity view\\$X_{i,t}$ and mask};
+\node[box,minimum width=1.9cm] (enc) at (2.65,0) {Shared encoding\\$Z_{i,t}$};
+\node[box,minimum width=1.7cm] (h0) at (5.2,0) {Projection, mask\\$H^{(0)}$};
+\node[smallbox] (h1) at (7.75,0) {$H^{(1)}$};
+\node[smallbox] (h2) at (10.15,0) {$H^{(2)}$};
+\node[smallbox] (hl) at (12.85,0) {$H^{(L)}$};
+\draw[flow] (obs) -- (enc);
+\draw[flow] (enc) -- (h0);
+\draw[flow] (h0) -- node[above,font=\footnotesize] {$F_\theta$} (h1);
+\draw[flow] (h1) -- node[above,font=\footnotesize] {$F_\theta$} (h2);
+\draw[flow] (h2) -- node[above,font=\footnotesize] {$\cdots\ F_\theta$} (hl);
+\node[font=\small\bfseries,text=blue!55!black] at (9.0,.92) {Shared entity refinement at one physical time};
+\node[box,fill=orange!8,draw=orange!60!black,minimum width=2.5cm] (query) at (4.7,-1.8) {Fixed current-self query\\$q=W_qH^{(0)}_{\rm self}+b_q$};
+\node[smallbox] (u1) at (7.75,-1.8) {Read $u^{(1)}$};
+\node[smallbox] (u2) at (10.15,-1.8) {Read $u^{(2)}$};
+\node[smallbox] (ul) at (12.85,-1.8) {Read $u^{(L)}$};
+\draw[queryflow] (h0.south) -- ++(0,-.43) -| (query.north);
+\draw[flow] (h1) -- (u1);
+\draw[flow] (h2) -- (u2);
+\draw[flow] (hl) -- (ul);
+\draw[queryflow] (query.east) -- (u1.west);
+\draw[draw=orange!70!black,thick] (6.5,-1.8) -- (6.5,-2.49) -- (12.85,-2.49);
+\draw[queryflow] (10.15,-2.49) -- (u2.south);
+\draw[queryflow] (12.85,-2.49) -- (ul.south);
+\node[font=\footnotesize,text=orange!70!black] at (9.6,-2.77) {One query; reader shared across stages};
+\node[box,minimum width=2.4cm] (fusion) at (15.55,-1.8) {Learned stage fusion\\$u_{[L]}=\sum_r\alpha_r^{[L]}u^{(r)}$};
+\draw[flow] (ul) -- (fusion);
+\draw[flow] (u1.east) -- ++(.22,0) |- (15.55,-.84) -- (fusion.north);
+\draw[flow] (u2.east) -- ++(.22,0) |- (15.55,-.84);
+\node[box,minimum width=2.3cm] (base) at (2.65,-3.65) {REFIL host attention\\Local feature $\ell$};
+\node[box,minimum width=2.45cm] (res) at (7.3,-3.65) {$\ell'=\ell+W_f u_{[L]}+b_f$};
+\node[box,fill=green!5,draw=green!35!black,minimum width=2.8cm] (gru) at (11.55,-3.65) {Temporal GRU: one update\\$h_t=\operatorname{GRU}(\ell',h_{t-1})$};
+\node[box,minimum width=2.15cm] (qval) at (15.55,-3.65) {Legal action values\\$Q_i(\tau_i,\cdot)$};
+\draw[flow] (enc.south) -- (base.north);
+\draw[flow] (base) -- (res);
+\draw[flow] (fusion.south) |- (7.3,-3.03) -- (res.north);
+\draw[flow] (res) -- (gru);
+\draw[flow] (gru) -- (qval);
+\node[font=\small,text=green!35!black] (prev) at (11.55,-4.75) {Previous temporal state $h_{t-1}$};
+\draw[flow,draw=green!35!black] (prev.north) -- (gru.south);
+\end{tikzpicture}

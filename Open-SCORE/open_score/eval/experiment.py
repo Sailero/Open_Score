@@ -418,10 +418,19 @@ class EpisodeIndex:
     def __init__(self, output):
         self.path = Path(output) / "episodes.csv"
         self.offset, self.header, self.cells = 0, None, {}
+        self.children = {}
 
     def refresh(self):
         import csv
+        # A version may contain independent HAD/MPE/SMAC streams. Each stream
+        # keeps its own cursor; historical versions still have one flat CSV.
         if not self.path.exists():
+            from open_score.utils.logging import record_paths
+            self.cells = {}
+            for path in record_paths(self.path.parent, "episodes"):
+                child = self.children.setdefault(path, EpisodeIndex(path.parent))
+                for key, values in child.refresh().items():
+                    self.cells.setdefault(key, set()).update(values)
             return self.cells
         size = self.path.stat().st_size
         if size < self.offset:
