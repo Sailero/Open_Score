@@ -1,10 +1,10 @@
 # LEAF 主实验结果分析：威胁情境编码、群体保护与双轴外推
 
-更新：2026-10-14。主方法统一称为 **LEAF**；保存数据中的内部标识只用于定位已有实验。当前主数据、必要模型和图片归于 [outputs/main](../Open-SCORE/outputs/main)。方法计算见[方法与变体说明](LEAF_方法与变体说明.md)，基线定义见[Baseline 与 Rule 实现说明](LEAF_Baseline与Rule实现说明.md)。
+更新：2026-10-15。主方法统一称为 **LEAF**；保存数据中的内部标识只用于定位已有实验。当前主数据、必要模型和图片归于 [outputs/main](../Open-SCORE/outputs/main)。方法计算见[方法与变体说明](LEAF_方法与变体说明.md)，基线定义见[Baseline 与 Rule 实现说明](LEAF_Baseline与Rule实现说明.md)。
 
 ## 1. 问题、设计目标与结果
 
-论文整理版见 [LEAF v4](../Papers/v4/README.md)及其 [PDF](../Papers/v4/main.pdf)。v4 将本报告结果重组为对比、历史设计比较、机制与补充分析四部分，统一使用 D↓ 展示；容量与精炼设计控制集中放在补充分析，仅重绘已有结果，不改变下述正式统计与来源口径。
+论文整理版见 [LEAF论文包](../Papers/1014/README.md)及其 [PDF](../Papers/1014/main.pdf)。论文将本报告结果组织为对比、历史设计比较、机制与补充分析四部分，统一使用 D↓ 展示；容量与精炼设计控制集中放在补充分析，仅重绘已有结果，不改变下述正式统计与来源口径。
 
 多目标攻防中，攻击者的威胁取决于它指向哪个目标、这个目标又已经被谁覆盖，也就是由攻击者、目标和队友共同构成的威胁情境。部署时实体规模会变、可用于关系推理的计算深度也可能变。LEAF设计目标是一个策略同时适应两种变化。
 
@@ -36,7 +36,7 @@ Q_t = action_head(hidden_t)
 
 ### 2.2 正式性能口径
 
-主性能表使用 `paper_current` 比较视图：LEAF及其余方法沿用 `paper1007` 的正式统计，SPECTra和TransfQMix采用 `source_version=main1013_base` 的19维输入重训结果。历史 `paper1007` 保持原样，不把旧、新模型混合平均。训练种子0/1/2，每种子1M物理环境步；训练人数 N∈{4,6,8,10}、目标数 K∈{1,2,3}独立采样。正式 checkpoint 为完成预算的 **final**，best 仅作为训练内验证最优模型存档。每个 final 在每配置300个共同场景9000–9299上评估。
+主性能表使用 `comparison` 比较视图：LEAF及其余方法采用既有正式统计，SPECTra和TransfQMix采用19维输入重训结果。10维基线数据另归 [归档说明](../backup/README.md#baseline_entity10)，不把不同模型混合平均。训练种子0/1/2，每种子1M物理环境步；训练人数 N∈{4,6,8,10}、目标数 K∈{1,2,3}独立采样。正式 checkpoint 为完成预算的 **final**，best 仅作为训练内验证最优模型存档。每个 final 在每配置300个共同场景9000–9299上评估。
 
 HAD 为二维抽象攻防，固定 reactive+rush 攻击策略，最长100个物理步。主指标为累计目标损伤 **D↓**，奖励 **R=−D↑**；累计损伤不受初始目标血量上限截断，也不等同于胜率。训练可含 shaping，报告奖励不含 shaping。下表固定使用 D；引用现有图时图中的 R 仍为 −D。
 
@@ -50,7 +50,7 @@ HAD 为二维抽象攻防，固定 reactive+rush 攻击策略，最长100个物�
 
 先在每个种子内对场景平均，再对组内配置等权，最后报告三种子均值±**样本SD**。All24 对24个配置等权，不是对四个组均值等权。Rule、Random 没有训练种子，其误差为300个共同场景所得的场景SD，标记为 †；SD 不等于95%区间。历史 IQM、bootstrap 或 t 区间保留各自名称，不与本表误差混用。
 
-验证每20k步进行一次，共50点，每点4个ID配置各25局，使用固定9500–9599场景，独立于正式池。学习图按验证序号对齐种子，横轴取实际 `t_env` 均值；不平滑，阴影为样本SD。验证末点与 final 终评来自不同场景，数值可以不同。数据入口为 [episodes.csv](../Open-SCORE/outputs/main/had/episodes.csv)、[learning.csv](../Open-SCORE/outputs/main/had/learning.csv) 和 [aggregates.json](../Open-SCORE/outputs/main/had/aggregates.json)；当前分组、逐配置与学习曲线统计取 `paper_current`，新基线独立确认取其 `confirmation`，历史统计保留在 `paper1007`。
+验证每20k步进行一次，共50点，每点4个ID配置各25局，使用固定9500–9599场景，独立于正式池。学习图按验证序号对齐种子，横轴取实际 `t_env` 均值；不平滑，阴影为样本SD。验证末点与 final 终评来自不同场景，数值可以不同。数据入口为 [episodes.csv](../Open-SCORE/outputs/main/had/episodes.csv)、[learning.csv](../Open-SCORE/outputs/main/had/learning.csv) 和 [aggregates.json](../Open-SCORE/outputs/main/had/aggregates.json)；当前分组、逐配置与学习曲线统计取 `comparison`，新基线独立确认取其 `confirmation`，设计比较取 `design_comparison`。
 
 此次输入对齐实验已完成SPECTra和TransfQMix各三个种子，共六个模型；每模型1M物理步、50个验证点、5,000条验证及正式/确认各7,200条记录，共116,400条逐局数据，已按来源身份并入main。actor、online/target mixer和冻结评估均使用10维实体基础特征加9维红方上一动作，首步及蓝方、目标的动作段为零。共同控制为8个环境进程、每可采样收集批8次更新、replay 5,000、batch 32、γ=0.99、clip 10、每200局硬更新target和100k步ε退火；damage任务采用β=1、范围4,000的势函数塑形，二维随机目标、reactive/rush对手和100步时限。保留基线自身Adam/1e−3、Double-Q、TD(λ=0.6)、半MSE及原结构，不能称为与LEAF全部超参数统一。环境登记为had-workbench-2.1.0 / rebuild-calibrated-v3-r7-target-initialization；正式与确认场景分别为9000–9299和110000–110299。
 
@@ -58,7 +58,7 @@ HAD 为二维抽象攻防，固定 reactive+rush 攻击策略，最长100个物�
 
 ### 3.1 LEAF与七个学习基线、Rule和Random
 
-**表1. 当前正式目标损伤：`paper_current`，均值±样本SD。**
+**表1. 当前正式目标损伤：`comparison`，均值±样本SD。**
 
 | 方法 | ID D↓ | K-OOD D↓ | N-OOD D↓ | Joint-OOD D↓ |
 |---|---:|---:|---:|---:|
@@ -90,32 +90,19 @@ HAD 为二维抽象攻防，固定 reactive+rush 攻击策略，最长100个物�
 
 LEAF 在四组 D 均值上领先全部学习基线；在当前保存碰撞指标的学习基线中，其碰撞比例也更低。新19维SPECTra和TransfQMix终评没有保存碰撞、拦截或受损回合比例，不据旧10维模型补写这些指标。Rule 在 N-OOD、Joint-OOD 的碰撞比例更低，因而保护收益不等于每个条件下碰撞最少。LEAF actor 参数175,754，REFIL102,025，REFIL-matched176,393，后者仅多639（约0.36%）；参数匹配结果削弱仅以模型大小解释性能的说法，但没有提供时延结论。
 
-![主方法与学习基线及规则的学习验证和外推表现](../Open-SCORE/outputs/main/had/figures/fig_had_generalization.png)
+![主方法与学习基线及规则的学习验证和外推表现](../Open-SCORE/outputs/main/had/figures/fig_comparison.png)
 
-*图1. 学习曲线为50点验证R均值±训练种子SD；SPECTra和TransfQMix曲线及损伤统计取新19维模型，其余沿用原来源。K、N外推保留种子点，Joint配置用共享线性色阶。Rule虚线为正式参考。[当前论文比较图](../Papers/v4/figures/fig_comparison.pdf)。*
+*图1. 当前八方法学习验证和外推比较统一展示D↓，验证为50点均值±训练种子SD；SPECTra和TransfQMix采用19维模型，其余沿用原来源。K、N外推展示均值与种子SD，Joint配置用共享线性色阶。Rule虚线为正式参考。(e)展示正式与独立确认All24；其中LEAF参照来自另存深度/确认池，不覆盖(a)–(d)或表1的正式来源。[同源矢量图](../Open-SCORE/outputs/main/had/figures/fig_comparison.pdf)。*
 
-验证第10点（约0.2M步）LEAF 的 R=−2.046±0.028，REFIL=−4.429±0.284；第50点分别为−0.373±0.066和−0.738±0.122。这是固定ID验证池的观察，不将两点推广为所有点或所有任务的样本效率结论。既有七学习基线的105,000条验证逐局记录继续保留；本次新增六模型的30,000条验证记录独立标记来源，当前SPECTra/TransfQMix曲线使用这些新记录，不重复计为额外训练。
+验证第10点（约0.2M步）LEAF 的 R=−2.046±0.028，REFIL=−4.429±0.284；第50点分别为−0.373±0.066和−0.738±0.122。这是固定ID验证池的观察，不将两点推广为所有点或所有任务的样本效率结论。既有基线验证记录保持来源身份；六个19维重训模型的30,000条验证记录独立标记来源，当前SPECTra/TransfQMix曲线使用这些记录。原10维基线验证数据归档，不重复计为额外训练。
 
-**新19维模型与历史10维对照。** 新基线的正式All24分别为SPECTra **6.2871±0.0289**、TransfQMix **4.2518±0.7733**，两者在独立确认池分别为 **6.2964±0.0723**、**4.2549±0.7413**。误差均为三训练种子样本SD，All24包含两项Extra配置。补齐输入后的两基线损伤低于原10维主表均值，但仍高于LEAF；这只说明本次预定训练和评估下的结果，不证明输入是跨方法差距的唯一成因。
+**19维重训模型的正式与独立确认。** 新基线的正式All24分别为SPECTra **6.2871±0.0289**、TransfQMix **4.2518±0.7733**，两者在独立确认池分别为 **6.2964±0.0723**、**4.2549±0.7413**。误差均为三训练种子样本SD，All24包含两项Extra配置。补齐输入后的两基线损伤低于原10维主表均值，但仍高于LEAF；这只说明本次预定训练和评估下的结果，不证明输入是跨方法差距的唯一成因。
 
-| 历史方法（10维）/指标 | ID | K-OOD | N-OOD | Joint-OOD |
-|---|---:|---:|---:|---:|
-| SPECTra D↓ | 2.662±0.070 | 6.933±0.670 | 6.455±1.403 | 11.184±0.352 |
-| SPECTra C↓ (%) | 13.06±0.75 | 20.71±1.60 | 28.92±1.54 | 31.25±1.63 |
-| TransfQMix D↓ | 2.157±0.235 | 6.128±1.822 | 6.226±0.708 | 10.597±2.786 |
-| TransfQMix C↓ (%) | 16.86±2.86 | 21.67±6.71 | 27.14±4.78 | 27.34±8.43 |
-
-历史权重与`paper1007`统计保留，不与19维模型混合。第4.2节的SPECTra轨迹及历史时延仍对应原10维权重，不作为新模型行为或速度结果。SPECTra原GRF训练使用500k探索退火且每采集8局更新一次，本文共享100k并每批8次；其作者SMACv2亦有100k配置。TransfQMix原单进程每局一次，此处按8局批次8次。上述适配在运行前固定，不声称完整原论文复现或充分调参。
-
-![新基线的正式与独立确认损伤](../Open-SCORE/outputs/main/had/figures/main1013_base_comparison.png)
-
-![新基线训练与验证曲线](../Open-SCORE/outputs/main/had/figures/main1013_base_learning.png)
-
-*图1b–c. 保留输入对齐实验的正式/确认比较和实际训练/验证曲线。图1b的LEAF归档参照来自main1009/深度池，与本报告主表的paper1007分别保留；新两基线来自main1013_base。训练曲线按各模型真实采集批次展示，验证曲线仅使用完整100场验证点。*
+原10维基线的分组对照及保存数据见 [归档说明](../backup/README.md#baseline_entity10)。第4.2节SPECTra展示轨迹对应原10维seed0模型，不能作为新模型的行为结果；轨迹模型独立保留其真实checkpoint身份。SPECTra原GRF训练使用500k探索退火且每采集8局更新一次，本实验共享100k并每批8次；其作者SMACv2亦有100k配置。TransfQMix原单进程每局一次，此处按8局批次8次。上述适配在运行前固定，不声称完整原论文复现或充分调参。
 
 ### 3.2 LEAF与七个历史设计变体
 
-**表3. 历史保存配置的八方法设计比较，source_version=main0928，D均值±三训练种子SD；并非全部只改变LEAF的一项设计。**
+**表3. 保存配置的八方法设计比较，D均值±三训练种子SD；并非全部只改变LEAF的一项设计。**
 
 | 方法 | ID | K-OOD | N-OOD | Joint-OOD |
 |---|---:|---:|---:|---:|
@@ -138,9 +125,9 @@ Memory query相对LEAF的四组D高 **0.122、0.533、0.424、0.849**；LEAF在I
 
 LEAF相对No host的四组D减少 **0.105、0.772、0.688、1.222**，这是同时存在宿主组合和query历史条件差异的观察，不能单独归因于宿主。Last read和Fixed depth均值接近LEAF，Unshared rounds在N-OOD均值更低；One round在10v10 K12的R=−1.548±0.439，LEAF为−1.625±0.515。因此现有结果不支持融合、随机深度或共享参数各自带来普遍独立增益。
 
-![LEAF与七变体的学习曲线和外推表现](../Open-SCORE/outputs/main/had/figures/fig_had_ablation.png)
+![LEAF与七变体的学习曲线和外推表现](../Open-SCORE/outputs/main/had/figures/fig_ablation.png)
 
-*图2. 全部八方法保持LEAF参照，展示验证过程、种子差异和逐配置表现；表3保留同口径D与SD。*
+*图2. LEAF与七个保存设计比较的验证学习、K/N外推和联合外推，四面板共同保留完整方法集。表3给出四组绝对D与SD；这些比较的历史query条件不同，不能全部当作单因素消融。*
 
 ### 3.3 从头训练的一轮与冻结一轮
 
@@ -150,7 +137,7 @@ LEAF–One round在训练阶段始终使用一轮更新，并以一轮执行，�
 
 ### 4.1 正常执行：主要读取早期实体上下文
 
-正常深度研究包含450个唯一回合单元：三个模型种子×三个配置×十个共同场景×（LEAF L1–L4、REFIL）。其中180个已有匹配回合复用，270个新增保存；一次前向完成但保存失败的尝试已登记恢复。没有新增训练。正常L4有90回合、3,392个物理决策步、38,693个活跃防御者决策。原始向量、权重和物理状态见 [v3正常机制数据](../Papers/v3/data/mechanism1008.json.gz)。
+正常深度研究包含450个唯一回合单元：三个模型种子×三个配置×十个共同场景×（LEAF L1–L4、REFIL）。其中180个已有匹配回合复用，270个新增保存；一次前向完成但保存失败的尝试已登记恢复。没有新增训练。正常L4有90回合、3,392个物理决策步、38,693个活跃防御者决策。原始向量、权重和物理状态见 [正常机制数据](../Open-SCORE/outputs/main/had/regir_nomem/mechanisms/results.json.gz)。
 
 **表4. 正常路径损伤D，十场景机制子集，均值±三模型SD。**
 
@@ -162,8 +149,6 @@ LEAF–One round在训练阶段始终使用一轮更新，并以一轮执行，�
 
 多个正常出口都形成可用策略，但奖励排序随配置变化：10v10的L3/L4相同，30v30 K2的L3均值更好，K12的L3反而更差。L2相对L4在前两个配置均为3/3种子降低奖励；因此前两轮读出权重高不等于执行恰好二轮总能最好。
 
-![正常执行深度的奖励与配对变化](../Papers/v3/figures/fig_leaf_depth.png)
-
 **表5. 正常融合权重与变化，均值±三模型SD。**
 
 | 配置 | α1 (%) | α2 (%) | α3 (%) | α4 (%) | 接收者SD (pp) | 相邻步变化 (pp) |
@@ -174,7 +159,9 @@ LEAF–One round在训练阶段始终使用一轮更新，并以一轮执行，�
 
 α先在模型内平均活跃防御者决策，再对三个模型等权。接收者差异为同状态活跃防御者α1的总体SD，再平均物理状态；相邻步变化只连接两步均存活的同一防御者，先求回合均值再对场景等权。前两轮合计98.909±0.265%、98.755±0.542%、98.839±0.157%；这描述正常网络读取的分配，不把权重当作奖励因果贡献。
 
-![正常融合权重及接收者和时间变化](../Papers/v3/figures/fig_leaf_readout.png)
+![冻结干预、正常读取、执行深度与同状态动作依赖](../Open-SCORE/outputs/main/had/figures/fig_mechanism.png)
+
+*共享机制图：(a)八种冻结干预相对本地standard的配对ΔD；(b)正常R4融合权重及接收者/时间变化；(c)冻结R1–R6及独立重训One round参照；(d)八干预的同状态动作变化。各区保留自身记录池，误差为三个模型的样本SD；正式保护另见fig_protection。第4.11节解释干预、Q-margin及runtime边界。*
 
 压力与α1的相关在三个配置分别−0.087±0.156、−0.361±0.233、−0.027±0.576，不支持统一的压力调节规律。晚轮读出范数较大，不能仅凭小权重断定无影响，也不能仅凭表征相似度宣称过平滑。
 
@@ -193,21 +180,21 @@ LEAF–One round在训练阶段始终使用一轮更新，并以一轮执行，�
 | 50v50 K2 | LEAF | 0.557±0.371 | 11.14±2.63 | 78.68±1.39 | 28.11±15.03 |
 | 50v50 K2 | REFIL | 3.080±0.821 | 19.59±3.69 | 72.27±0.77 | 70.56±7.65 |
 
-![正式碰撞、拦截与首次损伤发生](../Open-SCORE/outputs/main/had/figures/fig_had_learning_behavior.png)
+![正式碰撞、拦截与首次损伤发生](../Open-SCORE/outputs/main/had/figures/fig_protection.png)
 
 *图3. 正式全300场景统计，含无损回合；首次损伤累计发生曲线没有剔除非事件回合。截于[0,1]只用于显示。限制到100步的时间统计不等于每个回合实际首次命中时间。LEAF–Memory query为query使用历史的参照。*
 
 保护优势不能解释成消除重复追击。已有三种子×100场景辅助几何指标中，50v50 K2的LEAF重复追击43.93±4.20%，REFIL35.49±1.50%，但R分别−0.666±0.611和−3.405±0.753；30v30 K2同样为32.50%与28.27%。damage集中度HHI仅在D>0回合定义，无损回合不补零；最差10%奖励也不自动等于预定义失败事件。
 
-![七方法在5v5和15v15中的真实轨迹](../Papers/v3/figures/fig_leaf_final1007_trajectory.png)
+![七方法在5v5和15v15中的真实轨迹](../Open-SCORE/outputs/main/had/figures/fig_trajectory.png)
 
-*图4. 每规模七方法共享初始状态，固定训练seed0 final及场景9000，快照取物理步30，奖励曲线延续到真实终止；图来自同一次本地回放。[逐步原始数据](../Papers/v3/data/trajectories1008.json.gz)。*
+*图4. 每规模七方法共享初始状态，固定训练seed0 final及场景9000，快照取物理步30，累计目标损伤曲线延续到真实终止；图来自同一次本地回放。SPECTra为原10维模型（artifact_id=53e7f877dd9548a784e6d7376b42b7e2），其余模型按保存身份解释；该轨迹不代表19维SPECTra。[逐步原始数据](../Open-SCORE/outputs/main/had/trajectories.json.gz)。*
 
 两规模的最终 R/终止步分别为：LEAF −1/32、0/35；REFIL −1/31、−5/43；QMIX-Atten −3/34、−6/51；DCG −2/86、−7/45；SPECTra −3/44、−5/81；ALMA −1/41、−1/47；Rule −2/40、−1/50。5v5中LEAF与REFIL、ALMA同奖励；15v15中LEAF在步30仍有4名防御者、2名攻击者，目标无损，最终拦截全部15名攻击者。REFIL于步25首次受损、步27失去最后防御者，此后继续受损。14个本地回放中11个匹配历史11字段，DCG的5v5及ALMA两规模存在登记差异；它们没有覆盖正式性能值，示例不代替300场景排序。
 
 ### 4.3 LEAF R1–R6：完整冻结深度补评
 
-这部分来源 `leaf1009_nomem_depth_v1`，对原LEAF三个final在24配置×300场景9000–9299上固定R1–R6评估，`selection_use=false`。训练最大深度4，R5/R6是推理外推。补充包覆盖 **432/432单元、129,600逻辑评估**，其中R4复用21,600场，新增完成108,000场；它只有experiment、summary和单元CSV，**新增108,000场逐场JSONL未提供**。因此可复算种子均值与t区间，不能从本地缺失的逐场数据计算补评场景bootstrap。
+这部分保留既有冻结深度协议，对原LEAF三个final在24配置×300场景9000–9299上固定R1–R6评估，`selection_use=false`。训练最大深度4，R5/R6是推理外推。补充包覆盖 **432/432单元、129,600逻辑评估**，其中R4复用21,600场，新增完成108,000场；它只有experiment、summary和单元CSV，**新增108,000场逐场JSONL未提供**。因此可复算种子均值与t区间，不能从本地缺失的逐场数据计算补评场景bootstrap。
 
 **表6. LEAF冻结权重深度，D均值±三训练种子SD。**
 
@@ -232,9 +219,9 @@ LEAF–One round在训练阶段始终使用一轮更新，并以一轮执行，�
 
 R1→R2三种子收益分别−0.171547、+0.136147、+0.063537；R2→R4为+0.007100、+0.002211、+0.015435，方向一致但很小。各分组对应收益的t95也跨零。R5/R6的总体均值接近R4，逐配置仍有细微变化；R5→R6只有3个配置均值改变，不能据此证明实体状态严格收敛。R1的三种子All24为0.5887、0.9048、0.9130，R4为0.7531、0.7664、0.8340；SD收窄是本次冻结出口观察，不能推广为训练方差的普遍改善。
 
-![LEAF R1–R6各组曲线](../Open-SCORE/outputs/main/had/figures/loop_nomem_depth.png)
+各组R1–R6曲线见第4.1节的共享机制图；对应数据池、正式保护与冻结干预分别保存。
 
-*图5. 误差线为三训练种子SD；R5/R6超出训练深度。原LEAF的learned JK在新增轮次时扩大softmax候选集合，闭环轨迹也会改变Temporal hidden，所以该表不是只增加一次attention更新的纯因果效应。该评估池与表1的`paper1007`正式汇总分别保留，细微数值差异不覆盖原表。*
+*共享机制图(c)的误差带为三训练种子SD；R5/R6超出训练深度。原LEAF的learned JK在新增轮次时扩大softmax候选集合，闭环轨迹也会改变Temporal hidden，所以该表不是只增加一次attention更新的纯因果效应。该评估池与表1的`comparison`正式汇总分别保留，细微数值差异不覆盖原表。*
 
 ### 4.4 人数外推的逐配置R1–R6
 
@@ -287,16 +274,15 @@ R1→R2三种子收益分别−0.171547、+0.136147、+0.063537；R2→R4为+0.0
 | REFIL | 2.1394±0.1719 | 2.0857±0.1905 |
 | SPECTra（19维） | 6.2871±0.0289 | 6.2964±0.0723 |
 | TransfQMix（19维） | 4.2518±0.7733 | 4.2549±0.7413 |
-| TransfQMix（历史10维确认参照） | 6.6379±1.3225 | 6.6259±1.3394 |
 
-新19维基线采用本次完成的三个final，正式/确认各21,600场，以上All24取`paper_current`及其`confirmation`；历史TransfQMix行单列保留，不混入新模型均值。新基线确认分组结果如下：
+新19维基线采用本次完成的三个final，正式/确认各21,600场，以上All24取`comparison`及其`confirmation`；原10维确认参照归档，不混入新模型均值。新基线确认分组结果如下：
 
 | 方法（19维） | ID | K-OOD | N-OOD | Joint-OOD |
 |---|---:|---:|---:|---:|
 | SPECTra | 2.5251±0.1938 | 6.7793±0.5893 | 5.1562±0.5746 | 9.7550±0.4917 |
 | TransfQMix | 1.4911±0.1962 | 4.0353±0.4261 | 4.0360±0.8674 | 6.6108±1.2653 |
 
-独立池中LEAF仍保持较低D均值，数值与这一参照eval接近。这里LEAF的0.7845来自深度补评/确认参照池；主性能paper1007的All24为 **0.785439**，它与表1的正式分组统计同源。两套统计分别保存，不能用深度池值覆盖正式表或据小数差异声称新的训练结果。
+独立池中LEAF仍保持较低D均值，数值与这一参照eval接近。这里LEAF的0.7845来自深度补评/确认参照池；主性能comparison的All24为 **0.785439**，它与表1的正式分组统计同源。两套统计分别保存，不能用深度池值覆盖正式表或据小数差异声称新的训练结果。
 
 ### 4.8 决策时延：20回合部署测量与固定人数100次决策
 
@@ -385,7 +371,7 @@ R1→R2三种子收益分别−0.171547、+0.136147、+0.063537；R2→R4为+0.0
 
 **归因边界与来源。** 当前Fixed depth的实际checkpoint使用`global_query_detach_memory=true`，未启用`global_query_no_memory`（默认false）：历史Temporal hidden在query前停止梯度，但前向读取仍使用它。LEAF的`global_query_no_memory=true`将query中的历史hidden置零。因此两套现存权重除固定／随机训练深度外，还存在query历史输入差异；本对照不能单独证明“只因固定四轮训练而缺少浅层能力”，归因尚未闭环。整场改变执行深度也改变读出候选和后续时序轨迹，不是仅在同一物理状态多做一次更新。
 
-Fixed depth原始记录来自main0928，保留`legacy_had_protocol_unspecified`来源标识；旧逐局日志未登记HAD核心版本或物理协议，不能反向补写为表6的`had-workbench-2.1.0 / rebuild-calibrated-v3-r7-target-initialization`。本次只整理三个已有K2场景，不代表完整24配置、目标数外推或联合外推，也不用于模型／深度选择。
+Fixed depth原始记录保留实际来源，保留`legacy_had_protocol_unspecified`来源标识；旧逐局日志未登记HAD核心版本或物理协议，不能反向补写为表6的`had-workbench-2.1.0 / rebuild-calibrated-v3-r7-target-initialization`。本次只整理三个已有K2场景，不代表完整24配置、目标数外推或联合外推，也不用于模型／深度选择。
 
 未舍入的36个Fixed depth单元、LEAF对应36个300局参照单元、种子均值、配对差、t95、协议和checkpoint身份，合并保存在 [summary.json](../Open-SCORE/outputs/main/summary.json) 的`fixed_depth_pilot100`字段；原始3,600条记录继续保存在 [episodes.csv](../Open-SCORE/outputs/main/had/episodes.csv)，不复制逐局数据。分析通过一次性Python stdin命令完成，未加载HAD或运行模拟器，未生成或保留临时测试脚本。
 
@@ -459,6 +445,31 @@ Fixed depth原始记录来自main0928，保留`legacy_had_protocol_unspecified`�
 
 受控输入、模板划分、四类读出、标签、预测概率、分类器标准化与线性参数、真实R1/R2的Q及R2融合权重统一保存在 [coverage_binding_probe.npz](../Open-SCORE/outputs/main/had/coverage_binding_probe.npz)。协议、六份final的artifact身份、36个分类器明细及汇总保存于 [summary.json](../Open-SCORE/outputs/main/summary.json) 的`coverage_binding_probe`字段。数据可直接复算分类准确率；未保存完整策略权重副本。结果核对后已删除临时采集脚本；只保留本节报告、原始受控数据、必要线性参数与图片，原训练和评估代码保持原样。
 
+### 4.11 LEAF冻结干预、同状态诊断与动作稳定边界
+
+冻结辅助池为720回合：3种子×3配置（10v10 K2、50v50 K2、30v30 K12）×10场景×（7个LEAF臂+REFIL）。read1与L1的同状态Q最大差0，按登记复用；标准策略、本地干预配对，不覆盖正式300场景值。48,705个活跃agent决策的同状态诊断使用相同进入TemporalGRU的hidden，诊断动作不执行。
+
+另存270回合包含90个标准复核、90个H0旁路、90个固定均值fusion；重复标准不增加独立样本。下表使用各臂与**同runtime本地standard**的配对 ΔR，均值±三种子SD。
+
+| 干预 | 10v10 K2 | 50v50 K2 | 30v30 K12 |
+|---|---:|---:|---:|
+| L1 | −0.175±0.418 | +0.109±0.205 | −0.337±0.749 |
+| L2 | −0.273±0.047 | +0.001±0.205 | +0.264±1.259 |
+| 强制read4 | −6.728±3.186 | −19.937±12.955 | −25.558±16.414 |
+| uniform融合 | −3.607±3.099 | −8.837±11.604 | −17.662±15.789 |
+| 完整关系残差置零 | −5.950±1.525 | −13.695±6.899 | −18.788±1.144 |
+| 每物理步TemporalGRU重置 | −1.423±0.760 | −1.294±0.869 | −1.655±2.563 |
+| H0直接读取旁路 | −7.556±1.365 | −18.962±5.828 | −32.968±8.447 |
+| 固定校准均值fusion | +0.006±0.109 | +0.092±0.121 | −0.612±0.471 |
+
+read4、uniform、完整残差置零及H0旁路均9/9种子×配置下降；TemporalGRU重置8/9下降，但K12 seed0有+1.281反例。固定fusion前两配置接近或略高，K12三种子下降，约10%同状态动作改变；它使用同一事实池校准，不能视为独立部署收益。L2同状态动作改变约1.13–1.66%，L1约18–21%，read4约73–77%，uniform约61–65%，完整残差置零约75–78%，GRU重置约58–63%。这些定位冻结策略依赖，不证明删除模块后从头训练仍会失败。
+
+最低10%的Q-margin决策包含约78–81%的L2动作变化；48,705个决策中L2改变753次，满足局部充分稳定条件的38,620个决策均未改动作。这是固定事实轨迹的局部诊断，不是跨策略性能保证。原始记录、同状态诊断和配对统计统一见 [mechanisms/results.json.gz](../Open-SCORE/outputs/main/had/regir_nomem/mechanisms/results.json.gz)，按数据池分别保存。
+
+runtime必须按真实来源区分：旧720回合记录`had-workbench-2.1.0 / rebuild-calibrated-v3-r7-target-initialization`；另存270回合记录`skyhad-3.0.0 / skyhad-v3-rigid-body-task-start-combat`；14个展示轨迹为`skyhad-3.0.0rc2`及相同SkyHAD协议。90个标准复核的初始状态与11结果字段一致，是当前配对的实测依据，不代替完整环境等价证明。旧180个standard/REFIL与正式池比对有167个11字段全匹配、13个seed2差异（其中5个奖励不同），故辅助配对始终用本地standard。二维粒子/加速度实现不改称六自由度真实飞行验证。
+
+本节干预统计归入 [aggregates.json](../Open-SCORE/outputs/main/had/aggregates.json) 的 `mechanism.frozen`，正常读取与正式保护分别取 `mechanism.normal`、`mechanism.formal`。相同场景下复核和复用记录保持原身份，不扩大独立样本数。
+
 ## 5. 结论与证据范围
 
 LEAF将攻击者、目标与队友的同时刻信息加工为实体上下文，再由接收者读取并结合时序记忆行动。有限规模训练后的同一策略，在目标数、人数和联合外推中具有较低损伤；冻结同三份权重的R1–R6则展示了执行深度变化下的真实表现。正常融合、保护统计和轨迹将这一联合结构与实际群体保护连接起来。
@@ -471,7 +482,7 @@ LEAF将攻击者、目标与队友的同时刻信息加工为实体上下文，�
 | 执行深度变化与推理深度外推 | 同三final×24配置×R1–R6，包含配置和种子差异；R5/R6超出训练深度 |
 | 单个模块的独立稳定收益 | 当前分别训练及冻结结果存在局部反例，不将联合性能拆成普遍增益 |
 
-跨深度参数共享与中间读出融合组织了同一策略的计算，但没有回报单调改进或实体状态严格收敛保证。当前报告没有合格LEAF MAC对应数据；第4.8节包含指定硬件下的20回合部署时延与固定人数、同输入100次直接决策时延，不将其推广为训练吞吐、单个模块独立成本或跨硬件速度保证。历史探索见[补充实验结果分析](LEAF_补充实验结果分析.md)。
+跨深度参数共享与中间读出融合组织了同一策略的计算，但没有回报单调改进或实体状态严格收敛保证。当前报告没有合格LEAF MAC对应数据；第4.8节包含指定硬件下的20回合部署时延与固定人数、同输入100次直接决策时延，不将其推广为训练吞吐、单个模块独立成本或跨硬件速度保证。额外结构、旧协议和其他环境成果见[归档说明](../backup/README.md)。
 
 ## 附录 A. 当前数据与模型索引
 
@@ -479,16 +490,16 @@ LEAF将攻击者、目标与队友的同时刻信息加工为实体上下文，�
 |---|---|
 | 正式、验证及保留的LEAF辅助逐局数据 | [had/episodes.csv](../Open-SCORE/outputs/main/had/episodes.csv)，按source_version、run、method、seed、phase、arm及场景区分 |
 | 学习记录 | [had/learning.csv](../Open-SCORE/outputs/main/had/learning.csv)，性能曲线取train_eval奖励 |
-| 主性能派生统计 | [had/aggregates.json](../Open-SCORE/outputs/main/had/aggregates.json)，当前主比较取paper_current，新基线确认取其confirmation；paper1007作为历史保留 |
+| 主性能派生统计 | [had/aggregates.json](../Open-SCORE/outputs/main/had/aggregates.json)，当前主比较取comparison，新基线确认取其confirmation；设计比较取design_comparison，机制取mechanism.normal/frozen/formal |
 | 冻结深度与确认逐场记录 | [had/loop_records.jsonl](../Open-SCORE/outputs/main/had/loop_records.jsonl)，不将复用回合增加为独立样本 |
 | 深度单元统计 | [had/loop_summary.csv](../Open-SCORE/outputs/main/had/loop_summary.csv)，保留三种子、24配置与R1–R6 |
 | 全队决策时延 | [had/decision_timing.json](../Open-SCORE/outputs/main/had/decision_timing.json)，seed0 final、七个方法／出口、两种规模；20回合部署测量与固定人数100次直接决策以run字段区分，逐次与汇总合并保存 |
 | 总汇总与深度分析 | [summary.json](../Open-SCORE/outputs/main/summary.json)，nomem_depth_analysis保留完整单元、分组与配对种子统计；fixed_depth_pilot100保存三场景临时浅层对照；coverage_binding_probe保存受控覆盖关系探针统计 |
 | 实验协议 | [experiment.json](../Open-SCORE/outputs/main/experiment.json)，保留来源与checkpoint身份 |
-| LEAF主模型示例 | [final.pt](../Open-SCORE/outputs/main/had/regir_nomem/models/main0928/seed_0/final.pt)、[best.pt](../Open-SCORE/outputs/main/had/regir_nomem/models/main0928/seed_0/best.pt)，各种子final与验证best按来源保存 |
-| 新基线模型与加载配置 | [SPECTra seed0](../Open-SCORE/outputs/main/had/spectra/models/main1013_base/seed_0/config.json)、[TransfQMix seed0](../Open-SCORE/outputs/main/had/transfqmix/models/main1013_base/seed_0/config.json)，各种子final/best及配置归入同一main目录 |
-| 正常读取机制原始记录 | [mechanism1008.json.gz](../Papers/v3/data/mechanism1008.json.gz) |
-| 展示轨迹原始记录 | [trajectories1008.json.gz](../Papers/v3/data/trajectories1008.json.gz) |
+| LEAF主模型示例 | [final.pt](../Open-SCORE/outputs/main/had/regir_nomem/models/seed_0/final.pt)、[best.pt](../Open-SCORE/outputs/main/had/regir_nomem/models/seed_0/best.pt)，各种子final与验证best按来源保存 |
+| 新基线模型与加载配置 | [SPECTra seed0](../Open-SCORE/outputs/main/had/spectra/models/seed_0/config.json)、[TransfQMix seed0](../Open-SCORE/outputs/main/had/transfqmix/models/seed_0/config.json)，各种子final/best及配置归入同一main目录 |
+| 正常读取、冻结干预与同状态机制原始记录 | [mechanisms/results.json.gz](../Open-SCORE/outputs/main/had/regir_nomem/mechanisms/results.json.gz) |
+| 展示轨迹原始记录 | [trajectories.json.gz](../Open-SCORE/outputs/main/had/trajectories.json.gz) |
 
 深度补评新增108,000场已完成评估且有完整单元汇总，逐场JSONL未提供。本地现存R4逐场文件不能重建并覆盖其余出口汇总；不补造场景bootstrap或逐场统计。正式数据、最终模型和验证最优模型保留实际来源与完成状态。
 

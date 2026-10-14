@@ -1,6 +1,6 @@
 # LEAF 对比基线与 Rule 实现说明
 
-更新：2026-10-14。本文说明 **HAD 主实验中的学习基线、Rule 和 Random 实际怎样计算与训练**，依据现有源码、保留权重的 config.json 和归并后的实验登记。它与[方法与变体说明](LEAF_方法与变体说明.md)、[主实验结果分析](LEAF_主实验结果分析.md)配套阅读：前者介绍 NoMem 及其变体，后者给出成绩与统计；本文负责解释对手方法的实现。
+更新：2026-10-15。本文说明 **HAD 主实验中的学习基线、Rule 和 Random 实际怎样计算与训练**，依据现有源码、保留权重的 config.json 和归并后的实验登记。它与[方法与变体说明](LEAF_方法与变体说明.md)、[主实验结果分析](LEAF_主实验结果分析.md)配套阅读：前者介绍 LEAF 及其变体，后者给出成绩与统计；本文负责解释对手方法的实现。
 
 ## 1. 总结：主实验到底在和什么比较
 
@@ -9,7 +9,7 @@
 | 报告名称 | 保存方法名 | 实际核心 | 时间记忆 | 动作如何确定 |
 |---|---|---|---|---|
 | REFIL | refil | 一层自身查询的实体注意力 + imagined 分组辅助 TD + FlexQMIX | 每个红方的64维 GRU | 个体合法动作 Q 的贪心 / ε-greedy |
-| REFIL-matched | refil_matched | REFIL 的 attention 后增加残差 MLP，使 actor 参数接近 NoMem | 64维 GRU | 同 REFIL |
+| REFIL-matched | refil_matched | REFIL 的 attention 后增加残差 MLP，使 actor 参数接近 LEAF | 64维 GRU | 同 REFIL |
 | QMIX-Atten | b2_qmix_atten | REFIL 同型 actor + FlexQMIX，关闭 imagined 辅助训练 | 64维 GRU | 个体合法动作 Q 的贪心 / ε-greedy |
 | DCG | dcg | 注意力 + GRU；个体 utility 与两两 payoff；完整协调图 | 64维 GRU | 8轮 Max-Sum 得到联合动作，再施加探索 |
 | SPECTra | spectra | 类型投影 + 自身查询注意力 SAQA；集合超网络生成动态 mixer | 64维 GRU | 个体合法动作 Q 的贪心 / ε-greedy |
@@ -21,7 +21,7 @@
 需要先记住四点：
 
 1. **QMIX-Atten 在这里用的是 FlexQMIX**，不是把固定长度全局 state 展平后交给原始 QMIX。
-2. **所有七个学习基线都有时间记忆**。TransfQMix 用时序 token，其余用 GRU；NoMem 的名称也不表示删除时间记忆。
+2. **所有七个学习基线都有时间记忆**。TransfQMix 用时序 token，其余用 GRU；LEAF 的名称也不表示删除时间记忆。
 3. **Rule 是 nv1 整数指派与一步预测拦截**。早期覆盖规则、原生 RulePolicy、蓝方 reactive 对手都是不同实现。
 4. 各方法共享任务与环境步预算，但编码、学习目标、优化器和推理计算不同。已有结果证明的是这些保留实现之间的性能差异，不能直接解释成严格相同计算量下的比较。
 
@@ -66,7 +66,7 @@ $$
 
 REFIL、REFIL-matched、QMIX-Atten、DCG、ALMA 启用 entity_last_action：红方实体追加上一动作9维 one-hot，蓝方和目标的这一段为零，首步为零。因此这些 actor 的输入宽度是 **19**。归档 SPECTra 和 TransfQMix 权重使用基础 **10维**输入。这是确定的信息条件差异，不能仅凭旧成绩断言其影响大小。
 
-`main1013_base` 将当前 HAD 两个基线的 actor、online/target mixer 和冻结评估输入统一补齐为19维，读取实际执行的 `actions_onehot[t-1]`，不读取本步动作。新投影从头训练；加载历史 `entity_last_action=false` 权重仍使用10维。SMACv2 保留原生输入，开关仍关闭。obs_last_action=false 与 entity_last_action=true 可以同时成立，它们是不同开关；当前七方法均不额外附加 agent ID。六个模型及其验证、正式与确认评估均已完成并归入main；结果和历史10维对照统一见[主报告](LEAF_主实验结果分析.md)，当前比较使用`paper_current`。
+19维重训将当前 HAD 两个基线的 actor、online/target mixer 和冻结评估输入统一补齐为19维，读取实际执行的 `actions_onehot[t-1]`，不读取本步动作。新投影从头训练；加载历史 `entity_last_action=false` 权重仍使用10维。obs_last_action=false 与 entity_last_action=true 可以同时成立，它们是不同开关；当前七方法均不额外附加 agent ID。六个模型及其验证、正式与确认评估均已完成并归入main；结果见[主报告](LEAF_主实验结果分析.md)，当前比较使用`comparison`；原10维对照另见[归档说明](../backup/README.md#baseline_entity10)。
 
 actor 的相对实体视图和训练 mixer 的集中式绝对实体表也不是同一个张量。基础特征与视图转换见[features.py](../Open-SCORE/open_score/envs/features.py)和[entity_encoder.py](../Open-SCORE/open_score/models/entity_encoder.py)。
 
@@ -130,7 +130,7 @@ h_{i,t}=\operatorname{GRUCell}(e_{i,t},h_{i,t-1}),\qquad
 Q_i=W_Qh_{i,t}+b_Q.
 $$
 
-这里每个 observer 只读取自己的 attention 输出。它没有 NoMem 中“先更新全部实体工作状态，再从自身 query 读取”的 global 循环，也没有跨空间轮次融合。GRU 的跨物理步递归必须与 LEAF 的决策内循环区分。
+这里每个 observer 只读取自己的 attention 输出。它没有 LEAF 中“先更新全部实体工作状态，再从自身 query 读取”的 global 循环，也没有跨空间轮次融合。GRU 的跨物理步递归必须与 LEAF 的决策内循环区分。
 
 ### 3.2 imagined 分支到底做什么
 
@@ -179,7 +179,7 @@ QMIX-Atten 的 actor、64维时序 GRU 和 FlexQMIX 与上述 REFIL 同型。关
 
 虽然保存配置仍有 lmbda=0.5，关闭 imagine 后该值不参与损失。因此它是“实体 attention + 时序 GRU + FlexQMIX”的对照，不应描述成普通扁平 state QMIX。
 
-NoMem 保留 REFIL 的局部编码与 imagined 学习，额外引入当前实体工作状态、共享上下文更新和自身条件读取。因此与 REFIL 的比较比“与完全不同的 Transformer 方法比较”更接近共同基础；仍不能单凭这项整体比较拆出每一个新增模块的贡献。
+LEAF 保留 REFIL 的局部编码与 imagined 学习，额外引入当前实体工作状态、共享上下文更新和自身条件读取。因此与 REFIL 的比较比“与完全不同的 Transformer 方法比较”更接近共同基础；仍不能单凭这项整体比较拆出每一个新增模块的贡献。
 
 ### 4.2 REFIL-matched：增加容量，不增加实体循环
 
@@ -195,7 +195,7 @@ $$
 64\times576+576+576\times64+64=74{,}368.
 $$
 
-主报告保留的 actor 参数账本为：REFIL 102,025、REFIL-matched 176,393、NoMem 175,754。matched 比 NoMem 多639，约0.36%。因此它提供了**actor 参数接近的 MLP 容量对照**，并非严格相同总训练参数、FLOPs 或推理时延的控制实验。
+主报告保留的 actor 参数账本为：REFIL 102,025、REFIL-matched 176,393、LEAF 175,754。matched 比 LEAF 多639，约0.36%。因此它提供了**actor 参数接近的 MLP 容量对照**，并非严格相同总训练参数、FLOPs 或推理时延的控制实验。
 
 它没有增宽 GRU，没有更新实体工作状态，也没有多轮读取。matched_hidden=576 来自保留配置；本文不补造一个当前仓库没有保留的自动等参搜索过程。
 
@@ -263,7 +263,7 @@ DCG 的“八轮”是动作图上的优化消息；LEAF 的 R1–R4 是动作 Q
 
 ### 6.1 actor：类型投影、一次自身查询、GRU
 
-归档权重输入是10维自身中心实体视图，不含上一动作或 agent ID。self、ally、enemy、target 使用四套 Linear(10,64) 类型投影，再合成一个集合；`main1013_base` 的四套投影改为 Linear(19,64)，SAQA、GRU和动作头保持原结构：
+归档权重输入是10维自身中心实体视图，不含上一动作或 agent ID。self、ally、enemy、target 使用四套 Linear(10,64) 类型投影，再合成一个集合；19维重训 的四套投影改为 Linear(19,64)，SAQA、GRU和动作头保持原结构：
 
 $$
 z_i=\operatorname{LayerNorm}\!\left[
@@ -358,7 +358,7 @@ sel_task_upd=true 指自回归过程更新被选中 task 的 embedding，**不�
 
 ### 8.1 actor 的记忆怎样更新
 
-归档权重输入10维实体，不附加上一动作或 ID，所有类型共用 Linear(10,32)。`main1013_base` 补齐实体上一动作后使用 Linear(19,32)，actor 和中央 mixer 同步接入，仍不附加 ID。每个红方保存一个32维 memory token，首步为零。每步将上一 token 放在实体 token 前：
+归档权重输入10维实体，不附加上一动作或 ID，所有类型共用 Linear(10,32)。19维重训 补齐实体上一动作后使用 Linear(19,32)，actor 和中央 mixer 同步接入，仍不附加 ID。每个红方保存一个32维 memory token，首步为零。每步将上一 token 放在实体 token 前：
 
 ```text
 [上一步 memory token, 当前自身与其他有效实体 tokens]
@@ -407,7 +407,7 @@ Random: architecture="end_to_end", policy="random_accel"
 Blue:   architecture="hierarchical", grouping="reactive", control="rush"
 ```
 
-Rule 类名是 CoveragePolicy / CoverageExecutor，版本为 rule_nv1_v1。类名保留兼容，**不意味着仍执行早期覆盖算法**。完整数学细节还可读[现行规则说明](three_layer_rule_mathematical_spec.md)。
+Rule 类名是 CoveragePolicy / CoverageExecutor，版本为 rule_nv1_v1。类名保留兼容，**不意味着仍执行早期覆盖算法**。整数指派、执行与回放字段均在本节统一说明。
 
 ### 9.2 nv1 第一步：选择本步能承担的蓝方
 
@@ -445,7 +445,7 @@ $$
 
 实际调用 SciPy milp，mip_rel_gap=0；**没有调用匈牙利算法**。求解后验证整数性、边界、行和与列覆盖；求解或验证失败直接报错，不悄悄回到旧规则。
 
-这里优化的是当前预测距离，不是长期 damage，也没有全局最优拦截保证。
+这里优化的是当前预测距离。约束保证责任分配覆盖，不保证动力学可达、最终击杀或长期damage最优。
 
 ### 9.4 第三步：把指派变成离散机动动作
 
@@ -490,6 +490,13 @@ flowchart LR
 
 实现全部在[coverage_rule.py](../Open-SCORE/open_score/rules/coverage_rule.py)。
 
+**执行与回放顺序。** 本步动作前选择B*、进行一步匀速预测并求解MILP；executor直接读取精确红→蓝指派生成动作；原生物理推进后记录本步指派，下一步重新求解。CoveragePolicy与CoverageExecutor在分层路径共享同一策略实例，只复用同一步、同一公开状态的解。
+
+`command_interval=5`控制蓝方事件指挥周期；nv1红方固定每物理步更新。回放帧的`interception`为本步红方ID→蓝方ID指派，`selected_blue`为参与此次规划的蓝方，`ignored_blue`为红方数量不足时排除的蓝方。帧位置为执行后的状态，指派为执行该步时采用的方案；忽略对象没有被本次责任分配覆盖。
+
+viewer采用API 5，经对称`red_strategy/blue_strategy`对象传递checkpoint、端到端或分层架构；任务、空间维度及统计局数独立配置。damage显示累计目标伤害和双边回报，不以胜率展示；旧回放缺失模式与维度时的兼容解释以当前viewer为准。
+
+
 ### 9.5 Random 是动作随机，不是随机分组
 
 DirectActionPolicy 用场景种子初始化随机流，每个物理步对每个存活红方调用 rng.choice(action_ids)，故9个合法动作均匀采样。死亡实体动作0；它不运行 MILP，不决定保护目标，也不朝最近目标飞行。
@@ -532,7 +539,7 @@ open_score.rules 同时导出原生 RulePolicy 与本项目 CoveragePolicy，容
 
 当前原生 grand / rule 的配额是最大余数法，不能把历史覆盖规则的 D’Hondt 名称移给它。原生分组定义位于 HAD 依赖的 grouping/policies.py 与 grouping/actions.py，执行器位于 grouping/rules.py。旧源码已移除的细节只能依据历史资料解释，不从现行实现补写。
 
-[现行规则说明](three_layer_rule_mathematical_spec.md)中“本次没有运行新评估”描述2026-09-09当时的实现修改；后续主实验已登记 Rule / Random 各7,200场，二者不能混为同一个时间范围。
+正式Rule / Random锚点各保存7,200场；此前实现说明中的“未运行新评估”只描述当时的代码修改，不能替代后续正式评估登记。
 
 ## 10. 实际训练设置与比较边界
 
@@ -552,7 +559,7 @@ open_score.rules 同时导出原生 RulePolicy 与本项目 CoveragePolicy，容
 
 共同保存设置为 γ=0.99、replay 容量5,000回合、batch=32、梯度裁剪10、目标网络每200回合硬更新、ε从1降至0.05、每训练种子1M物理环境步。RMSprop 的 alpha=0.99、eps=1e−5。
 
-以上表格中SPECTra/TransfQMix采用已完成的`main1013_base`权重配置，其余方法沿用既有配置；旧10维权重另作历史保留。本次仅重训 SPECTra/TransfQMix 三种子，共6模型：输入统一19维、8个环境进程、每可采样收集批更新8次（含预算末批），其余共同控制与最终LEAF对齐；保留基线自身 Adam/1e−3、TD(λ=0.6)和核心结构。SPECTra作者GRF的探索退火为500k，而本实验共享100k；作者SMACv2也有100k配置。原GRF每采集8局更新1次，本实验改为8次。TransfQMix原单进程每局1次，此处按8局批次执行。该适配不宣称完整论文复现或充分调参；正式与确认采用独立场景、只评分完成训练的final；每模型保留5,000条验证、正式/确认各7,200条记录，总计116,400条，已归并到main。
+以上表格中SPECTra/TransfQMix采用已完成的19维重训权重配置，其余方法沿用既有配置；旧10维权重归入根backup，SPECTra seed0展示轨迹模型除外。本次仅重训 SPECTra/TransfQMix 三种子，共6模型：输入统一19维、8个环境进程、每可采样收集批更新8次（含预算末批），其余共同控制与最终LEAF对齐；保留基线自身 Adam/1e−3、TD(λ=0.6)和核心结构。SPECTra作者GRF的探索退火为500k，而本实验共享100k；作者SMACv2也有100k配置。原GRF每采集8局更新1次，本实验改为8次。TransfQMix原单进程每局1次，此处按8局批次执行。该适配不宣称完整论文复现或充分调参；正式与确认采用独立场景、只评分完成训练的final；每模型保留5,000条验证、正式/确认各7,200条记录，总计116,400条，已归并到main。
 
 **更新次数应看执行入口。** 普通方法当前按 training_iters=8 更新；TransfQMix 虽保存 training_iters=1，入口特判按实际收集 episode_batch.batch_size 更新，通常8局对应8次。不得据该保存字段推断 TransfQMix 每批只训练一次。ALMA 的分配更新另计，REFIL 的三个训练分支也额外消耗计算。
 
@@ -583,13 +590,13 @@ $$
 
 ### 10.3 正式结果如何对应这些实现
 
-主学习比较取`paper_current`：SPECTra/TransfQMix使用19维`main1013_base`结果，其余沿用原主表；旧10维`paper1007`独立保留。各学习方法使用三个训练种子0/1/2、final.pt；正式池为24配置，每配置每训练种子300场，共同场景编号9000–9299。分组为 ID、K-OOD、N-OOD、Joint-OOD 和额外配置。best.pt 不替代正式 final.pt。
+主学习比较取`comparison`：SPECTra/TransfQMix使用19维重训结果，其余沿用原主表；旧10维结果独立归档。各学习方法使用三个训练种子0/1/2、final.pt；正式池为24配置，每配置每训练种子300场，共同场景编号9000–9299。分组为 ID、K-OOD、N-OOD、Joint-OOD 和额外配置。best.pt 不替代正式 final.pt。
 
 Rule / Random 不训练，每方法24×300=7,200场；误差按场景统计，**不是三个训练种子的标准差**。归并重复包不增加独立样本数。
 
 旧来源有 archive_protocol=legacy_had_protocol_unspecified 标记。保留数据可以定位方法、场景和成绩；当前源码不能反向证明旧运行所有物理细节逐位一致。环境版本的限制和来源冲突保留在[主报告](LEAF_主实验结果分析.md)及[归并元数据](../Open-SCORE/outputs/main/summary.json)。
 
-## 11. 源码、权重配置与历史支线索引
+## 11. 源码、权重配置与实现来源
 
 ### 11.1 本文使用的保存配置
 
@@ -597,15 +604,15 @@ Rule / Random 不训练，每方法24×300=7,200场；误差按场景统计，**
 
 | 方法 | HAD 保存配置 |
 |---|---|
-| REFIL | [config.json](../Open-SCORE/outputs/main/had/refil/models/main0921/seed_0/config.json) |
-| REFIL-matched | [config.json](../Open-SCORE/outputs/main/had/refil_matched/models/main0921/seed_0/config.json) |
-| QMIX-Atten | [config.json](../Open-SCORE/outputs/main/had/b2_qmix_atten/models/main0921/seed_0/config.json) |
-| DCG | [config.json](../Open-SCORE/outputs/main/had/dcg/models/main0921/seed_0/config.json) |
-| SPECTra | [config.json](../Open-SCORE/outputs/main/had/spectra/models/main1013_base/seed_0/config.json) |
-| ALMA | [config.json](../Open-SCORE/outputs/main/had/alma/models/main0921/seed_0/config.json) |
-| TransfQMix | [config.json](../Open-SCORE/outputs/main/had/transfqmix/models/main1013_base/seed_0/config.json) |
+| REFIL | [config.json](../Open-SCORE/outputs/main/had/refil/models/seed_0/config.json) |
+| REFIL-matched | [config.json](../Open-SCORE/outputs/main/had/refil_matched/models/seed_0/config.json) |
+| QMIX-Atten | [config.json](../Open-SCORE/outputs/main/had/b2_qmix_atten/models/seed_0/config.json) |
+| DCG | [config.json](../Open-SCORE/outputs/main/had/dcg/models/seed_0/config.json) |
+| SPECTra | [config.json](../Open-SCORE/outputs/main/had/spectra/models/seed_0/config.json) |
+| ALMA | [config.json](../Open-SCORE/outputs/main/had/alma/models/seed_0/config.json) |
+| TransfQMix | [config.json](../Open-SCORE/outputs/main/had/transfqmix/models/seed_0/config.json) |
 
-新基线的加载配置、final.pt和best.pt按`main/had/<方法>/models/main1013_base/seed_<种子>`保存，未覆盖旧10维权重。日期形式的模型来源路径只用于追溯；报告方法名称仍使用表中的结构名。QMIX-Atten 的另一历史目录有错误 SMAC 环境登记，不能用其26动作、5M步配置替代本表的 HAD 保存配置。
+新基线的加载配置、final.pt和best.pt按`main/had/<方法>/models/seed_<种子>`保存，未覆盖旧10维权重。来源版本保留在数据与配置字段中；目录和报告方法名称按实际方法组织。QMIX-Atten 的另一历史目录有错误 SMAC 环境登记，不能用其26动作、5M步配置替代本表的 HAD 保存配置。
 
 当前代码分派见[algos 入口](../Open-SCORE/open_score/algos/__init__.py)与[模型 builder](../Open-SCORE/open_score/models/entity_encoder.py)；冻结模型的身份、动作与时间状态适配见[entity_env.py](../Open-SCORE/open_score/envs/entity_env.py)。
 
@@ -621,22 +628,13 @@ Rule / Random 不训练，每方法24×300=7,200场；误差按场景统计，**
 
 原论文说明思想，当前源码说明本地实现，保存配置说明保留模型采用了哪个分支。这三层证据不能互相替代。例如 vendored REFIL YAML 的 recurrent=false，不能用来否认本次 HAD 保存配置的 recurrent=true；TransfQMix 继承了 GRU 相关字段，也不能用来宣称它实际执行 GRU。
 
-### 11.3 其他历史基线简述
+额外基线、旧环境与独有协议结果统一见[归档说明](../backup/README.md)。本节保存配置是当前主结果的加载入口；旧配置不能替代当前模型。
 
-当前代码还保留两个可辨认支线；**代码存在不等于本次七基线正式矩阵包含它们**：
-
-| 支线 | 具体实现 | 使用边界 |
-|---|---|---|
-| QMIX-Base / B0 | 按固定槽顺序展平实体与可见性 mask，FC→GRU64→9动作；普通 padded QMIX | pool_slots 固定，超出训练池的人数 / 目标数拒绝加载，不用随机新增参数假装外推 |
-| GNN-QMIX | 共享自身 / 邻居线性消息、完整或 kNN 实体图、一次邻居聚合与 mean pooling，接 GRU 和 FlexQMIX | 不是 DCG payoff 图；是否有成绩以对应历史记录为准 |
-
-源代码分别在[FlattenEncoder / GraphEncoder](../Open-SCORE/open_score/models/entity_encoder.py)及[对应 mixer](../Open-SCORE/open_score/models/mixers.py)。ALMA 的 targets / 其他分配 probes、SMAC 的目标动作头与原生 RulePolicy 分组实验也须保留原协议，不并入本次 HAD 主表。
-
-## 12. 对 NoMem 论文故事的实际意义
+## 12. 对 LEAF 设计的实际意义
 
 这些基线覆盖了不同的协同方式：REFIL 用分组辅助价值学习，DCG 显式建模两两动作 payoff，ALMA 学习任务分配，SPECTra 强化集合编码 / 混合结构，TransfQMix 用 Transformer 承接实体与时间历史。
 
-NoMem 应聚焦**当前实体上下文加工、自身条件读取与时序记忆的分工**：
+LEAF应聚焦**当前实体上下文加工、自身条件读取与时序记忆的分工**：
 
 - 相对 REFIL / QMIX-Atten：新增决策内实体工作状态与读取，而非仅给自身 attention 换个名称。
 - 相对 REFIL-matched：性能比较有参数接近的 MLP 容量参照，支持继续讨论结构；不直接证明同算力优势。
@@ -644,6 +642,6 @@ NoMem 应聚焦**当前实体上下文加工、自身条件读取与时序记忆
 - 相对 ALMA / Rule：端到端学习机动价值，不将防御决策预先压成目标分配或最短预测距离。
 - 相对 SPECTra / TransfQMix：区别应落在实际上下文更新、固定当前 query 读取和时间信息入口，而非笼统声称“使用 attention”或“支持可变实体”。
 
-现有结果支持 NoMem 联合结构的保护性能。跨方法比较不能代替同设置消融：它尚未单独证明深轮、Fusion 或随机深度各自产生稳定收益，也尚缺与当前 NoMem 查询和训练协议一致的单轮重训对照。完整数值与证据界限以[主实验结果分析](LEAF_主实验结果分析.md)为准；五个新循环候选属于[补充实验结果分析](LEAF_补充实验结果分析.md)。
+现有结果支持LEAF联合结构的保护性能。跨方法比较不能代替同设置消融：它尚未单独证明深轮、Fusion 或随机深度各自产生稳定收益，也尚缺与当前LEAF查询和训练协议一致的单轮重训对照。完整数值与证据界限以[主实验结果分析](LEAF_主实验结果分析.md)为准；额外循环候选及旧协议结果见[归档说明](../backup/README.md)。
 
 本文不重新计算成绩、不调整协议、不新增对局，旨在让**方法描述、baseline 实现和结果解释使用同一套实际定义**。

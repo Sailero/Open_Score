@@ -34,17 +34,13 @@ CUSTOM_PATHS = set()
 CATALOG_READY = False
 CHECKPOINT_POLICY = "_viewer_checkpoint"
 METHOD_LABELS = {
-    "b0_qmix": "QMIX-Base", "b2_qmix_atten": "QMIX-Atten",
-    "refil": "REFIL", "dcg": "DCG", "gnn_qmix": "GNN-QMIX",
-    "spectra": "SPECTra", "alma": "ALMA",
-    "alma_fullobs": "ALMA-全场", "alma_blue": "ALMA-蓝方",
-    "alma_event": "ALMA-事件", "alma_nomask": "ALMA-NoMask",
-    "refil_local_mild": "REFIL-L0.15", "refil_local_mid": "REFIL-L0.30",
-    "refil_count": "REFIL-C",
-    "refil_cycle": "REFIL-B（循环）", "refil_card": "REFIL-A（数量校正）",
-    "refil_feedback": "REFIL-F（决策反馈）", "refil_slot": "REFIL-K10（10 槽）",
+    "regir_nomem": "LEAF", "regir_sg": "LEAF · Memory query", "regir_r0_sg": "LEAF · Direct read",
+    "regir_r1_sg": "LEAF · One round", "regir_norefil_sg": "LEAF · No host", "regir_last_sg": "LEAF · Last read",
+    "regir_fixed4_sg": "LEAF · Fixed depth", "regir_untied4_sg": "LEAF · Unshared rounds",
+    "refil": "REFIL", "refil_matched": "REFIL-Matched", "b2_qmix_atten": "QMIX-Atten",
+    "dcg": "DCG", "spectra": "SPECTra", "alma": "ALMA", "transfqmix": "TransfQMix",
 }
-CYCLE_BRANCHES = ("cycle", "slot", "feedback")
+CYCLE_BRANCHES = ("cycle",)
 DEFAULTS = {
     "targets": 2, "red": 8, "blue": 8, "seed0": 0,
     "display": 5, "stats": 100,
@@ -66,7 +62,7 @@ def _path_id(path):
 def _describe_checkpoint(path, cfg):
     from open_score.algos import POLICY_METHODS
     from open_score.envs.features import MAX_AGENTS, MAX_BLUE, MAX_TARGETS, ENTITY_DIM, N_ACTIONS
-    legacy_name = path.parent.parent.name if path.parent.name == "models" else path.stem
+    legacy_name = path.parent.parent.parent.name if path.parent.parent.name == "models" else path.stem
     method = cfg.get("method", legacy_name)
     try:
         version = path.relative_to(OUTPUTS).parts[0]
@@ -92,10 +88,10 @@ def _describe_checkpoint(path, cfg):
     elif cfg.get("encoder") == "flatten" and budget is None and int(cfg.get("n_entities", 0)) != MAX_AGENTS + MAX_BLUE + MAX_TARGETS:
         reason = "旧有序展平模型没有 pool_slots，固定输入宽度与当前实体接口不兼容。"
     elif cfg.get("multi_task") and int(cfg.get("n_tasks", 0)) + int(cfg.get("n_extra_tasks", 0)) < MAX_TARGETS:
-        reason = "分层模型的子任务嵌入不足以重建当前 6 目标槽接口。"
+        reason = "分层模型的子任务嵌入不足以重建当前 12 目标槽接口。"
     branch = cfg.get("global_branch")
     eval_depth = int(cfg.get("global_eval_depth", 4)) if branch in CYCLE_BRANCHES else None
-    label = f"{METHOD_LABELS.get(method, method)} · {version} / {run} · seed {seed if seed is not None else '未知'} · {path.stem}"
+    label = f"{METHOD_LABELS.get(method, method)} · seed {seed if seed is not None else '未知'} · {path.stem}"
     return dict(id=_path_id(path), path=_path_id(path), label=label, method=method,
                 method_label=METHOD_LABELS.get(method, method), version=version,
                 run=run, seed=seed, kind=path.stem, available=not reason, reason=reason,
@@ -109,7 +105,7 @@ def _scan_checkpoints():
     """Read sidecar configs, not replay buffers or all network tensors."""
     global CATALOG_READY
     with CATALOG_LOCK:
-        paths = set(OUTPUTS.rglob("*.pt")) | set((ROOT / "Open-SCORE/assets/frozen").glob("*.pt")) | CUSTOM_PATHS
+        paths = set((OUTPUTS / "main").glob("had/*/models/seed_*/*.pt")) | CUSTOM_PATHS
         found = {}
         configs = {}
         for path in sorted(paths):

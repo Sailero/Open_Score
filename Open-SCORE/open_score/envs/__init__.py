@@ -1,5 +1,5 @@
 """Public environment and native-rule boundary."""
-from .entity_env import HADEntityEnv, NativeEntityEnv
+from .entity_env import HADEntityEnv
 from .scales import Scale, ScaleSampler, SCALE_POOLS, TRAIN_POOL, TEST_POOL, VALIDATION_POOL
 from .had_wrapper import (
     HADWrapper, HADEnv, HADStage3Adapter, DecisionState, Entity, Group, Grouping,

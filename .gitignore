@@ -50,3 +50,15 @@ failure.json
 scheduler.*.json
 queue.*.json
 Open-SCORE/outputs/*/smacv2/scenes/manifest.json
+backup/
+*.aux
+*.bbl
+*.blg
+*.out
+*.toc
+*.xdv
+*.synctex.gz
+evaluation.json
+
+# Full timing calls stay local; publish aggregates and figures instead.
+Open-SCORE/outputs/main/had/decision_timing.json

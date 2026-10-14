@@ -1,6 +1,6 @@
 # LEAF 方法与变体说明：威胁情境、共享循环与时序记忆
 
-更新：2026-10-14。本文解释LEAF的实际计算、训练深度与执行深度两条轴，以及按设计轴组织的七个历史变体。保存配置中的查询条件不同，这些比较不全是单项改变。结果与协议见[主实验结果分析](LEAF_主实验结果分析.md)，基线定义见[Baseline 与 Rule 实现说明](LEAF_Baseline与Rule实现说明.md)。
+更新：2026-10-15。本文解释LEAF的实际计算、训练深度与执行深度两条轴，以及按设计轴组织的七个历史变体。保存配置中的查询条件不同，这些比较不全是单项改变。结果与协议见[主实验结果分析](LEAF_主实验结果分析.md)，基线定义见[Baseline 与 Rule 实现说明](LEAF_Baseline与Rule实现说明.md)。
 
 ## 1. 威胁情境与双轴适应目标
 
@@ -59,7 +59,7 @@ $$
 
 ### 3.1 信息流
 
-按论文的[框架图源文件](../Papers/v3/figures/framework.tex)和实际主模型重画。原文件是 TikZ，本文用 Mermaid 展示同一主干信息流。
+按论文的[框架图源文件](../Papers/1014/figures/framework.tex)和实际主模型重画。原文件是 TikZ，本文用 Mermaid 展示同一主干信息流。
 
 ```mermaid
 flowchart LR
@@ -135,9 +135,9 @@ $$
 
 评分器**只接收该轮读出**，没有另拼 query 或 Temporal hidden；接收者信息通过 $u^{(r)}$ 间接影响权重。这个 softmax 选择跨轮信息，不停止计算：正常 R4 中，四轮上下文均已计算。
 
-![论文中的 LEAF 跨轮读取分配](../Papers/v3/figures/fig_leaf_readout.png)
+![论文中的 LEAF 跨轮读取分配](../Open-SCORE/outputs/main/had/figures/fig_mechanism.png)
 
-*图1. 复用论文图。左：正常融合权重；中：同一物理状态不同接收者的权重差异；右：同一接收者相邻物理步的变化。三个规模下前两轮合计约99%。它说明实际读取以早期上下文为主，并随接收者和时间变化；不能把权重等同于奖励贡献，也不能据此声称节省计算。*
+*图1. 复用共享机制图；(b)展示正常融合权重、同一物理状态不同接收者的权重差异及同一接收者相邻物理步的变化。三个规模下前两轮合计约99%。它说明实际读取以早期上下文为主，并随接收者和时间变化；不能把权重等同于奖励贡献，也不能据此声称节省计算。*
 
 ### 3.5 基础特征、时间记忆与动作
 
@@ -208,7 +208,7 @@ No host是宿主组合删除，自身基础项退化为自身编码的投影，�
 
 [REFIL](https://proceedings.mlr.press/v139/iqbal21a.html)提供随机实体分组与辅助价值训练基础；[Universal Transformers](https://arxiv.org/abs/1807.03819)为跨深度共享变换提供先例；[Jumping Knowledge](https://proceedings.mlr.press/v80/xu18c.html)与中间表示汇聚有关。这些工作说明构件有设计依据，不提供本任务奖励改善或深度收敛保证。LEAF的定位是威胁情境、接收者读取、阶段融合与时间记忆的具体组织及双轴适应结果。
 
-历史探索见[补充分析](LEAF_补充实验结果分析.md)。
+冻结干预、同状态动作与稳定性边界见[主报告第4.11节](LEAF_主实验结果分析.md#411-leaf冻结干预同状态诊断与动作稳定边界)；额外结构及旧协议见[归档说明](../backup/README.md)。
 
 ## 7. 实现与配套资料
 
@@ -217,7 +217,7 @@ No host是宿主组合删除，自身基础项退化为自身编码的投影，�
 | 当前query、共享更新、reader与融合 | [entity_encoder.py](../Open-SCORE/open_score/models/entity_encoder.py) |
 | 结构注册 | [algos/__init__.py](../Open-SCORE/open_score/algos/__init__.py) |
 | 主TD与imagined TD | [q_learner.py](../Open-SCORE/open_score/algos/pymarl/learners/q_learner.py) |
-| LEAF实际保存配置 | [seed0 config.json](../Open-SCORE/outputs/main/had/regir_nomem/models/main0928/seed_0/config.json) |
+| LEAF实际保存配置 | [seed0 config.json](../Open-SCORE/outputs/main/had/regir_nomem/models/seed_0/config.json) |
 | 主统计与协议 | [summary.json](../Open-SCORE/outputs/main/summary.json)、[experiment.json](../Open-SCORE/outputs/main/experiment.json) |
 | 正式对照、正常机制与深度矩阵 | [主实验结果分析](LEAF_主实验结果分析.md) |
 

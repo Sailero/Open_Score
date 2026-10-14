@@ -30,9 +30,12 @@ def anchor_jobs():
 def run_anchors(output=DEFAULT_OUTPUT, *, run=FORMAL_RUN, seed=0, on_progress=None,
                 stop_requested=None):
     """Run only on an explicit CLI/scheduler call; resume completed openings."""
+    from .experiment import check_environment, ensure_layout, EXPECTED_ENV
+    check_environment()
     from open_score.rules import run_episode
 
     output = Path(output)
+    ensure_layout(output)
     existing = unique_episodes(read_records(output, "episodes", run=run))
     completed = {(row["method"], config_key(row["config"]), int(row["episode_seed"]))
                  for row in existing if row["phase"] == "anchor"}
@@ -56,6 +59,8 @@ def run_anchors(output=DEFAULT_OUTPUT, *, run=FORMAL_RUN, seed=0, on_progress=No
                                  max_steps=100, record=False, task_mode="damage", spatial_dim=2,
                                  target_initialization="random", diagnostics=True, record_events=True,
                                  retain_trajectory=False)
+            if result.get("physics_protocol") != EXPECTED_ENV["physics_protocol"]:
+                raise ValueError("Episode physics identity changed; anchor was not committed")
             if "episode_summary" not in result:
                 raise RuntimeError("rules.run_episode must return the frozen episode_summary")
             row = dict(result["episode_summary"], **job)

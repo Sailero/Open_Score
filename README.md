@@ -1,78 +1,85 @@
 # Open-SCORE
 
-主方法统一称为 **LEAF**，内部注册名 `regir_nomem` 保留用于加载权重和追溯数据。多目标攻防中，攻击者、目标与队友共同构成威胁情境；LEAF 的设计目标是让同一个策略适应部署实体规模和可用关系推理深度的变化。
+**LEAF**以攻击者、目标和队友构成的威胁情境支持多目标防护。当前主工作区保留LEAF、七个设计比较、七个学习基线及Rule/Random的HAD结果；同一冻结策略的实体规模外推、执行深度、机制、时延和受控探针在一份[主实验报告](docs/LEAF_主实验结果分析.md)中解释。
 
-| 结果 | 内容 | 正式分析 |
-|---|---|---|
-| [outputs/main](Open-SCORE/outputs/main) | LEAF、七个核心变体、HAD基线（含19维重训）、冻结深度与独立确认 | [主实验结果分析](docs/LEAF_主实验结果分析.md) |
-| [outputs/backup](Open-SCORE/outputs/backup) | 历史探索、旧协议、旧 probe 与其他环境结果 | 同一[补充实验结果分析](docs/LEAF_补充实验结果分析.md) |
+| 入口 | 内容 |
+|---|---|
+| [主实验结果分析](docs/LEAF_主实验结果分析.md) | 当前正式比较、学习验证、设计比较、正常/冻结机制、R1–R6、独立确认、时延与探针 |
+| [方法与变体说明](docs/LEAF_方法与变体说明.md) | 当前前向、训练/执行深度及保存设计比较的query条件 |
+| [Baseline与Rule实现说明](docs/LEAF_Baseline与Rule实现说明.md) | 七基线、Rule/Random、共同对手、优化设置与实现来源 |
+| [HAD环境与问题建模](docs/HAD_环境与问题建模.md) | 当前正式数据的实体接口、物理与奖励协议 |
+| [论文包](Papers/1014/README.md) | [main.tex](Papers/1014/main.tex)、[PDF](Papers/1014/main.pdf)和可编辑示意图 |
+| [主数据](Open-SCORE/outputs/main) | 同类合并数据、必要final/best/config及共享实验图 |
+| [归档说明](backup/README.md) | 与当前研究无关但独有的额外结构、旧协议、10维基线、SMACv2及其他结果 |
 
-配套阅读：[方法与变体说明](docs/LEAF_方法与变体说明.md)讲解 LEAF 的威胁情境构建、接收者读取、时序记忆及七个历史设计变体；[Baseline 与 Rule 实现说明](docs/LEAF_Baseline与Rule实现说明.md)解释七个学习基线、规则指派、随机动作及共同对手。历史结构与协议的讨论集中在补充分析中。
+内部键`regir_nomem`用于加载LEAF已有权重；它表示当前query不读历史hidden，时序GRU与上一动作仍保留。七个历史设计比较的query条件不同，不能统称单因素消融。数据按来源、run、方法、种子、协议与实验臂区分，展示与目录不按日期版本组织。
 
-论文当前整理版为 [LEAF v4](Papers/v4/README.md)：[PDF](Papers/v4/main.pdf)、[LaTeX 主文件](Papers/v4/main.tex)。实验按对比、历史设计比较、机制和补充分析四小节组织；图表以现有正式报告的数据与方法定义为准，容量及精炼设计参照放在补充分析。历史论文保留在 `Papers/v1`–`v3`。
+## 当前成果
 
-原 `outputs/supp` 的现有成果全部属于本轮归档范围，已并入 backup；当前没有保留补充成果，不生成空目录或占位数据。
+当前比较统计位于`had/aggregates.json`的`comparison`，设计比较取`design_comparison`，机制取`mechanism.normal/frozen/formal`。SPECTra和TransfQMix采用19维输入重训，各三个种子、每模型1M物理步，50个验证点及正式/确认各24配置×300场；共116,400条逐局记录已保存。正式All24 D分别为**6.2871±0.0289、4.2518±0.7733**。新终评未记录碰撞、拦截或受损事件比例，不套用原10维模型指标。
 
-数据保留来源版本、运行、环境协议、种子和实验臂；不同协议的成绩分别解释。权重位于 `<结果目录>/<环境>/<方法>/models/<训练来源>/seed_<种子>/`，保留 `final.pt`、`best.pt` 与加载配置。训练完成情况由权重 metadata 与原登记分别记录。数据、来源映射及历史表统一见各目录的 `summary.json`，实验协议见 `experiment.json`。正式归并成果以这两份报告和元数据为准。 Git 发布包含代码、论文、报告、聚合统计与图片；逐局数据、权重、恢复点及原始输入/计时列表保留本地。
+LEAF、七个设计比较及当前基线的权重位于`main/had/<方法>/models/seed_<种子>/`。保留已有`final.pt`、`best.pt`和`config.json`；best不替代正式final。仅用于旧10维SPECTra展示轨迹的seed0权重单列在`spectra/models/trajectory_entity10/seed_0/`，其真实artifact身份为`53e7f877dd9548a784e6d7376b42b7e2`。
 
-本轮整理前的完整本地保存点为 Git `860c109`，更早快照为 `8d8fa28`。归档保留独有数据、final/best 与加载配置；当前主表依赖的共享基线权重仍由 main 保存，backup 通过索引引用同一份权重。迁移、来源映射与记录覆盖见各目录元数据。[实验记录](实验报告/实验记录.md) 维护跨版本摘要；[论文包](Papers) 保留历版原稿，当前 v4 基于已归并结果重整正文与图片，不自动上传历史数据。
+正常与冻结机制原始记录统一在`had/regir_nomem/mechanisms/results.json.gz`，各数据池保留自身协议、配对和复用身份；展示轨迹为`had/trajectories.json.gz`。R1–R6补评有完整432单元，R4复用21,600场，新增108,000场的逐场JSONL未提供；不以现存R4逐场记录替代缺失出口数据。
+
+八组实验图共同保存在`main/had/figures/`，每组PNG供报告阅读、PDF供论文排版。论文实验图片直接引用这一份来源。Git发布代码、论文、报告、聚合统计与图片；原始逐局数据、模型及恢复进度保留本地。
 
 ## 环境与安装
 
-HAD底层为独立仓库 [HADE](../HADE/README.md)，本仓库通过 `Open-SCORE/open_score/envs/had_wrapper.py` 访问其原生实现。本机依赖路径为 `/data3/dell/Saileron/projects/HADE`，当前协议为 `had-workbench-2.1.0` / `rebuild-calibrated-v3-r7-target-initialization`。历史 v7 使用 r2，不代表当前任务与规则的结果。覆盖规则评估在 `open_score.rules`；回放器为仓库根目录的 `viewer.py` 与 `viewer.html`。
+HAD物理来自独立SkyHAD/HAD依赖，项目仅由`open_score/envs/had_wrapper.py`访问原生实现。正式结果登记为`had-workbench-2.1.0 / rebuild-calibrated-v3-r7-target-initialization`；部分冻结干预和时延测量使用独立SkyHAD协议，其差异在主报告中保留，不能用当前源码反向替旧数据补写协议。
 
-跨规模实验使用扁平包 `Open-SCORE/open_score/`，通过仓库内可编辑安装运行。`open_score.envs.make_entity_env` 提供 damage 任务实体接口：当前训练池槽位上限为 10 红方、10 蓝方、3 目标，评估接口上限为 50 红方、50 蓝方、12 目标；每局训练规模独立采样，死亡和 padding 槽保留，模型动作编号为 0–8。仅逐步热路径绕开原生观测；reset 沿用 HAD 原生初始化。评估和规则锚点共享蓝方事件调度、物理过程、动作映射和诊断采集。
+采用仓库内可编辑安装，配置位于`Open-SCORE/configs/`、命令入口位于`Open-SCORE/scripts/`：
 
 ```powershell
 & 'D:\Software\Anaconda\envs\torch310\python.exe' -m pip install -e './Open-SCORE[training]'
 ```
 
-`had-env` 声明环境依赖，`training` extra 声明七方法训练与出图所需依赖。旧Windows示例解释器为上述 `torch310`；Linux使用所在机器已配置的环境。历史环境已安装 PyTorch 2.13.0+cu130、NumPy 1.26.4、SciPy 1.15.3、Matplotlib 3.10.9、PyYAML 6.0.3；extra 不负责选择 CUDA 构建。渲染及 Workbench 界面的安装方法见其 README。
+`training`声明训练及绘图依赖，不负责选择CUDA构建。其他机器使用已经配置的Python/PyTorch环境并安装其原生HAD依赖。
 
-本轮支持保留源码目录的可编辑安装。方法配置保留在包外的 `Open-SCORE/configs/`，命令入口保留在 `Open-SCORE/scripts/`；独立 wheel 不是当前支持的运行方式。vendored 主干及补丁内的 YAML 与已有 LICENSE 已声明为 package data，不复制包外配置来扩展发布体系。
+## 训练、状态与正式评估
 
-## 公开接口
-
-| 导入 | 用途 |
-|---|---|
-| `open_score.envs.make_entity_env`、`HADEntityEnv` | damage 跨规模实体环境；10 维基础特征、固定槽与原生动作映射 |
-| `open_score.algos.train(name, cfg)` | 七方法共享训练入口；预算必须显式指定 |
-| `open_score.algos.load_policy(name, checkpoint)` | 冻结 checkpoint 转为 `reset()`／`act(state, side, action_ids)` 策略，可注册到规则评估与回放接口 |
-| `open_score.make_env`、`open_score.parallel_env` | 原生 Parallel / MPE 环境工厂 |
-| `open_score.rules.KnownOpponentEnv`、`make_grouping_env` | 原生事件式分组环境；后者默认规则执行器 |
-| `Entity`、`Group`、`Grouping`、`DecisionState`（均位于 `open_score.rules`） | 实体、分组动作与公开状态，沿用原生序列化与合法性约束 |
-| `RuleExecutor`、`RulePolicy` | 共享规则底层与上层规则策略 |
-| `CoveragePolicy`、`CoverageExecutor`、`run_episode`、`evaluate` | 当前 `rule_nv1_v1`：每步整数规划分组与匀速直线预测 |
-| `rule_grouping`、`grand_grouping`、`decode_counts` | 规则分组、每目标大组及人数分配解码 |
-
-规则策略支持 `rule`、`grand`、`random`、`static_rule`；`reset()` 重置策略状态，`act(state)` 返回原生 `Grouping`。项目代码统一通过 `open_score.envs` 访问固定对手和物理适配器，只有 `had_wrapper.py` 直接导入 HAD。
-
-网页首页直接提供红方算法与模型选择；规则分层仍可选择。红方规则上层 `nv1` 每步用 `p + v × Δt` 预测蓝方下一步位置，通过 0–1 整数规划最小化总拦截距离；下层 `predictive_intercept` 将指派转为飞行动作。每个红方恰好负责一个蓝方、每个参与分组的蓝方至少分配一个红方。红方不足时仅纳入最近的 R 个蓝方。蓝方上层默认 `reactive`，每 5 步或伤亡时重新选目标，下层 `rush` 每步控制飞行。完整定义见 [现行规则说明](docs/three_layer_rule_mathematical_spec.md)。旧覆盖策略别名和历史策略选择入口已移除，历史结果仍保留原记录。
-
-## 可视化回放与自定义比较
-
-在仓库根目录运行：
+训练必须显式指定方法、种子和物理步预算。下面只展示入口，不表示启动新实验：
 
 ```powershell
-& 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 .\viewer.py
+python -X utf8 Open-SCORE/scripts/train.py --stage train --method regir_nomem,refil --seeds 0,1,2 --steps 1000000
+python -X utf8 Open-SCORE/scripts/train.py --stage status
+python -X utf8 Open-SCORE/scripts/train.py --stage stop
 ```
 
-打开终端实际打印的地址：默认 `http://127.0.0.1:8765/`；若已被旧服务占用，会自动改用 8766 等空闲端口。也可通过 `--port 8770` 明确指定端口。当前前后端协议为 **API 5**，修改 Python 后端后需要重新启动；旧服务不会自动更新，访问旧地址仍会得到旧模型目录。首页直接显示红方模型、蓝方对手和基本评估参数，模型筛选、任务细节、自定义路径与比较队列默认折叠。红方可选择训练权重（`checkpoint`）、端到端（`end_to_end`）或规则分层（`hierarchical`）；蓝方保留端到端与规则分层。XY/XZ 图等比例绘制，damage 显示累计伤害及红方回报，survival 显示胜负指标。
+默认使用GPU 0、1，每张卡三项训练任务，共六槽；完成一项即补入下一项。独立评估池默认两个CPU worker，完成预算的final立即进入正式评估，不等待全部训练结束。只补齐同一协议未完成记录；恢复使用`--resume`，不抹掉已有进度。独立确认必须显式加`--confirmation`，不默认扩大评估配额。方法名称使用上述文档列出的内部注册键。
 
-红方选择训练权重后，可按版本、方法、训练种子和 `best/final/latest` 筛选。清单自动发现输出目录中与 `config.json` 同目录的保留模型，点击刷新可读取新增权重；`resume.pt` 专用于恢复训练，不进入可选推理清单。每项显示来源与适用限制，历史不兼容资产仍可查看其清单和原因。自定义路径接受本机 `.pt` 文件的绝对路径或仓库相对路径，加入当前服务会话后即可选择；文件应包含当前加载器使用的 `config/networks/progress` 字段，`config.method` 必须对应已有算法实现。只添加可信本地权重，加载使用 PyTorch checkpoint 反序列化。
+```powershell
+python -X utf8 Open-SCORE/scripts/eval.py --stage final --method regir_nomem,refil --seeds 0,1,2
+python -X utf8 Open-SCORE/scripts/eval.py --stage final --method regir_nomem --checkpoint Open-SCORE/outputs/main/had/regir_nomem/models/seed_0/final.pt
+python -X utf8 Open-SCORE/scripts/eval.py --stage depth --method regir_nomem --seeds 0,1,2 --depths 1,2,3,4,5,6
+python -X utf8 Open-SCORE/scripts/eval.py --stage anchors
+python -X utf8 Open-SCORE/scripts/eval.py --stage confirmation --method regir_nomem --seeds 0,1,2
+python -X utf8 Open-SCORE/scripts/eval.py --stage status
+python -X utf8 Open-SCORE/scripts/eval.py --stage stop
+```
 
-当前七种 checkpoint 都只控制红方，适用于 **二维 `damage`、红蓝各最多 50、目标最多 12、`max_steps` 不超过模型的 `episode_limit`（现有权重为 100）**。QMIX-Base 的 `pool_slots=[10,10,3]` 进一步限制为最多 10 红、10 蓝、3 目标。旧 ALMA（`n_extra_tasks=3`）不能评 K>6；新 ALMA 按 `n_extra_tasks=9` 训练。viewer 使用 CPU 顺序推理，并按每局种子重置模型状态和 PyTorch 随机流。原生 FF / `rel_overgen` 的 E0 模型不适用于 HAD 回放。
+`eval.py`接受单个checkpoint，或方法/种子列表；默认两个CPU worker。深度、锚点和确认按明确选择运行，不随final额外启动。状态与停止入口保留简表和可恢复进度。来源协议不同的数据分别保存和解释。
 
-蓝方训练对手是首页默认的 **自适应集火单目标（训练）**，对应 `reactive + rush`：每 5 步或发生伤亡时，根据红方防守覆盖和蓝方距离抽取一个目标，全部存活蓝方冲向该目标，下一次决策可能换目标。**集火最近目标**（`concentrated + rush`）同样全队集中，但按蓝方平均距离选择最近目标；**均分攻击多目标**（`balanced + rush`）将人数均分给各目标。另一个动作基线 **各自冲最近目标** 则是各架飞机独立选最近目标。三个分组策略都可在首页直接选择，飞行控制细选保留在更多设置中。
+已有图表的唯一刷新入口为：
 
-设置场景、蓝方、回放种子与统计局数后，可单独运行，或将当前配置加入比较队列，再切换红方算法、训练种子或 checkpoint 添加其他项。队列保留各项配置，依次执行每项明确填写的统计局数（API 字段 `stats`），不自动扩大局数或种子范围。比较同一场景下的红方算法时，使用相同蓝方策略、物理参数、种子、统计局数与步数上限；同条件比较会校验这些条件。结果保存在服务内存与浏览器 `sessionStorage`，用于本次交互，不写入正式训练 CSV 或实验报告；服务重启后内存任务不保留。
+```powershell
+python -X utf8 Open-SCORE/scripts/plot.py
+```
 
-API 5 通过 `red_strategy/blue_strategy` 传策略，切换架构后只提交该架构字段。例如，viewer 请求中的红方模型选择为：
+它读取保存数据和聚合统计，不加载模型，不启动训练、环境回放或评估，不生成另一份报告。
+
+## 回放与自定义比较
+
+在仓库根目录运行`python -X utf8 viewer.py`，打开终端打印的地址。默认端口8765，已占用时顺延；`--port 8770`可指定端口。前后端协议为**API 5**，后端代码改变后重启服务。
+
+红方可选checkpoint、端到端策略或分层规则；蓝方可选端到端或分层规则。请求采用`red_strategy/blue_strategy`对象，默认红方规则为`nv1 + predictive_intercept`，蓝方训练对手为`reactive + rush`：开局、每5步或发生伤亡时重新选择一个目标，全体存活蓝方冲向该目标。其他蓝方选项包括集火最近目标、均分攻击多目标和各自冲最近目标。nv1每物理步以一步匀速预测和0–1整数规划分配红方责任。
+
+模型清单发现与`config.json`同目录的推理权重，`resume.pt`仅用于恢复训练。自定义checkpoint可填绝对或仓库相对路径，必须包含当前加载器使用的`config/networks/progress`与已注册`config.method`。已有七类主基线checkpoint适用于二维damage、每队最多50、目标最多12、现有episode_limit=100；具体限制以所选模型真实配置为准。
 
 ```python
 red_strategy = {
     "architecture": "checkpoint",
-    "checkpoint": "Open-SCORE/outputs/main/had/regir_nomem/models/main0928/seed_0/final.pt",
+    "checkpoint": "Open-SCORE/outputs/main/had/regir_nomem/models/seed_0/final.pt",
 }
 blue_strategy = {
     "architecture": "hierarchical",
@@ -80,66 +87,21 @@ blue_strategy = {
 }
 ```
 
-`checkpoint` 是 viewer 的加载入口；直接调用 `run_episode` 时，应先用 `load_policy` 加载并注册为 `end_to_end` 策略。旧 `red_policy/blue_rule/blue_opponent/blue_style` 参数不再接受。
+选择场景、对手、种子、统计局数与步数后，可把当前配置加入比较队列。各项按明确填写的局数依次运行；同条件比较校验场景、物理参数、对手、种子与时限。结果仅用于此次交互，保存于服务内存与浏览器sessionStorage，不进入正式数据或报告。
 
-不同网络结构或自行实现的算法可使用已有的 `register_end_to_end_policy(side, name, label, factory)` 接口。将注册代码放入自己的模块，在服务启动时通过 `--policy-module` 导入（支持模块名或本地 Python 文件，可重复指定）：
+现有`register_end_to_end_policy(side, name, label, factory)`接受提供`reset()`和`act(state, side, action_ids)`的策略；通过`viewer.py --policy-module <模块名或文件>`导入注册代码。动作字典以全局ID映射原生动作ID，二维模型0–8索引需转换为传入的`action_ids`。
 
-```powershell
-& 'D:\Software\Anaconda\envs\torch310\python.exe' -X utf8 .\viewer.py --policy-module my_policies
-```
-
-模块导入时注册策略，例如 `register_end_to_end_policy("red", "my_policy", "我的算法", lambda seed: MyPolicy(seed))`。`factory(seed)` 返回提供 `reset()` 和 `act(state, side, action_ids)` 的独立对象。`state` 是公开物理状态，不含对手本步指令；`act` 返回 `{全局智能体ID: 原生动作ID}`，二维模型的 0–8 动作索引需通过 `action_ids` 转换。注册完成后，表单从 `STRATEGY_CATALOG` 生成对应队伍的端到端选项。自定义分层网络也可在该对象内部完成多层决策；新增规则层选项则需同时实现相应执行逻辑。
-
-当前数值基准：双方无人机 HP=1、满伤=1、速度范围 35–120、最大加速度 40；二维满伤 / 自动开火半径 200、归零半径 400；三维对应为 300、600；碰撞距离 20。存活任务目标默认 HP=2；damage 目标不扣血、不封顶。双方性能一致用于减少比较中的隐藏数值优势；尚未通过新胜率评估证明任务平衡。二维 200–400、三维 300–600 内的范围伤害仍按原线性曲线衰减，不把每个波及目标强行算为一次满伤。
-
-目标初始血量可逐环境传 `target_health=2.0`。公共默认值在 [HAD 配置](../Open_Score_HAD_Workbench/had_env/core/config.py)：`initial_health` 是目标初始血量，`AttackIntensity` 是伤害强度，`PlanarAltitude` 是二维平面高度，速度、加速度、攻击距离和世界边界等也在此文件。网页和训练默认 `target_initialization="random"`，每局按 `DefaultTargetRegion` 采样目标；可切换 `"fixed"`，以区域中心 x/z、内部等距 y 生成固定布局。二维统一使用平面高度；三维目标高度默认 500–1500 米。显式 `target_positions` 可指定固定坐标，默认随机训练不传它。修改源码后须在已有任务结束后重启 `viewer.py`；网页检查 API 版本以避免新表单被旧服务忽略。
-
-## 两种任务与 MARL 接入
+## 原生任务接口
 
 ```python
-from open_score import make_env  # 等价于 from had_env import make_env
+from open_score import make_env
 
-env = make_env(
-    "defense", api="parallel", red_count=8, blue_count=8, target_count=2,
-    task_mode="damage", spatial_dim=2, target_health=2.0,
-    max_cycles=100, seed=0,
-)
+env = make_env("defense", api="parallel", red_count=8, blue_count=8,
+               target_count=2, task_mode="damage", spatial_dim=2,
+               target_health=2.0, max_cycles=100, seed=0)
 observations, infos = env.reset(seed=0)
-# joint_actions 包含当前 env.agents 的所有红、蓝智能体。
-# observations, rewards, terminated, truncated, infos = env.step(joint_actions)
 ```
 
-- `spatial_dim=2` 是默认值：所有实体在同一高度运动，垂直速度与加速度为零。Parallel/MPE 提供 9 个离散平面动作或 2 维连续动作。`spatial_dim=3` 恢复 27 个离散动作或 3 维连续动作。观测仍保留 xyz/vxyz 的 11 维实体结构；三维旧模型必须显式选择三维并核对其协议。
-- `task_mode="survival"` 是工厂兼容默认值，任一目标被摧毁即旧任务结束，保留旧奖励契约。需要旧三维场景时同时传 `spatial_dim=3`。
-- `task_mode="damage"` 是网页默认任务：目标保持有限的初始血量并持续存在，累计未被血量截断的实际伤害。每物理步红方奖励为 `−新增目标伤害`，蓝方为相反数；整局未折扣回报等于 `−累计伤害/+累计伤害`。累计 5.5 即红 −5.5、蓝 +5.5；终局不另加奖励。此模式的 `target_health` 不设伤害上限。
-- 伤害任务仅蓝方攻击机全灭自然终止；红方全灭继续运行。`max_cycles/max_steps` 为采样上限，达到时截断，`bootstrap_mask=1`；自然终止为 0。若训练目标就是固定时长的有限和，应显式采用时间特征及相应终端价值边界，不能把采样截断误当自然终止。
-- 伤害任务保留固定槽到整局结束。死亡槽零观测、强制空动作，但继续接收团队奖励。`agent_mask` 用于 actor，`bootstrap_mask` 用于团队 critic。死亡当步更新使用动作产生前的存活掩码。同队 `team_reward` 已是同一份团队奖励，不能再按队员相加。
-- 累计伤害、时间和维度通过 `info` 提供。任意红蓝 MARL 策略可接 Parallel 联合动作字典，或接 MPE 固定顺序动作列表；网页通过 `red_strategy/blue_strategy` 对象传入统一入口。分组适配器保留原 27 个动作编号，二维只从其中 9 个平面方向选择，与训练接口的 0–8 编号勿混用。
+damage每物理步红方奖励为负的新增目标伤害，整局未折扣回报为`R=-D`。目标持续存在，伤害不按初始血量封顶；蓝方全灭自然终止，红方全灭继续计入目标损伤，到时截断保留bootstrap。团队奖励不按队员人数重复求和。
 
-此前环境接入轮次的 Parallel RNG、实体缓存和伤害距离过滤调整属于历史环境修改；当前主方法的结果与判断见[主实验结果分析](docs/LEAF_主实验结果分析.md)，循环候选及其他环境见[补充实验结果分析](docs/LEAF_补充实验结果分析.md)。完整原生接口见 [HAD API](../Open_Score_HAD_Workbench/docs/API.md)。
-
-```python
-from open_score.rules import make_grouping_env, RulePolicy
-
-env = make_grouping_env(red=8, blue=8, targets=2, opponent="reactive", seed=0)
-policy = RulePolicy("rule", seed=0)
-state = env.reset()
-policy.reset()
-grouping = policy.act(state)
-state, reward, done, info = env.step(grouping)
-env.adapter.env.close()
-```
-
-上述示例说明原生分组接口。分组环境 `survival` 保留原生时限终止与 0/1 奖励；传入 `task_mode="damage"` 后返回整个宏步的伤害奖励之和，并区分自然终止与截断。Parallel/MPE 工厂采用自己的时限语义。多目标位置、零人数、事件返回和快照格式均以 Workbench 原生 API 为准；v6 包装、奖励塑形、S2 投影及旧训练张量接口已归档。
-
-## 已归档实验
-
-2026-10-14，SPECTra和TransfQMix的基线输入对齐实验已完成六个模型的训练、50点验证、正式及独立确认评估，116,400条逐局记录和必要final/best模型已归入 [outputs/main](Open-SCORE/outputs/main)，原`outputs/main_1013_base`目录已删除。唯一正式结果分析并入[主报告](docs/LEAF_主实验结果分析.md)，不保留重复版本报告。当前比较及v4出图使用`had/aggregates.json`内的`paper_current`，历史`paper1007`和旧10维权重独立保留。
-
-新模型的actor与online/target mixer补齐红方上一动作，采用19维输入、8环境及每收集批8次更新；共同HAD任务与采样控制对齐最终LEAF，保留基线自身Adam/1e−3、TD(λ=0.6)、半MSE及核心结构。正式All24损伤为SPECTra **6.2871±0.0289**、TransfQMix **4.2518±0.7733**；新终评未保存碰撞和拦截指标。模型与配置位于`main/had/<方法>/models/main1013_base/seed_<种子>`。本次更新没有新增训练或评估，也不删除远端工作树。
-
-运行入口仍为`Open-SCORE/scripts/main1013_base.py`，保留用于追溯和既有远程任务；本地归并目录无需重新启动该实验。Git发布代码、论文、报告、汇总统计及图片，原始数据、模型和恢复点不随本次发布上传。
-
-结果目录保存已有数据与推理权重，旧任务启动、恢复和报告刷新命令已停用。历史单轮从头训练与多轮权重的单轮推理是两类不同对照，详见主报告。独有历史数据保留来源协议，未提供的原始记录如实注明。
-
-环境建模见 [HAD 环境与问题建模](docs/HAD_环境与问题建模.md)，早期方法移植差异见 [迁移记录](docs/方案_v2/diff_log.md)。更早研究源码可从 Git `cc2ab86` 查看；本次归并不改变 HAD 物理接口或算法实现。
+survival在任一目标被毁或蓝方全灭时自然终止；空间维度默认2，旧三维接口必须显式传`spatial_dim=3`。物理参数、实体特征、死亡/padding与蓝方事件规则以[环境说明](docs/HAD_环境与问题建模.md)、[规则说明](docs/LEAF_Baseline与Rule实现说明.md#9-rule-与-random没有训练权重的两条锚点)及对应协议为准。

@@ -309,7 +309,7 @@ let episodeRequest = 0, records = [], loadedIndex = null, pollFailures = 0, subm
 let evaluationQueue = [], queueActive = false, queueCurrent = null, queueSerial = 0, queueMessage = '';
 const episodeCache = new Map();
 const $ = id => document.getElementById(id);
-const methodNames = {b0_qmix:'QMIX-Base',b2_qmix_atten:'QMIX-Atten',alma:'ALMA'};
+const methodNames = {regir_nomem:'LEAF',b2_qmix_atten:'QMIX-Atten',alma:'ALMA'};
 const blueGroupingNames = {reactive:'自适应集火单目标（训练）',concentrated:'集火最近目标',balanced:'均分攻击多目标'};
 function displayMetadata(data) {
   // Display-only names also apply when refreshing an already-running API 5 server.
@@ -387,7 +387,7 @@ function strategyFromForm(side) {
   return {architecture,layers};
 }
 function cycleCheckpoint(checkpoint) {
-  return Boolean(checkpoint && ['cycle','slot','feedback'].includes(checkpoint.global_branch));
+  return Boolean(checkpoint && checkpoint.global_branch==='cycle');
 }
 function syncCycleDepthField(config = null) {
   const field=$('cycleDepthField'), select=$('cycle_depth');
@@ -439,7 +439,7 @@ function populateCheckpointOptions(preferred = null) {
   const select=$('red_checkpoint'); if (!select || !$('checkpointFilter_method')) return;
   const previous=preferred ?? select.value;
   const checkpoints=meta?.checkpoints || [];
-  const visible=checkpoints.filter(item=>item.available && ['version','method','seed','kind'].every(key=>{
+  const visible=checkpoints.filter(item=>item.available && ['method','seed','kind'].every(key=>{
     const value=$(`checkpointFilter_${key}`).value; return !value || String(item[key])===value;
   }));
   select.replaceChildren(...visible.map(item=>new Option(checkpointOptionText(item),item.id)));

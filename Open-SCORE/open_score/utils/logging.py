@@ -9,19 +9,13 @@ import json
 import math
 import os
 from pathlib import Path
-import re
 import threading
 import time
 
 VERSION = "main"
-# The formal training run of this version. v2 called it "stage3" after a
-# staged plan that no longer exists; the anchors it produced are policy- and
-# version-independent and are carried over instead of being re-run.
+# Training run and provenance stay in record fields, rather than directory versions.
 FORMAL_RUN = "train"
 DEFAULT_OUTPUT = Path(__file__).resolve().parents[2] / "outputs" / VERSION
-V3_OUTPUT = Path(__file__).resolve().parents[2] / "outputs" / "main_v3"
-V4_OUTPUT = Path(__file__).resolve().parents[2] / "outputs" / "main_v4"
-V5_OUTPUT = Path(__file__).resolve().parents[2] / "outputs" / "main_v5"
 IDENTITY = ("version", "run", "method", "seed", "recorded_at")
 EPISODE_FIELDS = (
     "train_dist", "t_env", "eval_point", "phase", "config", "episode_seed",
@@ -35,34 +29,18 @@ SCHEMAS = {
     "episodes": IDENTITY + EPISODE_FIELDS + ("checkpoint",),
     "learning": IDENTITY + ("t_env", "metrics"),
     "progress": IDENTITY + ("data",),
-    "verification": IDENTITY + ("data",),
-    "benchmarks": IDENTITY + ("data",),
     "trajectories": IDENTITY + ("phase", "config", "episode_seed", "checkpoint", "trajectory"),
-    "timing": IDENTITY + ("config", "device", "cycle_depth", "repeat_id", "ms_per_step", "n_steps", "params"),
 }
 
 
 def schema_for(output, stream_name):
-    from open_score.eval.experiment import is_profile
+    """All active writers use the complete HAD identity schema."""
     columns = SCHEMAS[stream_name]
-    root = Path(output)
-    if root.name in ("had", "mpe", "smacv2") and (root.parent / "experiment.json").exists():
-        root = root.parent
-    if not is_profile(root) and not (root / "had").is_dir():
-        return columns
     extra = ("env", "checkpoint_id", "arm", "cycle_depth", "readout")
     if stream_name == "episodes":
-        extra += ("battle_won", "return", "source_version", "dup_pursuit_frac", "intent_stats",
-                  "intent_override", "protocol")
-        metadata = root / "experiment.json"
-        if metadata.exists() and json.loads(metadata.read_text(encoding="utf-8")).get("profile") == "main1013_base":
-            # Retain committed episode timing with its count for resumable ETA;
-            # unknown extra row keys otherwise do not enter a shared CSV.
-            extra += ("episode_wall_seconds",)
+        extra += ("return", "source_version", "protocol", "episode_wall_seconds")
     if stream_name in ("learning", "trajectories", "progress"):
         extra += ("source_version", "protocol")
-    if stream_name == "timing":
-        extra += ("actor_params", "training_params", "p25_ms", "p75_ms", "p95_ms", "physical_gpu")
     return columns + tuple(key for key in extra if key not in columns)
 _LOCKS: dict[str, threading.RLock] = {}
 _LOCKS_GUARD = threading.Lock()
@@ -128,14 +106,10 @@ def append_records(output, stream_name, rows):
     rows = list(rows)
     if not rows:
         return 0
-    if (Path(output) / "had").is_dir():
-        from open_score.eval.experiment import environment_directory
-        grouped = {}
-        for row in rows:
-            grouped.setdefault(row.get("env") or "had", []).append(row)
-        return sum(append_records(environment_directory(output, env), stream_name, values)
-                   for env, values in grouped.items())
-    path = Path(output) / f"{stream_name}.csv"
+    from open_score.eval.experiment import ensure_layout
+    if any(row.get("env", "had") != "had" for row in rows):
+        raise ValueError("The active record writer supports HAD only")
+    path = ensure_layout(output) / f"{stream_name}.csv"
     with _locked_file(path, create=True) as stream:
         stream.seek(0, os.SEEK_END)
         if stream.tell() == 0:
@@ -147,6 +121,13 @@ def append_records(output, stream_name, rows):
             stream.seek(-1, os.SEEK_END)
             if stream.read(1) != b"\n":
                 raise RuntimeError(f"Incomplete record at {path}; preserve it before resuming")
+            required = {"env"}
+            if stream_name == "episodes":
+                required.update(("checkpoint_id", "arm", "protocol"))
+            missing = required - set(columns)
+            missing.update(key for row in rows for key in ("checkpoint_id", "arm", "protocol", "cycle_depth", "readout", "source_version") if row.get(key) is not None and key not in columns)
+            if missing:
+                raise RuntimeError(f"Legacy CSV header at {path} lacks identity fields {sorted(missing)}; existing records are preserved")
         payload = io.StringIO(newline="")
         writer = csv.writer(payload, lineterminator="\n")
         for row in rows:
@@ -158,10 +139,27 @@ def append_records(output, stream_name, rows):
     return len(rows)
 
 
+_ARCHIVE_TEXT_FIELDS = frozenset(("archive_source", "archive_protocol", "archive_record_status"))
+_OPTIONAL_CELLS = _ARCHIVE_TEXT_FIELDS | frozenset(("checkpoint", "checkpoint_id", "arm", "cycle_depth", "readout",
+    "battle_won", "return", "source_version", "dup_pursuit_frac", "intent_stats", "intent_override", "protocol",
+    "q_tot_mean", "q_tot_std", "q_i_mean", "episode_wall_seconds"))
+
+
 def _decode_row(cells, path):
     if None in cells or any(value is None for value in cells.values()):
         raise ValueError(f"Malformed complete CSV row in {path}")
-    row = {key: json.loads(value) for key, value in cells.items()}
+    row = {}
+    for field, value in cells.items():
+        if value == "" and field in _OPTIONAL_CELLS:
+            row[field] = None
+            continue
+        try:
+            row[field] = json.loads(value)
+        except json.JSONDecodeError as error:
+            if field in _ARCHIVE_TEXT_FIELDS:
+                row[field] = value
+            else:
+                raise ValueError(f"Invalid scientific JSON field {field} in {path}") from error
     for field in ("metrics", "data"):
         if isinstance(row.get(field), dict):
             row.update(row[field])
@@ -191,6 +189,9 @@ def _read_csv_bytes(path):
 def record_paths(output, stream_name, env=None):
     """Locate a legacy shared CSV or the version's separate environment CSVs."""
     root = Path(output)
+    current = root / "had" / f"{stream_name}.csv"
+    if current.exists():
+        return [current]
     legacy = root / f"{stream_name}.csv"
     if legacy.exists():
         return [legacy]
@@ -235,69 +236,6 @@ def read_records(output, stream_name, *, run=None, method=None, seed=None, env=N
     return list(iter_records(output, stream_name, run=run, method=method, seed=seed, env=env))
 
 
-def read_latest(output, stream_name, *, run=None, method=None, seed=None, keys=None, env=None):
-    """Last row per (method, run, seed). Does not retain history."""
-    from open_score.eval.experiment import is_profile
-    if is_profile(output) or (Path(output) / "had").is_dir():
-        latest = {}
-        for row in iter_records(output, stream_name, run=run, method=method, seed=seed, env=env):
-            identity = (row.get("method"), row.get("run"), row.get("seed"))
-            if keys is not None and identity not in keys:
-                continue
-            if env is None:
-                identity = (row.get("env"),) + identity
-            latest[identity] = row
-        return latest
-    path = Path(output) / f"{stream_name}.csv"
-    if not path.exists():
-        return {}
-    raw = _read_csv_bytes(path)
-    if not raw:
-        return {}
-    text = raw.decode("utf-8")
-    newline = text.find("\n")
-    if newline < 0:
-        return {}
-    header_line, body = text[:newline], text[newline + 1:]
-    if keys is not None:
-        wanted = set(keys)
-        found = {}
-        header = next(csv.reader([header_line]))
-        for line in reversed(body.splitlines()):
-            if not line:
-                continue
-            cells = next(csv.reader([line]))
-            if len(cells) != len(header):
-                continue
-            try:
-                row = _decode_row(dict(zip(header, cells)), path)
-            except (ValueError, json.JSONDecodeError):
-                continue
-            if run is not None and row.get("run") != run:
-                continue
-            identity = (row.get("method"), row.get("run"), row.get("seed"))
-            if identity not in wanted or identity in found:
-                continue
-            found[identity] = row
-            if len(found) >= len(wanted):
-                break
-        return found
-    latest = {}
-    for cells in csv.DictReader(io.StringIO(text, newline="")):
-        row = _decode_row(cells, path)
-        if run is not None and row.get("run") != run:
-            continue
-        if method is not None and row.get("method") != method:
-            continue
-        if seed is not None and row.get("seed") != int(seed):
-            continue
-        identity = (row.get("method"), row.get("run"), row.get("seed"))
-        if keys is not None and identity not in keys:
-            continue
-        latest[identity] = row
-    return latest
-
-
 def episode_key(row):
     return tuple(row.get(key) for key in ("version", "run", "method", "seed", "phase", "eval_point")) + (
         _encode(row["config"]), int(row["episode_seed"]), row.get("checkpoint"),
@@ -309,108 +247,14 @@ def unique_episodes(rows):
     return list({episode_key(row): row for row in rows}.values())
 
 
-def read_tail(path, nbytes=16384):
-    path = Path(path)
-    if not path.exists():
-        return ""
-    try:
-        size = path.stat().st_size
-        with path.open("rb") as stream:
-            if size > nbytes:
-                stream.seek(size - nbytes)
-            return stream.read().decode("utf-8", errors="replace")
-    except OSError:
-        return ""
-
-
-def _hms_seconds(text):
-    hours, minutes, seconds = text.split(":")
-    return int(hours) * 3600 + int(minutes) * 60 + int(seconds)
-
-
-_TRAIN_CONSOLE = re.compile(
-    r"\[(?P<name>[^\]]+)\]\s+(?P<hms>\d+:\d{2}:\d{2})\s+"
-    r"(?P<t>[\d,]+)/(?P<b>[\d,]+)\s+(?P<sps>[\d.]+)/s"
-)
-_EVAL_CONSOLE = re.compile(
-    r"\[(?P<who>[^\]]+)\]\s+(?P<phase>final_eval|depth_eval|mech\w*|anchor\w*)\s+"
-    r"(?:R(?P<depth>\d+)\s+)?(?P<done>[\d,]+)/(?P<total>[\d,]+)"
-)
-
-
-def parse_train_console(text):
-    for line in reversed(str(text or "").splitlines()):
-        match = _TRAIN_CONSOLE.search(line)
-        if match is None:
-            continue
-        row = dict(status="evaluating" if " ev=" in line else "training",
-                   t_env=int(match.group("t").replace(",", "")),
-                   budget_steps=int(match.group("b").replace(",", "")),
-                   steps_per_second=float(match.group("sps")),
-                   session_elapsed_seconds=_hms_seconds(match.group("hms")))
-        loss = re.search(r"L=([\d.]+)", line)
-        dval = re.search(r"D=([\d.-]+)", line)
-        ev = re.search(r"ev=(\d+)/(\d+)", line)
-        if loss:
-            row["loss"] = float(loss.group(1))
-        if dval is not None and dval.group(1) != "-":
-            try:
-                row["latest_validation_D"] = float(dval.group(1))
-            except ValueError:
-                pass
-        if ev:
-            row["eval_completed"] = int(ev.group(1))
-            row["eval_total"] = int(ev.group(2))
-        return row
-    return {}
-
-
-def parse_eval_console(text):
-    for line in reversed(str(text or "").splitlines()):
-        match = _EVAL_CONSOLE.search(line)
-        if match is None:
-            continue
-        depth = match.group("depth")
-        return dict(phase=match.group("phase"), status="running",
-                    completed=int(match.group("done").replace(",", "")),
-                    total=int(match.group("total").replace(",", "")),
-                    cycle_depth=None if depth is None else int(depth))
-    return {}
-
-
-def live_console_jobs(output, max_age=180):
-    """Train/eval jobs whose console log was written in the last max_age seconds."""
-    root = Path(output)
-    now = time.time()
-    found = []
-    for pattern, kind, filename in (
-        ("*/*/seed_*/console.log", "train", "console.log"),
-        ("*/*/seed_*/eval.console.log", "eval", "eval.console.log"),
-        ("*/*/*/seed_*/console.log", "train", "console.log"),
-        ("*/*/*/seed_*/eval.console.log", "eval", "eval.console.log"),
-    ):
-        for path in root.glob(pattern):
-            try:
-                if now - path.stat().st_mtime > max_age:
-                    continue
-            except OSError:
-                continue
-            seed_dir, run_dir, method_dir = path.parent, path.parent.parent, path.parent.parent.parent
-            try:
-                seed = int(seed_dir.name.split("_")[1])
-            except (IndexError, ValueError):
-                continue
-            found.append(dict(kind=kind, method=method_dir.name, run=run_dir.name,
-                              seed=seed, path=path))
-    found.sort(key=lambda item: (item["kind"], item["method"], item["seed"]))
-    return found
-
-
 class ExperimentLogger:
     def __init__(self, output=DEFAULT_OUTPUT, method="shared", seed=0, run=FORMAL_RUN, env="had"):
+        if env != "had":
+            raise ValueError("The active record writer supports HAD only")
         self.output, self.method, self.seed, self.run = Path(output), str(method), int(seed), str(run)
-        from open_score.eval.experiment import PROFILE, is_profile
-        self.profile = is_profile(output) or (self.output / "had").is_dir()
+        from open_score.eval.experiment import PROFILE, ensure_layout
+        ensure_layout(self.output)
+        self.profile = True
         self.version = PROFILE if self.profile else VERSION
         metadata = self.output / "experiment.json"
         if self.profile and metadata.exists():
@@ -435,16 +279,12 @@ class ExperimentLogger:
             row.setdefault("blue_lower", "rush")
             for field in ("q_tot_mean", "q_tot_std", "q_i_mean"):
                 row.setdefault(field, None)
-            if self.profile and self.env == "smacv2":
-                for field in EPISODE_FIELDS:
-                    row.setdefault(field, None)
             missing = set(EPISODE_FIELDS) - row.keys()
             if missing:
                 raise ValueError(f"Missing episode fields: {sorted(missing)}")
-            if row["phase"] not in ("train_eval", "final_eval", "depth_eval", "readout_eval", "anchor",
-                                    "gate_depth_eval", "dup_eval", "r1deploy_eval", "intent_intervention_eval"):
+            if row["phase"] not in ("train_eval", "final_eval", "depth_eval", "anchor"):
                 raise ValueError(f"Not a frozen evaluation phase: {row['phase']}")
-            for field in (("battle_won", "ep_len") if self.env == "smacv2" else ("D", "rho", "ep_len")):
+            for field in ("D", "rho", "ep_len"):
                 if row[field] is None or not math.isfinite(float(row[field])):
                     raise ValueError(f"Invalid applicable episode field {field}: {row[field]}")
             metadata = {key: row.pop(key) for key in IDENTITY if key in row}
@@ -457,15 +297,6 @@ class ExperimentLogger:
     def progress(self, **fields):
         return append_records(self.output, "progress", [self._row(dict(data=fields))])
 
-    def verification(self, rows):
-        return append_records(self.output, "verification", [self._row(dict(data=dict(row))) for row in rows])
-
-    def benchmarks(self, rows):
-        return append_records(self.output, "benchmarks", [self._row(dict(data=dict(row))) for row in rows])
-
-    def timing(self, rows):
-        encoded = [self._row(dict(row)) for row in rows]
-        return append_records(self.output, "timing", encoded)
 
     def trajectories(self, rows):
         def key(row):

@@ -29,6 +29,5 @@ where = ["."]
 include = ["open_score*"]
 
 [tool.setuptools.package-data]
-"open_score.algos.pymarl" = ["LICENSE", "config/*.yaml", "config/algs/*.yaml", "config/envs/*.yaml"]
-"open_score.algos.dcg_patch" = ["LICENSE", "*.yaml"]
-"open_score.algos.spectra_patch" = ["LICENSE", "*.yaml"]
+"open_score.algos.pymarl" = ["LICENSE", "README.md", "config/default.yaml"]
+"open_score.algos.dcg_patch" = ["LICENSE"]

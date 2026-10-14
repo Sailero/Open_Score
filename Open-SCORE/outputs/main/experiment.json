@@ -1,5 +1,5 @@
 {
-  "schema": "leaf-method-archive-v2",
+  "schema": "had-current-experiment-v1",
   "main_method": "regir_nomem",
   "main_method_display": "LEAF",
   "sources": {
@@ -751,7 +751,7 @@
         "physics_protocol": "rebuild-calibrated-v3-r7-target-initialization",
         "profile": "main1013_base",
         "reference": {
-          "config": "had/regir_nomem/models/main0928/seed_0/config.json",
+          "config": "had/regir_nomem/models/seed_0/config.json",
           "evaluation_source": "main1009",
           "method": "regir_nomem",
           "summary": "had/loop_summary.csv",
@@ -1024,5 +1024,8 @@
     "data_path": "had/decision_timing.json",
     "data_field": "decision_timing_fixed100",
     "figure_path": "had/figures/fig_decision_timing.png"
-  }
+  },
+  "report": "docs/LEAF_主实验结果分析.md",
+  "statistics": "had/aggregates.json",
+  "model_layout": "had/<method>/models/seed_<seed>"
 }

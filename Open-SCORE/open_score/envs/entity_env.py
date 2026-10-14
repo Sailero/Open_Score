@@ -1,4 +1,4 @@
-"""ALMA entity-environment contract for HAD and its native firefighters check."""
+"""ALMA entity-environment contract and frozen-policy adapter for HAD."""
 from __future__ import annotations
 
 import copy
@@ -7,7 +7,7 @@ import numpy as np
 from .features import (MAX_AGENTS, ENTITY_DIM, N_ACTIONS, masks_from_entity_mask,
                        available_actions, blue_nearest_from_table, entities_from_state,
                        resolve_pad, task_masks)
-from .had_wrapper import HADWrapper, run_environment_checks
+from .had_wrapper import HADWrapper
 from .scales import ScaleSampler, as_scale
 from ..utils.seeding import EpisodeSeedStream, split_seeds
 
@@ -134,115 +134,6 @@ class HADEntityEnv:
         self.wrapper.close()
 
 
-class NativeEntityEnv:
-    """Keeps native FF features/actions; only normalizes runner calls and seeds."""
-    def __init__(self, name="ff", args_dict=None, **kwargs):
-        if name not in ("ff", "rel_overgen", "stag_hunt"):
-            raise ValueError("NativeEntityEnv supports ff and the official rel_overgen task")
-        self.name = name
-        options = dict(args_dict or {})
-        options.update(kwargs)
-        if name == "ff":
-            from ..algos.pymarl.envs.firefighters.firefighters import FireFightersEnv
-            from ..algos.pymarl.envs.firefighters.scenarios import generate_single_scen_dict
-            options.setdefault("scenario_dict", generate_single_scen_dict(
-                agent_list=["F", "B"], building_list=["F", "S"], bld_spacing=3))
-            self.env = FireFightersEnv(**options)
-        else:
-            from pathlib import Path
-            import yaml
-            from ..algos.dcg_patch.stag_hunt import StagHunt
-            official = yaml.safe_load((Path(__file__).parents[1] / "algos/dcg_patch/rel_overgen.yaml").read_text(encoding="utf-8"))
-            native_options = dict(official["env_args"])
-            native_options.update(options)
-            self.env = StagHunt(**native_options)
-        self.episode_limit = self.env.episode_limit
-        self._episode_seed = int(options.get("seed", 0))
-        self._return = 0.0
-        self._steps = 0
-
-    def reset(self, seed=None, evaluate=False, retain_trajectory=False, config=None, test=False, **kwargs):
-        if seed is not None:
-            self._episode_seed = int(seed)
-        np.random.seed(self._episode_seed % (2 ** 32))
-        if self.name == "ff":
-            self.env.seed(self._episode_seed)
-            self.env.reset(test=bool(evaluate or test), **kwargs)
-            self._initial_mask = np.asarray(self.env.get_masks()["entity_mask"][:self.env.max_n_agents]).copy()
-        else:
-            import random
-            random.seed(self._episode_seed)
-            self.env.reset()
-            self._initial_mask = np.zeros(self.env.n_agents, dtype=np.uint8)
-        self._return, self._steps = 0.0, 0
-        return self.get_entities(), self.get_masks()
-
-    def step(self, actions):
-        if self.name != "ff":
-            import torch
-            actions = torch.as_tensor(actions)
-        reward, done, raw_info = self.env.step(actions)
-        self._return += float(reward)
-        self._steps += 1
-        info = {key: value.tolist() if isinstance(value, np.ndarray) else
-                value.item() if isinstance(value, np.generic) else value for key, value in raw_info.items()}
-        # FF checks natural task completion before its horizon branch. A task
-        # solved exactly at the limit is terminal, not a sampling truncation.
-        truncated = bool(info.get("episode_limit", False))
-        info.update(terminated=bool(done and not truncated), truncated=truncated,
-                    episode_limit=truncated, bootstrap_mask=float(not (done and not truncated)))
-        if done:
-            info["episode_summary"] = self.episode_summary()
-        return float(reward), bool(done), info
-
-    def get_entities(self):
-        values = self.env.get_entities() if self.name == "ff" else self.env.get_obs()
-        return np.asarray(values, dtype=np.float32)
-
-    def get_masks(self):
-        if self.name == "ff":
-            masks = self.env.get_masks()
-            return {key: np.asarray(masks[key], dtype=np.uint8) for key in ("obs_mask", "entity_mask")}
-        absent = (1 - self.env.agents_not_frozen[:, 0]).astype(np.uint8)
-        obs_mask = 1 - np.eye(self.env.n_agents, dtype=np.uint8)
-        obs_mask = np.maximum(obs_mask, np.maximum(absent[:, None], absent[None, :]))
-        return {"obs_mask": obs_mask, "entity_mask": absent}
-
-    def get_initial_agent_mask(self):
-        return self._initial_mask.copy()
-
-    def get_env_info(self, args=None):
-        info = self.env.get_env_info(args)
-        if self.name != "ff":
-            return {**info, "n_entities": self.env.n_agents, "entity_shape": self.env.obs_size,
-                    "feature_layout": "native", "gt_mask_avail": False}
-        return {**info, "feature_layout": "native", "gt_mask_avail": False,
-                "state_shape": info["n_entities"] * info["entity_shape"]}
-
-    def get_state(self):
-        if self.name == "ff":
-            return self.get_entities().reshape(-1)
-        return np.asarray(self.env.get_state(), dtype=np.float32).reshape(-1)
-
-    def episode_summary(self):
-        return {"episode_seed": self._episode_seed, "episode_return": self._return,
-                "ep_len": self._steps, "environment": self.name}
-
-    def get_trajectory(self):
-        return []
-
-    def get_rng_state(self):
-        import random
-        return {"numpy": np.random.get_state(), "python": random.getstate(), "episode_seed": self._episode_seed}
-
-    def set_rng_state(self, state):
-        import random
-        np.random.set_state(state["numpy"])
-        random.setstate(state["python"])
-        self._episode_seed = state["episode_seed"]
-
-    def __getattr__(self, name):
-        return getattr(self.env, name)
 
 
 class FrozenPolicyAdapter:
@@ -257,15 +148,22 @@ class FrozenPolicyAdapter:
         self.reset()
 
     def set_device(self, device):
-        self.device = str(device)
-        self.mac.agent.to(self.device)
+        import torch
+        target = torch.device(device)
+        if target.type not in ("cpu", "cuda"):
+            raise ValueError("Frozen policies support CPU or CUDA devices")
+        self.device = str(target)
+        self.args.device, self.args.use_cuda = self.device, target.type == "cuda"
+        for name in ("agent", "alloc_policy", "alloc_critic", "coach", "copa_recog", "utility_fun", "payoff_fun"):
+            module = getattr(self.mac, name, None)
+            if module is not None:
+                module.to(target)
+        for name in ("edges_from", "edges_to"):
+            tensor = getattr(self.mac, name, None)
+            if tensor is not None:
+                setattr(self.mac, name, tensor.to(target))
         if self.mixer is not None:
-            self.mixer.to(self.device)
-        if hasattr(self.mac, "cuda") and self.device == "cuda":
-            try:
-                self.mac.cuda()
-            except Exception:
-                pass
+            self.mixer.to(target)
         self.reset()
 
     def set_eval_depth(self, depth):

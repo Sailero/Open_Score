@@ -1,6 +1,6 @@
 # HAD 环境与问题建模
 
-底层物理在独立仓库 HAD Workbench。核心版本 `had-workbench-2.1.0`，物理协议 `rebuild-calibrated-v3-r7-target-initialization`。距离单位米，速度米/秒，加速度米/秒²，时间秒。一个物理步 \(\Delta t=1\)。
+本文描述当前正式LEAF/HAD结果登记的环境协议；底层物理在独立HAD依赖中。核心版本 `had-workbench-2.1.0`，物理协议 `rebuild-calibrated-v3-r7-target-initialization`。距离单位米，速度米/秒，加速度米/秒²，时间秒。一个物理步 \(\Delta t=1\)。
 
 ## 1. 问题
 
@@ -211,4 +211,4 @@ v_{t+1}=\mathrm{clip}_{\|v\|\in[v_{\min},v_{\max}]}\bigl(v_t+a_t\Delta t\bigr).
 | 实体包装 | `Open-SCORE/open_score/envs/had_wrapper.py` |
 | 实体表 | `Open-SCORE/open_score/envs/features.py` |
 
-若叙述与实现冲突，以源码和协议号为准。
+本文协议与当前源码、另存时延和冻结干预runtime必须分别解释。主结果、测量协议及runtime边界见[主实验结果分析](LEAF_主实验结果分析.md)，规则责任指派与回放字段见[Baseline与Rule实现说明](LEAF_Baseline与Rule实现说明.md#9-rule-与-random没有训练权重的两条锚点)。若叙述与实现冲突，以对应数据登记的协议和源码为准。

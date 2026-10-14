@@ -1,0 +1,89 @@
+﻿% Numerical sources: the main report Tables 1 and 3 and Section 4.11.
+% Saved views: comparison and design_comparison; statistics are unchanged.
+% Mechanism interventions use their runtime-matched local standards.
+
+\newcommand{\HadMainTable}{%
+\begin{table*}[!t]
+\centering\footnotesize
+\setlength{\tabcolsep}{5pt}
+\caption{Eight-method comparison of target protection: damage $D\downarrow$, mean $\pm$ sample SD across three training seeds (Rule: scene SD). Each configuration uses 300 common scenes; configurations are equally weighted. QMIX denotes the entity-attention adaptation. Bold: lowest mean.}
+\label{tab:had-main}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrr@{}}
+\toprule
+Method & ID & $K$-OOD & $N$-OOD & Joint OOD \\
+\midrule
+\textbf{LEAF} & $\mathbf{0.405\pm0.097}$ & $\mathbf{0.996\pm0.233}$ & $\mathbf{0.575\pm0.235}$ & $\mathbf{1.097\pm0.105}$ \\
+REFIL & $0.715\pm0.049$ & $1.796\pm0.304$ & $2.209\pm0.277$ & $3.308\pm0.303$ \\
+ALMA & $1.326\pm0.193$ & $3.022\pm0.344$ & $3.605\pm0.742$ & $5.375\pm1.036$ \\
+TransfQMix$^{\ddagger}$ & $1.529\pm0.283$ & $3.953\pm0.495$ & $4.024\pm0.968$ & $6.630\pm1.203$ \\
+DCG & $2.028\pm0.437$ & $5.839\pm1.920$ & $5.021\pm2.658$ & $8.092\pm3.909$ \\
+SPECTra$^{\ddagger}$ & $2.485\pm0.209$ & $6.743\pm0.528$ & $5.049\pm0.589$ & $9.838\pm0.490$ \\
+Rule$^{\dagger}$ & $1.462\pm0.717$ & $3.212\pm1.126$ & $1.545\pm0.881$ & $3.060\pm0.976$ \\
+QMIX & $2.318\pm1.431$ & $5.009\pm2.497$ & $5.139\pm3.111$ & $7.415\pm3.970$ \\
+\bottomrule
+\end{tabular*}
+\par\vspace{2pt}\parbox{\textwidth}{\footnotesize
+$\dagger$ Rule has no training seeds; its SD is across the 300 scene seeds after averaging configurations within each scene. Other SDs describe variation across trained models. $\ddagger$ Updated baselines align entity inputs and sampling controls while retaining their method-specific optimizer and TD settings.}
+\end{table*}}
+
+\newcommand{\HadCoreAblationTable}{%
+\begin{table*}[!t]
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\caption{Historical architecture design comparisons: damage $D\downarrow$, mean $\pm$ sample SD across three training seeds, under the formal evaluation of Table~\ref{tab:had-main}. The middle column states the principal module change. C: context constructor; Q: current-self query; F: stage fusion; H: host integration. Temporal GRU is retained by every trained variant. Bold: lowest mean.}
+\label{tab:had-core-ablation}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lp{0.30\textwidth}rrrr@{}}
+\toprule
+Variant & Module / change & ID & $K$-OOD & $N$-OOD & Joint OOD \\
+\midrule
+\textbf{LEAF} & Complete architecture & $\mathbf{0.405\pm0.097}$ & $\mathbf{0.996\pm0.233}$ & $\mathbf{0.575\pm0.235}$ & $\mathbf{1.097\pm0.105}$ \\
+Direct read & C: bypass updates; read $H^{(0)}$ & $0.928\pm0.210$ & $1.958\pm0.457$ & $2.020\pm0.446$ & $3.196\pm0.687$ \\
+Memory query & Q: add stopped-gradient history & $0.527\pm0.227$ & $1.529\pm0.734$ & $0.998\pm0.621$ & $1.946\pm1.229$ \\
+Last read & F: use only the exit's final read & $0.434\pm0.083$ & $1.020\pm0.100$ & $0.652\pm0.160$ & $1.269\pm0.202$ \\
+No host & H: remove REFIL attention, imagined groups, and auxiliary loss & $0.510\pm0.138$ & $1.768\pm0.621$ & $1.263\pm0.653$ & $2.319\pm0.889$ \\
+\bottomrule
+\end{tabular*}
+\par\vspace{2pt}\parbox{\textwidth}{\footnotesize
+All four historical variants use stopped-gradient history queries; LEAF uses a current-self query. Direct read, Last read, and No host therefore differ in query placement as well as the listed module. No host retains the self-projection residual and temporal memory. Depth-training and parameter-sharing comparisons appear in Table~\ref{tab:had-supplement}.}
+\end{table*}}
+
+\newcommand{\HadMechanismTable}{%
+\begin{table*}[!t]
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\caption{Frozen-policy mechanism interventions: paired damage increase $\Delta D=D_{\mathrm{intervention}}-D_{\mathrm{local\ standard}}$, mean $\pm$ sample SD across three models. Each model uses ten scenes per configuration. Positive values indicate worse protection. These interventions probe learned policy dependence, not independently retrained removals.}
+\label{tab:leaf-mechanism}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}llrrr@{}}
+\toprule
+Intervention & Path probed & $(10,10,2)$ & $(50,50,2)$ & $(30,30,12)$ \\
+\midrule
+Read initial $H^{(0)}$ & H1: constructed context & $7.556\pm1.365$ & $18.962\pm5.828$ & $32.968\pm8.447$ \\
+Zero relational residual & H1: relational feature path & $5.950\pm1.525$ & $13.695\pm6.899$ & $18.788\pm1.144$ \\
+Force final read & H2: intermediate-stage fusion & $6.728\pm3.186$ & $19.937\pm12.955$ & $25.558\pm16.414$ \\
+Reset Temporal GRU & H2: downstream temporal memory & $1.423\pm0.760$ & $1.294\pm0.869$ & $1.655\pm2.563$ \\
+\bottomrule
+\end{tabular*}
+\par\vspace{2pt}\parbox{\textwidth}{\footnotesize
+The $H^{(0)}$ bypass uses SkyHAD 3.0.0; the other interventions use the archived HAD-workbench 2.1.0 runtime. Each difference is paired with its corresponding local standard, separately from the formal 300-scene evaluation.}
+\end{table*}}
+
+\newcommand{\HadSupplementTable}{%
+\begin{table*}[!t]
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\caption{Supplementary design and capacity controls: damage $D\downarrow$, mean $\pm$ sample SD across three training seeds. Each row is separately trained with the same physical-step budget and uses the formal evaluation of Table~\ref{tab:had-main}. These controls examine training depth, parameter sharing, and host capacity; they are distinct from the frozen exits in Fig.~\ref{fig:mechanism}(c). Bold: lowest mean.}
+\label{tab:had-supplement}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lp{0.30\textwidth}rrrr@{}}
+\toprule
+Method / variant & Design or capacity change & ID & $K$-OOD & $N$-OOD & Joint OOD \\
+\midrule
+\textbf{LEAF} & Shared updates; train R1--R4 & $\mathbf{0.405\pm0.097}$ & $\mathbf{0.996\pm0.233}$ & $0.575\pm0.235$ & $\mathbf{1.097\pm0.105}$ \\
+One round & Train and execute R1 only & $0.609\pm0.272$ & $1.203\pm0.402$ & $1.355\pm0.884$ & $2.157\pm1.006$ \\
+Fixed depth & Train at R4 throughout & $0.407\pm0.204$ & $1.004\pm0.665$ & $0.659\pm0.184$ & $1.265\pm0.230$ \\
+Unshared rounds & Independent update blocks per round & $0.476\pm0.183$ & $1.127\pm0.157$ & $\mathbf{0.543\pm0.156}$ & $1.232\pm0.253$ \\
+REFIL-matched & Enlarge host to 176,393 actor parameters & $0.914\pm0.165$ & $2.493\pm0.280$ & $2.269\pm0.312$ & $4.170\pm0.760$ \\
+\bottomrule
+\end{tabular*}
+\par\vspace{2pt}\parbox{\textwidth}{\footnotesize
+One round, Fixed depth, and Unshared rounds retain stopped-gradient history queries, unlike LEAF. Single-round fusion is trivial. Unshared rounds also increases parameter count. The comparisons with LEAF are not single-factor changes, and equal physical-step budgets do not imply equal computation budgets.}
+\end{table*}}
