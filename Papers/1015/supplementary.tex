@@ -1,0 +1,57 @@
+% LEAF 1015 版补充材料入口，单独编译为 supplementary.pdf，正文页数不受影响。
+% 正文内容在 sections/appendix/appendix.tex，新增文献在 sections/appendix/references_supp.bib。
+% 正文的章节、公式、命题、表格编号经 xr-hyper 从 main.aux 读取（前缀 M-），因此必须先完整编译 main.tex。
+%   本地：tectonic -Z keep-intermediates main.tex，再 tectonic supplementary.tex（或 pdfLaTeX + BibTeX 依次编译）。
+%   Overleaf：项目根目录的 latexmkrc 会在编译本文件时先编译 main.tex 生成 main.aux，只需把本文件设为主文档编译。
+\RequirePackage[T1]{fontenc}
+\documentclass[journal,10pt]{IEEEtran}
+\usepackage{amsmath,amssymb}
+\usepackage{algorithm,algorithmic}
+\usepackage{array,booktabs,multirow}
+\usepackage{graphicx,xcolor}
+\usepackage{cite,url}
+\usepackage{xr-hyper}
+\usepackage[hidelinks]{hyperref}
+
+% main.aux stores captions that contain the vehicle switch of main.tex.
+\newif\ifvehicledetail
+\vehicledetailtrue
+
+% Overleaf 的 xr 用法：声明 main.aux 依赖，配合 latexmkrc 自动生成。
+\makeatletter
+\newcommand*{\addFileDependency}[1]{\typeout{(#1)}\@addtofilelist{#1}\IfFileExists{#1}{}{\typeout{No file #1.}}}
+\makeatother
+\newcommand*{\myexternaldocument}[2][]{\externaldocument[#1]{#2}\addFileDependency{#2.tex}\addFileDependency{#2.aux}}
+\myexternaldocument[M-]{main}
+
+\newcommand{\mref}[1]{\ref{M-#1}}
+\newcommand{\meqref}[1]{\eqref{M-#1}}
+\newcommand{\tofill}[1]{\textcolor{red}{[#1]}}
+
+\newtheorem{lemma}{Lemma}
+\renewcommand{\thelemma}{S\arabic{lemma}}
+\renewcommand{\theequation}{S\arabic{equation}}
+\renewcommand{\thetable}{S\arabic{table}}
+\renewcommand{\thefigure}{S\arabic{figure}}
+\renewcommand{\thealgorithm}{S\arabic{algorithm}}
+\renewcommand{\thesection}{\Alph{section}}
+\renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
+\renewcommand{\thesubsectiondis}{\thesection.\arabic{subsection}}
+\renewcommand{\algorithmiccomment}[1]{\hfill$\triangleright$~#1}
+\hypersetup{pdftitle={Supplementary Material for Looped Threat Context Reasoning for Scalable Multiagent Target Defense}}
+
+\begin{document}
+\bstctlcite{leafBibliographyControl}
+\title{Supplementary Material for\\ Looped Threat Context Reasoning for\\ Scalable Multiagent Target Defense}
+\author{First~Author, Second~Author, and Third~Author}
+\markboth{IEEE Transactions on Automation Science and Engineering}%
+{Supplementary Material for Looped Threat Context Reasoning for Scalable Multiagent Target Defense}
+\maketitle
+
+\noindent This supplement accompanies the main text. Appendix~\ref{sec:s-notation} collects the notation, Appendix~\ref{sec:s-proofs} proves the propositions, Appendix~\ref{sec:s-env} specifies the simulation environment and the attacker rule, Appendix~\ref{sec:s-baselines} describes how every baseline is adapted, Appendix~\ref{sec:s-leaf} gives the implementation of LEAF, Appendix~\ref{sec:s-results} reports additional results, and Appendix~\ref{sec:s-discussion} discusses their implications.
+
+\input{sections/appendix/appendix}
+
+\bibliographystyle{IEEEtran}
+\bibliography{references,sections/appendix/references_supp}
+\end{document}

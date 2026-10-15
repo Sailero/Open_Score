@@ -1,0 +1,41 @@
+% =====================================================================
+% 1015 版前置部分：标题、作者、摘要、Note to Practitioners、Index Terms
+% 版式：IEEEtran journal（TASE）。在 main.tex 的 \begin{document} 之后直接
+%   \input{sections/sec_1_2/front_matter}
+% 本文件和 introduction.tex、related_work.tex 用到的文献都在同目录 references.bib。
+% 摘要与引言中的数字来自 Open-SCORE/outputs/main/had/aggregates.json
+% （comparison、design_comparison）和 Open-SCORE/outputs/main/summary.json
+% （nomem_depth_analysis）。平台统一写作 SkyHAD 空中攻防环境，不点明动力学模型。
+% =====================================================================
+
+% 推荐标题。备选：
+%   Looped Threat-Context Reasoning for Zero-Shot Scalable Multi-Target Defense
+%   Train Small, Defend Large: Looped Threat Context Reasoning for Multiagent Target Defense
+\title{Looped Threat Context Reasoning for\\ Scalable Multiagent Target Defense}
+
+% 作者与首页脚注占位，投稿前替换。
+\author{First~Author, Second~Author, and Third~Author%
+\thanks{Manuscript received Month DD, 2026. This work was supported by ...}%
+\thanks{The authors are with ... (e-mail: ...).}%
+}
+
+\markboth{IEEE Transactions on Automation Science and Engineering}%
+{Looped Threat Context Reasoning for Scalable Multiagent Target Defense}
+
+\maketitle
+
+% 摘要单段，上限 200 词。叙述中的数字只保留训练与部署规模一处，优势用可核对的定性表述（不写 significantly）。
+\begin{abstract}
+Multiagent target defense requires defenders to protect several assets from attackers. Because team and asset counts are rarely known in advance, a policy should train once on small engagements and transfer to larger ones. Transfer is hard because an attacker's threat depends on the target it approaches and on the teammates already covering it. We call this relation the threat context. We propose Looped Entity Attention with Fused reading (LEAF), which builds this context by looping one weight-shared entity-attention operator. A query formed from the defender's current state reads every round, the reads are fused, and recurrent memory enters only after reading. Training samples the number of rounds, so the policy can act after any round. In the SkyHAD aerial defense environment, policies trained with at most 10 defenders and 3 targets transfer without retraining to 50 defenders or 12 targets. LEAF has the lowest target damage in every test configuration, and in every test group even its weakest training run beats the best run of each baseline. Ablations confirm the roles of context construction, multi-round refinement, and memory placement. With a single round of reasoning, LEAF keeps nearly all of its protection, whereas a fixed-depth model collapses.
+\end{abstract}
+
+% TASE 要求的 Note to Practitioners，用非专业语言写实际用途、潜力与局限，正文 200 词（要求 100--300 词）。
+% 借用 abstract 环境排版，使其与摘要同样式，显示为 Note to Practitioners---。
+{\renewcommand{\abstractname}{Note to Practitioners}%
+\begin{abstract}
+Teams of autonomous aircraft that guard airports, ports, or industrial sites must handle attacks whose size is unknown in advance. This work provides one control policy that is trained in small simulated engagements and then runs unchanged with several times more defenders, attackers, and protected sites. Every defender runs a copy of the same network on the positions, velocities, and status of the aircraft and sites it observes, and the network returns its next maneuver. Adding aircraft or sites needs no retraining, because all entities share the same parameters. The network first relates each attacker to the protected sites and nearby defenders, then interprets this picture from the defender's own situation, and only afterward uses its memory of earlier steps. Operators can also set how many reasoning rounds the network runs. A single round already keeps nearly all of the protection, so the controller can be matched to the onboard computer and the required decision rate without training a new model. The policy has so far been tested in simulation, where the defenders see every aircraft and site and the attackers follow a fixed rule. Field use calls for further tests with onboard sensors, communication delays, and attackers that adapt their tactics.
+\end{abstract}}
+
+\begin{IEEEkeywords}
+Multiagent reinforcement learning, multi-target defense, scale generalization, entity attention, iterative reasoning, unmanned aerial vehicles.
+\end{IEEEkeywords}

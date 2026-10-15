@@ -1,0 +1,69 @@
+% Placeholder LEAF framework for the 1015 draft, adapted from Papers/1014/figures/framework.tex.
+% Frames 1 to 4 match Sections IV-B to IV-E, and the unframed encoder on the left belongs to Section IV-A.
+\begin{tikzpicture}[x=1cm,y=1cm,>=Stealth,
+ box/.style={draw=blue!45!black,rounded corners=2pt,fill=blue!4,align=center,font=\small,minimum height=.76cm},
+ smallbox/.style={box,minimum width=1.42cm},
+ trainbox/.style={box,dashed,draw=black!55,fill=white},
+ flow/.style={->,thick,draw=black!65},
+ queryflow/.style={->,thick,draw=orange!70!black},
+ trainflow/.style={->,thick,dashed,draw=black!55},
+ frame/.style={rounded corners=5pt,line width=.7pt},
+ tag/.style={anchor=west,font=\footnotesize},
+ every node/.style={font=\small}]
+\draw[frame,draw=blue!45!black,fill=blue!2] (4.95,-0.7) rectangle (15.2,0.98);
+\draw[frame,draw=orange!60!black,fill=orange!3] (4.3,-1.08) rectangle (18.95,-3.45);
+\draw[frame,draw=green!35!black,fill=green!3] (6.2,-3.75) rectangle (18.95,-5.95);
+\draw[frame,dashed,draw=black!50,fill=black!2] (-1.35,-6.35) rectangle (18.95,-8.05);
+\node[tag,text=blue!50!black] at (5.1,0.74) {\textbf{1}\enspace Looped threat-context construction with one shared operator $F$};
+\node[tag,text=orange!65!black] at (4.45,-3.2) {\textbf{2}\enspace Current-state reading and fused readout, one fixed query and one shared reader};
+\node[tag,text=green!35!black] at (6.35,-5.62) {\textbf{3}\enspace Downstream temporal memory};
+\node[tag,text=black!65] at (-1.2,-6.6) {\textbf{4}\enspace Sampled-depth training and deployment};
+\node[font=\footnotesize,text=black!55] at (1.6,0.76) {Egocentric encoding};
+\node[box,minimum width=2.0cm] (obs) at (0,0) {Egocentric view\\$X_{i,t}$, $m_{i,t}$};
+\node[box,minimum width=1.9cm] (enc) at (3.2,0) {Shared encoder\\$Z_{i,t}$};
+\node[box,minimum width=1.7cm] (h0) at (6.4,0) {Projection, mask\\[2pt]$H^{(0)}_{i,t}$};
+\node[smallbox] (h1) at (9.2,0) {$H^{(1)}$};
+\node[smallbox] (h2) at (11.5,0) {$H^{(2)}$};
+\node[smallbox] (hl) at (14.1,0) {$H^{(L)}$};
+\draw[flow] (obs) -- (enc);
+\draw[flow] (enc) -- (h0);
+\draw[flow] (h0) -- node[above,font=\footnotesize] {$F$} (h1);
+\draw[flow] (h1) -- node[above,font=\footnotesize] {$F$} (h2);
+\draw[flow] (h2) -- node[above,font=\footnotesize] {$\cdots\ F$} (hl);
+\node[box,fill=orange!8,draw=orange!60!black,minimum width=2.5cm] (query) at (6.0,-2.2) {Current-state query\\$q=W_qE^{\mathrm{self}}+b_q$};
+\node[smallbox] (u1) at (9.2,-2.2) {Read $u^{(1)}$};
+\node[smallbox] (u2) at (11.5,-2.2) {Read $u^{(2)}$};
+\node[smallbox] (ul) at (14.1,-2.2) {Read $u^{(L)}$};
+\node[box,minimum width=2.6cm] (fusion) at (17.2,-2.2) {Fused readout\\[2pt]$c^{[L]}=\sum_r\alpha^{[L]}_r u^{(r)}$};
+\draw[queryflow] (h0.south) -- ++(0,-.55) -| (query.north);
+\draw[flow] (h1) -- (u1);
+\draw[flow] (h2) -- (u2);
+\draw[flow] (hl) -- (ul);
+\draw[queryflow] (query.east) -- (u1.west);
+\draw[draw=orange!70!black,thick] (7.95,-2.2) -- (7.95,-2.9) -- (14.1,-2.9);
+\draw[queryflow] (11.5,-2.9) -- (u2.south);
+\draw[queryflow] (14.1,-2.9) -- (ul.south);
+\draw[flow] (ul) -- (fusion);
+\draw[flow] (u1.east) -- ++(.25,0) |- (17.2,-1.32) -- (fusion.north);
+\draw[flow] (u2.east) -- ++(.25,0) |- (17.2,-1.32);
+\node[box,minimum width=2.3cm] (base) at (3.2,-4.7) {REFIL host attention\\Local feature $\ell_{i,t}$};
+\node[box,minimum width=2.45cm] (res) at (8.0,-4.7) {$\ell'=\ell+W_f c^{[L]}+b_f$};
+\node[box,fill=green!5,draw=green!35!black,minimum width=2.8cm] (gru) at (12.2,-4.7) {Temporal GRU, one update\\$h_{i,t}=\operatorname{GRU}(\ell',h_{i,t-1})$};
+\node[box,minimum width=2.4cm] (qval) at (17.2,-4.7) {Intent utilities\\$Q_\theta(\tau_{i,t},\cdot)$};
+\draw[flow] (enc.south) -- (base.north);
+\draw[flow] (base) -- (res);
+\draw[flow] (fusion.south) |- (8.0,-3.98) -- (res.north);
+\draw[flow] (res) -- (gru);
+\draw[flow] (gru) -- (qval);
+\node[font=\small,text=green!35!black] (prev) at (12.6,-5.6) {Previous state $h_{i,t-1}$};
+\draw[flow,draw=green!35!black] (prev.north) -- (prev.north |- gru.south);
+\node[trainbox,minimum width=2.6cm] (samp) at (1.5,-7.4) {Depth sampler\\$L\sim\mathcal U\{1,\dots,4\}$};
+\node[trainbox,minimum width=2.6cm] (branch) at (5.6,-7.4) {Online, target, and\\imagined branches at $L$};
+\node[trainbox,minimum width=2.6cm] (mix) at (9.9,-7.4) {Monotonic mixer\\[2pt]$Q^{[L]}_{\mathrm{tot}}$, $Q^{\mathrm{im},[L]}_{\mathrm{tot}}$};
+\node[trainbox,minimum width=2.6cm] (loss) at (14.0,-7.4) {Sampled-depth loss\\[2pt]$(1-\lambda)\mathcal L^{[L]}_{\mathrm{TD}}+\lambda\mathcal L^{[L]}_{\mathrm{im}}$};
+\node[box,minimum width=2.4cm] (deploy) at (17.4,-7.4) {Deployment\\fixed $L_{\mathrm{exec}}$, no mixer};
+\draw[trainflow] (samp) -- (branch);
+\draw[trainflow] (branch) -- (mix);
+\draw[trainflow] (mix) -- (loss);
+\draw[trainflow] (qval.south) |- (9.9,-6.15) -- (mix.north);
+\end{tikzpicture}

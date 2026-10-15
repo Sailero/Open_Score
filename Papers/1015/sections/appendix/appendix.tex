@@ -1,0 +1,885 @@
+% =====================================================================
+% 补充材料正文（1015 版），由 Papers/1015/supplementary.tex 读入并单独编译。
+% 正文编号经 xr-hyper 以前缀 M- 引用：\mref{标签}、\meqref{公式标签}，需先编译 main.tex 得到 main.aux。
+% 本附录用到的正文标签：sec:problem、subsec:pf-scenario、subsec:pf-decpomdp、subsec:pf-attacker、
+%   subsec:pf-generalization、sec:method、subsec:method-loop、subsec:method-read、subsec:method-memory、
+%   subsec:method-training、sec:experiments、eq:fw-dynamics、eq:fw-reference、eq:fw-kernel、eq:fw-reward、
+%   eq:fw-coverage、eq:fw-assignment、eq:fw-rush、eq:fw-mixing、eq:encoding、eq:loop、eq:read、eq:fusion、
+%   eq:decision、eq:isolation、eq:loss、eq:target、eq:prefix、prop:selection、prop:prefix、alg:leaf、
+%   tab:fw-setting、tab:design。
+% 载具口径：环境细节按第三章 SkyHAD 4.2 固定翼加速度意图 Damage 任务撰写（用户 10-15 决定）。
+% 红色 \tofill{} 为依赖实验实现、待用户在固定翼运行中确认的数值，见各处注释。
+% 数据来源：附录 F 的数值取自 Papers/1015/figures/src/figure_data.json（figdata.py 由 Open-SCORE/outputs/main
+%   的正式记录生成，与第五章同源），命题 2 的分箱统计取自
+%   Open-SCORE/outputs/main/had/regir_nomem/mechanisms/results.json.gz 的只读汇总。这些记录来自现有正式运行
+%   （平面 HAD 2.1.0 设定），若在固定翼设定下重跑，需要与第五章一起重新生成。
+% =====================================================================
+
+\section{Notation}
+\label{sec:s-notation}
+Table~\ref{tab:s-notation} collects the symbols of the main text and of this supplement. Equations, tables, lemmas, and the algorithm of the supplement carry the prefix S, and all other numbers refer to the main text.
+
+\begin{table}[!t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{Main Notation}
+\label{tab:s-notation}
+\begin{tabular}{@{}p{0.34\columnwidth}p{0.6\columnwidth}@{}}
+\toprule
+Symbol & Meaning\\
+\midrule
+$\mathbf n=(N_R,N_B,K)$, $M$ & configuration and number of entities $N_R+N_B+K$\\
+$\mathcal R_t$, $\mathcal B_t$, $\mathcal T$ & living defenders, living attackers, targets\\
+$\mathcal V$, $\bar a$, $\Delta t$ & intent set with $|\mathcal V|=27$, acceleration scale, decision interval\\
+$r_{\rm f}$, $r_0$, $r_1$ & firing radius, full-damage and zero-damage radii\\
+$l_{\rm c}$, $l_{\rm tr}$, $z_t$ & coverage and travel scales of the attacker rule, private assignment\\
+$X_{i,t}$, $m_{i,t}$, $d_x$ & egocentric entity matrix, exclusion mask, token width\\
+$Z$, $E$, $H^{(r)}$ & encoder tokens, projected tokens, context states after round $r$\\
+$d_z$, $d$, $d_h$ & encoder width 128, working width 64, host and GRU width 64\\
+$F$, $L$, $L_{\max}$, $L_{\rm exec}$ & shared operator, rounds, maximum training depth 4, execution depth\\
+$q$, $u^{(r)}$, $\zeta_r$ & query, read of round $r$, fusion score\\
+$\alpha^{[L]}_r$, $c^{[L]}$ & fusion weight, threat-context feature at depth $L$\\
+$\ell$, $h$, $Q_\theta$ & host feature, GRU state, intent utilities\\
+$\lambda$, $\gamma$ & imagined-loss weight 0.5, discount 0.99\\
+$\beta$, $\xi$, $\kappa$ & fusion mass beyond round $p$, read spread, Lipschitz constant of Proposition~\mref{prop:prefix}\\
+$\Phi$, $\nu$, $l_{\rm sh}$ & shaping potential, its coefficient and range\\
+$D$, $P$, CVaR & episode damage, share of episodes with damage, mean damage of the worst 10\% of episodes\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Proofs}
+\label{sec:s-proofs}
+This appendix proves the two propositions of Section~\mref{sec:method} and the supporting properties that the main text uses. Lemma~\ref{lem:s-structure} establishes the invariances behind the set-structured requirement, Appendices~\ref{sec:s-proof-selection} and~\ref{sec:s-proof-prefix} give complete proofs of Propositions~\mref{prop:selection} and~\mref{prop:prefix}, and Lemma~\ref{lem:s-shaping} shows that the training reward of Appendix~\ref{sec:s-leaf} preserves the greedy intents.
+
+\subsection{Attention Notation}
+All attention modules of LEAF and REFIL are masked multihead attention. With $H_{\rm a}$ heads of width $d_{\rm k}$, a query $a$, a key and value matrix $Y$ with rows $y_1,\dots,y_M$, and a mask $m$, head $o$ forms over the permitted set $\mathcal P=\{j:m_j=0\}$ the scores and weights
+\begin{equation}
+s^{o}_{j}=\frac{\langle W^{o}_Qa,W^{o}_Ky_j\rangle}{\sqrt{d_{\rm k}}},\qquad
+w^{o}_{j}=\frac{\exp(s^{o}_{j})}{\sum_{k\in\mathcal P}\exp(s^{o}_{k})},\quad j\in\mathcal P,
+\label{eq:s-weights}
+\end{equation}
+and $w^{o}_{j}=0$ for $j\notin\mathcal P$. The module returns
+\begin{equation}
+\operatorname{MHA}^{m}(a,Y,Y)=W_O\Big[\sum_{j\in\mathcal P}w^{1}_{j}W^{1}_Vy_j;\dots;\sum_{j\in\mathcal P}w^{H_{\rm a}}_{j}W^{H_{\rm a}}_Vy_j\Big].
+\label{eq:s-mha}
+\end{equation}
+The zero weights of excluded keys implement the $-\infty$ logits of Section~\mref{sec:method}, and an empty permitted set gives a zero output. When the first argument has several rows, as in \meqref{eq:loop}, each row acts as its own query. The LEAF modules use $H_{\rm a}=4$ and $d_{\rm k}=16$ without projection biases, and the host attention of REFIL uses $H_{\rm a}=4$ and $d_{\rm k}=32$.
+
+\subsection{Structural Properties}
+
+\begin{lemma}[Structural properties]
+\label{lem:s-structure}
+Fix the parameters and a depth $L$. Let defender $i$ hold the egocentric matrix $X$ with its own token in the first row and the mask $m$ with $m_1=0$.
+\begin{enumerate}
+\item[(a)] For every permutation $\pi$ of $\{2,\dots,M\}$, let $P_\pi$ permute the rows $2$ to $M$ and keep the first row. Then $\ell(P_\pi X,P_\pi m)=\ell(X,m)$, $c^{[L]}(P_\pi X,P_\pi m)=c^{[L]}(X,m)$, and the utilities $Q_\theta$ are unchanged for every entering state $h_{t-1}$.
+\item[(b)] Appending rows with mask value one leaves $\ell$, $c^{[L]}$, and $Q_\theta$ unchanged. The utilities thus depend on the observation only through the set of permitted tokens.
+\item[(c)] The number of parameters depends on $d_x$, $|\mathcal V|$, and the layer widths, and not on $M$, $N_R$, $N_B$, $K$, or $L$.
+\item[(d)] For fixed $X$, $m$, and $L$, none of $Z$, $\ell$, $E$, $H^{(r)}$, $q$, $u^{(r)}$, $\alpha^{[L]}_r$, and $c^{[L]}$ depends on $h_{t-1}$, so \meqref{eq:isolation} holds.
+\end{enumerate}
+\end{lemma}
+
+\begin{IEEEproof}
+Three facts about the building blocks are used. (i) A rowwise map $f$, such as $\phi_{\rm enc}$, $\operatorname{Lin}_g$, layer normalization, the feedforward network, or $\operatorname{Mask}_m$, satisfies $f(PY)=Pf(Y)$ for every row permutation $P$ that also permutes the mask. (ii) In \eqref{eq:s-weights}, the score between query row $j$ and key row $k$ depends only on these two rows, and the normalizing sum runs over the permitted set, which $P$ maps onto itself. The attention of \meqref{eq:loop} with one query per row is therefore permutation equivariant, $\operatorname{MHA}^{Pm}(PA,PY,PY)=P\operatorname{MHA}^{m}(A,Y,Y)$. (iii) For one fixed query $a$, the read $\operatorname{MHA}^{m}(a,Y,Y)$ sums over the permitted keys, so $\operatorname{MHA}^{Pm}(a,PY,PY)=\operatorname{MHA}^{m}(a,Y,Y)$.
+
+(a) By (i), $Z$, $E$, and $H^{(0)}$ permute with the rows. If $H^{(r-1)}$ permutes, then $\operatorname{LN}_a(H^{(r-1)})$ permutes by (i), the attention term of \meqref{eq:loop} permutes by (ii), and the feedforward and mask terms permute by (i), so $H^{(r)}$ permutes. By induction, every context state permutes. The query $q=W_qE^{\rm self}+b_q$ uses only the first row, which $P_\pi$ keeps. By (iii) every read $u^{(r)}$ is unchanged, and so are the scores $\zeta_r$, the weights $\alpha^{[L]}_r$, and $c^{[L]}$. The host path reads $Z$ with the self row as its only query and then applies rowwise maps to the pooled vector, so $\ell$ is unchanged by (iii). The GRU and the output head receive $\ell+W_fc^{[L]}+b_f$ and $h_{t-1}$, which are unchanged.
+
+(b) Let $\tilde X$ append rows with mask one. Excluded rows receive zero weight as keys in every softmax, so they never contribute to a permitted row or to a read. Their own states are set to zero after each round and are never used. By induction over rounds, the permitted rows of $\tilde H^{(r)}$ equal the rows of $H^{(r)}$, and all reads coincide. The host read coincides for the same reason. The self row is permitted for a living defender, so every softmax has a nonempty permitted set. Destroyed aircraft carry mask one and are covered by the same argument.
+
+(c) Every parameter tensor belongs to $\phi_{\rm enc}$, $\phi_{\rm host}$, $\operatorname{Lin}_g$, $F$, $W_q$, the reader, the scorer, $W_f$, the GRU, or $W_o$, and its shape is fixed by $d_x$, $d_z$, $d$, $d_h$, $|\mathcal V|$, the number of heads, and the feedforward width. The same tensors process every row, every defender, and every round, and no tensor is indexed by an entity slot, a team size, or a round. Table~\ref{tab:s-arch} gives the count.
+
+(d) The computation \meqref{eq:encoding} to \meqref{eq:fusion} takes $X$ and $m$ as its only inputs. The entering state appears only as the second argument of the GRU in \meqref{eq:decision}. Hence $c^{[L]}$ is a function of $(X,m,L)$, and its derivative with respect to $h_{t-1}$ vanishes.
+\end{IEEEproof}
+
+The Memory query variant of Section~\mref{sec:experiments} forms $q=W_q[E^{\rm self};\operatorname{sg}(h_{t-1})]+b_q$ with the stop-gradient operator $\operatorname{sg}$. Its forward pass depends on $h_{t-1}$, so property (d) fails for this variant while (a) to (c) still hold.
+
+\subsection{\texorpdfstring{Proof of Proposition~\mref{prop:selection}}{Proof of Proposition 1}}
+\label{sec:s-proof-selection}
+
+\noindent\textit{Proposition~\mref{prop:selection} (Selection without context):} \textit{Let $u=\operatorname{MHA}^{m}(q,Z,Z)$ be a read in which each row $z_j$ of $Z$ depends only on entity $j$ and defender $i$. In every head, two permitted entities $a$ and $b$ receive attention weights with $w_a/w_b=\exp(s_a-s_b)$, where $s_j$ depends only on $q$ and $z_j$. The ratio is therefore identical in any two scenes that share $q$, $z_a$, and $z_b$, whatever the other entities are.}
+
+\begin{IEEEproof}
+Fix a head and drop its index. By \eqref{eq:s-weights}, $w_j=\exp(s_j)/S$ for $j\in\mathcal P$ with $S=\sum_{k\in\mathcal P}\exp(s_k)$. The normalizer $S$ is positive and finite, so $w_b>0$, and for $a,b\in\mathcal P$
+\begin{equation*}
+\frac{w_a}{w_b}=\frac{\exp(s_a)/S}{\exp(s_b)/S}=\exp(s_a-s_b).
+\end{equation*}
+The score $s_j=\langle W_Qq,W_Kz_j\rangle/\sqrt{d_{\rm k}}$ is a function of $q$ and $z_j$ through the fixed matrices $W_Q$ and $W_K$. Consider a second scene with query $q'$, rows $z'_j$, and permitted set $\mathcal P'\ni a,b$, and suppose that $q'=q$, $z'_a=z_a$, and $z'_b=z_b$. Then $s'_a=s_a$ and $s'_b=s_b$, hence $w'_a/w'_b=w_a/w_b$. The rows $z'_j$ with $j\notin\{a,b\}$ and the sets $\mathcal P$ and $\mathcal P'$ are arbitrary, so the ratio does not depend on the other entities. The argument applies to every head.
+\end{IEEEproof}
+
+The hypothesis holds for the host read of REFIL, whose rows are $z_j=\operatorname{ReLU}(W_ex_{i,j}+b_e)$ with $x_{i,j}$ the egocentric token of entity $j$, for the self-query read of SPECTra, whose typed projections act on one token at a time, and for a read of $H^{(0)}=\operatorname{Mask}_m(\operatorname{Lin}_g(Z))$, which is the Direct read variant. In all three reads, the token of entity $j$ holds properties of entity $j$ relative to defender $i$. The positions of the teammates near the target of an attacker are properties of other entities. Moving these teammates can rescale the weights of all entities through $S$ and adds their own value terms to the read, but it cannot change how the read weighs one attacker against another.
+
+The hypothesis fails for $H^{(L)}$ with $L\ge1$. By \meqref{eq:loop}, the attention term in the row of attacker $a$ after one round sums the values of all permitted rows with weights set by the query of row $a$. A teammate's token therefore enters $H^{(1)}_a$ and $H^{(1)}_b$ with different weights, and the score difference $s_a-s_b$ of the next read varies with that token unless the subsequent maps cancel this dependence. Proposition~\mref{prop:selection} then places no constraint on the read. Whether the trained operator uses this freedom is an empirical question, which the comparison of Direct read and One round in Section~\mref{sec:experiments} answers at the level of behavior.
+
+\subsection{\texorpdfstring{Proof of Proposition~\mref{prop:prefix}}{Proof of Proposition 2}}
+\label{sec:s-proof-prefix}
+Fix defender $i$ at step $t$, its observation $X$, mask $m$, and entering state $h_{t-1}$. For a depth $L$, write $H^{(r)}$, $u^{(r)}$, and $\zeta_r$ for the quantities of \meqref{eq:loop} to \meqref{eq:fusion} in a run with $L$ rounds, and let
+\begin{equation}
+\Psi(c)=W_o\operatorname{GRU}\big(\ell+W_fc+b_f,\;h_{t-1}\big)+b_o
+\label{eq:s-decision-map}
+\end{equation}
+be the map from a threat-context feature to the intent utilities in \meqref{eq:decision}, so that the utilities at depth $L$ are $Q^{[L]}=\Psi(c^{[L]})$.
+
+\begin{lemma}[Prefix consistency]
+\label{lem:s-prefix}
+For $p\le L$, the states $H^{(r)}$, reads $u^{(r)}$, and scores $\zeta_r$ with $r\le p$ coincide in the runs with $p$ and with $L$ rounds. The host feature $\ell$ and the map $\Psi$ do not depend on the depth.
+\end{lemma}
+
+\begin{IEEEproof}
+$H^{(0)}=\operatorname{Mask}_m(\operatorname{Lin}_g(\phi_{\rm enc}(X)))$ involves no depth. Each round applies the same map $F^{m}$, whose parameters depend neither on $L$ nor on $r$, so induction over $r\le p$ gives $H^{(r)}=(F^m)^{r}(H^{(0)})$ in both runs. The query $q=W_qE^{\rm self}+b_q$ depends only on $X$. The reader and the scorer use the same parameters in every round, so $u^{(r)}$ and $\zeta_r=w_s^\top u^{(r)}+b_s$ coincide for $r\le p$. The host feature $\ell=\phi_{\rm host}(Z,m)$ involves neither the loop nor the depth, and $\Psi$ depends only on $\ell$, $h_{t-1}$, and the parameters.
+\end{IEEEproof}
+
+\begin{lemma}[Renormalization]
+\label{lem:s-renorm}
+Let $p<L$ and $\beta=\sum_{r=p+1}^{L}\alpha^{[L]}_r$. Then $0<\beta<1$ and $\alpha^{[p]}_r=\alpha^{[L]}_r/(1-\beta)$ for $r\le p$.
+\end{lemma}
+
+\begin{IEEEproof}
+Let $S_n=\sum_{k=1}^{n}\exp(\zeta_k)$, which by Lemma~\ref{lem:s-prefix} is common to both runs for $n\le p$. Every term of $S_L$ is positive, and $S_L$ has $L-p>0$ terms beyond $S_p$, so $1-\beta=S_p/S_L$ lies strictly between zero and one. For $r\le p$,
+\begin{equation*}
+\alpha^{[p]}_r=\frac{\exp(\zeta_r)}{S_p}=\frac{\exp(\zeta_r)}{S_L}\cdot\frac{S_L}{S_p}=\frac{\alpha^{[L]}_r}{1-\beta}.
+\end{equation*}
+\end{IEEEproof}
+
+\noindent\textit{Proof of \meqref{eq:prefix}:} By Lemma~\ref{lem:s-renorm}, $\sum_{r\le p}\alpha^{[L]}_ru^{(r)}=(1-\beta)\sum_{r\le p}\alpha^{[p]}_ru^{(r)}=(1-\beta)c^{[p]}$. Writing $c^{[p]}=(1-\beta)c^{[p]}+\sum_{r>p}\alpha^{[L]}_rc^{[p]}$ and subtracting gives
+\begin{equation}
+c^{[L]}-c^{[p]}=\sum_{r=p+1}^{L}\alpha^{[L]}_r\big(u^{(r)}-c^{[p]}\big).
+\label{eq:s-prefix-identity}
+\end{equation}
+The weights are nonnegative, so the triangle inequality yields
+\begin{align*}
+\big\|c^{[L]}-c^{[p]}\big\|&\le\sum_{r=p+1}^{L}\alpha^{[L]}_r\big\|u^{(r)}-c^{[p]}\big\|\\
+&\le\beta\max_{p<r\le L}\big\|u^{(r)}-c^{[p]}\big\|=\beta\xi.\qquad\blacksquare
+\end{align*}
+
+\noindent\textit{Proof of the intent statement:} By Lemma~\ref{lem:s-prefix}, both depths use the same map $\Psi$, so $Q^{[L]}=\Psi(c^{[L]})$ and $Q^{[p]}=\Psi(c^{[p]})$. The Lipschitz assumption on the segment between the two features and \meqref{eq:prefix} give $\|Q^{[L]}-Q^{[p]}\|_\infty\le\kappa\beta\xi=:\delta$. Let $a^\star$ maximize $Q^{[L]}$ and let its gap $G=Q^{[L]}(a^\star)-\max_{a\ne a^\star}Q^{[L]}(a)$ exceed $2\delta$, which makes $a^\star$ unique. For every $a\ne a^\star$,
+\begin{align*}
+Q^{[p]}(a^\star)&\ge Q^{[L]}(a^\star)-\delta\ge Q^{[L]}(a)+G-\delta\\
+&>Q^{[L]}(a)+\delta\ge Q^{[p]}(a),
+\end{align*}
+so $a^\star$ is the unique maximizer of $Q^{[p]}$ as well.\hfill$\blacksquare$
+
+Three remarks complete the picture. First, the bound \meqref{eq:prefix} is tight. If every late read lies at distance $\xi$ from $c^{[p]}$ in a common direction $e$, so that $u^{(r)}=c^{[p]}+\xi e$ for $r>p$, then \eqref{eq:s-prefix-identity} gives $\|c^{[L]}-c^{[p]}\|=\beta\xi$. Second, no step of the proof uses $L\le L_{\max}$, so the proposition covers execution beyond the training range as well as truncation within it. Third, the proposition compares two depths at one decision with a common entering state. In closed loop, a changed intent alters later observations and memory, so Section~\mref{sec:experiments} evaluates the damage of whole episodes at every depth.
+
+The Lipschitz assumption always holds with a constant that the trained weights determine.
+
+\begin{lemma}[A Lipschitz constant of the decision map]
+\label{lem:s-lipschitz}
+Let the GRU follow the standard gated form~\cite{cho2014gru} with input $x=\ell+W_fc+b_f$,
+\begin{align*}
+g_{\rm r}&=\sigma(W_{ir}x+b_{ir}+W_{hr}h+b_{hr}),\\
+g_{\rm u}&=\sigma(W_{iu}x+b_{iu}+W_{hu}h+b_{hu}),\\
+n&=\tanh\big(W_{in}x+b_{in}+g_{\rm r}\odot(W_{hn}h+b_{hn})\big),\\
+h'&=(1-g_{\rm u})\odot n+g_{\rm u}\odot h,
+\end{align*}
+with reset gate $g_{\rm r}$, update gate $g_{\rm u}$, and $h=h_{t-1}$. Then $\|h_{t-1}\|_\infty<1$ at every step of an episode, and for all $c,c'$
+\begin{equation}
+\|\Psi(c)-\Psi(c')\|_\infty\le\bar\kappa\,\|c-c'\|_2,
+\label{eq:s-kappa}
+\end{equation}
+\begin{align*}
+\bar\kappa=\|W_o\|_{2\to\infty}\Big(&\|W_{in}\|_2+\tfrac14\|W_{hn}h+b_{hn}\|_\infty\|W_{ir}\|_2\\
+&+\tfrac14\big(1+\|h\|_\infty\big)\|W_{iu}\|_2\Big)\|W_f\|_2,
+\end{align*}
+where $\|W_o\|_{2\to\infty}$ is the largest Euclidean norm of a row of $W_o$.
+\end{lemma}
+
+\begin{IEEEproof}
+The state starts at zero, and each update is the elementwise convex combination $h'=(1-g_{\rm u})\odot n+g_{\rm u}\odot h$ with $g_{\rm u}\in(0,1)$ and $|n|<1$, so $\|h\|_\infty<1$ implies $\|h'\|_\infty<1$. The map $\Psi$ is differentiable, and the mean value theorem along the segment from $c'$ to $c$ reduces \eqref{eq:s-kappa} to a bound on the operator norm of its Jacobian from $\|\cdot\|_2$ to $\|\cdot\|_\infty$. With $\sigma'\le\tfrac14$ and $\tanh'\le1$,
+\begin{align*}
+\frac{\partial h'}{\partial x}&=\operatorname{diag}(1-g_{\rm u})\frac{\partial n}{\partial x}+\operatorname{diag}(h-n)\frac{\partial g_{\rm u}}{\partial x},\\
+\Big\|\frac{\partial g_{\rm u}}{\partial x}\Big\|_2&\le\tfrac14\|W_{iu}\|_2,\\
+\Big\|\frac{\partial n}{\partial x}\Big\|_2&\le\|W_{in}\|_2+\tfrac14\|W_{hn}h+b_{hn}\|_\infty\|W_{ir}\|_2,
+\end{align*}
+where the last bound uses
+\begin{equation*}
+\frac{\partial n}{\partial x}=\operatorname{diag}(\tanh')\big[W_{in}+\operatorname{diag}(W_{hn}h+b_{hn})\operatorname{diag}(\sigma')W_{ir}\big].
+\end{equation*}
+Since $0<1-g_{\rm u}<1$ and $|h-n|<1+\|h\|_\infty$ elementwise, $\|\partial h'/\partial x\|_2$ is at most the bracket in $\bar\kappa$. The chain rule gives $\partial\Psi/\partial c=W_o(\partial h'/\partial x)W_f$, and $\|ABv\|_\infty\le\|A\|_{2\to\infty}\|Bv\|_2$ completes the bound.
+\end{IEEEproof}
+
+Lemma~\ref{lem:s-lipschitz} gives a worst-case constant that is valid for every pair of features. The realized utility change $\|Q^{[L]}-Q^{[p]}\|_\infty$ is usually far smaller, and Appendix~\ref{sec:s-results} evaluates the margin condition with this realized change.
+
+\subsection{Potential-Based Training Reward}
+Training adds a potential term to the team reward \meqref{eq:fw-reward}. The potential measures how far the living attackers have closed in on the targets,
+\begin{equation}
+\Phi(s)=-\nu\sum_{b\in\mathcal B}\max\Big(0,\;1-\frac{\min_{k\in\mathcal T}\|p_b-p_k\|}{l_{\rm sh}}\Big),
+\label{eq:s-potential}
+\end{equation}
+with $\Phi=0$ after natural completion, and the training reward is $\tilde r_t=r_t+\gamma\Phi(s_{t+1})-\Phi(s_t)$. The evaluation always reports the unshaped damage $D$.
+
+\begin{lemma}[Invariance of greedy intents]
+\label{lem:s-shaping}
+Let $\Phi$ be bounded with $\Phi=0$ after natural completion, and let $\gamma<1$. For every joint defender policy $\pi$, which may depend on the joint history $\tau_t$, the shaped and the original joint action values satisfy
+\begin{equation}
+\tilde Q^{\pi}(\tau_t,\mathbf a)=Q^{\pi}(\tau_t,\mathbf a)-\mathbb E\big[\Phi(s_t)\mid\tau_t\big]
+\label{eq:s-shaping}
+\end{equation}
+for every joint intent $\mathbf a$. The shift does not depend on $\mathbf a$, so both value functions select the same greedy joint intents and rank policies identically from every history.
+\end{lemma}
+
+\begin{IEEEproof}
+Let $\tilde G_t=\sum_{k\ge0}\gamma^k\tilde r_{t+k}$ be the shaped return from step $t$, where rewards and potentials after natural completion are zero. The shaping terms telescope,
+\begin{equation*}
+\sum_{k=0}^{K-1}\gamma^k\big(\gamma\Phi(s_{t+k+1})-\Phi(s_{t+k})\big)=\gamma^{K}\Phi(s_{t+K})-\Phi(s_t),
+\end{equation*}
+and the first term on the right vanishes as $K\to\infty$ because $\Phi$ is bounded and $\gamma<1$. Hence $\tilde G_t=G_t-\Phi(s_t)$. Taking expectations given $\tau_t$ and $\mathbf a_t=\mathbf a$ yields $\tilde Q^{\pi}(\tau_t,\mathbf a)=Q^{\pi}(\tau_t,\mathbf a)-\mathbb E[\Phi(s_t)\mid\tau_t,\mathbf a_t=\mathbf a]$. The intent at step $t$ is chosen from $\tau_t$ after $s_t$ is drawn, so fixing it does not change the distribution of $s_t$ given $\tau_t$, which gives \eqref{eq:s-shaping}.
+\end{IEEEproof}
+
+The potential \eqref{eq:s-potential} depends only on attacker and target positions, which every defender observes, so the shift in \eqref{eq:s-shaping} equals $\Phi(s_t)$. The identity carries over to the team value of the mixer, which approximates the joint action value. The learner retains the successor value at truncation~\cite{pardo2018timelimits}, so it estimates the time-unbounded values to which the lemma applies. Lemma~\ref{lem:s-shaping} is the cooperative multiagent form of the invariance of Ng et al.~\cite{ng1999shaping,devlin2011shaping}.
+
+\section{Simulation Environment}
+\label{sec:s-env}
+
+\subsection{Platform and Configuration}
+We use SkyHAD 4.2.0~\cite{skyhad2026} with its six-degree-of-freedom fixed-wing model, acceleration-intent control, and the Damage task in three spatial dimensions. Both teams consist of attack aircraft only, so the scout and jammer roles of SkyHAD are absent. SkyHAD scales the geometry of its 5 km base scene by a model-specific factor $\lambda_{\rm s}$, and the fixed-wing model uses $\lambda_{\rm s}=0.4$. The factor multiplies the scene, the opening regions, and all interaction distances, and it leaves the airframe unchanged. Table~\ref{tab:s-env} lists the resulting parameters and extends Table~\mref{tab:fw-setting}.
+
+\begin{table}[!t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{Parameters of the Fixed-Wing Damage Task}
+\label{tab:s-env}
+\begin{tabular}{@{}p{0.3\columnwidth}p{0.64\columnwidth}@{}}
+\toprule
+Quantity & Setting\\
+\midrule
+Scene & $[-1000,1000]^2\times[0,1000]$ m, positions clipped, outward velocity removed at a face\\
+Target region & $[-920,-760]\times[-480,480]\times[200,600]$ m, independent uniform placement\\
+Defender opening & around a uniformly chosen target, area-uniform annulus of 320--880 m\\
+Attacker opening & $x\in[0,1000]$ m, $y\in[-1000,1000]$ m, uniform\\
+Opening altitude and flight & uniform in $[80,600]$ m, trimmed level flight at 30 m/s, defenders east, attackers west\\
+Opening separation & more than 12 m from every entity placed earlier\\
+Airframe & Aerosonde, 11 kg, wing area 0.55 m$^2$, span 2.90 m, chord 0.19 m\\
+Integration & RK4, 100 substeps of 0.01 s per decision\\
+Intents $\mathcal V$ & zero vector and 26 unit directions, $\bar a=5$ m/s$^2$\\
+Autopilot limits & speed 18--30 m/s, bank $\pm45^\circ$, pitch $\pm20^\circ$, flight path $\pm15^\circ$, surfaces $\pm25^\circ$\\
+Collision & swept, all aircraft pairs including teammates, 8 m\\
+Firing and damage & $r_{\rm f}=r_0=120$ m, $r_1=240$ m, unit intensity\\
+Health & aircraft 1, targets 2 and constant in the Damage task\\
+Horizon & $\Delta t=1$ s, $T_{\max}=100$ decisions\\
+Attacker rule & $l_{\rm c}=340$ m, $l_{\rm tr}=2000$ m, events at $t=0$, every 5 decisions, and after casualties\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Opening Distribution}
+A reset draws the targets first, each uniformly in the target region and independently of the others. Each defender then selects one target uniformly at random and samples its horizontal position uniformly by area in the annulus of radii 320 m and 880 m around that target, clipped to the scene. Each attacker samples $x\in[0,1000]$ m and $y\in[-1000,1000]$ m uniformly. Every aircraft samples its altitude uniformly in $[80,600]$ m and starts in trimmed level flight at 30 m/s, with defenders heading east and attackers heading west. An aircraft whose opening lies within 12 m of an entity placed before it is resampled, which prevents overlapping openings and leaves later collisions possible. All draws come from one generator seeded by the scene seed, so a scene seed fixes the same opening for every method. The upper layer of the attacker rule draws from a second generator derived from the scene seed, so its draws do not depend on how many random numbers a defender policy consumes.
+
+\subsection{Aircraft Model and Autopilot}
+Each aircraft is an Aerosonde small fixed-wing aircraft with the parameter set of the BYU MAGICC group~\cite{beard2012small}, which fixes the inertia, aerodynamic, motor, and propeller coefficients. Lift blends the linear model $0.23+5.61\alpha$ with the flat-plate model $2\operatorname{sign}(\alpha)\sin^2\alpha\cos\alpha$ through a sigmoid stall blend with transition rate 50 and stall angle 0.47 rad, and drag follows a parabolic polar with parasitic coefficient 0.043 and Oswald efficiency 0.9. Thrust and propeller torque follow from a steady balance of the DC motor at the commanded throttle. SkyHAD integrates \meqref{eq:fw-dynamics} by RK4 with 100 substeps per decision and renormalizes the attitude quaternion after every substep. The model contains no wind, sensor noise, actuator lag, or ground impact.
+
+An intent $a$ fixes the velocity reference $v^{\rm ref}=v+\bar a\Delta t\,a$ once at the start of the decision, and \meqref{eq:fw-reference} turns it into the course, flight-path, and speed commands $\chi^{\rm ref}$, $\vartheta^{\rm ref}$, and $V^{\rm ref}$. At every RK4 stage the autopilot schedules the trim of straight level flight at $V^{\rm ref}$, obtained from the three force and three moment balances, and applies
+\begin{align}
+\theta_{\rm d}&=\operatorname{clip}_{\pm20^\circ}\big(\theta^\star+\vartheta^{\rm ref}+0.5(\vartheta^{\rm ref}-\vartheta)\big),\nonumber\\
+\phi_{\rm d}&=-\operatorname{clip}_{\pm45^\circ}\big(\arctan(\max(V,18)\,\Delta\chi/g_0)\big),\nonumber\\
+\delta_e&=\delta_e^\star-2(\theta_{\rm d}-\theta)+0.25\,q,\nonumber\\
+\delta_a&=\delta_a^\star+0.5(\phi_{\rm d}-\phi)-0.08\,p,\nonumber\\
+\delta_r&=\delta_r^\star+0.8(\beta_{\rm s}-\beta_{\rm s}^\star)+0.1\big(r-g_0\tan\phi_{\rm d}/\max(V,18)\big),\nonumber\\
+\delta_t&=\delta_t^\star+0.08(V^{\rm ref}-V)+0.7\sin\vartheta^{\rm ref}.
+\label{eq:s-autopilot}
+\end{align}
+Starred quantities belong to the scheduled trim, $\vartheta$ is the flight-path angle, $\Delta\chi$ the wrapped course error, $\phi$ and $\theta$ the bank and pitch with positive bank lowering the right wing, $p$, $q$, and $r$ the body rates in the forward-right-down frame, and $\beta_{\rm s}$ the sideslip. The surfaces, in radians, saturate at $\pm25^\circ$ and the throttle at $[0,1]$. These gains are design choices of SkyHAD and do not reproduce the full BYU autopilot. One intent changes the speed reference by at most 5 m/s and turns it by about $10^\circ$ at 30 m/s, so a defender commits to a maneuver for many decisions.
+
+\subsection{Step Pipeline}
+Every decision step runs the following stages in a fixed order.
+\begin{enumerate}
+\item \emph{Path prediction.} Each living aircraft integrates its dynamics over the step with its held reference, which yields its end state and a path of 100 substep segments. Positions are clipped to the scene, and an aircraft clipped at a face loses the outward component of its velocity.
+\item \emph{Swept collision.} For every pair of living aircraft, teammates included, SkyHAD computes the closest simultaneous separation over the matched substep segments. A separation of at most 8 m destroys both aircraft. Targets do not collide.
+\item \emph{Automatic firing.} On the snapshot before motion and after collisions, a living attacker fires if a target lies strictly within $r_{\rm f}$, and a living defender fires if a living attacker does.
+\item \emph{Damage.} On the same snapshot, every firing aircraft damages every enemy aircraft, and every firing attacker also damages every target, by the kernel \meqref{eq:fw-kernel}. Contributions of several sources add, aircraft health is clipped at zero, and target damage accumulates without a cap.
+\item \emph{Motion and removal.} Surviving aircraft adopt their predicted end states, and every firing aircraft is removed at the end of the step.
+\item \emph{Bookkeeping.} The task sums the step damage $\Delta D_t$ over targets and checks completion and truncation, and the attacker rule evaluates its command events.
+\end{enumerate}
+Firing and damage use positions from before the motion, so an intent affects interactions from the next step on, and a defender cannot escape a collision that its current path already implies.
+
+\subsection{Damage Task, Termination, and Reward}
+In the Damage task, targets keep their health of 2 and only accumulate damage. An episode completes naturally once no attacker remains, whether intercepted, destroyed in a collision, or removed after firing, and it is truncated after $T_{\max}=100$ decisions. Losing all defenders does not end the episode. Every defender receives the team reward $r_t=-\Delta D_t$ of \meqref{eq:fw-reward}, which counts once per step for the team. The evaluation metric is the undiscounted damage $D$ within the horizon. Natural completion stops bootstrapping, and truncation keeps the successor value~\cite{pardo2018timelimits}.
+
+\subsection{Attacker Rule}
+The attacker policy is the fixed two-layer rule of Section~\mref{subsec:pf-attacker}. This subsection gives the details that the main text leaves out.
+
+\emph{Command events.} The upper layer acts before the first decision, after every fifth decision, and after every decision at which an aircraft of either team is destroyed, which includes collisions and the removal of firing aircraft. No event follows the final step of an episode.
+
+\emph{Upper layer.} At an event, the layer evaluates \meqref{eq:fw-coverage} on the living defenders with their health $\sigma_{i,t}$ and the travel term $\bar\varrho_{k,t}/l_{\rm tr}$, and it draws one target from \meqref{eq:fw-assignment}. All living attackers receive this target and keep it until the next event. The draw uses positions and health from before the decision and never the intents that the defenders are about to execute.
+
+\emph{Lower layer.} At every decision, each living attacker selects the intent of \meqref{eq:fw-rush}, the element of $\mathcal V$ with the largest inner product with the unit direction to its target, with ties broken by the lowest intent index. Some unit direction always has a positive inner product, so an attacker always pushes its velocity reference toward the target. The intent passes through the autopilot \eqref{eq:s-autopilot}, so attackers obey the same speed, climb, and bank limits as defenders.
+
+\emph{Consequences.} The rule never evades defenders and flies the most direct course that its intents allow. Firing is automatic, so an attacker fires at the first target that comes within 120 m, which need not be its assigned target, and its explosion damages every target within 240 m. The stochastic upper layer can move the whole attacking force to another target at each event, and the coverage term steers it toward the targets that the defenders cover least.
+
+\subsection{Observation and State Interfaces}
+Table~\ref{tab:s-token} gives the token layout of the egocentric entity table. Positions and velocities are normalized. Destroyed aircraft are excluded by the mask and carry zero rows. The table is padded to 10 defenders, 10 attackers, and 3 targets in training and to 50, 50, and 12 at evaluation, and padding rows are excluded as well. The global table $g(s_t)$ of the mixer holds one row per entity with the same fields in the world frame, contains the previous intents of the defenders, and omits $z_t$ and the command clock.
+
+\begin{table}[!t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{Token Layout of the Egocentric Entity Table}
+\label{tab:s-token}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Field & Width & Defender & Attacker & Target\\
+\midrule
+Position & 3 & relative, own token absolute & relative & relative\\
+Velocity & 3 & relative, own token absolute & relative & zero\\
+Alive flag & 1 & 1 & 1 & 0\\
+Health ratio & 1 & $\sigma$ & $\sigma$ & 0\\
+Damage share & 1 & 0 & 0 & $D_k/N_B$\\
+Type & 3 & one-hot & one-hot & one-hot\\
+Previous intent & $|\mathcal V|$ & one-hot & zero & zero\\
+\midrule
+Total $d_x$ & \multicolumn{4}{l}{$12+|\mathcal V|=\tofill{39}$}\\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\parbox{\columnwidth}{\scriptsize $D_k$ is the accumulated damage of target $k$ and $N_B$ the initial number of attackers. The previous intent is zero at the first decision.}
+\end{table}
+% d_x：按第三章观测字段的三维接口推得 39。平面运行为 10 维基础特征加 9 维上一动作，共 19 维。请按固定翼实现确认。
+
+\subsection{Scale Protocol and Scene Pools}
+Training draws $N\in\{4,6,8,10\}$ with $N_R=N_B=N$ and $K\in\{1,2,3\}$ independently and uniformly for every episode. Section~\mref{sec:experiments} evaluates 24 configurations. The in-distribution group ID holds $(N,K)=(4,2)$, $(6,2)$, $(8,2)$, and $(10,3)$. Target-count extrapolation K-OOD holds $(10,4)$, $(10,6)$, $(10,9)$, and $(10,12)$. Team-size extrapolation N-OOD holds $(15,2)$, $(20,2)$, $(25,2)$, $(30,2)$, $(40,2)$, and $(50,2)$. Joint extrapolation Joint-OOD holds $(15,4)$, $(15,6)$, $(20,4)$, $(20,6)$, $(30,4)$, $(30,6)$, $(30,9)$, and $(30,12)$. The extra configurations $(5,2)$ and $(10,2)$ enter only the average over all 24 configurations, which we call All24. Every model plays the same 300 scenes, seeds 9000 to 9299, in every configuration. Validation during training uses the four ID configurations with 25 scenes each from the separate pool 9500 to 9599, and an independent confirmation uses the seeds 110000 to 110299.
+
+\section{Baselines and Their Adaptation}
+\label{sec:s-baselines}
+
+\subsection{Common Protocol}
+All learned methods receive the entity table of Table~\ref{tab:s-token}, the same masks, the same intent set, the same attacker rule, the same training distribution, and a budget of $10^6$ environment steps for each of three training seeds. Every learned method keeps a temporal memory, either a GRU or a recurrent token. Each baseline retains its own architecture and learning rule, and we replaced only its input encoder, its action head, and its masks. Variable team sizes are handled by the mechanism of each method, which is an entity hypernetwork mixer for QMIX, REFIL, and ALMA, a coordination graph built on the deployed team for DCG, a set hypernetwork for SPECTra, and a Transformer mixer for TransfQMix. The original agents of QMIX and DCG take a fixed-size observation vector, which cannot represent a team of 50 after training with 10. We therefore give both the entity-attention agent of REFIL, so that the comparison isolates their coordination mechanisms. Table~\ref{tab:s-baselines} summarizes the training settings.
+
+\begin{table*}[!t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{Training Settings of the Learned Methods}
+\label{tab:s-baselines}
+\begin{tabular}{@{}l p{0.28\textwidth} l p{0.28\textwidth} l@{}}
+\toprule
+Method & Coordination module & Memory & Optimizer and target & $\epsilon$\\
+\midrule
+QMIX & entity attention, FlexQMIX mixer & GRU 64 & RMSprop $5\times10^{-4}$, one-step double Q & 100k\\
+REFIL & QMIX, random entity groups, $\lambda=0.5$ & GRU 64 & as QMIX, with imagined loss & 100k\\
+REFIL-matched & REFIL plus residual MLP $64\to576\to64$ & GRU 64 & as REFIL & 100k\\
+DCG & full graph, utilities, payoffs, 8 Max-Sum rounds & GRU 64 & RMSprop $5\times10^{-4}$, one-step double Q & 50k\\
+ALMA & target allocation every 5 decisions, 32 proposals & GRU 64 & RMSprop $5\times10^{-4}$, double Q, allocation Q & 100k\\
+TransfQMix & Transformer actor and mixer, width 32, 2 blocks & token & Adam $10^{-3}$, double Q, TD($\lambda=0.6$) & 100k\\
+SPECTra & typed projections, self-query read, set mixer & GRU 64 & Adam $10^{-3}$, double Q, TD($\lambda=0.6$) & 100k\\
+LEAF & Section~\mref{sec:method}, REFIL host & GRU 64 & as REFIL, sampled depth & 100k\\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\parbox{\textwidth}{\scriptsize Shared controls: discount 0.99, replay of 5,000 episodes, minibatches of 32 episodes, gradient clipping at norm 10, hard target updates every 200 episodes, $\epsilon$ annealed linearly from 1.0 to 0.05, 8 parallel environments, 8 gradient updates per collected batch of 8 episodes, $10^6$ environment steps per run, training seeds 0 to 2. Adam~\cite{kingma2015adam} and TD($\lambda$)~\cite{sutton2018rl} are retained from the authors' code because they are part of SPECTra and TransfQMix.}
+\end{table*}
+
+The replay, minibatch, discount, clipping, and target-update settings follow the PyMARL defaults~\cite{samvelyan2019smac}. We fixed the number of updates per environment step for all methods, because the budget is counted in environment steps. The exploration schedule of DCG keeps its own default of 50k steps. SPECTra anneals exploration over 500k steps in its football experiments and over 100k steps in its SMACv2 experiments, and it updates once per batch of 8 episodes, so we used 100k steps and 8 updates to match the shared controls. TransfQMix originally updates once per episode in a single process, and we ran it with the shared batch schedule. These choices were fixed before training, and no method received additional tuning.
+
+\subsection{QMIX}
+The agent embeds each token with $\operatorname{Linear}(d_x,128)$ and a ReLU, reads the entities with 4-head self-query attention of width 128, and passes the result through $\operatorname{Linear}(128,64)$, a ReLU, a GRU cell of width 64, and $\operatorname{Linear}(64,|\mathcal V|)$. The FlexQMIX mixer of the REFIL code~\cite{iqbal2021refil} replaces the hypernetworks of QMIX~\cite{rashid2018qmix}, which read a flattened state of fixed size. Four attention hypernetworks over the global entity table, each with embedding 128, 4 heads, and output width 32, produce a weight vector $W_{1,i}\in\mathbb R^{32}$ for every living defender, a bias $b_1$, a second-layer vector $w_2$, and a state value $V(s)$. A softmax over the 32 mixing units makes $W_{1,i}$ and $w_2$ nonnegative, while $b_1$ and $V(s)$ are averaged over the living defenders and stay unconstrained. The team value is
+\begin{equation}
+Q_{\rm tot}=w_2^\top\operatorname{ELU}\Big(\sum_{i\in\mathcal R_t}Q_i\,W_{1,i}+b_1\Big)+V(s),
+\label{eq:s-flexqmix}
+\end{equation}
+which is monotone in every $Q_i$. QMIX uses no imagined groups.
+
+\subsection{REFIL and REFIL-Matched}
+REFIL adds random entity groups to QMIX~\cite{iqbal2021refil}. For each training sequence it draws $p\sim\mathcal U(0,1)$ and assigns each entity to group A with probability $p$, keeping the partition fixed over the sequence. Within-group and cross-group masks then restrict the attention of the agent and of the mixer hypernetworks. The two imagined views share the parameters of the full view, evaluate the replayed intents, and combine into an imagined team value whose squared error to the common target of the full view enters the loss with weight $\lambda=0.5$. Acting and evaluation use the full view only. REFIL-matched inserts the residual block $e\mapsto e+W_b\operatorname{ReLU}(W_ae+b_a)+b_b$ of widths $64\to576\to64$ between the attention output and the GRU, with a zero-initialized last layer. The block adds 74,368 parameters, against 73,729 stored parameters of the relational path of LEAF. The hidden width 576 makes the two totals agree within 639 parameters for any token width and intent count, because neither addition touches the encoder input or the output head.
+
+\subsection{DCG}
+DCG~\cite{boehmer2020dcg} decomposes the team value into utilities $f_i(a_i)$ and pairwise payoffs $f_{ij}(a_i,a_j)$ on a coordination graph. We feed it the same entity-attention GRU encoder of width 64. A shared $\operatorname{Linear}(64,|\mathcal V|)$ gives the utilities, and a shared $\operatorname{Linear}(128,|\mathcal V|^2)$ on the concatenated states $[h_i;h_j]$ gives a full payoff table, symmetrized as $f_{ij}(a_i,a_j)=\tfrac12[g(h_i,h_j)_{a_ia_j}+g(h_j,h_i)_{a_ja_i}]$. The graph connects all defenders present at the start of the episode, because defenders interact through shared attackers and collisions at any range. With $V_0$ and $E_0$ the initial nodes and edges, the team value is
+\begin{equation}
+Q_{\rm tot}=\frac{1}{|V_0|}\sum_{i\in V_0}f_i(a_i)+\frac{1}{|E_0|}\sum_{(i,j)\in E_0}f_{ij}(a_i,a_j).
+\label{eq:s-dcg}
+\end{equation}
+A destroyed defender keeps its node with only the zero intent available, so the normalization stays fixed within an episode and comparable across team sizes. The joint intent comes from 8 iterations of normalized Max-Sum message passing with anytime selection of the best joint intent found. The graph has cycles, so Max-Sum is approximate. Exploration replaces individual intents at random. The online graph selects the next joint intent and the target graph evaluates it in a one-step double-Q target. A team of 50 defenders has 1,225 edges with $|\mathcal V|^2$ payoff entries each, so the deployment cost of DCG grows with the square of the team size.
+
+\subsection{ALMA}
+ALMA~\cite{iqbal2022alma} learns a high-level allocation of agents to subtasks and a low-level policy conditioned on the allocated subtask. Its adaptation required the most design decisions.
+\begin{itemize}
+\item \emph{Subtasks.} Each protected target defines one subtask, because the target is the unit of protection in multi-target defense and an allocation then decides how many defenders guard each target. Label embeddings are provided for $3+9$ subtasks, so the allocation accepts up to 12 targets at evaluation.
+\item \emph{Entities per subtask.} A target belongs to its own subtask. An attacker belongs to the subtask of its nearest target by current geometry, because its assigned target $z_t$ is private, and nearest-target geometry is the information that every defender observes. The attachment is recomputed at every allocation.
+\item \emph{Allocation clock.} The allocation is renewed every 5 decisions and held in between, which matches the periodic commands of the attacker rule.
+\item \emph{Allocator.} An autoregressive pointer-network policy with embedding 128 and 4 heads proposes 32 joint allocations, an attention critic over the entities, the subtask labels, and the agent counts scores them, and the best proposal is executed. The critic learns by Q-learning with its own target network on the interval reward, which is the sum of the team rewards over the 5-step interval divided by 5. The policy is trained to reproduce the best proposal with an entropy bonus of 0.01 on replay from the most recent 150k environment steps.
+\item \emph{Low level.} The low-level agent is the entity-attention GRU agent, and the embedding of its subtask label enters through $\operatorname{Linear}(128,64)$ after the attention. It observes all entities, including those attached to other subtasks, because attackers bound for a neighboring target remain relevant to a defender. It learns a single team value with the FlexQMIX mixer on the team reward, because damage is a team quantity that cannot be split among subtasks when one explosion reaches several targets.
+\end{itemize}
+
+\subsection{TransfQMix}
+TransfQMix~\cite{transfqmix2023} uses Transformers in both the agent and the mixer, and we re-implemented the operations of the authors' code for the entity interface. The agent embeds every token with $\operatorname{Linear}(d_x,32)$, prepends its memory token from the previous step, and applies 2 blocks with 4 heads of width 32 each, a feedforward network $32\to128\to32$, residual connections, layer normalization, and no dropout. Both blocks take keys and values from the initial token embeddings and advance only the queries. The first output token becomes the new memory, and $\operatorname{Linear}(32,|\mathcal V|)$ gives the utilities. The mixer applies blocks of the same size to the global entity tokens, the detached memory tokens of the agents, and three temporal tokens of its own. The defender outputs give $W_1$, and the temporal tokens give $b_1$, $w_2$, and $b_2$, so that $Q_{\rm tot}=\operatorname{ELU}(\mathbf q|W_1|+b_1)|w_2|+\operatorname{ReLU}(b_2)$ with $\mathbf q$ the vector of chosen utilities. The adaptation changes only the action head and the masks. The memory token in every layer of the agent is the property that Section~\mref{sec:method} contrasts with LEAF.
+
+\subsection{SPECTra}
+SPECTra~\cite{park2026spectra} pairs a set-structured agent with a mixer that scales with the team. The agent applies four typed projections from $d_x$ to 64 dimensions, one each for the self token, teammates, attackers, and targets, then a single self-query attention with 4 heads of width 16 followed by a residual connection and layer normalization, a GRU of width 64, and a head $64\to64\to|\mathcal V|$. The Damage task has no actions aimed at individual entities, so the entity-targeted action head of SPECTra stays unused. The mixer contains two set hypernetworks, each with typed projections of width 32, 4-head residual attention, and residual MLPs. Each hypernetwork produces an $N\times N$ weight by a query-key product and a bias by a pooled query-key block, which define two mixing layers. Absolute values keep the weights nonnegative, and the output of the second layer is summed over the defenders. Adam and TD($\lambda$) targets follow the authors' code.
+
+\subsection{Rule}
+The Rule defender re-solves an integer assignment at every decision, as Algorithm~\ref{alg:s-rule} lists. It uses the true positions and velocities of all aircraft, keeps no memory, and never observes $z_t$. When the attackers outnumber the defenders, it considers only the $|\mathcal R_t|$ attackers nearest to the defenders. The assignment requires every defender to take exactly one considered attacker and every considered attacker to receive at least one defender, so surplus defenders double up. SciPy~\cite{virtanen2020scipy} solves the 0--1 program with a relative optimality gap of zero. Each defender then flies toward the one-step prediction of its attacker. Its speed command follows three limits, the maximum speed, the distance that one step can cover, and a turn limit that slows the aircraft when the heading error $\theta$ is large. The defender executes the intent whose velocity reference best matches the commanded velocity. The assignment covers every considered attacker, and the rule makes no claim about reachability or long-run damage.
+
+\begin{algorithm}[!t]
+\caption{Rule Defender at Decision $t$}
+\label{alg:s-rule}
+\begin{algorithmic}[1]
+\REQUIRE living defenders $\mathcal R_t$, attackers $\mathcal B_t$, limits $v_{\min},v_{\max},\bar a$
+\STATE Rank attackers by distance to the nearest defender and keep the $n=\min(|\mathcal R_t|,|\mathcal B_t|)$ nearest as $\mathcal B^\star$
+\STATE Predict $\hat p_b=p_b+v_b\Delta t$ and set $c_{ib}=\|p_i-\hat p_b\|$
+\STATE Solve $\min\sum c_{ib}x_{ib}$ with $x_{ib}\in\{0,1\}$, one attacker per defender, and at least one defender per attacker
+\FOR{each defender $i$ assigned to attacker $b$}
+\STATE $d\gets\|\hat p_b-p_i\|$, $e\gets(\hat p_b-p_i)/d$, $\theta\gets\angle(v_i,e)$
+\STATE $s\gets\operatorname{clip}(\min(v_{\max},d/\Delta t,\bar a/\max(\theta,10^{-3})),v_{\min},v_{\max})$
+\STATE Choose the intent whose clipped reference of \meqref{eq:fw-reference} is closest to $s\,e$
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Design Variants}
+Section~\mref{sec:experiments} retrains seven variants of LEAF with the budget, seeds, and evaluation of the main comparison. Table~\ref{tab:s-variants} lists the single setting in which each variant departs from its parent. Except LEAF, every member of this family conditions its query on the recurrent state, with a stop-gradient on the memory input.
+
+\begin{table}[!t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\caption{Design Variants and Their Single Change}
+\label{tab:s-variants}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Variant & Parent & Change relative to the parent & Rounds\\
+\midrule
+Direct read & -- & reads $H^{(0)}$, no context round & 0\\
+One round & Direct read & one round of $F$ before the read & 1\\
+Fixed depth & One round & four rounds, trained only at $L=4$ & 4\\
+Memory query & Fixed depth & $L\sim\mathcal U\{1,\dots,4\}$ in training & 4\\
+LEAF & Memory query & query without the recurrent state & 4\\
+Unshared rounds & Fixed depth & four independent copies of $F$ & 4\\
+Last read & Memory query & $c^{[L]}=u^{(L)}$ instead of fusion & 4\\
+No host & Memory query & no REFIL attention, no imagined groups & 4\\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\parbox{\columnwidth}{\scriptsize Rounds is the training and default execution depth. No host replaces the host feature by a projection of the self token and sets $\lambda=0$. Unshared rounds stores 105,984 more parameters than LEAF.}
+\end{table}
+
+\section{Implementation Details of LEAF}
+\label{sec:s-leaf}
+
+\subsection{Architecture and Parameters}
+Table~\ref{tab:s-arch} lists every module of the LEAF actor with its parameter count and the work it builds on. The checkpoint stores 7,488 parameters that never affect the output. They belong to a population-count embedding that every run disables, so that LEAF receives no count input, and to the columns of the query projection that would read the recurrent state in the Memory query variant and multiply zeros in LEAF. Excluding them, LEAF has 8,127 fewer effective parameters than REFIL-matched.
+
+\begin{table*}[!t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{Modules of the LEAF Actor}
+\label{tab:s-arch}
+\begin{tabular}{@{}llrl@{}}
+\toprule
+Module & Operation & Parameters & Origin\\
+\midrule
+Encoder $\phi_{\rm enc}$ & $\operatorname{Linear}(d_x,128)$, ReLU & $128d_x+128$ & REFIL code~\cite{iqbal2021refil}\\
+Host path $\phi_{\rm host}$ & self-query attention, 4 heads of width 32, $\operatorname{Linear}(128,64)$, ReLU & 73,920 & REFIL code~\cite{iqbal2021refil}\\
+Projection $\operatorname{Lin}_g$ & $\operatorname{Linear}(128,64)$ & 8,256 & this work\\
+Operator $F$ & $\operatorname{LN}_a$, 4-head attention without biases, $\operatorname{LN}_f$, FFN $64\to128\to64$ & 33,216 & Transformer block~\cite{vaswani2017attention}, shared as in~\cite{dehghani2019universal}\\
+Query $W_q,b_q$ & $\operatorname{Linear}(64,64)$ on $E^{\rm self}$ & 4,160 & this work\\
+Reader & 4-head attention without biases & 16,384 & this work\\
+Scorer $w_s,b_s$ & $\operatorname{Linear}(64,1)$ shared across rounds & 65 & jumping knowledge~\cite{xu2018jk}\\
+Fusion $W_f,b_f$ & $\operatorname{Linear}(64,64)$, zero-initialized & 4,160 & zero-initialized residual~\cite{bachlechner2021rezero}\\
+Memory & GRU cell of width 64 & 24,960 & recurrent Q-learning~\cite{hausknecht2015drqn,cho2014gru}\\
+Output $W_o,b_o$ & $\operatorname{Linear}(64,|\mathcal V|)$ & $65|\mathcal V|$ & REFIL code~\cite{iqbal2021refil}\\
+Inert & count embedding and memory columns of the query & 7,488 & unused\\
+\midrule
+Total stored & & $128d_x+65|\mathcal V|+172{,}737$ & \tofill{179{,}484}\\
+Total effective & & $128d_x+65|\mathcal V|+165{,}249$ & \tofill{171{,}996}\\
+REFIL for reference & encoder, host path, GRU, output & $128d_x+65|\mathcal V|+99{,}008$ & \tofill{105{,}755}\\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\parbox{\textwidth}{\scriptsize The red totals evaluate the formulas at $d_x=39$ and $|\mathcal V|=27$. REFIL-matched stores $128d_x+65|\mathcal V|+173{,}376$ parameters, all of them effective.}
+\end{table*}
+% 参数公式已用现有权重核实：d_x=19、|V|=9 时 LEAF 175,754、REFIL 102,025、REFIL-matched 176,393，与 seed0 final.pt 一致。
+% 红色合计按固定翼 d_x=39、|V|=27 代入，待固定翼接口确认后更新。
+
+\subsection{Masking, Initialization, and Numerics}
+Every attention module assigns $-\infty$ logits to excluded keys, an all-excluded row returns zero, and $\operatorname{Mask}_m$ resets the states of excluded rows after every round. $\operatorname{LN}_a$ normalizes only the queries of the context attention, and the keys and values use the unnormalized states, so each round is a pre-normalization residual block~\cite{xiong2020layer,ba2016layernorm}. The logits of the LEAF modules are divided by $\sqrt{16}$ and those of the host attention by $\sqrt{32}$. All weights use the PyTorch defaults~\cite{paszke2019pytorch}, except $W_f$ and $b_f$, which start at zero so that training begins from the host computation, and the last layer of the REFIL-matched block, which starts at zero for the same reason. The GRU state starts each episode at zero and is cleared when a defender is destroyed. During training, the activations of the encoder and the loop are recomputed in the backward pass to bound memory.
+
+\subsection{Training Procedure}
+Algorithm~\mref{alg:leaf} lists the procedure, and Table~\ref{tab:s-hyper} lists the hyperparameters with their sources. Replay stores complete episodes. The loss \meqref{eq:loss} averages the squared errors over valid steps, and gradients pass through all rounds of each decision and through the GRU along the whole episode. At every collection round, each of the 8 parallel environments draws its depth when its episode starts, and the learner draws one depth per minibatch for the online, target, and imagined branches. Validation runs every 20k environment steps on the pool of Appendix~\ref{sec:s-env} with greedy intents at $L=4$. It produces the learning curves and is not used to select checkpoints, so every evaluation uses the final checkpoint.
+
+After the last defender is destroyed, no defender decision remains. The environment then plays the remaining attacker steps without defender actions, adds their discounted rewards to the last transition, and marks that transition terminal. If the folded tail ends by truncation, the environment removes the potential credit of its last state, so the folded return equals the unshaped tail return minus $\Phi$ of the state where the tail begins, as Lemma~\ref{lem:s-shaping} requires. The damage $D$ of the episode is unaffected.
+
+\begin{table}[!t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{Hyperparameters of LEAF}
+\label{tab:s-hyper}
+\begin{tabular}{@{}l p{0.46\columnwidth} l@{}}
+\toprule
+Hyperparameter & Value & Source\\
+\midrule
+Widths $d_z$, $d$, $d_h$ & 128, 64, 64 & REFIL\\
+Heads, feedforward width & 4, $2d$ & REFIL\\
+Depths $L_{\max}$, $L_{\rm exec}$ & 4, 4 & this work\\
+Imagined weight $\lambda$ & 0.5 & REFIL~\cite{iqbal2021refil}\\
+Optimizer & RMSprop, $5\times10^{-4}$, $\alpha=0.99$, $\epsilon=10^{-5}$ & \cite{samvelyan2019smac}\\
+Discount, gradient clip & 0.99, norm 10 & \cite{samvelyan2019smac}\\
+Replay, minibatch & 5,000 episodes, 32 episodes & \cite{samvelyan2019smac}\\
+Target network & hard copy every 200 episodes & \cite{mnih2015dqn}\\
+TD target & one-step double Q & \cite{vanhasselt2016double}\\
+Exploration & $\epsilon$ from 1.0 to 0.05 over 100k steps & REFIL\\
+Mixer & FlexQMIX, embedding 128, width 32 & REFIL\\
+Shaping $\nu$, $l_{\rm sh}$ & \tofill{1}, \tofill{} m & \cite{ng1999shaping}\\
+Collection & 8 environments, 8 updates per batch & shared\\
+Budget & $10^6$ steps, seeds 0, 1, 2 & shared\\
+\bottomrule
+\end{tabular}
+\end{table}
+% 塑形参数：平面运行为 nu=1、l_sh=4000 m（5 km 场景），固定翼场景 2 km，请按固定翼训练配置填写。
+
+\subsection{Deployment and Cost}
+Deployment freezes the parameters, drops the mixer, and lets every defender act greedily at $L_{\rm exec}$ rounds. One round costs $O(M^2d+Md^2)$ for one defender, so a team decision costs $O(N_RL_{\rm exec}(M^2d+Md^2))$, and the parameter count stays fixed. The host path adds one attention over $M$ entities per defender, and the GRU adds $O(d_h^2)$. Appendix~\ref{sec:s-results} reports measured latencies.
+
+\section{Additional Results}
+\label{sec:s-results}
+This appendix completes the statistics of Section~\mref{sec:experiments}. Unless stated otherwise, the values come from the formal evaluation on the scenes 9000 to 9299, and every learned method contributes three training seeds.
+
+\subsection{Damage in Every Configuration}
+Table~\ref{tab:s-config} lists the mean damage of all methods in every evaluation configuration. LEAF has the lowest damage in all 24 configurations. Its reduction relative to the strongest competitor of each configuration ranges from 33\% at $(4,2)$ to 69\% at $(30,6)$. REFIL is the strongest competitor in every ID and K-OOD configuration and in every joint configuration with 15 or 20 defenders. Rule takes this place from 20 defenders per side with two targets and in every joint configuration with 30 defenders, and its damage with two targets falls from 1.76 at 20 defenders per side to 1.17 at 50.
+
+\begin{table*}[!t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.2pt}
+\caption{Mean Damage $D$ in Every Evaluation Configuration}
+\label{tab:s-config}
+\begin{tabular}{@{}llrrrrrrrrr@{}}
+\toprule
+Group & $(N,K)$ & QMIX & REFIL & DCG & ALMA & TransfQMix & SPECTra & Rule & LEAF & Change\\
+\midrule
+ID & (4, 2) & 1.52 & \underline{0.41} & 1.26 & 0.74 & 0.81 & 1.64 & 1.15 & \textbf{0.27}$\pm$0.08 & $-$33\%\\
+ID & (6, 2) & 2.01 & \underline{0.62} & 1.72 & 1.08 & 1.31 & 2.14 & 1.33 & \textbf{0.33}$\pm$0.09 & $-$46\%\\
+ID & (8, 2) & 2.43 & \underline{0.78} & 2.08 & 1.42 & 1.68 & 2.57 & 1.43 & \textbf{0.41}$\pm$0.11 & $-$47\%\\
+ID & (10, 3) & 3.31 & \underline{1.05} & 3.05 & 2.06 & 2.32 & 3.59 & 1.93 & \textbf{0.60}$\pm$0.12 & $-$43\%\\
+K-OOD & (10, 4) & 3.69 & \underline{1.28} & 3.59 & 2.21 & 2.77 & 4.39 & 2.23 & \textbf{0.64}$\pm$0.20 & $-$50\%\\
+K-OOD & (10, 6) & 4.31 & \underline{1.49} & 4.70 & 2.54 & 3.20 & 5.64 & 2.91 & \textbf{0.72}$\pm$0.09 & $-$52\%\\
+K-OOD & (10, 9) & 5.49 & \underline{1.88} & 6.41 & 3.34 & 4.42 & 7.58 & 3.59 & \textbf{1.00}$\pm$0.31 & $-$47\%\\
+K-OOD & (10, 12) & 6.55 & \underline{2.53} & 8.66 & 4.00 & 5.42 & 9.36 & 4.12 & \textbf{1.63}$\pm$0.51 & $-$36\%\\
+N-OOD & (15, 2) & 3.58 & \underline{1.44} & 3.20 & 2.32 & 2.63 & 3.72 & 1.63 & \textbf{0.56}$\pm$0.12 & $-$61\%\\
+N-OOD & (20, 2) & 4.26 & 1.78 & 3.96 & 2.83 & 3.18 & 4.09 & \underline{1.76} & \textbf{0.61}$\pm$0.16 & $-$66\%\\
+N-OOD & (25, 2) & 4.93 & 1.95 & 4.54 & 3.26 & 3.73 & 4.68 & \underline{1.71} & \textbf{0.60}$\pm$0.21 & $-$65\%\\
+N-OOD & (30, 2) & 5.42 & 2.39 & 5.34 & 3.74 & 4.11 & 5.25 & \underline{1.65} & \textbf{0.56}$\pm$0.26 & $-$66\%\\
+N-OOD & (40, 2) & 6.01 & 2.62 & 6.05 & 4.32 & 4.76 & 5.83 & \underline{1.34} & \textbf{0.57}$\pm$0.35 & $-$58\%\\
+N-OOD & (50, 2) & 6.64 & 3.08 & 7.02 & 5.16 & 5.73 & 6.73 & \underline{1.17} & \textbf{0.56}$\pm$0.37 & $-$52\%\\
+Joint-OOD & (15, 4) & 4.72 & \underline{1.84} & 4.57 & 3.06 & 3.65 & 5.34 & 2.40 & \textbf{0.75}$\pm$0.19 & $-$59\%\\
+Joint-OOD & (15, 6) & 5.74 & \underline{2.12} & 5.89 & 3.63 & 4.72 & 7.06 & 3.08 & \textbf{0.92}$\pm$0.13 & $-$57\%\\
+Joint-OOD & (20, 4) & 5.38 & \underline{2.43} & 5.42 & 3.88 & 4.66 & 6.50 & 2.61 & \textbf{0.83}$\pm$0.22 & $-$66\%\\
+Joint-OOD & (20, 6) & 6.64 & \underline{2.82} & 6.95 & 4.48 & 5.44 & 8.48 & 3.29 & \textbf{1.08}$\pm$0.08 & $-$62\%\\
+Joint-OOD & (30, 4) & 6.95 & 3.26 & 7.06 & 5.19 & 5.99 & 7.80 & \underline{2.22} & \textbf{0.87}$\pm$0.32 & $-$61\%\\
+Joint-OOD & (30, 6) & 8.15 & 3.78 & 8.63 & 6.20 & 7.45 & 10.59 & \underline{3.06} & \textbf{0.95}$\pm$0.20 & $-$69\%\\
+Joint-OOD & (30, 9) & 10.01 & 4.78 & 11.69 & 7.53 & 9.76 & 14.46 & \underline{3.65} & \textbf{1.26}$\pm$0.25 & $-$66\%\\
+Joint-OOD & (30, 12) & 11.73 & 5.46 & 14.53 & 9.03 & 11.37 & 18.48 & \underline{4.18} & \textbf{2.12}$\pm$0.80 & $-$49\%\\
+Extra & (5, 2) & 1.79 & \underline{0.55} & 1.52 & 0.88 & 1.04 & 1.93 & 1.25 & \textbf{0.29}$\pm$0.08 & $-$47\%\\
+Extra & (10, 2) & 2.83 & \underline{1.03} & 2.53 & 1.76 & 1.88 & 3.05 & 1.53 & \textbf{0.46}$\pm$0.08 & $-$55\%\\
+\midrule
+All24 & & 5.17 & 2.14 & 5.43 & 3.53 & 4.25 & 6.29 & 2.30 & \textbf{0.77}$\pm$0.05 & \\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\parbox{\textwidth}{\scriptsize $N=N_R=N_B$. Each entry averages 300 common scenes and three training seeds, and LEAF also shows the seed SD. Underlined entries mark the strongest competitor of each row, and the last column gives the change of LEAF relative to it. Rule is deterministic given the scene and has no training seeds.}
+\end{table*}
+
+\subsection{Seed-Level Results}
+Table~\ref{tab:s-seeds} lists the group damage of every training seed for the learned methods and the design variants. The worst LEAF seed has lower damage than the best seed of every baseline in all four groups, and lower damage than Rule, whose group damage is 1.46, 3.21, 1.55, and 3.06. The table also supports the seed counts of the ablation in Section~\mref{sec:experiments}. Memory query exceeds Fixed depth in 10 of the 12 seed-group pairs, and its second seed raises the mean the most, with Joint-OOD damage 3.36 against 1.35 and 1.13 for the other two seeds.
+
+\begin{table*}[!t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\caption{Group Damage $D$ of Every Training Seed}
+\label{tab:s-seeds}
+\begin{tabular}{@{}lrrrrrrrrrrrr@{}}
+\toprule
+ & \multicolumn{3}{c}{ID} & \multicolumn{3}{c}{K-OOD} & \multicolumn{3}{c}{N-OOD} & \multicolumn{3}{c}{Joint-OOD}\\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}\cmidrule(l){11-13}
+Method & s0 & s1 & s2 & s0 & s1 & s2 & s0 & s1 & s2 & s0 & s1 & s2\\
+\midrule
+QMIX & 3.87 & 1.05 & 2.03 & 7.70 & 2.77 & 4.55 & 8.43 & 2.24 & 4.74 & 11.49 & 3.56 & 7.19\\
+REFIL & 0.69 & 0.69 & 0.77 & 1.47 & 1.86 & 2.07 & 2.19 & 2.50 & 1.94 & 3.00 & 3.61 & 3.31\\
+DCG & 1.92 & 2.51 & 1.66 & 4.20 & 7.95 & 5.36 & 3.11 & 8.06 & 3.90 & 5.50 & 12.59 & 6.19\\
+ALMA & 1.54 & 1.16 & 1.28 & 3.40 & 2.74 & 2.92 & 3.74 & 2.80 & 4.27 & 5.35 & 4.35 & 6.43\\
+TransfQMix & 1.69 & 1.20 & 1.69 & 4.00 & 3.44 & 4.42 & 4.84 & 2.95 & 4.28 & 7.41 & 5.25 & 7.23\\
+SPECTra & 2.72 & 2.42 & 2.31 & 6.57 & 7.33 & 6.32 & 5.53 & 4.39 & 5.22 & 9.28 & 10.18 & 10.06\\
+REFIL-matched & 0.85 & 0.79 & 1.10 & 2.69 & 2.17 & 2.62 & 2.50 & 1.91 & 2.39 & 4.99 & 3.50 & 4.02\\
+\midrule
+Direct read & 1.11 & 0.97 & 0.70 & 2.23 & 2.22 & 1.43 & 2.46 & 2.03 & 1.57 & 3.88 & 3.19 & 2.51\\
+One round & 0.38 & 0.54 & 0.91 & 0.82 & 1.17 & 1.62 & 0.48 & 1.34 & 2.25 & 1.06 & 2.38 & 3.03\\
+Fixed depth & 0.20 & 0.61 & 0.41 & 0.45 & 1.74 & 0.82 & 0.45 & 0.78 & 0.75 & 1.03 & 1.50 & 1.27\\
+Memory query & 0.31 & 0.76 & 0.51 & 1.04 & 2.37 & 1.18 & 0.63 & 1.72 & 0.65 & 1.35 & 3.36 & 1.13\\
+Unshared rounds & 0.69 & 0.38 & 0.36 & 1.15 & 0.96 & 1.27 & 0.72 & 0.45 & 0.45 & 1.52 & 1.04 & 1.14\\
+Last read & 0.36 & 0.42 & 0.52 & 1.02 & 0.92 & 1.12 & 0.55 & 0.57 & 0.84 & 1.21 & 1.10 & 1.49\\
+No host & 0.66 & 0.40 & 0.47 & 2.12 & 1.05 & 2.13 & 2.01 & 0.84 & 0.94 & 3.10 & 1.35 & 2.51\\
+\midrule
+LEAF & 0.30 & 0.49 & 0.43 & 1.07 & 1.18 & 0.73 & 0.42 & 0.45 & 0.85 & 1.13 & 0.98 & 1.18\\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+Table~\ref{tab:s-pcvar} completes the protection statistics of the main comparison with their seed SDs. LEAF keeps all targets undamaged in 59\% to 72\% of the episodes of each group, while every other method stays below 56\%. Its worst 10\% of episodes carry 25\% to 34\% less damage than those of the strongest competitor in each group.
+
+\begin{table*}[!t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\caption{Share of Damaged Episodes $P$ and Mean Damage of the Worst 10\% of Episodes}
+\label{tab:s-pcvar}
+\begin{tabular}{@{}lrrrrrrrr@{}}
+\toprule
+ & \multicolumn{4}{c}{$P$ (\%)} & \multicolumn{4}{c}{CVaR}\\
+\cmidrule(lr){2-5}\cmidrule(l){6-9}
+Method & ID & K-OOD & N-OOD & Joint-OOD & ID & K-OOD & N-OOD & Joint-OOD\\
+\midrule
+QMIX & 82.1$\pm$19.1 & 92.9$\pm$8.3 & 92.0$\pm$11.4 & 94.4$\pm$8.0 & 5.18$\pm$2.10 & 10.94$\pm$4.14 & 11.57$\pm$5.38 & 15.98$\pm$6.20\\
+REFIL & 44.4$\pm$2.6 & 60.4$\pm$6.9 & 67.0$\pm$2.6 & 73.2$\pm$4.4 & 2.79$\pm$0.11 & 6.18$\pm$0.55 & 7.81$\pm$0.72 & 10.66$\pm$0.58\\
+DCG & 85.2$\pm$5.2 & 96.4$\pm$2.3 & 94.8$\pm$3.6 & 97.9$\pm$1.7 & 4.99$\pm$0.99 & 12.07$\pm$3.21 & 11.77$\pm$4.50 & 17.32$\pm$7.71\\
+ALMA & 67.8$\pm$7.0 & 83.0$\pm$3.6 & 90.3$\pm$5.8 & 92.6$\pm$3.6 & 3.86$\pm$0.34 & 7.78$\pm$0.50 & 9.10$\pm$1.21 & 12.97$\pm$1.68\\
+TransfQMix & 68.5$\pm$8.1 & 88.1$\pm$2.6 & 89.5$\pm$5.2 & 93.9$\pm$3.2 & 4.39$\pm$0.42 & 9.63$\pm$1.02 & 10.84$\pm$1.68 & 15.87$\pm$1.87\\
+SPECTra & 90.9$\pm$2.6 & 98.9$\pm$0.9 & 95.6$\pm$3.4 & 99.3$\pm$0.5 & 5.71$\pm$0.25 & 13.30$\pm$0.51 & 12.09$\pm$0.56 & 19.49$\pm$1.01\\
+Rule & 80.2 & 92.6 & 75.1 & 88.9 & 3.77 & 7.15 & 4.67 & 7.70\\
+\textbf{LEAF} & \textbf{27.6}$\pm$7.0 & \textbf{41.4}$\pm$9.2 & \textbf{31.4}$\pm$10.7 & \textbf{39.1}$\pm$1.6 & \textbf{2.10}$\pm$0.15 & \textbf{4.14}$\pm$0.34 & \textbf{3.10}$\pm$0.65 & \textbf{5.41}$\pm$0.43\\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\parbox{\textwidth}{\scriptsize Both statistics are computed per model and configuration from the 300 formal episodes and then averaged as the damage. CVaR averages the 30 episodes with the highest damage. Values are means and seed SDs, and Rule has no seeds.}
+\end{table*}
+
+\subsection{Learning Speed and Independent Confirmation}
+Context construction speeds up learning. On the validation pool, the mean damage of LEAF first falls to 1.0 after about 0.56M environment steps. Every variant with at least one context round reaches this level between 0.50M and 0.68M steps, Direct read needs 0.74M steps, REFIL 0.86M, and REFIL-matched 0.98M. QMIX, DCG, ALMA, TransfQMix, and SPECTra stay above this level within the budget, with final validation damage between 1.37 and 2.66. On the independent pool of seeds 110000 to 110299, the All24 damage is $0.790\pm0.040$ for LEAF, $2.086\pm0.191$ for REFIL, $4.255\pm0.741$ for TransfQMix, and $6.296\pm0.072$ for SPECTra, against $0.774\pm0.051$, $2.139\pm0.171$, $4.252\pm0.773$, and $6.287\pm0.029$ on the formal pool. The ordering and the magnitudes reproduce on new scenes.
+
+\subsection{Execution Depth by Configuration}
+Table~\ref{tab:s-depth} lists the damage of the three LEAF models at every execution depth in every configuration. The averages are flat, and the best depth varies across configurations without a pattern that a deployment could exploit. In $(30,12)$ one round has the lowest damage, and in several K-OOD configurations five or six rounds are marginally lower than four. These differences lie within the seed spread, so the table supports the claim that every depth is usable and no claim that deeper is better.
+
+\begin{table}[!t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.6pt}
+\caption{Damage of LEAF at Execution Depths $L=1$ to $6$}
+\label{tab:s-depth}
+\begin{tabular}{@{}llrrrrrr@{}}
+\toprule
+Group & $(N,K)$ & 1 & 2 & 3 & 4 & 5 & 6\\
+\midrule
+ID & (4, 2) & 0.272 & \textbf{0.262} & 0.278 & 0.270 & 0.270 & 0.270\\
+ID & (6, 2) & 0.403 & \textbf{0.317} & 0.327 & 0.327 & 0.329 & 0.329\\
+ID & (8, 2) & 0.412 & \textbf{0.399} & 0.404 & 0.400 & 0.401 & 0.401\\
+ID & (10, 3) & \textbf{0.590} & 0.607 & 0.607 & 0.606 & 0.610 & 0.610\\
+K-OOD & (10, 4) & 0.730 & 0.648 & 0.642 & 0.637 & \textbf{0.635} & \textbf{0.635}\\
+K-OOD & (10, 6) & 0.801 & 0.743 & 0.740 & 0.727 & \textbf{0.726} & \textbf{0.726}\\
+K-OOD & (10, 9) & 1.135 & 1.091 & 1.029 & \textbf{1.027} & 1.033 & 1.033\\
+K-OOD & (10, 12) & \textbf{1.661} & 1.721 & 1.721 & 1.687 & 1.688 & 1.688\\
+N-OOD & (15, 2) & 0.602 & 0.577 & 0.550 & \textbf{0.547} & 0.549 & 0.549\\
+N-OOD & (20, 2) & 0.631 & 0.614 & 0.602 & 0.600 & 0.594 & \textbf{0.592}\\
+N-OOD & (25, 2) & 0.663 & 0.639 & \textbf{0.601} & 0.612 & 0.610 & 0.610\\
+N-OOD & (30, 2) & 0.643 & 0.595 & 0.568 & \textbf{0.537} & 0.549 & 0.549\\
+N-OOD & (40, 2) & 0.550 & 0.597 & \textbf{0.523} & 0.543 & 0.542 & 0.544\\
+N-OOD & (50, 2) & 0.564 & 0.565 & \textbf{0.543} & 0.561 & 0.568 & 0.568\\
+Joint-OOD & (15, 4) & 0.829 & 0.752 & 0.745 & 0.732 & \textbf{0.732} & \textbf{0.732}\\
+Joint-OOD & (15, 6) & 1.047 & \textbf{0.886} & 0.925 & 0.917 & 0.914 & 0.914\\
+Joint-OOD & (20, 4) & 0.962 & 0.874 & 0.828 & 0.803 & 0.802 & \textbf{0.799}\\
+Joint-OOD & (20, 6) & 1.071 & \textbf{1.062} & 1.072 & 1.095 & 1.104 & 1.104\\
+Joint-OOD & (30, 4) & \textbf{0.859} & 0.883 & 0.913 & 0.924 & 0.918 & 0.918\\
+Joint-OOD & (30, 6) & 1.072 & 1.094 & \textbf{0.958} & 0.972 & 0.966 & 0.966\\
+Joint-OOD & (30, 9) & 1.296 & \textbf{1.244} & 1.369 & 1.346 & 1.344 & 1.344\\
+Joint-OOD & (30, 12) & \textbf{1.638} & 2.067 & 2.197 & 2.167 & 2.164 & 2.164\\
+Extra & (5, 2) & 0.323 & 0.297 & 0.298 & \textbf{0.292} & 0.294 & 0.294\\
+Extra & (10, 2) & 0.497 & \textbf{0.494} & 0.498 & 0.498 & 0.498 & 0.498\\
+\midrule
+\multicolumn{2}{@{}l}{All24} & 0.802 & 0.793 & 0.789 & 0.785 & 0.785 & 0.785\\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\parbox{\columnwidth}{\scriptsize Means over three models and 300 scenes per configuration. Bold marks the lowest value of each row. Depths 5 and 6 exceed the training range. The values come from the separate frozen-depth evaluation, so the column $L=4$ differs slightly from Table~\ref{tab:s-config}.}
+\end{table}
+
+Table~\ref{tab:s-depth-k2} compares the four models with saved depth evaluations in the three configurations with two targets. The two models trained with sampled depth stay nearly flat at every depth, and their one-round damage lies between 0.84 and 1.49 times their four-round damage in all six models. The two models trained only at four rounds collapse at shallow exits. In five of their six models, one round raises the damage to between 12.7 and 29.0 times the four-round damage. Fixed depth shares its parameters across rounds and still runs at five and six rounds, while Unshared rounds has no parameters for them.
+
+\begin{table}[!t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{Execution Depth of Four Models With Two Targets}
+\label{tab:s-depth-k2}
+\begin{tabular}{@{}llrrrrrr@{}}
+\toprule
+Model & $N$ & 1 & 2 & 3 & 4 & 5 & 6\\
+\midrule
+LEAF & 10 & 0.50 & 0.49 & 0.50 & 0.50 & 0.50 & 0.50\\
+ & 30 & 0.64 & 0.59 & 0.57 & 0.54 & 0.55 & 0.55\\
+ & 50 & 0.56 & 0.57 & 0.54 & 0.56 & 0.57 & 0.57\\
+Memory query & 10 & 0.66 & 0.65 & 0.68 & 0.68 & 0.68 & 0.68\\
+ & 30 & 1.23 & 1.07 & 1.02 & 1.07 & 1.08 & 1.08\\
+ & 50 & 1.67 & 1.17 & 1.17 & 1.16 & 1.15 & 1.15\\
+Fixed depth & 10 & 4.58 & 3.00 & 1.01 & 0.50 & 0.55 & 0.64\\
+ & 30 & 9.98 & 7.60 & 2.92 & 0.73 & 0.65 & 0.76\\
+ & 50 & 14.16 & 10.76 & 4.38 & 0.69 & 0.60 & 0.60\\
+Unshared rounds & 10 & 6.13 & 4.11 & 1.12 & 0.52 & -- & --\\
+ & 30 & 12.38 & 6.56 & 1.99 & 0.55 & -- & --\\
+ & 50 & 16.29 & 7.70 & 2.60 & 0.56 & -- & --\\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\parbox{\columnwidth}{\scriptsize $N=N_R=N_B$ with $K=2$. The ratio of one-round to four-round damage per training seed is 0.86, 1.20, 1.11 for LEAF, 0.84, 1.49, 0.89 for Memory query, 22.2, 1.16, 25.8 for Fixed depth, and 12.7, 28.8, 29.0 for Unshared rounds.}
+\end{table}
+
+\subsection{Frozen Interventions}
+Table~\ref{tab:s-interv} perturbs one component of the trained LEAF models at a time and keeps all weights. Each intervention runs ten scenes per configuration and model and is paired with a standard four-round run on the same scenes. Reading $H^{(0)}$ instead of the loop, zeroing the relational residual $W_fc+b_f$, forcing the fourth read, and fusing all reads uniformly each raise the damage in all nine model-configuration pairs and change most intents. Executing one or two rounds changes little. Replacing the learned fusion weights by their mean over the decisions of a calibration pool changes about 10\% of the intents and raises damage consistently only in $(30,12)$. Resetting the recurrent state at every decision raises damage in eight of nine pairs, so LEAF still relies on its memory for action selection. The same pattern holds for Memory query, whose damage in $(30,12)$ rises from 3.37 with learned fusion to 27.99 when it reads only the fourth round, while the first or second read alone give 4.16 and 4.04.
+
+\begin{table*}[!t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\caption{Frozen Interventions on the Trained LEAF Models}
+\label{tab:s-interv}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+ & \multicolumn{2}{c}{(10, 2)} & \multicolumn{2}{c}{(50, 2)} & \multicolumn{2}{c}{(30, 12)}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(l){6-7}
+Intervention & $\Delta D$ & Changed & $\Delta D$ & Changed & $\Delta D$ & Changed\\
+\midrule
+Execute $L=1$ & $+0.18\pm0.42$ & 17.9\% & $-0.11\pm0.21$ & 20.5\% & $+0.34\pm0.75$ & 21.1\%\\
+Execute $L=2$ & $+0.27\pm0.05$ & 1.1\% & $-0.00\pm0.21$ & 1.7\% & $-0.26\pm1.26$ & 1.5\%\\
+Read $H^{(0)}$ & $+7.56\pm1.37$ & 71.7\% & $+18.96\pm5.83$ & 72.4\% & $+32.97\pm8.45$ & 69.6\%\\
+Zero relational residual & $+5.95\pm1.53$ & 77.9\% & $+13.70\pm6.90$ & 75.2\% & $+18.79\pm1.14$ & 77.8\%\\
+Read only round 4 & $+6.73\pm3.19$ & 73.7\% & $+19.94\pm12.96$ & 73.2\% & $+25.56\pm16.41$ & 76.8\%\\
+Uniform fusion & $+3.61\pm3.10$ & 62.6\% & $+8.84\pm11.60$ & 60.7\% & $+17.66\pm15.79$ & 65.0\%\\
+Mean fusion weights & $-0.01\pm0.11$ & 10.5\% & $-0.09\pm0.12$ & 9.9\% & $+0.61\pm0.47$ & 10.1\%\\
+Reset GRU every step & $+1.42\pm0.76$ & 58.4\% & $+1.29\pm0.87$ & 62.9\% & $+1.66\pm2.56$ & 59.9\%\\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\parbox{\textwidth}{\scriptsize $\Delta D$ is the paired change of damage relative to the standard run, as mean and SD over three models. Changed is the share of same-state decisions whose greedy intent differs from the standard intent when both use the same observation and entering state.}
+\end{table*}
+
+\subsection{\texorpdfstring{Empirical Check of Proposition~\mref{prop:prefix}}{Empirical Check of Proposition 2}}
+The mechanism records of the standard four-round runs store, for every decision of every living defender, the fusion weights $\alpha^{[4]}$ and the same-state utilities at $L=2$ and $L=4$. They cover 48,705 decisions in three configurations. Table~\ref{tab:s-prefix} relates them to Proposition~\mref{prop:prefix} with $p=2$ and $L=4$.
+
+The fusion mass beyond the second round, $\beta=\alpha^{[4]}_3+\alpha^{[4]}_4$, is small in almost every decision, with a median between 0.34\% and 0.63\%, and 96\% of all decisions have $\beta<5\%$. Two rounds change the greedy intent in 1.1\% to 1.7\% of the decisions. The proposition predicts that the utility change grows with $\beta$, and the data agree. The rank correlation between $\beta$ and the realized change $\|Q^{[2]}-Q^{[4]}\|_\infty$ lies between 0.77 and 0.84, and the share of changed intents rises from below 0.7\% in the lower half of $\beta$ to between 14\% and 23\% in its top percent. Changed intents also concentrate where the utility gap is small. Between 78\% and 80\% of them fall in the decile of smallest gaps, where the change rate is 9\% to 13\%, against at most 1.3\% in every other decile. With the realized change in place of the bound $\kappa\beta\xi$, the margin condition of the proposition holds in 79\% of all decisions, and by the proposition none of these decisions can change its intent, which the records confirm.
+
+The interventions explain how a small $\beta$ coexists with a strong reliance on the fusion. Forcing the fourth read changes about 75\% of the intents, so in most decisions the fourth read lies far from the early fused feature, which makes $\xi$ large. The learned scores keep $\beta$ near 1\%, so the product $\beta\xi$ in \meqref{eq:prefix} stays small, and truncating the loop after two rounds barely moves the decisions.
+
+\begin{table*}[!t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.2pt}
+\caption{Fusion Mass Beyond Round Two and Same-State Intent Changes Between $L=2$ and $L=4$}
+\label{tab:s-prefix}
+\begin{tabular}{@{}lrrrrrrrrrrr@{}}
+\toprule
+ & & & & \multicolumn{3}{c}{$\beta$ (\%)} & & \multicolumn{4}{c}{Changed intents by quantile of $\beta$ (\%)}\\
+\cmidrule(lr){5-7}\cmidrule(l){9-12}
+Configuration & Decisions & Changed & Margin holds & median & 95th & 99th & $\rho(\beta,\Delta Q)$ & 0--50 & 50--90 & 90--99 & 99--100\\
+\midrule
+(10, 2) & 5,667 & 1.13\% & 83.7\% & 0.34 & 3.70 & 15.4 & 0.84 & 0.32 & 1.46 & 2.75 & 14.3\\
+(50, 2) & 27,491 & 1.65\% & 78.6\% & 0.63 & 4.08 & 13.4 & 0.77 & 0.62 & 1.91 & 3.76 & 23.4\\
+(30, 12) & 15,547 & 1.52\% & 78.9\% & 0.48 & 3.87 & 12.0 & 0.82 & 0.44 & 1.88 & 4.15 & 16.8\\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\parbox{\textwidth}{\scriptsize Decisions pool three models and ten scenes per configuration. Margin holds counts decisions whose depth-4 utility gap exceeds $2\|Q^{[2]}-Q^{[4]}\|_\infty$. $\rho$ is the Spearman correlation between $\beta$ and $\|Q^{[2]}-Q^{[4]}\|_\infty$.}
+\end{table*}
+
+\subsection{Memory Drift}
+The drift analysis uses the standard four-round episodes of the three LEAF models in $(10,2)$, the reference inside the training range, and in $(50,2)$ and $(30,12)$, with ten common scenes per configuration and model. Every decision with $t\ge1$ of every living defender gives one sample with two feature sets. The memory is the entering state $h_{t-1}$ of width 64. The self features are the inputs of the query, which are the absolute position and velocity of the defender, its alive flag and health, and its previous intent as a one-hot vector. For each training seed and shifted configuration, we balance the two domains by drawing equal numbers of samples at every common decision step, which yields between 1,751 and 1,835 samples per domain. Three classifiers from scikit-learn~\cite{pedregosa2011sklearn} separate the domains: a standardized logistic regression, gradient-boosted trees, and a logistic regression on the first eight principal components. We report the mean AUC of five folds grouped by scene, so that no scene contributes to training and test data at once.
+
+Table~\ref{tab:s-drift} shows that every classifier identifies the deployment scale from the memory far better than from the self features. The query is a deterministic function of the self features, so any score computed from the query is also a score computed from the self features, and the largest AUC achievable from the query cannot exceed that achievable from the self features. Restricted to eight principal components, the memory still exceeds the self features in all three seeds for $(50,2)$ and in two of three seeds for $(30,12)$, so the joint shift lies partly in directions of small variance. The mean norm of the memory is between 6.15 and 6.36 in all nine model-configuration cells, so the drift changes the direction of the state and leaves its magnitude intact.
+
+\begin{table}[!t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{AUC of Identifying the Deployment Scale}
+\label{tab:s-drift}
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Shift & Features & Linear & Boosted trees & PCA-8\\
+\midrule
+(50, 2) & memory & 0.888$\pm$0.015 & 0.924$\pm$0.011 & 0.722$\pm$0.016\\
+ & self & 0.610$\pm$0.043 & 0.656$\pm$0.066 & 0.594$\pm$0.021\\
+(30, 12) & memory & 0.804$\pm$0.032 & 0.834$\pm$0.034 & 0.591$\pm$0.072\\
+ & self & 0.522$\pm$0.030 & 0.532$\pm$0.038 & 0.548$\pm$0.024\\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\parbox{\columnwidth}{\scriptsize Reference $(10,2)$. Means and SDs over three models. Linear AUCs per seed are 0.888, 0.874, 0.903 for memory and 0.588, 0.584, 0.660 for self features in $(50,2)$, and 0.795, 0.840, 0.777 and 0.505, 0.557, 0.505 in $(30,12)$. An AUC of 0.5 means no scale information.}
+\end{table}
+
+\subsection{Protection Behavior}
+Table~\ref{tab:s-protect} compares LEAF, Memory query, and REFIL on the formal pool in four configurations. In all four configurations and all five measures, Memory query lies between LEAF and REFIL. LEAF intercepts the most attackers, keeps the most episodes free of damage, has the lowest tail damage and the fewest collisions among the three, and delays the first damage the longest.
+
+\begin{table}[!t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.6pt}
+\caption{Protection Measures of LEAF, Memory Query, and REFIL}
+\label{tab:s-protect}
+\begin{tabular}{@{}llrrrrr@{}}
+\toprule
+$(N,K)$ & Method & $I$ (\%) & $P$ (\%) & CVaR & $C$ (\%) & $T_{\rm first}$\\
+\midrule
+(10, 2) & LEAF & \textbf{86.4} & \textbf{30.4} & \textbf{2.43} & \textbf{1.8} & \textbf{82.1}\\
+ & Memory query & 81.0 & 42.4 & 2.71 & 2.5 & 74.0\\
+ & REFIL & 77.0 & 55.2 & 3.54 & 4.7 & 66.7\\
+(30, 2) & LEAF & \textbf{83.0} & \textbf{29.6} & \textbf{3.18} & \textbf{6.3} & \textbf{83.1}\\
+ & Memory query & 78.8 & 47.8 & 4.35 & 9.0 & 71.3\\
+ & REFIL & 75.1 & 70.9 & 7.80 & 13.4 & 57.3\\
+(50, 2) & LEAF & \textbf{78.7} & \textbf{28.1} & \textbf{3.13} & \textbf{11.1} & \textbf{83.9}\\
+ & Memory query & 75.7 & 45.2 & 5.11 & 14.7 & 72.9\\
+ & REFIL & 72.3 & 70.6 & 10.85 & 19.6 & 57.9\\
+(30, 12) & LEAF & \textbf{81.5} & \textbf{48.3} & \textbf{9.42} & \textbf{7.6} & \textbf{70.8}\\
+ & Memory query & 77.5 & 63.8 & 11.72 & 9.4 & 59.8\\
+ & REFIL & 74.5 & 78.2 & 17.37 & 12.7 & 49.9\\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\parbox{\columnwidth}{\scriptsize $I$: share of attackers intercepted. $P$: share of episodes with damage. CVaR: mean damage of the worst 10\% of episodes. $C$: share of defenders lost to collisions with teammates. $T_{\rm first}$: mean decision of the first damage, with undamaged episodes counted at 100. Means over three models and 300 scenes.}
+\end{table}
+
+\subsection{Decision Latency}
+Table~\ref{tab:s-latency} reports the time of one decision for a whole team on a workstation with an NVIDIA GeForce RTX 5070 Ti GPU and an Intel Core i7-14700KF CPU, using PyTorch 2.13 with CUDA 13.0 in single precision without TF32, one CPU thread, and batch size one. The closed-loop columns average the decision steps with at least one living defender over 20 episodes of the seed-0 models, with CUDA synchronization before and after every call. The timer covers the batching of entity features, transfers between host and GPU, the actor forward pass of all defenders, the update of the recurrent state, and the selection and decoding of intents. It excludes the environment, the mixer, and logging. The fixed-team columns repeat 100 decisions on a fixed input with all entities alive, which removes the variation of team size within episodes. One round costs about 70\% of four rounds in closed loop, and the models with a fixed depth cost the same as LEAF at the same depth. All values are two orders of magnitude below the decision interval of 1 s.
+
+\begin{table}[!t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{Team Decision Latency in Milliseconds}
+\label{tab:s-latency}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+ & \multicolumn{2}{c}{Closed loop} & \multicolumn{2}{c}{Fixed team}\\
+\cmidrule(lr){2-3}\cmidrule(l){4-5}
+Model and depth & 30 & 50 & 30 & 50\\
+\midrule
+LEAF, $L=1$ & 7.24 & 7.47 & 6.10 & 5.85\\
+LEAF, $L=2$ & 8.37 & 8.67 & 7.05 & 7.22\\
+LEAF, $L=3$ & 9.76 & 9.55 & 7.99 & 8.11\\
+LEAF, $L=4$ & 10.32 & 10.59 & 9.10 & 8.88\\
+One round & 7.62 & 7.51 & 5.79 & 5.88\\
+Fixed depth, $L=4$ & 10.33 & 10.52 & 8.75 & 9.21\\
+Unshared rounds, $L=4$ & 10.44 & 10.48 & 8.92 & 8.92\\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\parbox{\columnwidth}{\scriptsize Columns give the team size $N_R=N_B$ with two targets. Closed-loop episode SDs are 0.8 to 1.9 ms, and fixed-team call SDs are 1.1 to 2.2 ms.}
+\end{table}
+
+\section{Discussion}
+\label{sec:s-discussion}
+
+\subsection{What the Propositions Establish}
+The two propositions describe single decisions. Proposition~\mref{prop:selection} identifies a structural limitation of every read over individually embedded entities, and Section~\mref{sec:experiments} measures its cost in behavior through the Direct read variant. The proposition does not state that a context round must encode coverage, and the trained operator may use its freedom in other ways. Proposition~\mref{prop:prefix} turns the learned fusion weights into a per-decision guarantee for a change of depth, and Table~\ref{tab:s-prefix} shows that the guarantee and its premise are informative in practice. Closed-loop damage at every depth remains an empirical quantity because a changed intent alters the rest of the episode, and Table~\ref{tab:s-depth} measures it directly.
+
+\subsection{Sampled Depth at Full Depth}
+Sampled-depth training buys a usable policy at every exit, and within the family of variants with a memory-conditioned query it costs damage at four rounds. Memory query exceeds Fixed depth in 10 of 12 seed-group pairs. A plausible reading is that one operator must now serve four exits, so the fourth round can no longer specialize to the last read alone. LEAF combines sampled depth with the current-state query and is not worse than Fixed depth in any group, but these two models differ in two settings. A Fixed-depth model with the current-state query would isolate the cost of sampled depth under the LEAF query, and we leave it to future runs.
+
+\subsection{Why Rule Gains From Larger Teams}
+Rule is the only method besides LEAF whose damage does not grow with the team. It re-solves its assignment for the deployed team, so a larger team gives every attacker a closer defender. Its share of damaged episodes nevertheless stays between 75\% and 93\%. The assignment minimizes predicted distances and treats an attacker bound for a covered target like one bound for an exposed target, and its constant-velocity prediction ignores how the attackers will turn. LEAF stays below Rule at every team size, which indicates that the threat context carries information that distance-based assignment lacks.
+
+\subsection{Scaling With the Number of Targets}
+Damage grows with the number of targets for every method, because ten defenders must spread over up to twelve targets while the attacker rule seeks the least covered one. LEAF has the lowest damage at every target count, and its relative growth from 4 to 12 targets is not smaller than that of REFIL. Target-count extrapolation therefore remains the hardest axis, and it combines a harder task with a policy shift.
+
+\subsection{Scope of the Evidence}
+The evaluation covers one simulator and one fixed attacker rule. The attackers neither evade nor adapt to the defense, the defenders observe all entities without noise or communication delay, and the deployed scales reach 50 aircraft per side or 12 targets but not both together. Every learned method has three training seeds, which limits statistical power~\cite{agarwal2021rliable}, so the tables report seed SDs and per-seed values, and the text counts the seeds that improve. Adaptive attackers, partial sensing, and larger joint scales are the natural next tests of the threat-context design.
+
+\subsection{Computation at Larger Scales}
+A team decision costs $O(N_RL_{\rm exec}M^2d)$ because every defender builds its own context over all entities, and the measured latency grows slowly at the tested sizes because the computation runs in parallel on the GPU. Much larger teams could restrict each defender's context to nearby entities or build one context in the world frame and read it from every defender, which would compute the context once per team instead of once per defender. The egocentric tokens of the current design make every context specific to its defender, so such a change would need retraining.

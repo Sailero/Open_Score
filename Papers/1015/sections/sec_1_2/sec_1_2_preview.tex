@@ -1,0 +1,36 @@
+% 仅用于预览本模块：前置部分、第一章、第二章。合稿时由 Papers/1015/main.tex 直接 \input 三个文件，不需要本文件。
+% 编译：tectonic sec_1_2_preview.tex（在本目录运行）
+% 第三到六章用占位节代替，只为让 Section III--VI 的交叉引用编号正确。
+\RequirePackage[T1]{fontenc}
+\documentclass[journal,10pt]{IEEEtran}
+\usepackage{mathptmx}
+\usepackage{amsmath,amssymb,booktabs,array,multirow}
+\usepackage{graphicx,xcolor}
+\usepackage{cite,url}
+\usepackage[hidelinks]{hyperref}
+\hyphenation{multi-agent gene-ra-li-za-tion re-pre-sen-ta-tion}
+\begin{document}
+\bstctlcite{leafBibliographyControl}
+\input{front_matter}
+\input{introduction}
+\input{related_work}
+
+\section{Problem Formulation}
+\label{sec:problem}
+\textit{Placeholder. Drafted in sections/sec\_3.}
+
+\section{Method}
+\label{sec:method}
+\textit{Placeholder. Drafted in sections/sec\_4.}
+
+\section{Experiments}
+\label{sec:experiments}
+\textit{Placeholder. Drafted in sections/sec\_5\_6.}
+
+\section{Conclusion}
+\label{sec:conclusion}
+\textit{Placeholder. Drafted in sections/sec\_5\_6.}
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+\end{document}

@@ -1,0 +1,228 @@
+% =====================================================================
+% 第三章 Problem Formulation（1015 版草稿，第三轮）
+% 结构：概览；III-A 仿真平台与任务（含固定翼核心动力学）；III-B 防御方 Dec-POMDP；
+%       III-C 蓝方规则策略；III-D 零样本规模泛化（兼作向第四章的过渡，不再另设小节）。
+% 场景：SkyHAD 4.2，UAV_fixedwing + acceleration（27 个离散意图）+ damage。
+% 蓝方：SkyHAD 现有两层规则 reactive（上层目标指派）+ rush（下层飞控）。
+% 载具开关：main.tex 定义 \ifvehicledetail。真分支为固定翼细节（main.tex），假分支为不含载具
+%       细节的通用描述（main_generic.tex）。开关只出现在 III-A、Table、图注、l_c 与 l_tr 的取值、
+%       III-B 的重置分布与观测说明处。单独编译本文件时默认取固定翼分支。
+% 交叉引用：本章引用 sec:intro、sec:method、sec:experiments。
+%       第四章引用本章的 subsec:pf-generalization、subsec:pf-requirements（二者都指向 III-D）、
+%       subsec:pf-decpomdp、eq:fw-mixing、eq:fw-reward，这些标签需保留。
+% 符号：与第四章统一使用 Q_theta、intent。已避开第四章占用的 xi、zeta、phi、psi、beta、kappa、
+%       c、h、u、y、L、F、Theta。重力记 g_0，以免与全局实体表 g(s_t) 冲突。
+% 参考文献：beard2012small、pardo2018timelimits 见同目录 references_sec3.bib，其余键见
+%       sec_1_2/references.bib。
+% 宏包：amsmath、amssymb、booktabs、graphicx。
+% =====================================================================
+\expandafter\ifx\csname ifvehicledetail\endcsname\relax
+  \expandafter\newif\csname ifvehicledetail\endcsname
+  \vehicledetailtrue
+\fi
+
+\section{Problem Formulation}
+\label{sec:problem}
+
+This section formulates multi-target defense as a cooperative decision problem for the defenders. Section~\ref{subsec:pf-scenario} introduces the simulation platform and the task. Section~\ref{subsec:pf-decpomdp} casts the defenders' problem as a decentralized partially observable Markov decision process (Dec-POMDP), and Section~\ref{subsec:pf-attacker} specifies the rule-based attacker that enters its transition. Section~\ref{subsec:pf-generalization} states the zero-shot scale-generalization objective and derives what it requires of the policy in Section~\ref{sec:method}.
+
+\subsection{Simulation Platform and Task}
+\label{subsec:pf-scenario}
+
+\ifvehicledetail
+SkyHAD~\cite{skyhad2026} is an open aerial attack-defense simulator with particle, fixed-wing, and quadrotor models under several control interfaces. We use its six-degree-of-freedom fixed-wing model with acceleration-intent control in the Damage task, where red defenders protect stationary targets against blue attackers.
+\else
+SkyHAD~\cite{skyhad2026} is an aerial attack-defense simulator in which red defenders protect stationary targets against blue attackers. We use its Damage task with acceleration-intent control.
+\fi
+An episode contains a defender set $\mathcal R$, an attacker set $\mathcal B$, and a target set $\mathcal T$ with configuration $\mathbf n=(N_R,N_B,K)$ and $M=N_R+N_B+K$ entities. We write $\mathcal R_t$ and $\mathcal B_t$ for the aircraft alive at decision step $t$, $p_{j,t}$ and $v_{j,t}$ for the position and velocity of aircraft $j$, and $p_k$ for the position of target $k$.
+\ifvehicledetail
+As Fig.~\ref{fig:fw-scene}(a) shows, targets lie near the western edge of a $2\times2\times1$ km scene, each defender starts around a random target, and the attackers enter from the east. Table~\ref{tab:fw-setting} lists the main parameters.
+\else
+As Fig.~\ref{fig:fw-scene}(a) shows, targets lie near the western edge of the scene, each defender starts around a random target, and the attackers enter from the east.
+\fi
+
+% ---------------------------------------------------------------------
+% 图 fig:fw-scene 绘制说明（待作图，当前为占位框）
+% 形式：双栏 figure*，建议高度约 0.2\textheight，两联图，宽度比约 0.55 : 0.45。
+% 配色：沿用 1014 动机图，防御者 teal、攻击者 coral-orange、目标 ochre，避免与红蓝阵营名混淆。
+% (a) 交战示意，三维斜视角，场景 2 km x 2 km x 1 km。西侧 2 到 3 个目标，其中一个目标外画两层
+%     半透明球壳，内层 120 m 标 r_f = r_0，外层 240 m 标 r_1。每个目标外画虚线圆环表示防御覆盖 C_k，
+%     覆盖最弱的目标即被选中目标。防御者为固定翼图标，位于目标周围。攻击者从东侧进入，
+%     用虚线箭头汇聚到同一个被选中的目标，目标旁标 z_t，并用小锁表示防御者不可见。
+% (b) 决策结构（只画问题层面的信息流，不画网络内部）。中间是环境框，内含飞机与目标的推进，
+%     框内右上角是蓝方两层规则：上层在命令事件时由 C_k 与行程采样 z_t（锁标 private），
+%     下层每步 rush 输出蓝方意图。环境向每个防御者输出实体观测 o_{i,t}，列出 token 内容：
+%     相对位置与速度、类型、健康、目标累计损伤、上一意图，并在 z_t 上打叉。
+%     每个防御者经共享的 Q_theta（灰框，标 Section IV）输出意图 a_{i,t}，由自驾仪执行后回到环境。
+%     环境输出团队奖励 r_t = -Delta D_t。训练时用虚线框画单调混合器 f_mix 读取 g(s_t)，部署时去掉。
+% ---------------------------------------------------------------------
+\begin{figure*}[!t]
+\centering
+% \includegraphics[width=\textwidth]{figures/fig_problem.pdf}
+\fbox{\parbox[c][0.2\textheight][c]{0.96\textwidth}{\centering\small
+Figure placeholder. (a) Engagement in SkyHAD. (b) Decision structure of the defense problem.}}
+\caption{Multi-target defense in SkyHAD. (a) Targets lie near the western edge, defenders start around them, and attackers enter from the east. Shells mark the firing and damage radii of one target, rings show defender coverage, and dashed arrows show the attackers converging on the target their rule has privately selected. (b) Each defender maps its entity observations to an acceleration intent that \ifvehicledetail the autopilot\else the aircraft\fi{} executes. Inside the environment, the attacker rule draws a target at command events and steers at every decision, and the drawn target stays hidden from the defenders.}
+\label{fig:fw-scene}
+\end{figure*}
+
+\ifvehicledetail
+Every aircraft $j$ is an Aerosonde small fixed-wing aircraft~\cite{beard2012small} with state $x_j=(p_j,v_j,\mathbf R_j,\Omega_j)$, where $\mathbf R_j$ is the body-to-world attitude and $\Omega_j$ the body angular rate. It follows the Newton--Euler equations
+\begin{align}
+\dot p_j&=v_j, & \dot v_j&=m_{\rm a}^{-1}\mathbf R_j\mathbf f_j-g_0\mathbf e_3,\nonumber\\
+\dot{\mathbf R}_j&=\mathbf R_j[\Omega_j]_\times, & \dot\Omega_j&=\mathbf I_{\rm a}^{-1}\big(\boldsymbol\Gamma_j-\Omega_j\times\mathbf I_{\rm a}\Omega_j\big),\nonumber\\
+\mathbf f_j&=\bar q_jS\,\mathbf C_F+T_{\rm p}\mathbf e_1, & \boldsymbol\Gamma_j&=\bar q_jS\,\mathbf C_\Gamma-Q_{\rm p}\mathbf e_1,
+\label{eq:fw-dynamics}
+\end{align}
+with mass $m_{\rm a}$, inertia $\mathbf I_{\rm a}$, gravity $g_0$, wing area $S$, and dynamic pressure $\bar q_j=\tfrac12\rho_{\rm air}V_j^2$ at airspeed $V_j$. The coefficient vectors $\mathbf C_F$ and $\mathbf C_\Gamma$, the latter scaled by span and chord, depend on the angle of attack, the sideslip, the body rate, and the elevator, aileron, and rudder deflections in the command $\delta_j=(\delta_e,\delta_a,\delta_r,\delta_t)$. The propeller adds the thrust $T_{\rm p}$ and the torque $Q_{\rm p}$ along the body axis $\mathbf e_1$, both set by the airspeed and the throttle $\delta_t$.
+
+A defender does not command the surfaces directly. At each decision it selects an acceleration intent $a_{i,t}\in\mathcal V$, where $\mathcal V$ holds the zero vector and the 26 unit vectors $\mathbf w/\|\mathbf w\|$ with $\mathbf w\in\{-1,0,1\}^3\setminus\{\mathbf 0\}$. The intent fixes a velocity reference for the whole step, which sets the course, climb, airspeed, and bank commands of the autopilot,
+\begin{equation}
+\begin{aligned}
+v^{\rm ref}_{i,t}&=v_{i,t}+\bar a\,\Delta t\,a_{i,t},\\
+\chi^{\rm ref}&=\operatorname{atan2}\big(v^{\rm ref}_y,v^{\rm ref}_x\big),\\
+\vartheta^{\rm ref}&=\operatorname{clip}_{\pm15^\circ}\big(\operatorname{atan2}(v^{\rm ref}_z,\|v^{\rm ref}_{xy}\|)\big),\\
+V^{\rm ref}&=\operatorname{clip}_{[18,30]}\big(\|v^{\rm ref}_{i,t}\|\big),\\
+\mu^{\rm ref}&=\operatorname{clip}_{\pm45^\circ}\big(\arctan(V\Delta\chi/g_0)\big),
+\end{aligned}
+\label{eq:fw-reference}
+\end{equation}
+where $\bar a=5$ m/s$^2$, $\Delta t=1$ s, $V$ is the current airspeed, and $\Delta\chi$ is the wrapped error between $\chi^{\rm ref}$ and the current course. The autopilot $\delta_j=\mathcal K(x_j,\mu^{\rm ref},\vartheta^{\rm ref},V^{\rm ref})$ tracks the bank, climb, and airspeed commands with surface and throttle feedback around the trim at $V^{\rm ref}$, and its rudder holds the coordinated-turn yaw rate $g_0\tan\mu^{\rm ref}/V$. It runs at every stage of a fourth-order Runge--Kutta (RK4) integration of \eqref{eq:fw-dynamics} with 100 substeps per decision, while the reference stays fixed. The policy therefore decides maneuvers, and the airframe and autopilot impose the fixed-wing constraints. An aircraft cannot hover, and one intent turns its velocity reference by at most about $10^\circ$ at the 30 m/s cruise speed, so a heading reversal takes more than ten decisions.
+\else
+Decisions occur every $\Delta t=1$ s. A defender acts by choosing an acceleration intent $a_{i,t}$ from a finite set $\mathcal V$ that holds the zero vector and a set of unit directions. The intent fixes the velocity reference
+\begin{equation}
+v^{\rm ref}_{i,t}=v_{i,t}+\bar a\,\Delta t\,a_{i,t},
+\label{eq:fw-reference}
+\end{equation}
+where $\bar a$ is the acceleration scale, and the aircraft tracks this reference within its speed and turn limits. The policy therefore chooses maneuvers, and the flight constraints remain in effect. An aircraft cannot hover and turns at a bounded rate, so a heading reversal takes many decisions.
+\fi
+
+Firing is automatic, and each aircraft fires at most once. A defender fires when a living attacker comes within the firing radius $r_{\rm f}$, and an attacker fires when a target does. The firing aircraft is removed, and every enemy aircraft at distance $\varrho$, together with every target when the source is an attacker, takes the damage
+\begin{equation}
+\eta(\varrho)=
+\begin{cases}
+1, & \varrho<r_0,\\
+(r_1-\varrho)/(r_1-r_0), & r_0\le\varrho<r_1,\\
+0, & \varrho\ge r_1.
+\end{cases}
+\label{eq:fw-kernel}
+\end{equation}
+Each interception thus costs one defender. Because aircraft have unit health, one interception can also remove several attackers that fly close together. Two aircraft whose paths pass within the collision distance during a step destroy each other, defenders included. Coordination therefore decides how many attackers each defender removes and how many defenders the team loses to collisions and redundant interceptions.
+
+In the Damage task, targets never disappear and accumulate the damage they receive without an upper bound. An episode ends once no attacker remains, whether intercepted, destroyed in a collision, or expended on a target, and is truncated after $T_{\max}=100$ decisions. Losing all defenders does not end the episode, so the surviving attackers keep adding damage.
+
+\ifvehicledetail
+\begin{table}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\caption{Fixed-Wing Damage Task in SkyHAD}
+\label{tab:fw-setting}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Quantity & Setting\\
+\midrule
+Scene & $[-1000,1000]^2\times[0,1000]$ m\\
+Target region & $[-920,-760]\times[-480,480]\times[200,600]$ m\\
+Defender opening & 320--880 m around a target, heading east\\
+Attacker opening & $x\in[0,1000]$ m, any $y$, heading west\\
+Aircraft & Aerosonde, 11 kg, 30 m/s level trim at start\\
+Intents $\mathcal V$ & 27, scale $\bar a=5$ m/s$^2$\\
+Autopilot limits & 18--30 m/s, climb $\pm15^\circ$, bank $\pm45^\circ$\\
+Decision interval, horizon & $\Delta t=1$ s, $T_{\max}=100$\\
+Collision distance & 8 m\\
+Radii $r_{\rm f}=r_0$, $r_1$ & 120 m, 240 m\\
+Health & aircraft 1, targets 2 and constant\\
+Attacker commands & $t=0$, every 5 decisions, after casualties\\
+\bottomrule
+\end{tabular}
+\end{table}
+\fi
+
+\subsection{Defender Dec-POMDP}
+\label{subsec:pf-decpomdp}
+
+With the attacker policy $\pi_B$ of Section~\ref{subsec:pf-attacker} fixed, defense in configuration $\mathbf n$ is the Dec-POMDP~\cite{oliehoek2016decpomdp}
+\begin{equation}
+\mathcal M_{\mathbf n}=\big\langle\mathcal R,\mathcal S,\mathcal A,P^{\pi_B},\{O_i\},r,\gamma,\rho_0^{\mathbf n},T_{\max}\big\rangle.
+\label{eq:fw-decpomdp}
+\end{equation}
+
+\emph{State and actions.} The state $s_t\in\mathcal S$ holds the flight states and health of all aircraft, the accumulated target damage, the attackers' private target assignment $z_t$, and the decision index $t$. The reset law $\rho_0^{\mathbf n}$ samples the opening of \ifvehicledetail Table~\ref{tab:fw-setting}\else Fig.~\ref{fig:fw-scene}(a)\fi. Each living defender selects an intent $a_{i,t}\in\mathcal A=\mathcal V$.
+
+\emph{Transition.} The attackers take the intents $\pi_B^{\rm low}(s_t)$ of their rule. Given these and the joint defender intent $\mathbf a_t$, the aircraft and targets evolve deterministically by the flight model and interaction rules of Section~\ref{subsec:pf-scenario}. The assignment is then redrawn as $z_{t+1}\sim\pi_B^{\rm up}(\cdot\mid s_{t+1})$ at the command events of the rule and kept otherwise. Together with the reset law, these draws are the only randomness in the environment.
+
+\emph{Observations.} Defender $i$ observes the entity set $o_{i,t}=O_i(s_t,\mathbf a_{t-1})=\{x_{i,e,t}\}_{e\in\mathcal E_{i,t}}$ over the living aircraft and all targets, $\mathcal E_{i,t}=\mathcal R_t\cup\mathcal B_t\cup\mathcal T$. Each token holds the position and velocity of entity $e$, its type, its health if $e$ is an aircraft, its accumulated damage if $e$ is a target, and its previous intent if $e$ is a defender. Positions and velocities are relative to defender $i$, except in its own token, which keeps them absolute. The observation is noiseless but omits $z_t$\ifvehicledetail, the command timing, and the attitudes handled by the autopilot\else{} and the command timing\fi. The history $\tau_{i,t}=(o_{i,0},a_{i,0},\dots,o_{i,t})$ therefore carries information that the current observation lacks. Fig.~\ref{fig:fw-scene}(b) summarizes this information structure.
+
+\emph{Reward and objective.} All defenders share the reward
+\begin{equation}
+r_t=-\Delta D_t=-\sum_{k\in\mathcal T}\sum_{b\in\mathcal F_t}\eta\big(\|p_{b,t}-p_k\|\big),
+\label{eq:fw-reward}
+\end{equation}
+where $\mathcal F_t\subseteq\mathcal B_t$ holds the attackers that fire at step $t$. The reward counts simultaneous damage once per step for the team, and the episode reward is $R=-D$ with episode damage $D=\sum_t\Delta D_t$. Natural completion zeroes the successor value, while truncation at $T_{\max}$ retains it~\cite{pardo2018timelimits}. The defenders share one policy $\pi_\theta(a_{i,t}\mid\tau_{i,t})$ and maximize
+\begin{equation}
+J_{\mathbf n}(\theta)=\mathbb E\Big[\sum_{t=0}^{T-1}\gamma^tr_t\,\Big|\,\pi_\theta,\pi_B,\rho_0^{\mathbf n}\Big],
+\label{eq:fw-objective}
+\end{equation}
+where $T\le T_{\max}$ is the stopping step. With $\gamma=1$, $J_{\mathbf n}(\theta)=-\mathbb E[D\mid\mathbf n,\pi_\theta,\pi_B]$.
+
+\subsection{Rule-Based Attacker Policy}
+\label{subsec:pf-attacker}
+
+The attacker policy $\pi_B=(\pi_B^{\rm up},\pi_B^{\rm low})$ is the fixed two-layer rule of SkyHAD, organized like the rule-based defender of Section~\ref{sec:experiments}. Its upper layer assigns a target at command events, which occur at $t=0$, every fifth decision, and every decision that follows a casualty. Its lower layer steers at every decision. The rule works in three steps.
+
+\emph{Step~1, public threat evaluation.} At a command event, the upper layer scores each target by the defender coverage around it and the mean distance the attackers must travel,
+\begin{align}
+C_{k,t}&=\sum_{i\in\mathcal R_t}\sigma_{i,t}\exp\big(-\|p_{i,t}-p_k\|/l_{\rm c}\big),\nonumber\\
+\bar\varrho_{k,t}&=\frac{1}{|\mathcal B_t|}\sum_{b\in\mathcal B_t}\|p_{b,t}-p_k\|,
+\label{eq:fw-coverage}
+\end{align}
+where $\sigma_{i,t}\in[0,1]$ is the health of defender $i$ and
+\ifvehicledetail
+$l_{\rm c}=340$ m.
+\else
+$l_{\rm c}$ is a coverage length scale.
+\fi
+Both scores use only public positions and health.
+
+\emph{Step~2, concentrated stochastic assignment.} The upper layer draws one target $z_t$ from
+\begin{equation}
+\pi_B^{\rm up}(k\mid s_t)=\operatorname{softmax}_{k\in\mathcal T}\big(-2C_{k,t}-0.25\,\bar\varrho_{k,t}/l_{\rm tr}\big),
+\label{eq:fw-assignment}
+\end{equation}
+with \ifvehicledetail $l_{\rm tr}=2000$ m\else a travel length scale $l_{\rm tr}$\fi, and assigns every living attacker to it. The assignment is held until the next command event and stays private to the attackers.
+
+\emph{Step~3, rush steering.} At every decision, each attacker $b\in\mathcal B_t$ selects the intent best aligned with the direction to the assigned target,
+\begin{equation}
+a^B_{b,t}=\arg\max_{a\in\mathcal V}\;a^\top\frac{p_{z_t}-p_{b,t}}{\|p_{z_t}-p_{b,t}\|},
+\label{eq:fw-rush}
+\end{equation}
+and executes it through the same interface \eqref{eq:fw-reference}. This map is the lower layer $\pi_B^{\rm low}$.
+
+The rule makes the threat depend on the defenders' own layout, because the coverage term favors weakly covered targets. It concentrates the whole attacking force on one target at a time and can switch targets at every command event through a draw that the defenders do not observe.
+
+\subsection{Zero-Shot Scale Generalization}
+\label{subsec:pf-generalization}
+\label{subsec:pf-requirements}
+
+The configurations index a family $\{\mathcal M_{\mathbf n}\}$ that shares the dynamics, intents, attacker rule, and reward, and differs only in entity counts and reset law. A policy is trained on configurations drawn from $P_{\rm train}$ and deployed with frozen parameters on $P_{\rm test}$, whose support contains larger teams, more targets, or both. Deployment quality is
+\begin{equation}
+\bar D_{\rm test}(\theta)=\mathbb E_{\mathbf n\sim P_{\rm test}}\,\mathbb E\big[D\mid\mathbf n,\pi_\theta,\pi_B\big],
+\label{eq:fw-transfer}
+\end{equation}
+while training maximizes only $\mathbb E_{\mathbf n\sim P_{\rm train}}J_{\mathbf n}(\theta)$. In Section~\ref{sec:experiments}, $P_{\rm train}$ has at most ten aircraft per side and three targets, and $P_{\rm test}$ reaches fifty aircraft per side or twelve targets.
+
+We learn $\pi_\theta$ by centralized training with decentralized execution (CTDE). A shared utility network $Q_\theta$ gives each defender the intent utilities $Q_\theta(\tau_{i,t},\cdot)\in\mathbb R^{|\mathcal V|}$. During training, a monotonic mixer~\cite{rashid2018qmix} combines them with a global entity table $g(s_t)$ that also omits $z_t$,
+\begin{align}
+Q_{\rm tot}(s_t,\mathbf a_t)&=f_{\rm mix}\big(\{Q_\theta(\tau_{i,t},a_{i,t})\}_{i\in\mathcal R_t},\,g(s_t)\big),\nonumber\\
+\frac{\partial Q_{\rm tot}}{\partial Q_\theta(\tau_{i,t},a_{i,t})}&\ge0,
+\label{eq:fw-mixing}
+\end{align}
+so greedy individual intents also maximize $Q_{\rm tot}$. At deployment each defender acts greedily on $Q_\theta(\tau_{i,t},\cdot)$ without the mixer, and the utility network alone turns an entity set of any size into the intent of one defender. Zero-shot transfer therefore places three requirements on $Q_\theta$.
+
+\emph{Set-structured processing.} The observation $o_{i,t}$ is a set whose size changes with $\mathbf n$ and with casualties. $Q_\theta$ must accept any number of tokens, give the same utilities under any reordering of the other entities, and share parameters across defenders~\cite{zaheer2017deepsets,lee2019settransformer}.
+
+\emph{Relational threat context.} Coverage enters the problem twice. Through \eqref{eq:fw-coverage} and \eqref{eq:fw-assignment} it shapes where the attackers go, and it decides whether an approaching attacker still needs a response, since teammates near its target can intercept it. The urgency of an attacker for defender $i$ thus depends jointly on the attacker's approach to a target, the teammates covering that target, and the defender's own state. This attacker--target--teammate relation is the threat context of Section~\ref{sec:intro}. $Q_\theta$ must relate attacker, target, and teammate tokens before it extracts the feature on which defender $i$ acts. The turn limit raises the cost of an error, since a defender committed to the wrong attacker needs many decisions to recover.
+
+\emph{Memory after scene interpretation.} The current scene shows which targets the attacker rule favors at its next command event. Only the history reveals which target its last draw selected, so $Q_\theta$ needs a recurrent memory~\cite{hausknecht2015drqn}. Larger engagements contain more entities and more casualty-triggered reassignments, so a recurrent state trained on small engagements drifts into ranges it never visited. If that state conditioned the reading of the current scene, the drift would propagate into the threat context. $Q_\theta$ should therefore interpret the current scene from the current observation and add memory afterward.
+
+Section~\ref{sec:method} builds LEAF on the entity-based factorization of REFIL~\cite{iqbal2021refil} to meet these requirements. A shared looped attention operator constructs the threat context over the current entity set, a query formed from the defender's current state reads it, and recurrent memory enters after the read.

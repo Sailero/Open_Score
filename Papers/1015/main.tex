@@ -1,0 +1,41 @@
+% LEAF 1015 版合稿入口。编译：tectonic main.tex，或 pdfLaTeX + BibTeX（Overleaf 默认）。
+% 各章源文件位于 sections/ 下对应子目录，参考文献统一使用本目录 references.bib。
+% 第三章有两个版本：本文件给出固定翼载具细节；main_generic.tex 先定义 \LEAFGenericVehicle，
+% 得到不含载具细节的通用描述版本，其余各章两版相同。
+\RequirePackage[T1]{fontenc}
+\documentclass[journal,10pt]{IEEEtran}
+\usepackage{amsmath,amssymb}
+\usepackage{algorithm,algorithmic}
+\usepackage{array,booktabs,multirow}
+\usepackage{graphicx,xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,calc}
+\usepackage{cite,url}
+\usepackage[hidelinks]{hyperref}
+
+\newtheorem{proposition}{Proposition}
+\renewcommand{\algorithmiccomment}[1]{\hfill$\triangleright$~#1}
+\hyphenation{multi-agent gene-ra-li-za-tion re-pre-sen-ta-tion}
+\hypersetup{pdftitle={Looped Threat Context Reasoning for Scalable Multiagent Target Defense}}
+
+\newif\ifvehicledetail
+\ifdefined\LEAFGenericVehicle\vehicledetailfalse\else\vehicledetailtrue\fi
+
+\begin{document}
+\bstctlcite{leafBibliographyControl}
+\input{sections/sec_1_2/front_matter}
+\input{sections/sec_1_2/introduction}
+\input{sections/sec_1_2/related_work}
+\input{sections/sec_3/problem}
+\input{sections/sec_4/method}
+
+\input{sections/sec_5_6/experiments}
+\input{sections/sec_5_6/conclusion}
+
+% IEEE 要求在致谢中披露 AI 生成内容，并指明所用系统与涉及部分。投稿前请按实际情况补全模型名称。
+\section*{Acknowledgment}
+The authors used AI assistants based on large language models, accessed through the Cursor editor, to draft and revise the text of all sections, to lay out the tables and the method diagram, and to write the scripts that plot the experimental figures from the recorded results. The authors checked all content against the experimental records and take full responsibility for the paper.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+\end{document}

@@ -1,0 +1,9 @@
+# Overleaf compiles whichever file is set as the main document. When that file is
+# supplementary.tex, build main.tex first so xr-hyper can read main.aux.
+add_cus_dep('tex', 'aux', 0, 'build_main_aux');
+sub build_main_aux {
+    if ($_[0] eq 'main') {
+        return system('latexmk', '-pdf', '-interaction=nonstopmode', 'main.tex');
+    }
+    return 0;
+}

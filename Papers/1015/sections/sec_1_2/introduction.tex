@@ -1,0 +1,76 @@
+% =====================================================================
+% Section I: Introduction（1015 版，精简稿）
+% 依赖的交叉引用标签：sec:problem、sec:method、sec:experiments、sec:conclusion
+% 本文件定义：sec:intro、fig:motivation。文献见同目录 references.bib。
+% 叙述中的具体数字只保留训练与部署规模一处；结果优势用可核对的定性表述，数值见第五章。
+% 与基线的设计区别由单栏 Fig. 1(b) 的三行信息流呈现，不再单列表格。
+% =====================================================================
+\section{Introduction}
+\label{sec:intro}
+
+\IEEEPARstart{D}{efending} stationary assets with a team of autonomous vehicles is a central problem for multirobot systems and aerial swarms~\cite{garcia2019activedefense,shishika2020perimeter,zhao2024swarmdefense,wu2025swarm}. The numbers of defenders, attackers, and protected targets are rarely known before a mission, so training a policy for every combination is impractical. A deployable controller should be trained once on small engagements and then run without retraining on much larger ones. We study this zero-shot scale generalization~\cite{kirk2023zsg,iqbal2021refil}.
+
+% ---------------------------------------------------------------------
+% 【Fig. 1 作图说明】单栏 figure，宽 \columnwidth（约 3.5 in），高约 3.0 in，上下两个子图。
+% 字号缩放后不小于 7 pt；LEAF 的颜色与第五章各图统一。
+% (a) Threat context（上，约 1.1 in 高）
+%     左右两个并排小场景，各约 1.6 in 宽，元素位置完全相同：红色攻击者带速度箭头飞向同一目标，
+%     蓝色 acting defender 在同一位置。左图目标两侧各有一名蓝色队友并画浅色覆盖圈，标 Guarded；
+%     右图没有队友，目标红色描边，标 Unguarded。两图下方一行小字：same attacker features, different threat。
+% (b) Where relations, memory, and depth enter（下，约 1.7 in 高）
+%     三行从左到右的简化流程，左侧为行标签：
+%     1. Single read (REFIL, SPECTra)：实体 token 行 -> 自身 query 读取一次 -> GRU（h_{t-1} 进入 GRU）-> Q
+%     2. Entity Transformer (TransfQMix)：[memory token + 实体 token] -> Layer 1 -> Layer 2（标 fixed depth）-> Q，
+%        红色箭头表示记忆进入每一层
+%     3. LEAF：实体 token 行 -> 共享算子 F 带回环箭头 xL（标 L set at deployment）-> 当前状态 query 每轮读取
+%        -> fuse -> GRU（h_{t-1} 只在这里进入）-> Q
+%     用三种标记区分性质：绿色框表示读取前建立实体关系（第 2、3 行），红色箭头表示记忆进入场景处理（仅第 2 行），
+%     回环箭头表示深度可在部署时设定（仅第 3 行）。图例放在 (b) 底部一行。
+%     若三行太挤，可只画第 1、3 行，第 2 行的差别留在图注。
+% 图做好后用 \includegraphics[width=\columnwidth]{figures/fig1_threat_context.pdf} 替换 \fbox。
+% ---------------------------------------------------------------------
+\begin{figure}[!t]
+\centering
+\fbox{\parbox[c][2.9in][c]{0.95\columnwidth}{\centering Placeholder for Fig.~1, single column.\\ The figure plan is given in the source comments.}}
+% \includegraphics[width=\columnwidth]{figures/fig1_threat_context.pdf}
+\caption{Threat context and the design of LEAF. (a) The same attacker approaching the same target is far more urgent when no teammate guards the target, so its own features cannot reveal its threat. (b) Where relations, memory, and depth enter. A single-read policy queries the entities once without relating them. An entity Transformer relates them in a fixed stack that also carries the recurrent memory. LEAF relates them with a weight-shared loop whose depth is set at deployment, reads every round with a current-state query, and lets memory enter only after the read.}
+\label{fig:motivation}
+\end{figure}
+
+Scale generalization is hard in target defense because threat is relational. Air-defense practice assesses a threat by its capability against the defended assets~\cite{roux2007tewa}, and defense games show that the outcome depends on how defenders are arranged around the targets~\cite{shishika2020perimeter,garcia2021mpme}. The urgency of an attacker therefore depends on its motion, on the target it approaches, and on the teammates already covering that target. We call this joint relation the threat context. In Fig.~\ref{fig:motivation}(a), the same attacker approaches the same target in two scenes, and teammates guard the target only in the first. The features of the attacker are identical in both scenes, so no function of them can separate the two. A defender has to relate attackers to targets and targets to teammates before it decides~\cite{battaglia2018relational,zambaldi2019relational}. Larger engagements produce these relations in new combinations, so the computation that builds them must be shared across entities and remain valid for sets of any size~\cite{zaheer2017deepsets,lee2019settransformer}.
+
+The context must also be read in the right way. The same context calls for different responses from a free defender and from one already engaged elsewhere, so each defender should read it from its own state, as agent-specific attention does~\cite{iqbal2019maac,iqbal2021refil}. Memory is needed as well, because attackers choose their targets privately and the scene is only partially observable~\cite{oliehoek2016decpomdp,hausknecht2015drqn}. A recurrent state, however, moves into unseen regions when its inputs differ from those of training~\cite{lamb2016professor,bengio2015scheduled}, and a larger engagement supplies such inputs. If memory takes part in building or reading the threat context, this drift distorts the reading of the current scene.
+
+A last question is how much relational reasoning a decision needs. One round of attention relates entities in pairs, while a guarded target is a relation among an attacker, its target, and nearby teammates. Further rounds compose such relations from earlier ones, as multiple hops do in memory networks~\cite{sukhbaatar2015memory,battaglia2018relational}. The required depth varies across inputs~\cite{graves2016act,kaya2019overthinking}, and a network trained at one depth degrades when it runs with fewer layers~\cite{fan2020layerdrop,kaya2019overthinking}. A defense policy with a fixed depth therefore cannot shorten its reasoning to meet a tighter time budget.
+
+Existing methods meet only part of these requirements. Assignment-based defenders, from differential games to learned allocation, compress the threat context into discrete defender-attacker pairs~\cite{chen2017reachavoid,garcia2021mpme,iqbal2022alma,wu2025swarm}. Value factorization methods such as QMIX and DCG improve how utilities combine~\cite{rashid2018qmix,boehmer2020dcg}, while each utility still comes from one read of the scene. Entity-based methods such as REFIL and SPECTra accept any team size~\cite{iqbal2021refil,park2026spectra}, yet they read the entities once without relating them first, as the top row of Fig.~\ref{fig:motivation}(b) shows. Entity Transformers such as TransfQMix relate entities over several layers~\cite{hu2021updet,transfqmix2023}, but the same stack carries the recurrent memory and has a depth fixed in training.
+
+Our key insight is that a defender's decision separates into three steps with different inputs. Building the threat context needs only the current entities. Reading it needs only the defender's current state. Inferring the hidden intent of attackers is the only step that needs history. A policy that generalizes across scales should give each step its own module, let history enter last, and train the context builder to work at any depth.
+
+We propose LEAF (Looped Entity Attention with Fused reading). At each decision, LEAF refines the current entities with one weight-shared entity-attention operator applied in a loop, following the shared-depth computation of Universal and looped Transformers~\cite{dehghani2019universal,giannou2023looped}. A query formed only from the defender's current state reads the entities after every round, and learned weights fuse these reads. A recurrent network then combines the fused feature with the defender's memory and outputs action values. Training samples the number of rounds, so that every round count yields a usable policy~\cite{fan2020layerdrop}. Parameters are shared across entities, defenders, and rounds, and LEAF keeps the value factorization of REFIL for centralized training~\cite{iqbal2021refil}. Unlike REFIL and SPECTra, LEAF relates entities before any defender reads them. Unlike TransfQMix, its scene processing never sees the recurrent state, and its depth can change after training, as the bottom row of Fig.~\ref{fig:motivation}(b) shows.
+
+We evaluate LEAF in the SkyHAD aerial defense environment~\cite{skyhad2026}. Policies trained with at most 10 defenders and 3 targets are deployed without retraining to up to 50 defenders or 12 targets. As teams grow, every learned baseline falls behind a rule-based assignment controller. LEAF has the lowest damage in every test configuration and outperforms all baselines by a wide margin. In every test group, even its weakest training run beats the best run of each baseline, and a baseline enlarged to the size of LEAF remains far behind. Single-factor ablations confirm that context construction, multi-round refinement, and memory placement each reduce damage, most clearly under extrapolation. A probe of the recurrent state confirms that memory drifts with scale while the current self state does not. Sampled-depth training keeps every execution depth usable. A fixed-depth model collapses when it runs with fewer rounds, whereas LEAF keeps nearly all of its protection with a single round.
+
+The main contributions of this paper are as follows.
+\begin{enumerate}
+\item \emph{Diagnosis.} We identify the threat context as the information on which zero-shot scale generalization in multi-target defense depends. We trace the scale failure of learned defenders to two design choices: reading entities before relating them, and letting a memory that drifts with scale take part in reading the scene.
+\item \emph{Method.} We propose LEAF, which separates context construction, current-state reading, and memory, and trains one weight-shared loop across sampled depths. A single policy then serves any team size and any execution depth.
+\item \emph{Evidence.} Trained on small engagements, LEAF transfers to teams and target sets several times larger with the lowest damage in every test configuration, and it keeps nearly all of its protection with a single round of reasoning.
+\end{enumerate}
+
+Section~\ref{sec:related} reviews related work, Section~\ref{sec:problem} formulates the problem, Section~\ref{sec:method} presents LEAF, Section~\ref{sec:experiments} reports the experiments, and Section~\ref{sec:conclusion} concludes the paper.
+
+% =====================================================================
+% 【引言主张与支撑】合稿检查用；数值已与保存统计核对，正文不写具体百分比。
+% 观点与假设 -> 文献：威胁取决于受保护资产与防守布局 roux2007tewa、shishika2020perimeter、garcia2021mpme；
+%   先关联实体再决策 battaglia2018relational、zambaldi2019relational；共享计算适用任意规模 zaheer2017deepsets、
+%   lee2019settransformer；按自身状态读取 iqbal2019maac、iqbal2021refil；部分可观测需要记忆 oliehoek2016decpomdp、
+%   hausknecht2015drqn；输入偏离训练时循环状态漂移 lamb2016professor、bengio2015scheduled；多轮组合关系
+%   sukhbaatar2015memory、battaglia2018relational；所需深度随输入变化、固定深度截断会退化 graves2016act、
+%   kaya2019overthinking、fan2020layerdrop；共享深度计算 dehghani2019universal、giannou2023looped。
+% 实验主张 -> 第五章：大规模下学习基线不如 Rule（N-OOD 1.545 vs REFIL 2.209，Joint 3.060 vs 3.308）；
+%   24/24 配置最低，相对各组最强基线降损 43%-64%；四组中最差 LEAF 种子胜过每个基线的最好种子；
+%   REFIL-matched 同参数仍远落后；单因素消融链；记忆漂移探针（docs/experiment.md 第 7.2 节）；
+%   固定深度一轮损伤约为四轮 15 倍，LEAF 一轮只高约 2%。
+% 注意：随机深度不提升四轮性能，引言只写可用出口。不写 significantly（只有三个训练种子，没有显著性检验）。
+% =====================================================================

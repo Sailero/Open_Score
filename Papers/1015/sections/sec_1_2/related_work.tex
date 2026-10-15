@@ -1,0 +1,24 @@
+% =====================================================================
+% Section II: Related Work（1015 版，精简稿）
+% 四个方法族与第五章基线对应：II-A Rule、ALMA；II-B QMIX、DCG；II-C REFIL、SPECTra；II-D TransfQMix。
+% 本文件定义：sec:related、subsec:rw-*。文献见同目录 references.bib。
+% =====================================================================
+\section{Related Work}
+\label{sec:related}
+We group prior work by the mechanism it uses to coordinate a changing number of defenders. Each family is represented among the baselines of Section~\ref{sec:experiments}.
+
+\subsection{Assignment-Based Target Defense}
+\label{subsec:rw-assignment}
+Differential games derive defense strategies with guarantees, often by solving pairwise subgames and combining them through assignment~\cite{garcia2019activedefense,chen2017reachavoid,yan2022matching,garcia2021mpme}. Task allocation makes the division of effort explicit~\cite{gerkey2004allocation,choi2009auction,miele2025coordination}. Learning methods keep an allocation layer and learn when and how to assign, as in ALMA and hierarchical swarm defense~\cite{iqbal2022alma,wu2025swarm,li2025targetdefense,zhao2024swarmdefense}. Our rule-based baseline re-solves an integer assignment of defenders to predicted attacker positions at every step. An assignment compresses the threat context into discrete pairs, which must be revised whenever attackers switch targets. LEAF keeps the context as entity representations and outputs maneuvers without an assignment.
+
+\subsection{Value Factorization and Explicit Coordination}
+\label{subsec:rw-factorization}
+Value decomposition connects individual utilities to a team objective through additive, monotonic, or pairwise structure~\cite{sunehag2018vdn,rashid2018qmix,boehmer2020dcg}. These methods decide how utilities combine, while each utility still comes from one read of the scene by its own agent. LEAF keeps a monotonic mixer for training and changes how the agent network forms its utilities.
+
+\subsection{Entity-Based Generalization Across Team Sizes}
+\label{subsec:rw-entity}
+Set encoders and permutation-invariant networks process each entity with shared parameters~\cite{zaheer2017deepsets,lee2019settransformer,hao2023hpn}, attention lets each agent weigh others by relevance~\cite{iqbal2019maac}, and population curricula reach large teams by training on them~\cite{long2020epc,wang2020dymacl}. REFIL factorizes values over random entity groups so that learned interactions recombine in new teams~\cite{iqbal2021refil}, and SPECTra pairs self-query attention with a mixer that scales with the team~\cite{park2026spectra}. Both read the entity set once with the agent's own query, so relations among the other entities are not formed before the read. LEAF inserts a looped construction of these relations before the read.
+
+\subsection{Entity Transformers, Iterative Reasoning, and Memory}
+\label{subsec:rw-transformer}
+Entity Transformers apply several attention layers over entity tokens~\cite{hu2021updet,transfqmix2023}. UPDeT and TransfQMix carry history as a recurrent token in every layer, and their depth is fixed in training. Weight-shared iteration turns depth into repeated computation with constant parameters~\cite{dehghani2019universal,graves2016act,giannou2023looped}. Stochastic depth, layer dropout, and early exits train networks that remain useful at several depths~\cite{huang2016stochastic,fan2020layerdrop,teerapittayanon2016branchynet,kaya2019overthinking}, and jumping knowledge combines intermediate representations~\cite{xu2018jk}. Recurrent memory is standard under partial observability~\cite{hausknecht2015drqn,phan2023aerial}. These ideas come from settings where test inputs resemble training inputs. LEAF combines a weight-shared loop, sampled depths, and fused reads inside one decision of a multiagent policy, and it keeps memory out of the loop.

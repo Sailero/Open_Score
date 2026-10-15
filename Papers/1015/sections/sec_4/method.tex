@@ -1,0 +1,180 @@
+% Section IV (Method) of the 1015 draft, input from Papers/1015/main.tex.
+% Preamble needs amsmath, amssymb, algorithm, algorithmic, tikz with
+% \usetikzlibrary{arrows.meta,positioning,fit,calc}, and \newtheorem{proposition}{Proposition}.
+% Labels used from other sections: subsec:pf-generalization, subsec:pf-decpomdp, subsec:pf-requirements,
+% eq:fw-mixing, eq:fw-reward from Section III, and sec:experiments from Section V.
+
+\section{Looped Entity Attention With Fused Reading}
+\label{sec:method}
+This section presents LEAF. Section~\ref{subsec:method-overview} gives the overall framework and its pseudocode, and Sections~\ref{subsec:method-loop} to~\ref{subsec:method-training} describe its four modules.
+
+% Placeholder: sections/sec_4/framework.tex, the 1014 TikZ diagram regrouped into the four modules.
+% Planned replacement figure, full width. Numbered frames 1 to 4 match Sections IV-B to IV-E.
+% Front end: egocentric view of defender i with teammates, attackers, and targets, the shared encoder,
+%   and the split into the REFIL host path l_{i,t} and the relational path H^(0).
+% Module 1, IV-B: one shared operator F drawn once with a loop arrow and a times-L mark inside a box marked
+%   one decision step, with H^(0) -> H^(1) -> ... -> H^(L) as a filmstrip.
+% Module 2, IV-C: one fixed query from the current self token feeding the shared reader at every round,
+%   a small bar of fusion weights alpha_r, and the fused feature c^[L].
+% Module 3, IV-D: l' = l + W_f c^[L], the GRU on an outer time axis t-1 -> t -> t+1 as the only state that
+%   crosses decision steps, and the intent utilities Q_theta.
+% Module 4, IV-E: a dashed training strip with L drawn per episode and per minibatch from {1,...,4}, the
+%   online, target, and imagined branches, the monotonic mixer, and eq:loss, plus a deployment tag with a
+%   fixed L and no mixer.
+\begin{figure*}[!t]
+\centering
+\resizebox{\textwidth}{!}{\input{sections/sec_4/framework}}
+\caption{Overview of LEAF at one decision of defender $i$. A shared encoder maps the egocentric entity view to tokens that feed the REFIL host path and the relational path. Module~1 initializes the context states $H^{(0)}$ from the current entities and refines them for $L$ rounds with one shared operator $F$. Module~2 reads every round with a fixed query formed from the defender's current self token and fuses the reads into the threat-context feature $c^{[L]}$. Module~3 adds $c^{[L]}$ to the host feature, and the temporal GRU then produces the intent utilities. The GRU state is the only quantity that persists across decision steps. Module~4 samples $L$ from one to four during training and applies the same depth to the online, target, and imagined branches. Deployment fixes $L$ as a compute budget and runs without the mixer.}
+\label{fig:framework}
+\end{figure*}
+
+\subsection{Framework Overview}
+\label{subsec:method-overview}
+LEAF instantiates the utility network $Q_\theta$ of Section~\ref{subsec:pf-generalization} on top of REFIL~\cite{iqbal2021refil}. It rests on one observation. A defender's decision separates into three steps that draw on different information. Building the threat context draws only on the current entities, interpreting it for one defender adds only that defender's current state, and only inferring the hidden intent of the attackers needs history. LEAF gives each step its own module and lets history enter last. A fourth module trains the context builder so that it works at any depth.
+
+Fig.~\ref{fig:framework} shows one decision of defender $i$. A shared encoder embeds the egocentric entity view, and the host path of REFIL pools it into a local feature. Module~1 refines the entity states for $L$ rounds with one shared attention operator. Module~2 reads every round with a query formed from the defender's current self token and fuses the reads into a threat-context feature. Module~3 adds this feature to the host feature and passes the sum to a gated recurrent unit (GRU), which outputs the intent utilities. The loop restarts from the current observation at every decision, and only the GRU state carries memory across decisions. During training, Module~4 samples $L$, and the mixer of \eqref{eq:fw-mixing} combines the utilities into a team value. At deployment, the mixer is dropped and $L$ becomes a compute budget. Algorithm~\ref{alg:leaf} lists the procedure.
+
+All parameters are shared across entities, defenders, and rounds, and every map acts on each entity separately or combines entities through masked attention. LEAF therefore accepts any number of entities, does not depend on their order~\cite{lee2019settransformer}, and needs neither a population-specific parameter nor an explicit population count. This meets the set-structured requirement of Section~\ref{subsec:pf-requirements}. Modules~1 to~3 meet its other two requirements, and Module~4 answers the depth question raised in the Introduction.
+
+\begin{algorithm}[!t]
+\caption{LEAF Decision and Sampled-Depth Training}
+\label{alg:leaf}
+\begin{algorithmic}[1]
+\REQUIRE Actor and mixer parameters $\Theta$, target copy $\bar\Theta$, replay buffer $\mathcal D$, maximum depth $L_{\max}$, weight $\lambda$
+\STATE \textbf{Decision} of defender $i$ at step $t$ with depth $L$:
+\STATE Compute $Z_{i,t}$, $\ell_{i,t}$, $E_{i,t}$, and $H^{(0)}_{i,t}$ by \eqref{eq:encoding}
+\STATE $q_{i,t}\gets W_qE^{\mathrm{self}}_{i,t}+b_q$
+\FOR{$r=1$ \TO $L$}
+\STATE $H^{(r)}_{i,t}\gets F^{m_{i,t}}(H^{(r-1)}_{i,t})$ by \eqref{eq:loop} \COMMENT{Module 1}
+\STATE Read $u^{(r)}_{i,t}$ with the fixed query by \eqref{eq:read} \COMMENT{Module 2}
+\ENDFOR
+\STATE Fuse the reads into $c^{[L]}_{i,t}$ by \eqref{eq:fusion} \COMMENT{Module 2}
+\STATE Update $h_{i,t}$ and output $Q_\theta(\tau_{i,t},\cdot)$ by \eqref{eq:decision} \COMMENT{Module 3}
+\STATE \textbf{Training} \COMMENT{Module 4}
+\FOR{each collection round}
+\STATE Draw $L_k\sim\mathcal U\{1,\dots,L_{\max}\}$ for each episode $k$
+\STATE Run each episode $k$ with $\epsilon$-greedy decisions at depth $L_k$ and store it in $\mathcal D$
+\FOR{each gradient step}
+\STATE Sample a minibatch and $L\sim\mathcal U\{1,\dots,L_{\max}\}$
+\STATE Unroll the online, target, and imagined branches with $L$ rounds
+\STATE Update $\Theta$ by a gradient step on \eqref{eq:loss} at depth $L$
+\ENDFOR
+\STATE Copy $\Theta$ to $\bar\Theta$ at a fixed interval
+\ENDFOR
+\STATE \textbf{Deployment:} freeze $\Theta$, choose $L_{\mathrm{exec}}$, and act greedily without the mixer
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Looped Threat-Context Construction}
+\label{subsec:method-loop}
+Defender $i$ arranges its observation $o_{i,t}$ as a matrix $X_{i,t}\in\mathbb R^{M\times d_x}$ with one row per entity and its own token first. The self row keeps the absolute position and velocity of the defender, and the other rows give positions and velocities relative to it, which exposes distances and closing motion directly. The mask $m_{i,t}\in\{0,1\}^{M}$ marks destroyed aircraft and padding rows, which never serve as attention keys and whose states $\operatorname{Mask}_{m}(\cdot)$ sets to zero. A rowwise encoder $\phi_{\mathrm{enc}}$, an affine map with a rectified linear unit, feeds both paths:
+\begin{align}
+Z_{i,t}&=\phi_{\mathrm{enc}}(X_{i,t}),\qquad \ell_{i,t}=\phi_{\mathrm{host}}(Z_{i,t},m_{i,t}),\nonumber\\
+E_{i,t}&=\operatorname{Lin}_{g}(Z_{i,t}),\qquad H^{(0)}_{i,t}=\operatorname{Mask}_{m_{i,t}}(E_{i,t}).
+\label{eq:encoding}
+\end{align}
+Here $\phi_{\mathrm{host}}$ is the self-query entity attention of REFIL with its output projection, $\operatorname{Lin}_{g}$ maps each token to the working width $d$, and $E^{\mathrm{self}}_{i,t}$ is the self row of $E_{i,t}$.
+
+Module~1 refines the context states with one operator $F$ applied $L$ times, $H^{(r)}_{i,t}=F^{m_{i,t}}(H^{(r-1)}_{i,t})$. Omitting $i$ and $t$, one round is the residual attention block
+\begin{align}
+\widetilde H^{(r)}&=H^{(r-1)}+\operatorname{MHA}^{m}_{\mathrm c}\big(\operatorname{LN}_a(H^{(r-1)}),H^{(r-1)},H^{(r-1)}\big),\nonumber\\
+H^{(r)}&=\operatorname{Mask}_{m}\big[\widetilde H^{(r)}+\operatorname{FFN}_{\mathrm c}\big(\operatorname{LN}_f(\widetilde H^{(r)})\big)\big],
+\label{eq:loop}
+\end{align}
+where $\operatorname{MHA}^{m}_{\mathrm c}$ is multihead attention~\cite{vaswani2017attention} over queries, keys, and values with $-\infty$ logits at excluded keys, and layer normalization and the two-layer feedforward network act on each row. The defender's own token takes part in the context like any other teammate.
+
+The context is built before it is read because of a property shared by every read over individually embedded entities, such as the reads of REFIL and SPECTra~\cite{iqbal2021refil,park2026spectra} or a read of $H^{(0)}$.
+
+\begin{proposition}[Selection without context]
+\label{prop:selection}
+Let each row $z_j$ of $Z$ depend only on entity $j$ and defender $i$, and consider the read $u=\operatorname{MHA}^{m}(q,Z,Z)$. In every head, two permitted entities $a$ and $b$ receive attention weights with $w_a/w_b=\exp(s_a-s_b)$, where $s_j$ depends only on $q$ and $z_j$. The ratio is therefore identical in any two scenes that share $q$, $z_a$, and $z_b$, whatever the other entities are.
+\end{proposition}
+
+\begin{IEEEproof}
+A head assigns $w_j=\exp(s_j)/\sum_k\exp(s_k)$, with $s_j=\langle W_Qq,W_Kz_j\rangle/\sqrt{d_{\mathrm k}}$ for key width $d_{\mathrm k}$ and the sum over permitted entities, so the normalizer cancels in $w_a/w_b$.
+\end{IEEEproof}
+
+Moving teammates toward or away from the targets of two attackers thus cannot change how such a read weighs one attacker against the other, and any dependence on coverage must be recovered later from the pooled vector. The ablation that reads $H^{(0)}$ in Section~\ref{sec:experiments} tests this restriction directly. A read of $H^{(L)}$ with $L\ge1$ is free of it, because by \eqref{eq:loop} every context state depends on all permitted entities. After one round, a target token can carry the teammates around it and an attacker token the target it approaches. After two, the attacker token can absorb the coverage-aware target token, so two rounds suffice for information to travel from teammate to target to attacker.
+
+Sharing $F$ across rounds makes depth a free variable of one computation. The parameter count does not depend on $L$, and every sampled depth trains the same operator on both the initial tokens and its own outputs, as with the shared transition of Universal Transformers~\cite{dehghani2019universal}. Training thus favors a transformation that stays useful when applied to its own output, which is what execution at a different depth requires.
+
+\subsection{Current-State Reading and Fused Readout}
+\label{subsec:method-read}
+Module~2 reads the context with a query formed from the defender's current self token, $q_{i,t}=W_qE^{\mathrm{self}}_{i,t}+b_q$, fixed for all rounds of the decision. A reader with its own parameters, shared across rounds, produces one read per round,
+\begin{equation}
+u^{(r)}_{i,t}=\operatorname{MHA}^{m_{i,t}}_{\mathrm r}\big(q_{i,t},H^{(r)}_{i,t},H^{(r)}_{i,t}\big),\quad r=1,\dots,L.
+\label{eq:read}
+\end{equation}
+The query carries the defender's own state and previous intent, so a free defender and one engaged elsewhere can attend to different threats in the same scene. Because it ignores the loop states, every round answers the same question about a progressively refined context. It also ignores the temporal state, which Module~3 places downstream.
+
+A linear scorer shared across rounds fuses the reads into the threat-context feature
+\begin{align}
+\zeta_r&=w_s^{\top}u^{(r)}_{i,t}+b_s,\qquad
+\alpha^{[L]}_{r}=\frac{\exp(\zeta_r)}{\sum_{k=1}^{L}\exp(\zeta_k)},\nonumber\\
+c^{[L]}_{i,t}&=\sum_{r=1}^{L}\alpha^{[L]}_{r}\,u^{(r)}_{i,t}.
+\label{eq:fusion}
+\end{align}
+Because the scorer sees one read at a time, it serves any number of rounds, and the fusion weights still vary with the defender and the scene. Every depth $L$ yields its own feature $c^{[L]}_{i,t}$, so stopping after any round, which we call an exit, gives a complete decision feature built from the same weights. As in jumping knowledge networks~\cite{xu2018jk}, a deeper exit keeps the early reads while adding refinement, and the feature never relies on the last round alone, whose token states repeated attention can homogenize~\cite{dong2021attention}. All $L$ rounds are computed, and the weights decide only how their reads are combined.
+
+\subsection{Downstream Temporal Memory}
+\label{subsec:method-memory}
+Module~3 adds the threat-context feature to the host feature and only then lets the temporal state enter:
+\begin{align}
+\ell'_{i,t}&=\ell_{i,t}+W_fc^{[L]}_{i,t}+b_f,\nonumber\\
+h_{i,t}&=\operatorname{GRU}(\ell'_{i,t},h_{i,t-1}),\qquad
+Q_\theta(\tau_{i,t},\cdot)=W_oh_{i,t}+b_o.
+\label{eq:decision}
+\end{align}
+The zero-initialized projection $W_f,b_f$ lets training start from the host computation. The GRU updates once per decision, starts every episode from zero~\cite{hausknecht2015drqn}, and integrates the motion that reveals the private assignment of the attackers. At deployment, each defender selects the intent with the highest utility, and coordination arises from these intents without any assignment output.
+
+For a fixed observation, mask, and depth, neither the query nor any quantity in \eqref{eq:encoding} to \eqref{eq:fusion} depends on $h_{i,t-1}$, so
+\begin{equation}
+\frac{\partial c^{[L]}_{i,t}}{\partial h_{i,t-1}}=0.
+\label{eq:isolation}
+\end{equation}
+History shapes the utilities through the GRU and never changes how the current scene is built or read. A recurrent state accumulated in a large engagement can leave the range of states seen in small training engagements, and Section~\ref{sec:experiments} measures this drift. If such a state entered the query or the entity tokens, as the recurrent token of UPDeT and TransfQMix does~\cite{hu2021updet,transfqmix2023}, it would change which entities the defender attends to. Under \eqref{eq:isolation}, the threat-context feature depends on the present observation alone.
+
+\subsection{Sampled-Depth Training and Deployment}
+\label{subsec:method-training}
+Module~4 trains the actor through the learning interface of REFIL. The mixer $f_{\mathrm{mix}}$ of \eqref{eq:fw-mixing} uses attention-based hypernetworks over the entity table~\cite{iqbal2021refil}. For each training sequence, REFIL also draws a random entity partition and forms within-group and cross-group masked views, whose auxiliary team value $Q^{\mathrm{im}}_{\mathrm{tot}}$ shares the target of the main branch. LEAF applies these masks to both feature paths. With team values $Q^{[L]}_{\mathrm{tot}}$ and $Q^{\mathrm{im},[L]}_{\mathrm{tot}}$ computed with $L$ rounds, LEAF minimizes
+\begin{equation}
+\mathcal L(\Theta)=\mathbb E_{L\sim\mathcal U\{1,\dots,L_{\max}\}}\Big[(1-\lambda)\,\mathcal L^{[L]}_{\mathrm{TD}}+\lambda\,\mathcal L^{[L]}_{\mathrm{im}}\Big],
+\label{eq:loss}
+\end{equation}
+where $\mathcal L^{[L]}_{\mathrm{TD}}$ and $\mathcal L^{[L]}_{\mathrm{im}}$ are the mean squared errors of the two team values with respect to the target
+\begin{equation}
+y^{[L]}_t=r_t+\gamma\,\bar Q^{[L]}_{\mathrm{tot}}\big(s_{t+1},\mathbf a^{\star}_{t+1}\big).
+\label{eq:target}
+\end{equation}
+Here $\Theta$ holds the actor parameters $\theta$ and the mixer parameters, $r_t$ is the training reward derived from \eqref{eq:fw-reward}, $\bar Q_{\mathrm{tot}}$ is the target network with parameters $\bar\Theta$, and $\mathbf a^{\star}_{t+1}$ collects the greedy intents of the online utilities. The bootstrap term is zero after natural termination, and we set $L_{\max}=4$ and $\lambda=0.5$.
+
+Each parallel environment draws $L$ when an episode starts and keeps it for the episode, so the temporal state evolves under one consistent policy. Each minibatch draws one $L$ for its online, target, and imagined branches, so every temporal-difference error compares values from the same computation. Because Q-learning is off-policy, the two draws can be independent.
+
+Every sampled depth supervises a complete policy. A shallow exit must already support good decisions, and a deeper exit must support them as well, so later rounds cannot undo what the first rounds built. Training at a fixed depth gives shallower exits no such signal. Sampled depth thus applies the idea of stochastic depth, LayerDrop, and early-exit training~\cite{huang2016stochastic,fan2020layerdrop,teerapittayanon2016branchynet,kaya2019overthinking} to the number of applications of one shared operator.
+
+At deployment, LEAF freezes $\Theta$, drops the mixer, and runs $L_{\mathrm{exec}}$ rounds. One round costs $O(M^2d+Md^2)$ for each defender, so computation grows linearly with $L_{\mathrm{exec}}$ while the parameter count stays fixed, and the execution depth becomes a compute budget that needs no retraining. All experiments use $d_z=128$, $d=d_h=64$, four heads in every attention module, a feedforward width of $2d$, and $L_{\mathrm{exec}}=4$ unless stated otherwise. The next property states when a change of this budget keeps the decisions.
+
+\begin{proposition}[Prefix-fusion stability]
+\label{prop:prefix}
+Fix one decision of defender $i$ at step $t$, including its observation and entering temporal state, and compare depths $p<L$. Let
+\begin{equation*}
+\beta=\sum_{r=p+1}^{L}\alpha^{[L]}_{r},\qquad
+\xi=\max_{p<r\le L}\big\|u^{(r)}_{i,t}-c^{[p]}_{i,t}\big\|
+\end{equation*}
+be the fusion mass beyond round $p$ and the largest distance from a later read to the depth-$p$ feature. Then
+\begin{equation}
+\big\|c^{[L]}_{i,t}-c^{[p]}_{i,t}\big\|\le\beta\xi.
+\label{eq:prefix}
+\end{equation}
+Let $\delta$ be the largest change of any utility $Q_\theta(\tau_{i,t},a)$ between the two depths. Depth $p$ selects the same greedy intent as depth $L$ whenever the depth-$L$ utility gap between the best and the second-best intents exceeds $2\delta$. If the map from $c$ to $Q_\theta(\tau_{i,t},\cdot)$ defined by \eqref{eq:decision} is $\kappa$-Lipschitz on the segment between $c^{[p]}_{i,t}$ and $c^{[L]}_{i,t}$, from the norm in $\xi$ to the max norm, then $\delta\le\kappa\beta\xi$.
+\end{proposition}
+
+\begin{IEEEproof}
+The first $p$ rounds do not depend on $L$, so the reads and scores up to round $p$ coincide at both depths, and $\alpha^{[p]}_{r}=\alpha^{[L]}_{r}/(1-\beta)$ for $r\le p$. Hence
+\begin{equation*}
+c^{[L]}-c^{[p]}=\sum_{r=p+1}^{L}\alpha^{[L]}_{r}\big(u^{(r)}-c^{[p]}\big),
+\end{equation*}
+and the triangle inequality gives \eqref{eq:prefix}. If the best intent at depth $L$ leads every other intent by more than $2\delta$, it still leads at depth $p$, since each utility moves by at most $\delta$. The host feature and the entering temporal state are common to both depths, so the utilities differ only through $c$, and the Lipschitz condition with \eqref{eq:prefix} gives $\delta\le\kappa\beta\xi$.
+\end{IEEEproof}
+
+The bound holds for every $p<L$, including $L>L_{\max}$, so it covers both truncating the loop and extending it beyond the training range. When the readout places little mass beyond round $p$ and the late reads stay near the early fused feature, changing the depth barely moves the threat-context feature and keeps every decision with a clear utility gap. Section~\ref{sec:experiments} measures this fusion mass and checks the condition on recorded decisions.
