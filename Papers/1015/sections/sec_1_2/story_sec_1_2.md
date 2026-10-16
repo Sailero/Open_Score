@@ -87,4 +87,4 @@
 1. 标题沿用 story.md：*Looped Threat Context Reasoning for Scalable Multiagent Target Defense*。
 2. 摘要与引言用定性陈述代替 43%–64%，百分比只出现在第五章和结论。
 3. Fig. 1 单栏两子图方案。
-4. 第三章与实验数据的平台不一致（固定翼 27 个意图对平面 9 个动作），需要你决定改第三章还是重跑实验。
+4. 已确认：结果就是三维固定翼、27 个意图。`outputs/main` 里的 `n_actions=9`、`spatial_dim=2` 是拷贝时写坏的配置，不作为论文口径。表和图保留。

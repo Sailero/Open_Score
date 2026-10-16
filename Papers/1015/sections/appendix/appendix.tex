@@ -7,12 +7,13 @@
 %   eq:fw-coverage、eq:fw-assignment、eq:fw-rush、eq:fw-mixing、eq:encoding、eq:loop、eq:read、eq:fusion、
 %   eq:decision、eq:isolation、eq:loss、eq:target、eq:prefix、prop:selection、prop:prefix、alg:leaf、
 %   tab:fw-setting、tab:design。
-% 载具口径：环境细节按第三章 SkyHAD 4.2 固定翼加速度意图 Damage 任务撰写（用户 10-15 决定）。
-% 红色 \tofill{} 为依赖实验实现、待用户在固定翼运行中确认的数值，见各处注释。
+% 载具口径：环境细节按第三章 SkyHAD 4.2 固定翼加速度意图 Damage 任务撰写，参数取自 SkyHAD 源码，
+%   不依赖一次固定翼训练。观测宽度、参数量和塑形尺度都留成公式或符号，不填推测值。
 % 数据来源：附录 F 的数值取自 Papers/1015/figures/src/figure_data.json（figdata.py 由 Open-SCORE/outputs/main
 %   的正式记录生成，与第五章同源），命题 2 的分箱统计取自
-%   Open-SCORE/outputs/main/had/regir_nomem/mechanisms/results.json.gz 的只读汇总。这些记录来自现有正式运行
-%   （平面 HAD 2.1.0 设定），若在固定翼设定下重跑，需要与第五章一起重新生成。
+%   Open-SCORE/outputs/main/had/regir_nomem/mechanisms/results.json.gz 的只读汇总。
+%   用户已确认这些结果就是固定翼、27 意图的实验。outputs/main 里 n_actions=9、spatial_dim=2
+%   是拷贝时写坏的配置，不能用来改论文口径。
 % =====================================================================
 
 \section{Notation}
@@ -62,7 +63,7 @@ w^{o}_{j}=\frac{\exp(s^{o}_{j})}{\sum_{k\in\mathcal P}\exp(s^{o}_{k})},\quad j\i
 \end{equation}
 and $w^{o}_{j}=0$ for $j\notin\mathcal P$. The module returns
 \begin{equation}
-\operatorname{MHA}^{m}(a,Y,Y)=W_O\Big[\sum_{j\in\mathcal P}w^{1}_{j}W^{1}_Vy_j;\dots;\sum_{j\in\mathcal P}w^{H_{\rm a}}_{j}W^{H_{\rm a}}_Vy_j\Big].
+\operatorname{MHA}^{m}(a,Y,Y)=W_O\big[v^{1};\dots;v^{H_{\rm a}}\big],\quad v^{o}=\sum_{j\in\mathcal P}w^{o}_{j}W^{o}_Vy_j.
 \label{eq:s-mha}
 \end{equation}
 The zero weights of excluded keys implement the $-\infty$ logits of Section~\mref{sec:method}, and an empty permitted set gives a zero output. When the first argument has several rows, as in \meqref{eq:loop}, each row acts as its own query. The LEAF modules use $H_{\rm a}=4$ and $d_{\rm k}=16$ without projection biases, and the host attention of REFIL uses $H_{\rm a}=4$ and $d_{\rm k}=32$.
@@ -328,13 +329,12 @@ Damage share & 1 & 0 & 0 & $D_k/N_B$\\
 Type & 3 & one-hot & one-hot & one-hot\\
 Previous intent & $|\mathcal V|$ & one-hot & zero & zero\\
 \midrule
-Total $d_x$ & \multicolumn{4}{l}{$12+|\mathcal V|=\tofill{39}$}\\
+Total $d_x$ & \multicolumn{4}{l}{$12+|\mathcal V|$}\\
 \bottomrule
 \end{tabular}
 \par\smallskip
-\parbox{\columnwidth}{\scriptsize $D_k$ is the accumulated damage of target $k$ and $N_B$ the initial number of attackers. The previous intent is zero at the first decision.}
+\parbox{\columnwidth}{\scriptsize $D_k$ is the accumulated damage of target $k$ and $N_B$ the initial number of attackers. The previous intent is zero at the first decision. Positions and velocities use three coordinates, so the table has width $12+|\mathcal V|$.}
 \end{table}
-% d_x：按第三章观测字段的三维接口推得 39。平面运行为 10 维基础特征加 9 维上一动作，共 19 维。请按固定翼实现确认。
 
 \subsection{Scale Protocol and Scene Pools}
 Training draws $N\in\{4,6,8,10\}$ with $N_R=N_B=N$ and $K\in\{1,2,3\}$ independently and uniformly for every episode. Section~\mref{sec:experiments} evaluates 24 configurations. The in-distribution group ID holds $(N,K)=(4,2)$, $(6,2)$, $(8,2)$, and $(10,3)$. Target-count extrapolation K-OOD holds $(10,4)$, $(10,6)$, $(10,9)$, and $(10,12)$. Team-size extrapolation N-OOD holds $(15,2)$, $(20,2)$, $(25,2)$, $(30,2)$, $(40,2)$, and $(50,2)$. Joint extrapolation Joint-OOD holds $(15,4)$, $(15,6)$, $(20,4)$, $(20,6)$, $(30,4)$, $(30,6)$, $(30,9)$, and $(30,12)$. The extra configurations $(5,2)$ and $(10,2)$ enter only the average over all 24 configurations, which we call All24. Every model plays the same 300 scenes, seeds 9000 to 9299, in every configuration. Validation during training uses the four ID configurations with 25 scenes each from the separate pool 9500 to 9599, and an independent confirmation uses the seeds 110000 to 110299.
@@ -419,8 +419,8 @@ The Rule defender re-solves an integer assignment at every decision, as Algorith
 \STATE Solve $\min\sum c_{ib}x_{ib}$ with $x_{ib}\in\{0,1\}$, one attacker per defender, and at least one defender per attacker
 \FOR{each defender $i$ assigned to attacker $b$}
 \STATE $d\gets\|\hat p_b-p_i\|$, $e\gets(\hat p_b-p_i)/d$, $\theta\gets\angle(v_i,e)$
-\STATE $s\gets\operatorname{clip}(\min(v_{\max},d/\Delta t,\bar a/\max(\theta,10^{-3})),v_{\min},v_{\max})$
-\STATE Choose the intent whose clipped reference of \meqref{eq:fw-reference} is closest to $s\,e$
+\STATE Set the speed $s$ from $v_{\max}$, $d/\Delta t$, and $\bar a/\theta$, clipped to $[v_{\min},v_{\max}]$
+\STATE Take the intent whose velocity reference is closest to $s\,e$
 \ENDFOR
 \end{algorithmic}
 \end{algorithm}
@@ -480,16 +480,14 @@ Memory & GRU cell of width 64 & 24,960 & recurrent Q-learning~\cite{hausknecht20
 Output $W_o,b_o$ & $\operatorname{Linear}(64,|\mathcal V|)$ & $65|\mathcal V|$ & REFIL code~\cite{iqbal2021refil}\\
 Inert & count embedding and memory columns of the query & 7,488 & unused\\
 \midrule
-Total stored & & $128d_x+65|\mathcal V|+172{,}737$ & \tofill{179{,}484}\\
-Total effective & & $128d_x+65|\mathcal V|+165{,}249$ & \tofill{171{,}996}\\
-REFIL for reference & encoder, host path, GRU, output & $128d_x+65|\mathcal V|+99{,}008$ & \tofill{105{,}755}\\
+Total stored & & $128d_x+65|\mathcal V|+172{,}737$ & \\
+Total effective & & $128d_x+65|\mathcal V|+165{,}249$ & \\
+REFIL for reference & encoder, host path, GRU, output & $128d_x+65|\mathcal V|+99{,}008$ & \\
 \bottomrule
 \end{tabular}
 \par\smallskip
-\parbox{\textwidth}{\scriptsize The red totals evaluate the formulas at $d_x=39$ and $|\mathcal V|=27$. REFIL-matched stores $128d_x+65|\mathcal V|+173{,}376$ parameters, all of them effective.}
+\parbox{\textwidth}{\scriptsize Adding the rows gives the totals. REFIL-matched stores $128d_x+65|\mathcal V|+173{,}376$ parameters, all of them effective, so it has 8,127 more effective parameters than LEAF at every token width and intent count. Section~\mref{sec:experiments} reports the counts of the trained checkpoints.}
 \end{table*}
-% 参数公式已用现有权重核实：d_x=19、|V|=9 时 LEAF 175,754、REFIL 102,025、REFIL-matched 176,393，与 seed0 final.pt 一致。
-% 红色合计按固定翼 d_x=39、|V|=27 代入，待固定翼接口确认后更新。
 
 \subsection{Masking, Initialization, and Numerics}
 Every attention module assigns $-\infty$ logits to excluded keys, an all-excluded row returns zero, and $\operatorname{Mask}_m$ resets the states of excluded rows after every round. $\operatorname{LN}_a$ normalizes only the queries of the context attention, and the keys and values use the unnormalized states, so each round is a pre-normalization residual block~\cite{xiong2020layer,ba2016layernorm}. The logits of the LEAF modules are divided by $\sqrt{16}$ and those of the host attention by $\sqrt{32}$. All weights use the PyTorch defaults~\cite{paszke2019pytorch}, except $W_f$ and $b_f$, which start at zero so that training begins from the host computation, and the last layer of the REFIL-matched block, which starts at zero for the same reason. The GRU state starts each episode at zero and is cleared when a defender is destroyed. During training, the activations of the encoder and the loop are recomputed in the backward pass to bound memory.
@@ -520,13 +518,12 @@ Target network & hard copy every 200 episodes & \cite{mnih2015dqn}\\
 TD target & one-step double Q & \cite{vanhasselt2016double}\\
 Exploration & $\epsilon$ from 1.0 to 0.05 over 100k steps & REFIL\\
 Mixer & FlexQMIX, embedding 128, width 32 & REFIL\\
-Shaping $\nu$, $l_{\rm sh}$ & \tofill{1}, \tofill{} m & \cite{ng1999shaping}\\
+Shaping $\nu$, $l_{\rm sh}$ & positive coefficient and length scale & \cite{ng1999shaping}\\
 Collection & 8 environments, 8 updates per batch & shared\\
 Budget & $10^6$ steps, seeds 0, 1, 2 & shared\\
 \bottomrule
 \end{tabular}
 \end{table}
-% 塑形参数：平面运行为 nu=1、l_sh=4000 m（5 km 场景），固定翼场景 2 km，请按固定翼训练配置填写。
 
 \subsection{Deployment and Cost}
 Deployment freezes the parameters, drops the mixer, and lets every defender act greedily at $L_{\rm exec}$ rounds. One round costs $O(M^2d+Md^2)$ for one defender, so a team decision costs $O(N_RL_{\rm exec}(M^2d+Md^2))$, and the parameter count stays fixed. The host path adds one attention over $M$ entities per defender, and the GRU adds $O(d_h^2)$. Appendix~\ref{sec:s-results} reports measured latencies.
