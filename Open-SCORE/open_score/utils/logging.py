@@ -252,13 +252,17 @@ class ExperimentLogger:
         if env != "had":
             raise ValueError("The active record writer supports HAD only")
         self.output, self.method, self.seed, self.run = Path(output), str(method), int(seed), str(run)
-        from open_score.eval.experiment import PROFILE, ensure_layout
+        from open_score.eval.experiment import ensure_layout
         ensure_layout(self.output)
         self.profile = True
-        self.version = PROFILE if self.profile else VERSION
-        metadata = self.output / "experiment.json"
-        if self.profile and metadata.exists():
-            self.version = json.loads(metadata.read_text(encoding="utf-8")).get("profile", self.version)
+        root = self.output.parent if self.output.name == "had" else self.output
+        self.version = root.name
+        metadata = root / "experiment.json"
+        self.protocol = None
+        if metadata.exists():
+            retained = json.loads(metadata.read_text(encoding="utf-8"))
+            self.version = retained.get("profile", self.version)
+            self.protocol = retained.get("env_identity", {}).get("physics_protocol")
         self.env = env
         self._trajectory_keys = None
 
@@ -267,6 +271,8 @@ class ExperimentLogger:
                    recorded_at=datetime.now(timezone.utc).isoformat(timespec="seconds"))
         if self.profile:
             row["env"] = self.env
+        if self.protocol:
+            row.update(source_version=self.version, protocol=self.protocol)
         row.update(data)
         return row
 

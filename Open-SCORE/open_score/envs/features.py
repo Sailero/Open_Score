@@ -19,6 +19,28 @@ FEATURE_NAMES = ("x", "y", "vx", "vy", "alive", "health", "target_damage_share",
                  "is_red", "is_blue", "is_target")
 
 
+def feature_spec(spatial_dim=2, world_bounds=None, max_speed=None):
+    """Describe the HAD table without changing the original ten columns."""
+    if spatial_dim not in (2, 3):
+        raise ValueError("spatial_dim must be 2 or 3")
+    position_scale = POSITION_SCALE if world_bounds is None else float(np.abs(world_bounds).max())
+    velocity_scale = VELOCITY_SCALE if max_speed is None else float(max_speed)
+    if not np.isfinite([position_scale, velocity_scale]).all() or min(position_scale, velocity_scale) <= 0:
+        raise ValueError("feature normalization scales must be positive and finite")
+    return {"entity_shape": ENTITY_DIM + (2 if spatial_dim == 3 else 0),
+            "n_actions": 27 if spatial_dim == 3 else N_ACTIONS,
+            "spatial_dim": int(spatial_dim),
+            "feature_names": list(FEATURE_NAMES + (("z", "vz") if spatial_dim == 3 else ())),
+            "had_position_indices": [0, 1, 10] if spatial_dim == 3 else [0, 1],
+            "had_velocity_indices": [2, 3, 11] if spatial_dim == 3 else [2, 3],
+            "had_position_scale": position_scale, "had_velocity_scale": velocity_scale}
+
+
+def table_position_indices(entities):
+    """Geometry columns of either supported base HAD table."""
+    return (0, 1, 10) if np.shape(entities)[-1] == 12 else (0, 1)
+
+
 def resolve_pad(pad):
     """Train uses the pool ceiling; eval keeps the 50-red / 50-blue interface."""
     if pad in (None, "eval"):
@@ -79,13 +101,16 @@ def planar_action_mapping(primitives):
     return native_ids, inverse
 
 
-def entities_from_state(state):
-    """Convert physical state to fixed red/blue/target slots, preserving IDs."""
-    entities = np.zeros((MAX_ENTITIES, ENTITY_DIM), dtype=np.float32)
-    entity_mask = np.ones(MAX_ENTITIES, dtype=np.uint8)
-    for side, start, limit, kind in (("red", 0, MAX_AGENTS, 0),
-                                     ("blue", MAX_AGENTS, MAX_BLUE, 1),
-                                     ("targets", MAX_AGENTS + MAX_BLUE, MAX_TARGETS, 2)):
+def entities_from_state(state, pad="eval", spec=None):
+    """Pack training and frozen-policy states with the same physical features."""
+    n_red, n_blue, n_targets = resolve_pad(pad)
+    spec = feature_spec(getattr(state, "spatial_dim", 2)) if spec is None else spec
+    entities = np.zeros((n_red + n_blue + n_targets, spec["entity_shape"]), dtype=np.float32)
+    entity_mask = np.ones(len(entities), dtype=np.uint8)
+    position_indices, velocity_indices = spec["had_position_indices"], spec["had_velocity_indices"]
+    for side, start, limit, kind in (("red", 0, n_red, 0),
+                                     ("blue", n_red, n_blue, 1),
+                                     ("targets", n_red + n_blue, n_targets, 2)):
         rows = tuple(getattr(state, side))
         if len(rows) > limit:
             raise ValueError(f"{side} count exceeds experiment interface ({limit})")
@@ -96,13 +121,15 @@ def entities_from_state(state):
         rows = [row for row, alive in zip(rows, live) if alive]
         if not rows:
             continue
-        entities[indices, :2] = np.asarray([row.position[:2] for row in rows]) / POSITION_SCALE
+        entities[np.ix_(indices, position_indices)] = np.asarray(
+            [row.position[:spec["spatial_dim"]] for row in rows]) / spec["had_position_scale"]
         entities[indices, 7 + kind] = 1.0
         entity_mask[indices] = 0
         if kind == 2:
             entities[indices, 6] = [row.cumulative_damage / len(state.blue) for row in rows]
         else:
-            entities[indices, 2:4] = np.asarray([row.velocity[:2] for row in rows]) / VELOCITY_SCALE
+            entities[np.ix_(indices, velocity_indices)] = np.asarray(
+                [row.velocity[:spec["spatial_dim"]] for row in rows]) / spec["had_velocity_scale"]
             entities[indices, 4] = 1.0
             entities[indices, 5] = [row.health / row.initial_health for row in rows]
     return entities, entity_mask
@@ -124,8 +151,9 @@ def blue_nearest_from_table(entities, entity_mask, n_red=MAX_AGENTS,
     if not len(live_blue) or not len(live_tgt):
         return nearest
     table = np.asarray(entities)
-    distances = np.linalg.norm(table[n_red + live_blue, None, :2]
-                               - table[n_red + n_blue + live_tgt, :2][None], axis=-1)
+    positions = table[:, table_position_indices(table)]
+    distances = np.linalg.norm(positions[n_red + live_blue, None]
+                               - positions[n_red + n_blue + live_tgt][None], axis=-1)
     nearest[live_blue] = live_tgt[distances.argmin(axis=1)]
     return nearest
 
@@ -170,14 +198,15 @@ def task_masks(entities, entity_mask, n_active_targets, n_red=MAX_AGENTS,
     entity2task[target_rows, active] = 0
     live_blue = np.flatnonzero(~absent[n_red:n_red + n_blue]) + n_red
     if len(live_blue):
-        distances = np.linalg.norm(np.asarray(entities)[live_blue, None, :2]
-                                   - np.asarray(entities)[target_rows, :2][None], axis=-1)
+        positions = np.asarray(entities)[:, table_position_indices(entities)]
+        distances = np.linalg.norm(positions[live_blue, None]
+                                   - positions[target_rows][None], axis=-1)
         entity2task[live_blue, active[distances.argmin(axis=1)]] = 0
     return {"task_mask": task_mask, "entity2task_mask": entity2task}
 
 
-def available_actions(entity_mask, n_agents=None):
+def available_actions(entity_mask, n_agents=None, n_actions=N_ACTIONS):
     n_agents = MAX_AGENTS if n_agents is None else int(n_agents)
-    avail = np.repeat((1 - np.asarray(entity_mask[:n_agents]))[:, None], N_ACTIONS, axis=1)
+    avail = np.repeat((1 - np.asarray(entity_mask[:n_agents]))[:, None], int(n_actions), axis=1)
     avail[:, 0] = 1
     return avail.astype(np.int64)

@@ -71,8 +71,18 @@ def progress_lines(output, state=None):
 
 
 def run(options, tasks):
-    from open_score.eval.experiment import check_environment, ensure_layout
-    check_environment()
+    from open_score.eval.experiment import check_environment, ensure_layout, is_sky_environment, register_environment
+    if options.stage == "anchors":
+        check_environment()
+    else:
+        import torch
+        for task in tasks:
+            retained = torch.load(task["checkpoint"], map_location="cpu", weights_only=False)
+            cfg = retained["config"]
+            check_environment(cfg.get("env_args"))
+            if is_sky_environment(cfg.get("env_args")):
+                register_environment(options.output, cfg, cfg, cfg.get("environment_parameters"))
+            del retained
     ensure_layout(options.output)
     ctx = get_context("spawn")
     stop, results = ctx.Event(), ctx.Queue()

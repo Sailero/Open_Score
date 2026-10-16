@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 import numpy as np
 
-from .features import (MAX_AGENTS, ENTITY_DIM, N_ACTIONS, masks_from_entity_mask,
+from .features import (MAX_AGENTS, masks_from_entity_mask,
                        available_actions, blue_nearest_from_table, entities_from_state,
                        resolve_pad, task_masks)
 from .had_wrapper import HADWrapper
@@ -29,7 +29,8 @@ class HADEntityEnv:
         self.n_blue = self.wrapper.n_blue
         self.n_targets = self.wrapper.n_targets
         self.n_entities = self.wrapper.n_entities
-        self.n_actions = N_ACTIONS
+        self.n_actions = self.wrapper.n_actions
+        self.entity_dim = self.wrapper.entity_dim
         self.train_dist = train_dist
 
     def reset(self, seed=None, config=None, evaluate=False, retain_trajectory=False,
@@ -47,7 +48,7 @@ class HADEntityEnv:
         return self.wrapper.entities.copy()
 
     def get_entity_size(self):
-        return ENTITY_DIM
+        return self.entity_dim
 
     def get_masks(self):
         return masks_from_entity_mask(self.wrapper.entity_mask)
@@ -62,13 +63,13 @@ class HADEntityEnv:
         return mask
 
     def get_avail_actions(self):
-        return available_actions(self.wrapper.entity_mask, self.n_agents)
+        return available_actions(self.wrapper.entity_mask, self.n_agents, self.n_actions)
 
     def get_avail_agent_actions(self, agent_id):
         return self.get_avail_actions()[agent_id]
 
     def get_total_actions(self):
-        return N_ACTIONS
+        return self.n_actions
 
     def get_state(self):
         env = self.wrapper.adapter.env
@@ -78,7 +79,7 @@ class HADEntityEnv:
         return np.concatenate((self.wrapper.entities.reshape(-1), fractions))
 
     def get_state_size(self):
-        return self.n_entities * ENTITY_DIM + 3
+        return self.n_entities * self.entity_dim + 3
 
     def get_obs(self):
         table = self.get_entities()
@@ -88,14 +89,17 @@ class HADEntityEnv:
         return self.get_obs()[agent_id]
 
     def get_obs_size(self):
-        return self.n_entities * ENTITY_DIM
+        return self.n_entities * self.entity_dim
 
     def get_env_info(self, args=None):
-        return {"n_agents": self.n_agents, "n_entities": self.n_entities, "n_actions": N_ACTIONS,
-                "entity_shape": ENTITY_DIM, "state_shape": self.get_state_size(),
+        return {"n_agents": self.n_agents, "n_entities": self.n_entities,
+                **self.wrapper.feature_spec, "state_shape": self.get_state_size(),
                 "obs_shape": self.get_obs_size(), "episode_limit": self.episode_limit,
                 "gt_mask_avail": False, "feature_layout": "had",
-                "n_tasks": self.wrapper.n_tasks()}
+                "n_tasks": self.wrapper.n_tasks(), "environment_parameters": self.parameter_snapshot()}
+
+    def parameter_snapshot(self):
+        return self.wrapper.parameter_snapshot()
 
     def get_task_masks(self):
         masks = task_masks(self.wrapper.entities, self.wrapper.entity_mask, self.wrapper.scale.K,
@@ -141,6 +145,17 @@ class FrozenPolicyAdapter:
     def __init__(self, mac, args, scheme, groups, preprocess, mixer=None):
         self.mac, self.args, self.scheme = mac, args, scheme
         self.groups, self.preprocess, self.mixer = groups, preprocess, mixer
+        saved = getattr(args, "environment_parameters", None) or {}
+        self.feature_spec = copy.deepcopy(saved.get("feature_spec"))
+        if self.feature_spec is None:
+            # Construct configuration only: no native world, reset or RNG draw.
+            env_args = {key: value for key, value in (getattr(args, "env_args", None) or {}).items()
+                        if key not in ("scale", "config")}
+            self.feature_spec = HADWrapper(**env_args).feature_spec
+        self.n_actions = int(args.n_actions)
+        if (int(args.entity_shape) != self.feature_spec["entity_shape"]
+                or self.n_actions != self.feature_spec["n_actions"]):
+            raise ValueError("checkpoint feature/action dimensions differ from its environment configuration")
         self.mac.agent.eval()
         if self.mixer is not None:
             self.mixer.eval()
@@ -251,7 +266,7 @@ class FrozenPolicyAdapter:
         self._loop_stats = {}
         if getattr(self.args, "leaf_loop_core", None):
             self.mac.agent.loop_depth_override = None
-        self.intent_stats = dict(count={}, correct={}, nll={}, label_hist=[0] * 9)
+        self.intent_stats = dict(count={}, correct={}, nll={}, label_hist=[0] * self.n_actions)
         self.roster = None
         self._alloc_hold = 0
         self._last_nearest = None
@@ -280,9 +295,11 @@ class FrozenPolicyAdapter:
                 raise ValueError("policy physical roster changed within an episode")
             ordered[key] = tuple(rows[identity] for identity in ids)
         state = replace(state, **ordered)
-        entities, absent = entities_from_state(state)
+        if state.spatial_dim != self.feature_spec["spatial_dim"]:
+            raise ValueError("checkpoint spatial dimension differs from the physical world")
+        entities, absent = entities_from_state(state, spec=self.feature_spec)
         masks = masks_from_entity_mask(absent)
-        avail = available_actions(absent)
+        avail = available_actions(absent, n_actions=self.n_actions)
         initial = np.ones(MAX_AGENTS, dtype=np.uint8)
         initial[:len(state.red)] = 0
         fractions = np.asarray([sum(e.alive for e in state.red) / len(state.red),
@@ -330,8 +347,8 @@ class FrozenPolicyAdapter:
                     if value is not None:
                         storage.append(float(value))
         ids = tuple(map(int, action_ids))
-        if len(ids) != N_ACTIONS:
-            raise ValueError("checkpoint evaluation requires the 9 native planar action IDs")
+        if len(ids) != self.n_actions:
+            raise ValueError(f"checkpoint evaluation requires {self.n_actions} native acceleration IDs")
         decoded = actions[0].detach().cpu().numpy()
         self.last_result = {entity.id: ids[int(decoded[i])] if entity.alive else ids[0]
                             for i, entity in enumerate(state.red)}
@@ -343,7 +360,8 @@ class FrozenPolicyAdapter:
         if env_args.get("allocation_clock", "interval") != "event":
             return step % length == 0
         n_red, n_blue, n_targets = resolve_pad("eval")
-        nearest = blue_nearest_from_table(entities_from_state(state)[0], absent, n_red, n_blue, n_targets)
+        nearest = blue_nearest_from_table(entities_from_state(state, spec=self.feature_spec)[0],
+                                         absent, n_red, n_blue, n_targets)
         alive = (sum(entity.alive for entity in state.red), sum(entity.alive for entity in state.blue))
         if step == 0:
             self._alloc_hold = 0
@@ -374,7 +392,7 @@ class FrozenPolicyAdapter:
         valid = record["teammate"]
         stats = self.intent_stats
         stats["label_hist"] = (np.asarray(stats["label_hist"])
-                               + np.bincount(target[valid].cpu().numpy(), minlength=9)[:9]).tolist()
+                               + np.bincount(target[valid].cpu().numpy(), minlength=self.n_actions)).tolist()
         for round_id, logits in enumerate(record["logits"]):
             keep = valid & (record["depth"] > round_id).unsqueeze(-1)
             n = int(keep.sum())

@@ -131,11 +131,8 @@ def _evaluate(method, checkpoint, *, output=None, run=None, seed=None, device="c
               on_progress=None, stop_requested=None, confirmation=False, depths=None):
     import torch
     from open_score.algos import load_policy
-    from open_score.rules import register_end_to_end_policy, run_episode
     from open_score.utils.logging import DEFAULT_OUTPUT, FORMAL_RUN, ExperimentLogger, read_records
-    from .anchors import BLUE_STRATEGY
-    from .experiment import atomic_json, process_lock, check_environment, ensure_layout, EXPECTED_ENV
-    check_environment()
+    from .experiment import atomic_json, process_lock, check_environment, ensure_layout, is_sky_environment, register_environment
     output = Path(DEFAULT_OUTPUT if output is None else output)
     ensure_layout(output)
     checkpoint = Path(checkpoint)
@@ -145,13 +142,20 @@ def _evaluate(method, checkpoint, *, output=None, run=None, seed=None, device="c
             raise RuntimeError(f"Checkpoint already has an evaluator: {checkpoint}")
         saved = torch.load(checkpoint, map_location="cpu", weights_only=False)
         cfg, progress = saved["config"], saved["progress"]
+        identity_env = check_environment(cfg.get("env_args"))
+        fixedwing = is_sky_environment(cfg.get("env_args"))
+        retained_env = cfg.get("env_identity")
+        if retained_env and any(retained_env.get(key) != identity_env[key] for key in ("had_core_version", "physics_protocol")):
+            raise ValueError("Checkpoint physics identity differs; no evaluation sampling started")
         actual_seed, t_env = int(cfg["seed"]), int(progress["t_env"])
         if cfg.get("method") != method or (seed is not None and int(seed) != actual_seed):
             raise ValueError("Evaluation method/seed must identify the retained checkpoint")
         if cfg.get("env") != "had" or checkpoint.name != "final.pt" or t_env < int(cfg.get("t_max", t_env)):
             raise ValueError("Frozen evaluation requires completed HAD final.pt")
+        if fixedwing:
+            register_environment(output, cfg, cfg, cfg.get("environment_parameters"))
         identity = checkpoint_identity(saved, checkpoint, output)
-        protocol = cfg.get("implementation_revision", "retained")
+        protocol = identity_env["physics_protocol"] if fixedwing else cfg.get("implementation_revision", "retained")
         selected = tuple(int(d) for d in depths) if depths is not None else ()
         if depths is not None and (not selected or len(set(selected)) != len(selected) or min(selected) < 1 or max(selected) > 6):
             raise ValueError("Explicit depth selection must be a distinct subset of R1..R6")
@@ -167,7 +171,7 @@ def _evaluate(method, checkpoint, *, output=None, run=None, seed=None, device="c
             return row.get("phase"), row.get("eval_point"), config_key(row["config"]), int(row["episode_seed"]), row.get("checkpoint")
         wanted = {key(job) for job in jobs}
         retained = {key(r): r for r in existing if str(r.get("checkpoint_id")) == identity and key(r) in wanted}
-        compatible = list(retained.values())
+        compatible = [row for row in retained.values() if row.get("protocol") == protocol]
         pending = remaining_jobs(jobs, compatible)
         total, completed = len(jobs), len(jobs) - len(pending)
         sum_d = sum(float(row["D"]) for row in compatible)
@@ -192,8 +196,31 @@ def _evaluate(method, checkpoint, *, output=None, run=None, seed=None, device="c
         del saved
         policy = load_policy(method, checkpoint)
         policy.set_device(device)
-        policy_name = f"had_evaluation_{next(_POLICY_IDS)}"
-        register_end_to_end_policy("red", policy_name, method, lambda _: policy)
+        environment = None
+        if fixedwing:
+            from open_score.envs.entity_env import HADEntityEnv
+            import json
+            env_args = dict(cfg.get("env_args") or {})
+            for key in ("seed", "scale", "config", "worker_id"):
+                env_args.pop(key, None)
+            env_args.update(pad="eval", diagnostics=True, retain_trajectory=False,
+                            max_steps=int(cfg.get("episode_limit", 100)))
+            environment = HADEntityEnv(seed=actual_seed, **env_args)
+            info = environment.get_env_info()
+            for key in ("entity_shape", "n_actions", "spatial_dim", "feature_names", "had_position_indices", "had_velocity_indices", "had_position_scale", "had_velocity_scale"):
+                if json.dumps(cfg.get(key)) != json.dumps(info.get(key)):
+                    environment.close()
+                    raise ValueError(f"Frozen evaluation {key} differs from the checkpoint")
+            expected_parameters = cfg.get("environment_parameters")
+            actual_parameters = environment.parameter_snapshot()
+            if expected_parameters is None or json.dumps(expected_parameters, sort_keys=True) != json.dumps(actual_parameters, sort_keys=True):
+                environment.close()
+                raise ValueError("Frozen evaluation effective parameters differ from the checkpoint")
+        else:
+            from open_score.rules import register_end_to_end_policy, run_episode
+            from .anchors import BLUE_STRATEGY
+            policy_name = f"had_evaluation_{next(_POLICY_IDS)}"
+            register_end_to_end_policy("red", policy_name, method, lambda _: policy)
         publish("running")
         try:
             for job in pending:
@@ -204,14 +231,25 @@ def _evaluate(method, checkpoint, *, output=None, run=None, seed=None, device="c
                     policy.set_eval_depth(job["cycle_depth"])
                 red, blue, targets = config_key(job["config"])
                 before = time.monotonic()
-                result = run_episode(red=red, blue=blue, targets=targets, seed=job["episode_seed"],
-                    red_strategy={"architecture": "end_to_end", "policy": policy_name},
-                    blue_strategy=BLUE_STRATEGY, max_steps=int(cfg.get("episode_limit", 100)),
-                    record=False, task_mode="damage", spatial_dim=2, target_initialization="random",
-                    diagnostics=True, record_events=False, retain_trajectory=False)
-                if result.get("physics_protocol") != EXPECTED_ENV["physics_protocol"]:
+                if fixedwing:
+                    policy.reset()
+                    environment.reset(seed=job["episode_seed"], config=job["config"], evaluate=True)
+                    complete = False
+                    while not complete:
+                        actions = policy.act(environment.get_policy_state(), "red", environment.wrapper.native_action_ids)
+                        _, complete, _ = environment.step(environment.wrapper.encode_native_actions(actions))
+                    summary = environment.episode_summary()
+                    actual_protocol = environment.wrapper.adapter.env.physics_protocol
+                else:
+                    result = run_episode(red=red, blue=blue, targets=targets, seed=job["episode_seed"],
+                        red_strategy={"architecture": "end_to_end", "policy": policy_name},
+                        blue_strategy=BLUE_STRATEGY, max_steps=int(cfg.get("episode_limit", 100)),
+                        record=False, task_mode="damage", spatial_dim=2, target_initialization="random",
+                        diagnostics=True, record_events=False, retain_trajectory=False)
+                    summary, actual_protocol = result["episode_summary"], result.get("physics_protocol")
+                if actual_protocol != identity_env["physics_protocol"]:
                     raise ValueError("Episode physics identity changed; result was not committed")
-                row = dict(result["episode_summary"], **job, episode_wall_seconds=time.monotonic() - before)
+                row = dict(summary, **job, episode_wall_seconds=time.monotonic() - before)
                 if hasattr(policy, "episode_q_statistics"):
                     row.update(policy.episode_q_statistics())
                 logger.episodes([row])
@@ -226,6 +264,9 @@ def _evaluate(method, checkpoint, *, output=None, run=None, seed=None, device="c
         except BaseException as error:
             publish("failed")
             raise
+        finally:
+            if environment is not None:
+                environment.close()
         return dict(status="complete", completed=completed, total=total)
 
 def evaluate_checkpoint(method, checkpoint, *, output=None, run=None, seed=None, device="cpu", on_progress=None, stop_requested=None, confirmation=False):

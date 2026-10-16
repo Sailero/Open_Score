@@ -7,9 +7,14 @@ from __future__ import annotations
 import csv
 import gzip
 import json
+import math
+import os
 from pathlib import Path
 import statistics
+import subprocess
+import sys
 import threading
+from datetime import datetime, timedelta, timezone
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -492,3 +497,147 @@ def render_figures(output=None):
 def refresh_report(output=None, *, run=None):
     """Compatibility entry: render saved figures; maintain the one Markdown report in docs."""
     return render_figures(output)
+
+
+def render_training(output, *, method="regir_nomem", seed=0, run="train", config=None, state=None):
+    """Refresh one training PNG and its one report from actual saved records."""
+    from open_score.utils.logging import read_records
+    root = Path(output)
+    root = root.parent if root.name == "had" else root
+    directory = root / "had" / method / "models" / f"seed_{int(seed)}"
+
+    def optional_json(path):
+        return read_json(path) if path.exists() else {}
+
+    config = optional_json(directory / "config.json") if config is None else dict(config)
+    progress = optional_json(directory / "resource.json")
+    progress.update(state or {})
+    training = read_records(root, "learning", run=run, method=method, seed=int(seed), env="had")
+    training = sorted({int(row["t_env"]): row for row in training}.values(), key=lambda row: row["t_env"])
+    episodes = read_records(root, "episodes", run=run, method=method, seed=int(seed), env="had")
+    grouped = {}
+    for row in episodes:
+        if row.get("phase") == "train_eval":
+            key = (json.dumps(row["config"], sort_keys=True), int(row["episode_seed"]))
+            grouped.setdefault(int(row["eval_point"]), {})[key] = row
+    validations = []
+    for point, rows_by_key in sorted(grouped.items()):
+        rows = list(rows_by_key.values())
+        counts = {}
+        for row in rows:
+            key = json.dumps(row["config"], sort_keys=True)
+            counts[key] = counts.get(key, 0) + 1
+        if len(rows) == 100 and len(counts) == 4 and set(counts.values()) == {25}:
+            validations.append(dict(point=point, t_env=max(int(row["t_env"]) for row in rows),
+                                    D=statistics.mean(float(row["D"]) for row in rows)))
+
+    def finite_points(rows, field):
+        return [(int(row["t_env"]), float(row[field])) for row in rows
+                if row.get(field) is not None and math.isfinite(float(row[field]))]
+
+    budget = int(config.get("t_max", progress.get("budget_steps", 0)))
+    completed_steps = int(progress.get("t_env", 0))
+    observed_steps = int(progress.get("observed_t_env", completed_steps))
+    safe_steps = int(progress.get("safe_checkpoint_t_env", 0))
+    status = progress.get("status", "waiting")
+    phase = progress.get("current_phase", "waiting")
+    points = (finite_points(training, "train_D"), finite_points(validations, "D"), finite_points(training, "loss"))
+    figure_path = root / "had" / "figures" / "training.png"
+    report_path = root / "报告.md"
+    figure_path.parent.mkdir(parents=True, exist_ok=True)
+    with _RENDER_LOCK:
+        fig, axes = plt.subplots(1, 3, figsize=(11.8, 3.8), constrained_layout=True)
+        for ax, data, caption, ylabel, color in zip(axes, points,
+                ("Training damage (batch mean)", "Validation damage (100 episodes)", "Training loss"),
+                ("Target damage D", "Target damage D", "Loss"), (TEAL, BLUE, ORANGE)):
+            if data:
+                xs, ys = zip(*data)
+                ax.plot(np.asarray(xs) / 1e6, ys, color=color, linewidth=1.15,
+                        marker="o" if caption.startswith("Validation") else None, markersize=2.5)
+            else:
+                ax.text(.5, .5, "waiting for data", ha="center", va="center", transform=ax.transAxes, color=GRAY)
+            ax.set(title=caption, xlabel="Physical steps (millions)", ylabel=ylabel)
+            if budget:
+                ax.set_xlim(0, budget / 1e6)
+            style(ax)
+        fig.suptitle(f"LEAF seed {seed} | {status}: {phase} | {observed_steps:,}/{budget:,} steps | "
+                     f"validation {len(validations)}/50", fontsize=10, color=INK)
+        temporary = figure_path.with_name(".training.png.pending")
+        try:
+            fig.savefig(temporary, format="png", dpi=160, facecolor="white")
+            os.replace(temporary, figure_path)
+        finally:
+            plt.close(fig)
+            temporary.unlink(missing_ok=True)
+
+        latest_train = points[0][-1][1] if points[0] else None
+        latest_validation = validations[-1]["D"] if validations else None
+        best_validation = min((row["D"] for row in validations), default=None)
+        latest_loss = points[2][-1][1] if points[2] else None
+        number = lambda value: "waiting" if value is None else f"{value:.6g}"
+        identity = config.get("env_identity", {})
+        environment = config.get("env_args", {})
+        final_rows = sum(row.get("phase") == "final_eval" for row in episodes)
+        final_status = f"已记录 {final_rows} 局，属于单独执行的评估。" if final_rows else "未运行；本次命令仅训练及训练内验证。"
+        evaluation_command = subprocess.list2cmdline([config.get("python_executable", sys.executable),
+            "-X", "utf8", "Open-SCORE/scripts/eval.py", "--stage", "final", "--method", method,
+            "--seed", str(seed), "--output", str(root), "--workers", "2", "--device", "cpu"])
+        report = f"""# LEAF SkyHAD 固定翼 seed{seed} 训练报告
+
+更新时间：{datetime.now(timezone(timedelta(hours=8))).isoformat(timespec='seconds')}（Asia/Shanghai，UTC+8）。本报告与下图按实际日志原地更新。
+
+## 当前状态
+
+- 状态：`{status}`；阶段：`{phase}`。
+- 物理步：已采集 {observed_steps:,} / {budget:,}；完整采集批次 {completed_steps:,}；可恢复检查点 {safe_steps:,}。
+- 验证：完成 {len(validations)} / 50 个验证点（每点 4 种配置 × 25 局）；已写入验证数据 {sum(len(rows) for rows in grouped.values())} 局。
+- 最新训练批次 D：{number(latest_train)}；最新验证 D：{number(latest_validation)}；已完成验证点最低 D：{number(best_validation)}；最新 loss：{number(latest_loss)}。
+- 正式终评：{final_status}
+
+采集中的物理步仅用于展示进度；恢复训练只使用完整采集与参数更新批次的检查点。缺少数据的面板显示 waiting，不补造训练或验证结果。
+
+## 实验配置
+
+| 项目 | 实际配置 |
+|---|---|
+| 算法 / 内部键 | LEAF / `{method}` |
+| 训练种子 / run | {seed} / `{run}` |
+| 载具 / 动作 | `{environment.get('env_agent_type', 'waiting')}` / `{environment.get('env_agent_action_type', 'acceleration')}` |
+| 任务 / 空间维度 | `{environment.get('task_mode', 'damage')}` / {config.get('spatial_dim', environment.get('spatial_dim', 'waiting'))} |
+| 物理版本 / 协议 | `{identity.get('had_core_version', 'waiting')}` / `{identity.get('physics_protocol', 'waiting')}` |
+| 训练分布 / 每局上限 | `{environment.get('train_dist', 'mixed_le10')}` / {environment.get('max_steps', 100)} 物理步 |
+| 蓝方规则 | `{environment.get('blue_upper', 'reactive')} + {environment.get('blue_lower', 'rush')}` |
+| 实体特征 / 动作数 | {config.get('entity_shape', 'waiting')} 维 / {config.get('n_actions', 'waiting')} |
+| 训练深度 / 验证深度 | `{config.get('global_depths', [])}` / {config.get('global_eval_depth', 'waiting')} |
+| 并行环境 / 每批学习更新 | {config.get('batch_size_run', 'waiting')} / {config.get('training_iters', 'waiting')} |
+| 实现版本 | `{config.get('implementation_revision', 'waiting')}` |
+
+完整生效物理参数与特征布局见 [experiment.json](experiment.json)；模型配置见 [config.json](had/{method}/models/seed_{seed}/config.json)。伤害任务的原始整局回报为 R=-D，D 越低越好；训练目标保留配置中的 potential shaping。
+
+## 训练与验证曲线
+
+![训练批次损伤、验证损伤与训练 loss](had/figures/training.png)
+
+训练 D 与 loss 为实际完整采集/学习批次记录；验证 D 只显示已收齐 100 局的验证点。日志使用 `had/learning.csv`、`had/episodes.csv` 与 `had/progress.csv`；权重保留 `final.pt`、验证最优 `best.pt` 及训练恢复文件。仅在物理预算与全部 50 个验证点均完成后标记 completed。
+
+## 运行命令
+
+```powershell
+& {config.get('launch_command', 'waiting for launch command')}
+```
+
+中断后在同一命令末尾添加 `--resume` 继续。状态与停止分别使用原训练脚本的 `--stage status` / `--stage stop`，并传入相同 `--output`。
+
+后续正式终评命令如下，当前训练任务不会自动执行：
+
+```powershell
+& {evaluation_command}
+```
+"""
+        temporary_report = report_path.with_name(".报告.md.pending")
+        try:
+            temporary_report.write_text(report, encoding="utf-8")
+            os.replace(temporary_report, report_path)
+        finally:
+            temporary_report.unlink(missing_ok=True)
+    return figure_path, report_path

@@ -10,15 +10,72 @@ PROFILE = "main"
 
 EXPECTED_ENV = {"had_core_version": "had-workbench-2.1.0",
                 "physics_protocol": "rebuild-calibrated-v3-r7-target-initialization"}
+SKY_EXPECTED_ENV = {"had_core_version": "skyhad-4.3.0", "physics_protocol": "skyhad-4.3"}
 
-def check_environment():
+
+def is_sky_environment(env_args=None):
+    return (env_args or {}).get("env_agent_type") == "UAV_fixedwing"
+
+
+def check_environment(env_args=None):
+    """Require the physics selected explicitly by the retained task configuration."""
+    expected = SKY_EXPECTED_ENV if is_sky_environment(env_args) else EXPECTED_ENV
     try:
-        from had_env.core.version import CORE_VERSION, PHYSICS_PROTOCOL
+        import had_env
+        if is_sky_environment(env_args):
+            from had_env.config import CORE_VERSION, PHYSICS_PROTOCOL
+        else:
+            from had_env.core.version import CORE_VERSION, PHYSICS_PROTOCOL
     except ImportError as error:
-        raise RuntimeError("Install the retained had-env version exposing had_env.core.version before running; help/status/plot remain available") from error
+        raise RuntimeError(f"Install the selected HAD environment {expected}; help/status/plot remain available") from error
     actual = dict(had_core_version=CORE_VERSION, physics_protocol=PHYSICS_PROTOCOL)
-    if actual != EXPECTED_ENV:
-        raise ValueError(f"Environment mismatch: expected {EXPECTED_ENV}, found {actual}; no sampling started")
+    if actual != expected:
+        raise ValueError(f"Environment mismatch: expected {expected}, found {actual}; no sampling started")
+    return dict(actual, library_version=getattr(had_env, "__version__", CORE_VERSION),
+                had_module=str(Path(had_env.__file__).resolve()))
+
+
+def register_environment(output, config, env_info=None, parameter_snapshot=None):
+    """Retain a fixed-wing experiment's real physics and reject mixed protocols."""
+    root = Path(output)
+    root = root.parent if root.name == "had" else root
+    env_args = dict(config.get("env_args") or {})
+    if not is_sky_environment(env_args):
+        return read_json(root / "experiment.json", {})
+    if root.name == PROFILE:
+        raise ValueError("Fixed-wing SkyHAD requires its independent output; existing main data are preserved")
+    identity = check_environment(env_args)
+    env_info = dict(env_info or {})
+    parameters = parameter_snapshot if parameter_snapshot is not None else config.get("environment_parameters")
+    features = {key: env_info.get(key, config.get(key)) for key in (
+        "entity_shape", "n_actions", "feature_names", "spatial_dim", "had_position_indices",
+        "had_velocity_indices", "had_position_scale", "had_velocity_scale")}
+    metadata = dict(schema="had-current-experiment-v1", profile=root.name,
+                    main_method=config["method"], main_method_display="LEAF" if config["method"] == "regir_nomem" else config["method"],
+                    seeds=[int(config["seed"])], budget_steps=int(config["t_max"]),
+                    official_checkpoint="final", env_identity=identity, env_args=env_args,
+                    feature_spec=features, environment_parameters=parameters,
+                    effective_config=(parameters or {}).get("effective_config"),
+                    train_N=[4, 6, 8, 10], train_K=[1, 2, 3],
+                    validation_configs=[[4, 4, 2], [6, 6, 2], [8, 8, 2], [10, 10, 3]],
+                    validation_points=50, validation_episodes_per_config=25,
+                    validation_scenes=[9500, 9599], final_episodes_per_config=300,
+                    final_scenes=[9000, 9299])
+    metadata = json.loads(json.dumps(metadata, ensure_ascii=False, allow_nan=False))
+    path = root / "experiment.json"
+    retained = read_json(path)
+    if path.exists() and retained is None:
+        raise ValueError("Existing experiment metadata are unreadable; existing data are preserved")
+    if retained is not None:
+        for key in ("profile", "main_method", "seeds", "budget_steps", "env_identity", "env_args", "feature_spec", "environment_parameters"):
+            if retained.get(key) != metadata[key]:
+                raise ValueError(f"Existing experiment {key} differs; existing data are preserved")
+        return retained
+    directory = environment_directory(root)
+    if any((directory / f"{stream}.csv").exists() for stream in ("episodes", "learning", "progress", "trajectories")):
+        raise ValueError("Existing records lack fixed-wing experiment identity; existing data are preserved")
+    atomic_json(path, metadata)
+    return metadata
 
 
 def is_profile(output):

@@ -1,16 +1,16 @@
 """The only project module importing HAD; physics is never copied or patched."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 import copy
 import numpy as np
 
 from had_env import make_env, parallel_env
 from had_env.actions import ACCELERATION_PRIMITIVES
-from had_env.core import config as had_config
-from had_env.core.make_env import HADEnv
-from had_env.core.version import PHYSICS_PROTOCOL
-from had_env.grouping.adapter import HADStage3Adapter
+from had_env import config as had_config
+from had_env.simulation import Simulation as HADEnv
+from had_env.config import PHYSICS_PROTOCOL
+from had_env.grouping.adapter import GroupingAdapter as HADStage3Adapter
 from had_env.grouping.actions import decode_counts, grand_grouping, rule_grouping
 from had_env.grouping.domain import DecisionState as NativeDecisionState, Entity as NativeEntity, Group, Grouping
 from had_env.grouping.environment import KnownOpponentEnv
@@ -18,7 +18,7 @@ from had_env.grouping.opponents import sample
 from had_env.grouping.policies import RulePolicy
 from had_env.grouping.rules import RuleExecutor, make_env as make_grouping_env
 
-from .features import (ENTITY_DIM, POSITION_SCALE, VELOCITY_SCALE,
+from .features import (entities_from_state, feature_spec,
                        planar_action_mapping, resolve_pad, task_masks)
 from .scales import as_scale
 
@@ -41,7 +41,7 @@ class DecisionState(NativeDecisionState):
                    Grouping.from_dict(data["previous"]),
                    {int(i): tuple(map(float, row)) for i, row in data.get("memory", {}).items()},
                    {int(i): int(value) for i, value in data.get("last_actions", {}).items()},
-                   int(data.get("spatial_dim", 3)))
+                   int(data.get("spatial_dim", 3)), float(data.get("scene_scale", 1.0)))
 
 
 def build_decision_state(adapter, grouping=None, opponent="reactive", last_actions=None):
@@ -57,7 +57,7 @@ def build_decision_state(adapter, grouping=None, opponent="reactive", last_actio
                          tuple(row(target, i) for i, target in enumerate(adapter.env.targets)),
                          grouping, {}, dict(last_actions if last_actions is not None else
                                             getattr(adapter, "_policy_last_actions", {})),
-                         spatial_dim=adapter.spatial_dim)
+                         spatial_dim=adapter.spatial_dim, scene_scale=adapter.scene_scale)
 
 
 def native_actions_to_planar(actions):
@@ -149,7 +149,8 @@ class EpisodeDiagnostics:
         self.adapter, self.seed = adapter, int(seed)
         self.blue_upper, self.blue_lower = blue_upper, blue_lower
         self.enabled, self.retain_trajectory = bool(enabled), bool(retain_trajectory)
-        self.action_hist = np.zeros(9, dtype=np.int64)
+        self.native_action_ids = np.asarray(adapter.valid_action_ids, dtype=np.int64)
+        self.action_hist = np.zeros(len(self.native_action_ids), dtype=np.int64)
         self.first_damage = [None] * len(adapter.env.targets)
         self.red_deaths = dict.fromkeys(("shot_down", "friendly_collision", "enemy_collision", "boundary", "self_destruct"), 0)
         self.blue_deaths = dict.fromkeys(("intercepted", "self_destruct", "collision"), 0)
@@ -173,12 +174,14 @@ class EpisodeDiagnostics:
         red = [a for a in env.red_agents if a.Health > 0]
         if red:
             action_values = [native_actions.get(int(a.Id), 0) for a in red]
-            self.action_hist += np.bincount(native_actions_to_planar(action_values), minlength=9)
-            positions = np.asarray([a.position[:2] for a in red], dtype=np.float64)
-            speeds = np.linalg.norm(np.asarray([a.velocity[:2] for a in red]), axis=-1)
+            action_indices = np.searchsorted(self.native_action_ids, action_values)
+            self.action_hist += np.bincount(action_indices, minlength=len(self.action_hist))
+            dim = self.adapter.spatial_dim
+            positions = np.asarray([a.position[:dim] for a in red], dtype=np.float64)
+            speeds = np.linalg.norm(np.asarray([a.velocity[:dim] for a in red]), axis=-1)
             self.speed_sum += float(speeds.sum())
             self.speed_count += len(red)
-            target_positions = np.asarray([t.position[:2] for t in env.targets])
+            target_positions = np.asarray([t.position[:dim] for t in env.targets])
             nearest = np.linalg.norm(positions[:, None] - target_positions[None], axis=-1).min(axis=1)
             self.target_distance_sum += float(nearest.sum())
             self.target_distance_count += len(red)
@@ -190,8 +193,8 @@ class EpisodeDiagnostics:
                 self.minimum_distances.append(float(pairs.min()))
             blue = [b for b in env.blue_agents if b.Health > 0]
             if blue:
-                pursuers = pursuit_matrix(positions, np.asarray([a.velocity[:2] for a in red], dtype=np.float64),
-                                          np.asarray([b.position[:2] for b in blue], dtype=np.float64))
+                pursuers = pursuit_matrix(positions, np.asarray([a.velocity[:dim] for a in red], dtype=np.float64),
+                                          np.asarray([b.position[:dim] for b in blue], dtype=np.float64))
                 self.dup_pursuit_sum += float((pursuers.sum(0) >= 2).mean())
                 self.dup_pursuit_count += 1
 
@@ -273,10 +276,25 @@ class HADWrapper:
                  shaping_coef=0.0, shaping_range=4000.0, pad="eval",
                  subtask_set="targets", allocation_clock="interval",
                  action_length=5, max_alloc_hold=10, reward_mode="damage",
-                 friendly_penalty=1.0, **kwargs):
+                 friendly_penalty=1.0, env_agent_type="particle",
+                 env_agent_action_type="acceleration", spatial_dim=None, task_mode="damage", **kwargs):
         self.scale = as_scale(scale)
         self.max_steps = int(max_steps)
         self.blue_upper, self.blue_lower = blue_upper, blue_lower
+        if blue_lower != "rush":
+            raise ValueError("the native Blue lower policy is rush")
+        if env_agent_action_type != "acceleration" or task_mode != "damage":
+            raise ValueError("HAD entity experiments require acceleration control and damage mode")
+        spatial_dim = (2 if env_agent_type == "particle" else 3) if spatial_dim is None else spatial_dim
+        config_values = dict(kwargs, env_agent_type=env_agent_type,
+                             env_agent_action_type=env_agent_action_type,
+                             spatial_dim=spatial_dim, task_mode=task_mode)
+        self.effective_config = had_config.EnvConfig.from_values(config_values)
+        self.spatial_dim = self.effective_config.spatial_dim
+        self.feature_spec = feature_spec(self.spatial_dim, self.effective_config.world_bounds,
+                                         self.effective_config.preset.max_speed)
+        self.entity_dim, self.n_actions = self.feature_spec["entity_shape"], self.feature_spec["n_actions"]
+        self.native_action_ids = tuple(range(27)) if self.spatial_dim == 3 else tuple(map(int, PLANAR_NATIVE_IDS))
         self.command_interval = int(command_interval)
         self.gamma = float(gamma)
         self.fold_wipeout_tail = bool(fold_wipeout_tail)
@@ -313,6 +331,24 @@ class HADWrapper:
         self.last_nearest = None
         self.last_alive = None
 
+    def parameter_snapshot(self):
+        """JSON-safe identity and effective parameters, available before reset."""
+        config = self.effective_config
+        return {"core_version": had_config.CORE_VERSION, "physics_protocol": PHYSICS_PROTOCOL,
+                "env_agent_type": config.env_agent_type,
+                "env_agent_action_type": config.env_agent_action_type,
+                "spatial_dim": self.spatial_dim, "task_mode": config.task_mode,
+                "scene_scale": config.scene_scale, "effective_config": config.to_dict(),
+                "model_preset": asdict(config.preset), "attack_distance": list(config.attack_distance),
+                "fire_range": config.fire_range, "collision_distance": config.collision_distance,
+                "interval": float(had_config.Interval),
+                "target_health": float(had_config.initial_health if self.adapter_kwargs.get("target_health") is None
+                                       else self.adapter_kwargs["target_health"]),
+                "target_initialization": ("fixed" if self.adapter_kwargs.get("target_positions") is not None
+                                          else self.adapter_kwargs.get("target_initialization", "random")),
+                "max_steps": self.max_steps, "command_interval": self.command_interval,
+                "feature_spec": copy.deepcopy(self.feature_spec)}
+
     def reset(self, seed=0, scale=None, evaluate=False, diagnostics=None, retain_trajectory=None):
         self.scale = self.scale if scale is None else as_scale(scale)
         roster = (self.scale.N_R, self.scale.N_B, self.scale.K)
@@ -325,8 +361,8 @@ class HADWrapper:
                     f"configuration {roster} exceeds this method's ordered slot budget "
                     f"{self.pool_slots}; it has no parameters for the extra entities")
         self.adapter = HADStage3Adapter(self.scale.N_R, self.scale.N_B, self.scale.K,
-                                       max_steps=self.max_steps, task_mode="damage", spatial_dim=2,
-                                       blue_rule_style=self.blue_lower, **self.adapter_kwargs)
+                                       max_steps=self.max_steps, task_mode="damage", spatial_dim=self.spatial_dim,
+                                       effective_config=self.effective_config, **self.adapter_kwargs)
         adapter = self.adapter
         adapter.reset(seed=int(seed), red_assignment={i: None for i in adapter.red_ids},
                       blue_assignment={i: None for i in adapter.blue_ids})
@@ -354,24 +390,8 @@ class HADWrapper:
         self.adapter.set_joint_assignments({}, self.blue_grouping.assignment())
 
     def _refresh_features(self):
-        env = self.adapter.env
-        self.entities = np.zeros((self.n_entities, ENTITY_DIM), dtype=np.float32)
-        self.entity_mask = np.ones(self.n_entities, dtype=np.uint8)
-        for group, start, kind in ((env.red_agents, 0, 0), (env.blue_agents, self.n_red, 1),
-                                    (env.targets, self.n_red + self.n_blue, 2)):
-            indices = np.asarray([start + i for i, e in enumerate(group) if kind == 2 or e.Health > 0])
-            rows = [e for e in group if kind == 2 or e.Health > 0]
-            if not rows:
-                continue
-            self.entity_mask[indices] = 0
-            self.entities[indices, :2] = np.asarray([e.position[:2] for e in rows]) / POSITION_SCALE
-            self.entities[indices, 7 + kind] = 1
-            if kind == 2:
-                self.entities[indices, 6] = [e.cumulative_damage / self.scale.N_B for e in rows]
-            else:
-                self.entities[indices, 2:4] = np.asarray([e.velocity[:2] for e in rows]) / VELOCITY_SCALE
-                self.entities[indices, 4] = 1
-                self.entities[indices, 5] = [e.Health / e.initial_health for e in rows]
+        self.entities, self.entity_mask = entities_from_state(
+            self.get_policy_state(), (self.n_red, self.n_blue, self.n_targets), self.feature_spec)
 
     def _potential_by_target(self):
         """The shaping potential split over the target each Blue is closing on.
@@ -386,8 +406,8 @@ class HADWrapper:
         live = [agent for agent in env.blue_agents if agent.Health > 0]
         if not self.shaping_coef or not live:
             return values
-        targets = np.asarray([target.position[:2] for target in env.targets])
-        blue = np.asarray([agent.position[:2] for agent in live])
+        targets = np.asarray([target.position[:self.spatial_dim] for target in env.targets])
+        blue = np.asarray([agent.position[:self.spatial_dim] for agent in live])
         distances = np.linalg.norm(blue[:, None] - targets[None], axis=-1)
         closed = np.clip(1.0 - distances.min(axis=1) / self.shaping_range, 0.0, 1.0)
         values[:] = -self.shaping_coef * np.bincount(distances.argmin(axis=1), weights=closed,
@@ -408,8 +428,8 @@ class HADWrapper:
         live = [(index, agent) for index, agent in enumerate(env.blue_agents) if agent.Health > 0]
         if not live or not env.targets:
             return nearest
-        targets = np.asarray([target.position[:2] for target in env.targets])
-        blue = np.asarray([agent.position[:2] for _, agent in live])
+        targets = np.asarray([target.position[:self.spatial_dim] for target in env.targets])
+        blue = np.asarray([agent.position[:self.spatial_dim] for _, agent in live])
         chosen = np.linalg.norm(blue[:, None] - targets[None], axis=-1).argmin(axis=1)
         for (index, _), target_id in zip(live, chosen):
             nearest[index] = int(target_id)
@@ -420,8 +440,8 @@ class HADWrapper:
         live = [(index, agent) for index, agent in enumerate(self.adapter.env.blue_agents) if agent.Health > 0]
         if not self.shaping_coef or not live:
             return values
-        targets = np.asarray([target.position[:2] for target in self.adapter.env.targets])
-        blue = np.asarray([agent.position[:2] for _, agent in live])
+        targets = np.asarray([target.position[:self.spatial_dim] for target in self.adapter.env.targets])
+        blue = np.asarray([agent.position[:self.spatial_dim] for _, agent in live])
         distances = np.linalg.norm(blue[:, None] - targets[None], axis=-1)
         closed = np.clip(1.0 - distances.min(axis=1) / self.shaping_range, 0.0, 1.0)
         for (index, _), value in zip(live, closed):
@@ -499,7 +519,7 @@ class HADWrapper:
     def _advance(self, native_red):
         """One physical step with the same Blue schedule as a rule episode."""
         adapter, env = self.adapter, self.adapter.env
-        blue = adapter.commanded_rule_actions("Blue", style=self.blue_lower)
+        blue = adapter.blue_rush_actions()
         all_actions = dict(native_red)
         all_actions.update({int(a.Id): int(value) for a, value in zip(env.blue_agents, blue)})
         before = [a.Health > 0 for a in env.agents]
@@ -545,9 +565,9 @@ class HADWrapper:
         if env.is_episode_done() or adapter.step_count >= self.max_steps:
             raise RuntimeError("cannot step a completed HAD episode")
         values = np.asarray(actions, dtype=np.int64).reshape(-1)
-        if not (self.scale.N_R <= len(values) <= self.n_red) or np.any((values < 0) | (values > 8)):
-            raise ValueError("red actions must contain 0..8 IDs for the actual or padded red roster")
-        native_red = {int(a.Id): int(PLANAR_NATIVE_IDS[values[i]]) if a.Health > 0 else 0
+        if not (self.scale.N_R <= len(values) <= self.n_red) or np.any((values < 0) | (values >= self.n_actions)):
+            raise ValueError(f"red actions must contain 0..{self.n_actions - 1} IDs for the actual or padded red roster")
+        native_red = {int(a.Id): int(self.native_action_ids[values[i]]) if a.Health > 0 else 0
                       for i, a in enumerate(env.red_agents)}
         reward, task_rewards, terminated, truncated = self._advance(native_red)
         folded_steps = 0
@@ -602,6 +622,12 @@ class HADWrapper:
 
     def get_policy_state(self):
         return build_decision_state(self.adapter, self.red_grouping, self.blue_upper)
+
+    def encode_native_actions(self, actions):
+        """Convert a frozen policy's global-ID mapping to environment action slots."""
+        inverse = {native: policy for policy, native in enumerate(self.native_action_ids)}
+        return [inverse[int(actions.get(int(agent.Id), 0))] if agent.Health > 0 else 0
+                for agent in self.adapter.env.red_agents]
 
     def episode_summary(self):
         return self.diagnostics.summary()

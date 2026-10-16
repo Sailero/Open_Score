@@ -22,6 +22,33 @@ from open_score.utils.logging import DEFAULT_OUTPUT
 from open_score.eval.experiment import atomic_json, read_json, run_directory, process_lock, logical_devices, physical_device
 
 
+class Tee:
+    """Keep an interactive terminal and the existing per-run console log."""
+    def __init__(self, terminal, log):
+        self.terminal, self.log = terminal, log
+
+    def write(self, value):
+        written = self.terminal.write(value)
+        self.log.write(value)
+        self.log.flush()
+        return written
+
+    def flush(self):
+        self.terminal.flush()
+        self.log.flush()
+
+    def isatty(self):
+        return self.terminal.isatty()
+
+    def __getattr__(self, key):
+        return getattr(self.terminal, key)
+
+
+def environment_options(options):
+    return {key: value for key in ("env_agent_type", "env_agent_action_type", "spatial_dim", "task_mode")
+            if (value := getattr(options, key, None)) is not None}
+
+
 def selection(text, allowed=None, integer=False):
     values = tuple(int(v.strip()) if integer else v.strip() for v in str(text).split(",") if v.strip())
     if not values or len(set(values)) != len(values):
@@ -127,7 +154,7 @@ def progress_lines(output, state=None):
             path = run_directory(output, item["method"], item["seed"])
             row = read_json(path / ("resource.json" if pool == "train" else "evaluation.json"), {})
             measurements.append(row)
-            done, total = (row.get("t_env", 0), row.get("budget_steps", 0)) if pool == "train" else (row.get("completed", 0), row.get("total", 0))
+            done, total = (row.get("observed_t_env", row.get("t_env", 0)), row.get("budget_steps", 0)) if pool == "train" else (row.get("completed", 0), row.get("total", 0))
             damage = row.get("latest_validation_D") if pool == "train" else row.get("D")
             device = str(item.get("gpu", state.get("eval_device", "cpu")))
             lines.append(f"{pool:<6} {item['method']:<23} {item['seed']:>4} {device:>6} {done:>7}/{total:<7} {duration_text(row.get('elapsed_seconds')):<11} {duration_text(row.get('remaining_seconds')):<11} {damage_text(damage):<7} {row.get('current_phase', row.get('phase', 'starting'))}")
@@ -152,13 +179,66 @@ def render(lines, previous=0):
     return len(lines)
 
 
+def single(options):
+    """Train one seed in the foreground; validation stays inside train()."""
+    from open_score.algos import train
+    methods = selection(options.method, METHODS)
+    seeds = selection(options.seeds, integer=True)
+    devices = logical_devices(options.devices or "0")
+    if len(methods) != 1 or len(seeds) != 1 or len(devices) != 1:
+        raise ValueError("single requires one method, one seed and one GPU")
+    if options.steps < 50:
+        raise ValueError("The selected training protocol requires a budget >=50")
+    if options.confirmation:
+        raise ValueError("single performs training and validation; confirmation is a separate explicit evaluation")
+    method, seed = methods[0], seeds[0]
+    gpu = physical_device(devices[0])
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
+    directory = run_directory(options.output, method, seed)
+    directory.mkdir(parents=True, exist_ok=True)
+    started_at = time.time()
+
+    def publish(status):
+        active = [dict(pool="train", method=method, seed=seed, gpu=gpu, pid=os.getpid())] if status == "running" else []
+        finished = [] if active else [dict(pool="train", method=method, seed=seed, status=status)]
+        atomic_json(options.output / "scheduler.train.json", dict(pid=os.getpid(), updated_at=time.time(),
+            status=status, train_slots=1, eval_slots=0, total_train=1, total_eval=0,
+            started_at=started_at, active=active, waiting_train=[], waiting_eval=[], finished=finished))
+
+    with process_lock(options.output / ".train.scheduler.lock") as owned:
+        if not owned:
+            raise RuntimeError("This output already has a running trainer")
+        with process_lock(directory / ".train.lock") as model_owned:
+            if not model_owned:
+                raise RuntimeError(f"Model already has a trainer: {method}/s{seed}")
+            if (options.output / "stop.request").exists() and not options.resume:
+                raise ValueError("Stopped output requires --resume")
+            (options.output / "stop.request").unlink(missing_ok=True)
+            with (directory / "console.log").open("a", encoding="utf-8", buffering=1) as stream:
+                with redirect_stdout(Tee(sys.stdout, stream)), redirect_stderr(Tee(sys.stderr, stream)):
+                    publish("running")
+                    try:
+                        path = train(method, dict(output=str(options.output), seed=seed, t_max=options.steps,
+                            run=options.run, resume=options.resume, use_cuda=True,
+                            env_args=environment_options(options), progress=options.progress,
+                            live_curves=options.live_curves, launch_command=options.launch_command,
+                            python_executable=sys.executable))
+                        completed = Path(path).name == "final.pt"
+                        publish("complete" if completed else "stopped")
+                        print(f"[{method}] {'complete' if completed else 'stopped'}: {path}", flush=True)
+                        return 0 if completed else 130
+                    except BaseException:
+                        publish("failed")
+                        raise
+
+
 def run(options):
     from open_score.eval.experiment import check_environment, ensure_layout
     check_environment()
     ensure_layout(options.output)
     methods = selection(options.method, METHODS)
     seeds = selection(options.seeds, integer=True)
-    devices = logical_devices(options.devices)
+    devices = logical_devices(options.devices or "0,1")
     if options.steps < 50 or options.per_gpu != 3 or len(devices) != 2:
         raise ValueError("Current training requires an explicit budget >=50 and two GPUs with three jobs each")
     ctx = get_context("spawn")
@@ -261,13 +341,21 @@ def main():
     parser.add_argument("--steps", type=int, help="Explicit physical-step budget")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--run", default="train")
-    parser.add_argument("--devices", default="0,1", help="Two logical indices within inherited CUDA_VISIBLE_DEVICES")
+    parser.add_argument("--devices", help="Logical GPU indices within inherited CUDA_VISIBLE_DEVICES; single defaults to 0")
     parser.add_argument("--per-gpu", type=int, default=3, choices=(3,))
     parser.add_argument("--eval-workers", type=positive_integer, default=2)
     parser.add_argument("--eval-device", type=evaluation_device, default="cpu", help="Independent evaluation pool device: cpu or cuda:N")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--confirmation", action="store_true", help="Also evaluate the explicitly requested independent confirmation bank")
+    parser.add_argument("--env-agent-type", choices=("particle", "UAV_fixedwing", "UAV_quadrotor"))
+    parser.add_argument("--env-agent-action-type", choices=("acceleration",))
+    parser.add_argument("--spatial-dim", type=int, choices=(2, 3))
+    parser.add_argument("--task-mode", choices=("damage",))
+    parser.add_argument("--progress", choices=("plain", "tqdm"), default="plain")
+    parser.add_argument("--live-curves", action="store_true", help="Refresh saved training curves and the experiment report every 30 seconds")
     options = parser.parse_args()
+    import subprocess
+    options.launch_command = subprocess.list2cmdline([sys.executable, "-X", "utf8", *sys.argv])
     options.output = options.output.resolve()
     if options.stage == "stop":
         from open_score.utils.resources import write_stop
@@ -282,6 +370,10 @@ def main():
         options.seeds = str(options.seed)
     if not options.method or options.seeds is None or options.steps is None:
         parser.error("Training requires explicit --method, --seed/--seeds and --steps")
+    if options.stage == "single":
+        return single(options)
+    if environment_options(options) or options.progress != "plain" or options.live_curves:
+        parser.error("Environment selection, tqdm and live curves require --stage single")
     return run(options)
 
 if __name__ == "__main__":

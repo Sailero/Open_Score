@@ -18,6 +18,14 @@ from modules.agents.agent import Agent as ALMAAgent
 from modules.layers.attention import EntityAttentionLayer
 
 
+def _had_geometry_indices(args, kind):
+    env_args = getattr(args, "env_args", None) or {}
+    spatial_dim = int(env_args.get("spatial_dim", 3 if int(getattr(args, "entity_shape", 10)) == 12 else 2))
+    default = ([0, 1, 10] if spatial_dim == 3 else [0, 1]) if kind == "position" else (
+        [2, 3, 11] if spatial_dim == 3 else [2, 3])
+    return list(getattr(args, f"had_{kind}_indices", None) or default)
+
+
 def relative_entity_views(inputs, args, extras=()):
     """Construct temporary observer-centred views; replay stays global.
 
@@ -41,7 +49,8 @@ def relative_entity_views(inputs, args, extras=()):
         own = views[:, :, inds, inds].clone()
     ed = views.shape[-1]
     if observer_entities is None and getattr(args, "feature_layout", "had") == "had":
-        views[..., :4] -= own.unsqueeze(3)[..., :4]
+        geometry = _had_geometry_indices(args, "position") + _had_geometry_indices(args, "velocity")
+        views[..., geometry] -= own.unsqueeze(3)[..., geometry]
         inds = th.arange(na, device=entities.device)
         views[:, :, inds, inds] = own
     order = th.arange(ne, device=entities.device).repeat(na, 1)
@@ -309,7 +318,7 @@ class GraphEncoder(_EntityEncoder):
                 raise ValueError("kNN geometry is defined only for the HAD schema")
             # Restore observer-relative position for the own token, which
             # otherwise keeps absolute geometry for the policy input.
-            points = views[..., :2].clone()
+            points = views[..., _had_geometry_indices(self.args, "position")].clone()
             points[:, 0] = 0
             distances = th.cdist(points, points).masked_fill(~adj, float("inf"))
             neighbours = distances.topk(min(self.k, max(ne - 1, 1)), largest=False).indices
