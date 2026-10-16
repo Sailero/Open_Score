@@ -542,6 +542,8 @@ def render_training(output, *, method="regir_nomem", seed=0, run="train", config
     status = progress.get("status", "waiting")
     phase = progress.get("current_phase", "waiting")
     points = (finite_points(training, "train_D"), finite_points(validations, "D"), finite_points(training, "loss"))
+    visible_steps = max(20000, observed_steps, *(x for data in points for x, _ in data))
+    visible_steps = min(budget, visible_steps * 1.05) if budget else visible_steps * 1.05
     figure_path = root / "had" / "figures" / "training.png"
     report_path = root / "报告.md"
     figure_path.parent.mkdir(parents=True, exist_ok=True)
@@ -557,8 +559,7 @@ def render_training(output, *, method="regir_nomem", seed=0, run="train", config
             else:
                 ax.text(.5, .5, "waiting for data", ha="center", va="center", transform=ax.transAxes, color=GRAY)
             ax.set(title=caption, xlabel="Physical steps (millions)", ylabel=ylabel)
-            if budget:
-                ax.set_xlim(0, budget / 1e6)
+            ax.set_xlim(0, visible_steps / 1e6)
             style(ax)
         fig.suptitle(f"LEAF seed {seed} | {status}: {phase} | {observed_steps:,}/{budget:,} steps | "
                      f"validation {len(validations)}/50", fontsize=10, color=INK)
