@@ -553,24 +553,12 @@ def tables(data):
         cells = [c[i] for c in cols]
         print(f"{LABELS[m]} & " + " & ".join(cells[:4]) + " && " + " & ".join(cells[4:8]) + " && "
               + " & ".join(cells[8:]) + r"\\")
-    rel = []
-    for k in GROUPS:
-        rel.append(g[LEAF][k]["mean"] / min(g[m][k]["mean"] for m in methods[:-1]) - 1)
-    for metric in ("P", "CVaR"):
-        for k in GROUPS:
-            rel.append(pc[LEAF][k][metric]["mean"] / min(pc[m][k][metric]["mean"] for m in methods[:-1]) - 1)
-    fmt = lambda r: f"$-${abs(100 * r):.0f}\\%"
-    print(r"LEAF vs.\ best & " + " & ".join(map(fmt, rel[:4])) + " && " + " & ".join(map(fmt, rel[4:8])) + " && "
-          + " & ".join(map(fmt, rel[8:])) + r"\\")
     print()
     chain = ("regir_r0_sg", "regir_r1_sg", "regir_fixed4_sg", "regir_sg", LEAF)
-    for i, m in enumerate(chain):
+    for m in chain:
         cells = []
         for k in GROUPS:
             cell = f"{g[m][k]['mean']:.2f}$\\pm${g[m][k]['sd']:.2f}"
-            if i:
-                r = 100 * (g[m][k]["mean"] / g[chain[i - 1]][k]["mean"] - 1)
-                cell += f" {{\\scriptsize({'+' if r > 0 else '$-$'}{abs(r):.0f}\\%)}}"
             cells.append(cell)
         print(m, "& " + " & ".join(cells) + r"\\")
     for m in ("regir_untied4_sg", "regir_last_sg", "regir_norefil_sg", "refil_matched"):

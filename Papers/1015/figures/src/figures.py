@@ -157,9 +157,11 @@ def save(fig, name):
 def curve(ax, data, method, cfgs, xs):
     cell = data["configs"][method]
     mean = np.array([cell[c]["mean"] for c in cfgs])
-    if method == LEAF:
+    if method != "rule":
         sd = np.array([cell[c]["sd"] for c in cfgs])
-        ax.fill_between(xs, np.maximum(mean - sd, 1e-3), mean + sd, color=COLORS[LEAF], alpha=0.16, lw=0, zorder=4)
+        ax.fill_between(xs, np.maximum(mean - sd, 1e-3), mean + sd, color=COLORS[method],
+                        alpha=0.16 if method == LEAF else 0.10, lw=0, zorder=4 if method == LEAF else 2)
+    if method == LEAF:
         ax.plot(xs, mean, color=COLORS[LEAF], lw=1.8, marker="o", ms=2.8, mew=0, zorder=6)
     elif method == "rule":
         ax.plot(xs, mean, color=COLORS["rule"], lw=1.0, ls=DASH, zorder=5)
@@ -181,39 +183,47 @@ SWEEPS = (
 
 def fig_generalization(data):
     fig, add = canvas(PAGE, 1.84)
-    left, bottom, width, height, gap = 0.40, 0.32, 1.56, 1.10, 0.16
-    axes = [add(left + i * (width + gap), bottom, width, height) for i in range(4)]
-    ticks = (0.3, 1, 3, 10)
-    for ax in axes:
-        log_y(ax, 0.2, 20, ticks)
+    bottom, width, height = 0.32, 1.40, 1.10
+    axes = [add(left, bottom, width, height) for left in (0.40, 2.35, 3.99, 5.63)]
+    ticks = (0.3, 1, 3, 10, 30)
+    for ax in axes[1:]:
+        if ax is not axes[1]:
+            ax.sharey(axes[1])
+        log_y(ax, 0.15, 30, ticks)
         grid(ax, ticks)
 
     ax = axes[0]
+    ax.set_ylim(0, 8)
+    ax.set_yticks((0, 2, 4, 6, 8))
+    grid(ax, (2, 4, 6, 8))
     for method in ORDER:
         if method == "rule":
             continue
         x, y, sd = validation(data, method)
         lead = method == LEAF
-        if lead:
-            ax.fill_between(x, np.maximum(y - sd, 1e-3), y + sd, color=COLORS[LEAF], alpha=0.16, lw=0, zorder=4)
+        ax.fill_between(x, y - sd, y + sd, color=COLORS[method], alpha=0.16 if lead else 0.10,
+                        lw=0, zorder=4 if lead else 2)
         ax.plot(x, y, color=COLORS[method], lw=1.8 if lead else 1.0, zorder=6 if lead else 3)
     ax.axhline(data["rule_id_reference"]["mean"], color=COLORS["rule"], lw=1.0, ls=DASH, zorder=5)
     ax.set_xlim(0, 1)
     ax.set_xticks((0, 0.5, 1), ("0", "0.5", "1"))
     ax.set_xlabel("Environment steps (M)")
-    ax.set_ylabel(r"Target damage $D$")
+    ax.set_ylabel(r"Validation damage $D$")
     title(ax, "a", "Training on ID scales")
 
     for ax, (letter, name, cfgs, xs, xlabel, major, minor, train) in zip(axes[1:], SWEEPS):
         if train:
             ax.axvspan(0.1, train, color=SHADE, lw=0, zorder=0)
-            ax.text(xs[0] / 1.07, 16, "training", ha="left", va="top", fontsize=6.2, color=MUTED)
+            ax.text(xs[0] / 1.07, 0.94, "training", transform=ax.get_xaxis_transform(),
+                    ha="left", va="top", fontsize=6.2, color=MUTED)
         for method in ORDER:
             curve(ax, data, method, cfgs, xs)
         log_x(ax, major, minor)
         ax.set_xlim(xs[0] / 1.12, xs[-1] * 1.12)
         ax.set_xlabel(xlabel)
-        ax.tick_params(axis="y", labelleft=False)
+        ax.tick_params(axis="y", labelleft=ax is axes[1])
+        if ax is axes[1]:
+            ax.set_ylabel(r"Target damage $D$")
         title(ax, letter, name)
 
     handles = [Line2D([], [], color=COLORS[m], lw=1.8 if m == LEAF else 1.0, ls=DASH if m == "rule" else "-",
@@ -240,7 +250,7 @@ def fig_capacity(data):
                 color="white" if c == COLORS[LEAF] else INK, zorder=5)
     refil = data["group"]["refil"]["Joint-OOD"]["mean"]
     ax.axvline(refil, color=COLORS["refil"], lw=0.9, ls=DASH, zorder=2)
-    ax.text(refil, ys[0] + 0.55, "REFIL", color=COLORS["refil"], ha="center", va="bottom", fontsize=6.5)
+    ax.text(refil + 0.25, 2.5, "REFIL", color=COLORS["refil"], ha="left", va="center", fontsize=6.5)
     ax.set_ylim(-0.55, ys[0] + 0.95)
     ax.set_yticks(ys, [NAMES[m] for m in SAME_SIZE])
     ax.get_yticklabels()[-1].set_color(COLORS[LEAF])
@@ -358,7 +368,7 @@ def fig_depth(data):
     handles = [Line2D([], [], color=COLORS[m], lw=1.8 if m == LEAF else 1.2, ls="-" if m in SAMPLED else DASH,
                       label=NAMES[m]) for m in DEPTH_MODELS]
     ax.legend(handles=handles, loc="upper right", bbox_to_anchor=(1.02, 1.02), handlelength=2.2,
-              labelspacing=0.3)
+              labelspacing=0.3, frameon=True, facecolor="white", framealpha=1, edgecolor="none")
     title(ax, "a", "Damage at every exit")
 
     ax = add(2.95, bottom, 1.55, height)
@@ -377,31 +387,56 @@ def fig_depth(data):
     ax.set_ylabel(r"Fusion weight $\alpha_r$ (%)")
     title(ax, "b", "Weight per round")
 
-    ax = add(5.10, bottom, 1.95, height)
-    timing = data["timing"]["closed_loop"]["50-2"]
-    prof = data["depth"][LEAF]["50-2"]
-    xs = np.array([timing[f"LEAF R{d}"]["ms"] for d in range(1, 5)])
-    ys = np.array([np.mean(prof[str(d)]) for d in range(1, 5)])
-    one = data["configs"]["regir_r1_sg"]["50-2"]["mean"]
-    one_x = timing["One round"]["ms"]
-    ax.plot(xs, ys, color=COLORS[LEAF], lw=1.8, marker="o", ms=3.4, mew=0, zorder=5)
-    for d, (x, y) in enumerate(zip(xs, ys), start=1):
-        ax.text(x, y - 0.17, f"$L$={d}", ha="center", va="top", fontsize=6.3, color=COLORS[LEAF])
-    ax.plot(one_x, one, ls="", marker="o", ms=3.8, mew=0, color=LOOP, zorder=5)
-    ax.text(one_x + 0.2, one, "One round", ha="left", va="center", fontsize=6.5, color="#C0675C")
-    ax.annotate("", xy=(xs[0] + 0.08, 1.0), xytext=(xs[3] - 0.08, 1.0),
-                arrowprops=dict(arrowstyle="-|>", color=INK, lw=0.7, mutation_scale=7))
-    saving = 100 * (1 - xs[0] / xs[3])
-    ax.text((xs[0] + xs[3]) / 2, 1.07, f"{saving:.0f}% less time", ha="center", va="bottom", fontsize=6.5)
-    ax.set_xlim(6.9, 11.1)
-    ax.set_xticks((7, 8, 9, 10, 11))
-    ax.set_ylim(0, 2.0)
-    ax.set_yticks((0, 0.5, 1, 1.5, 2), ("0", "0.5", "1", "1.5", "2"))
-    grid(ax, (0.5, 1, 1.5, 2))
-    ax.set_xlabel("Team decision time (ms)")
-    ax.set_ylabel(r"$D$ at $N$ = 50")
-    title(ax, "c", "Compute versus damage")
+    ax = add(4.95, bottom, 1.68, height)
+    depth_cost_panel(ax, data)
     return save(fig, "exp_depth")
+
+
+def depth_cost_panel(ax, data):
+    """Panel 7(c), shared by the paper and its standalone preview."""
+    damage_ax = ax.twinx()
+    timing = data["timing"]["closed_loop"]["50-2"]
+    depths = np.arange(1, 5)
+    positions = np.arange(1, 6)
+    times = [timing[f"LEAF R{d}"]["ms"] for d in depths] + [timing["One round"]["ms"]]
+    damage = [np.mean(data["depth"][LEAF]["50-2"][str(d)]) for d in depths]
+    one_damage = data["configs"]["regir_r1_sg"]["50-2"]["mean"]
+
+    ax.bar(positions, times, width=0.56, color="#D6DADF", lw=0, zorder=2)
+    for x, value in zip(positions, times):
+        ax.text(x, value + 0.22, f"{value:.1f}", ha="center", va="bottom", fontsize=6.5)
+    ax.axvline(4.5, color="#B8BDC4", ls=DASH, lw=0.7, zorder=1)
+    damage_ax.plot(depths, damage, color=COLORS[LEAF], marker="o", ms=3.8, mew=0, lw=1.5, zorder=5)
+    damage_ax.plot(5, one_damage, color=COLORS[LEAF], marker="^", ms=5.0, mfc="white", mew=1, ls="", zorder=5)
+    for x, value in zip(positions, damage + [one_damage]):
+        damage_ax.text(x, value - 0.12, f"{value:.2f}", color=COLORS[LEAF],
+                       ha="center", va="top", fontsize=6.5)
+
+    ax.annotate("", xy=(1, 12.15), xytext=(4, 12.15),
+                arrowprops=dict(arrowstyle="-|>", color=INK, lw=0.7, mutation_scale=7))
+    saving = 100 * (1 - times[0] / times[3])
+    ax.text(2.5, 12.5, f"{saving:.0f}% less time", ha="center", va="bottom", fontsize=6.5)
+    ax.set_xlim(0.45, 5.55)
+    ax.set_ylim(0, 14)
+    ax.set_yticks((0, 5, 10))
+    grid(ax, (5, 10))
+    ax.set_xticks(positions, [rf"$L$={d}" for d in depths] + ["One\nround"])
+    ax.set_ylabel("Team decision time (ms)")
+    damage_ax.set_ylim(0, 2.25)
+    damage_ax.set_yticks((0, 0.5, 1, 1.5, 2), ("0", "0.5", "1", "1.5", "2"))
+    damage_ax.spines["right"].set_visible(True)
+    damage_ax.spines["right"].set_color(SPINE)
+    damage_ax.tick_params(axis="y", colors=SPINE)
+    damage_ax.set_ylabel(r"Target damage $D$", color=INK)
+    title(ax, "c", "Depth, time, and protection")
+
+
+def fig_depth_preview(data):
+    """Standalone preview of the paper's depth, time, and damage panel."""
+    fig, add = canvas(COLUMN, 2.10)
+    ax = add(0.46, 0.32, 2.52, 1.48)
+    depth_cost_panel(ax, data)
+    return save(fig, "backfig/exp_depth_alternative")
 
 
 FIGURES = {
@@ -414,16 +449,17 @@ FIGURES = {
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("names", nargs="*", help=f"subset of {', '.join(FIGURES)}")
+    renderers = {**FIGURES, "depth-preview": fig_depth_preview}
+    parser.add_argument("names", nargs="*", help=f"subset of {', '.join(renderers)}")
     parser.add_argument("--rebuild", action="store_true", help="recompute statistics from the saved records")
     args = parser.parse_args()
-    unknown = set(args.names) - set(FIGURES)
+    unknown = set(args.names) - set(renderers)
     if unknown:
         parser.error(f"unknown figures: {', '.join(sorted(unknown))}")
     data = figdata.load(args.rebuild)
     with plt.rc_context(RC):
         for name in args.names or FIGURES:
-            for path in FIGURES[name](data):
+            for path in renderers[name](data):
                 print(path)
 
 
