@@ -49,7 +49,11 @@ def env_worker(remote, args_dict, rank):
                 env.reset(**payload)
                 remote.send(_read_env(env))
             elif cmd == 'step':
-                reward, done, info = env.step(payload)
+                if isinstance(payload, dict):
+                    reward, done, info = env.step(payload['actions'],
+                                                  max_physical_steps=payload['max_physical_steps'])
+                else:
+                    reward, done, info = env.step(payload)
                 result = _read_env(env)
                 result.update(reward=float(reward), terminated=bool(done), info=info)
                 if done:
@@ -142,14 +146,14 @@ class ParallelRunner:
                     [[int(decide and not done)] for done in ended], dtype=np.uint8)
         return data
 
-    def run(self, test_mode=False, jobs=None, max_train_steps=None, **unused):
+    def run(self, test_mode=False, jobs=None, max_train_steps=None, train_t_env=None, **unused):
         # Windows imports the target module in each spawned environment
         # process. Keep Torch and replay imports local to the learner process.
         import torch
         with torch.no_grad():
-            return self._collect(test_mode, jobs, max_train_steps, **unused)
+            return self._collect(test_mode, jobs, max_train_steps, train_t_env=train_t_env, **unused)
 
-    def _collect(self, test_mode=False, jobs=None, max_train_steps=None, **unused):
+    def _collect(self, test_mode=False, jobs=None, max_train_steps=None, train_t_env=None, **unused):
         from components.episode_buffer import EpisodeBatch
         if jobs is None:
             jobs = [{'episode_seed': int(rng.integers(100000, 2**31 - 1))} for rng in self.seed_rngs]
@@ -163,6 +167,8 @@ class ParallelRunner:
         self.batch = batch
         for rank, job in enumerate(jobs):
             payload = dict(seed=int(job['episode_seed']), evaluate=bool(test_mode))
+            if not test_mode and self.args.env == "had":
+                payload['train_t_env'] = int(self.t_env if train_t_env is None else train_t_env)
             if job.get('config') is not None:
                 payload['config'] = job['config']
             if job.get('reset_config') is not None:
@@ -185,6 +191,9 @@ class ParallelRunner:
         qstats = [dict(q_tot=[], q_i=[]) for _ in range(count)]
         physical_steps = 0
         t = 0
+        bounded_physics = (not test_mode and max_train_steps is not None
+                           and self.args.env == 'had'
+                           and getattr(self.args, 'preset', None) == 'sky_friendly_v1')
         while active:
             # At the declared budget boundary finish the collected trajectory
             # with a sampling reset, retaining bootstrap from its final state.
@@ -216,7 +225,11 @@ class ParallelRunner:
             batch.update({'actions': actions.unsqueeze(-1)}, bs=active, ts=t, mark_filled=False)
             cpu_actions = actions.cpu().numpy()
             for i, rank in enumerate(active):
-                self.parent_conns[rank].send(('step', cpu_actions[i]))
+                payload = cpu_actions[i]
+                if bounded_physics:
+                    limit = capacity // len(active) + int(i < capacity % len(active))
+                    payload = {'actions': payload, 'max_physical_steps': limit}
+                self.parent_conns[rank].send(('step', payload))
             returned = [self._recv(rank) for rank in active]
             rewards, natural, resets = [], [], []
             subtask_rewards, subtask_terminated = [], []

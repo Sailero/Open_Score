@@ -41,7 +41,8 @@ RESUME_MUTABLE = frozenset(("resume", "output", "device", "use_cuda",
                             "report_interval", "progress_interval", "resume_interval",
                             "implementation_revision", "concurrency",
                             "entity_pad", "skip_final_eval", "t_max",
-                            "progress", "live_curves", "launch_command"))
+                            "progress", "live_curves", "launch_command", "launch_argv",
+                            "python_executable", "working_directory", "launch_platform"))
 # Keys added after some runs started; missing saved values equal these defaults.
 RESUME_DEFAULTS = {"reward_mode": "damage", "friendly_penalty": 1.0,
                    "count_ln": True, "global_branch": None, "global_slots": 4,
@@ -91,13 +92,46 @@ def _config_yaml_name(name):
     return name
 
 
+def _check_frozen_preset(actual, frozen, prefix=""):
+    for key, value in frozen.items():
+        found = actual.get(key)
+        if isinstance(value, dict) and isinstance(found, dict):
+            _check_frozen_preset(found, value, prefix + key + ".")
+        elif found != value:
+            raise ValueError(f"Frozen preset parameter differs: {prefix}{key}")
+
+
+def resolve_friendly_config(arm, overrides=None):
+    """Resolve one approved arm without importing Torch or creating an environment."""
+    import yaml
+    arm = str(arm).upper()
+    definitions = yaml.safe_load((PROJECT / "configs/refil.yaml").read_text(encoding="utf-8-sig"))
+    preset = definitions["experiment_presets"]["sky_friendly_v1"]
+    if arm not in preset["arms"]:
+        raise ValueError("sky_friendly_v1 requires one experiment arm: A, B or C")
+    result = _merge(copy.deepcopy(preset["common"]), preset["arms"][arm])
+    result["experiment_arm"] = arm
+    frozen = copy.deepcopy(result)
+    _merge(result, overrides or {})
+    if result.get("preset") != "sky_friendly_v1" or result.get("experiment_arm") != arm:
+        raise ValueError("Preset/experiment arm may not be overridden")
+    if int(result.get("seed", -1)) != 0 or int(result.get("t_max", -1)) != 1000000:
+        raise ValueError("sky_friendly_v1 is frozen to seed0 and 1,000,000 steps per arm")
+    if result.get("method") != "regir_nomem":
+        raise ValueError("sky_friendly_v1 uses regir_nomem")
+    _check_frozen_preset(result, frozen)
+    return result
+
+
 def load_config(name, overrides=None):
     import yaml
     if name not in POLICY_METHODS:
         raise ValueError(f"Unknown method: {name}")
     config_name = _config_yaml_name(name)
     base = yaml.safe_load((UPSTREAM / "config/default.yaml").read_text(encoding="utf-8-sig"))
-    base = _merge(base, yaml.safe_load((PROJECT / f"configs/{config_name}.yaml").read_text(encoding="utf-8-sig")))
+    algorithm_config = yaml.safe_load((PROJECT / f"configs/{config_name}.yaml").read_text(encoding="utf-8-sig"))
+    algorithm_config.pop("experiment_presets", None)
+    base = _merge(base, algorithm_config)
     if name in MAIN_OVERRIDES:
         _merge(base, MAIN_OVERRIDES[name])
     base.update(method=name, name=name, env="had", seed=0, entity_scheme=True,
@@ -115,9 +149,18 @@ def load_config(name, overrides=None):
     # arm of this experiment, so the coach stays off for every method.
     base["hier_agent"]["copa"] = False
     base.setdefault("env_args", {})
+    requested = overrides or {}
+    if requested.get("preset"):
+        if requested["preset"] != "sky_friendly_v1" or name != "regir_nomem":
+            raise ValueError("Unknown preset or incompatible method")
+        _merge(base, resolve_friendly_config(requested.get("experiment_arm")))
     _merge(base, overrides or {})
     if base["env_args"].get("env_agent_type") == "UAV_fixedwing":
-        base["implementation_revision"] = "skyhad_fixedwing_entity12_v1"
+        base["implementation_revision"] = ("skyhad_friendly_rigid19_v1" if base["env_args"].get("rigid_features")
+                                           else "skyhad_fixedwing_entity12_v1")
+    if base.get("preset"):
+        expected = resolve_friendly_config(base["experiment_arm"])
+        _check_frozen_preset(base, expected)
     # The subtask keys exist exactly when the allocation layer is in use, and
     # the mixer follows the agent's conditioning as in the upstream run.py.
     base["multi_task"] = base["hier_agent"]["task_allocation"] is not None
@@ -407,13 +450,15 @@ def train(name, cfg):
     from open_score.utils.logging import ExperimentLogger, read_records
     from open_score.eval.protocol import evaluation_thresholds, validation_jobs, validation_score, final_jobs, remaining_jobs
     stop_event = cfg.get('_stop_event')
+    external_reporting = bool(cfg.get('_external_reporting', False))
     cfg = {key: value for key, value in cfg.items() if not key.startswith('_')}
     if 't_max' not in cfg:
         raise ValueError('train requires an explicit t_max physical-step budget')
     from open_score.eval import experiment
     recovered = recovered_from = None
     if cfg.get('resume'):
-        directory = experiment.run_directory(cfg.get('output', DEFAULT_OUTPUT), name, cfg.get('seed', 0))
+        directory = experiment.run_directory(cfg.get('output', DEFAULT_OUTPUT), name, cfg.get('seed', 0),
+                                             experiment_arm=cfg.get('experiment_arm'))
         recovered, recovered_from = _load_resume(directory, require_complete=True)
         if recovered is not None:
             previous = recovered['config']
@@ -421,11 +466,18 @@ def train(name, cfg):
                 raise ValueError('Resume method/environment/seed differs; recovery data preserved')
             if int(previous.get('t_max', -1)) != int(cfg['t_max']):
                 raise ValueError('Resume budget differs; select an independent output')
+            if previous.get('experiment_arm') != cfg.get('experiment_arm'):
+                raise ValueError('Resume experiment arm differs; recovery data preserved')
             previous_env = {"env_agent_type": "particle", "env_agent_action_type": "acceleration",
                             "spatial_dim": 2, "task_mode": "damage", **previous.get('env_args', {})}
             changed_env = [key for key, value in cfg.get('env_args', {}).items() if previous_env.get(key) != value]
             if changed_env:
                 raise ValueError('Resume environment differs: ' + ', '.join(changed_env))
+            if previous.get('preset'):
+                conflicts = [key for key, value in cfg.items() if key not in RESUME_MUTABLE
+                             and key != 'env_args' and previous.get(key) != value]
+                if conflicts:
+                    raise ValueError('Explicit resume parameters differ: ' + ', '.join(sorted(conflicts)))
             retained = copy.deepcopy(previous)
             retained.update({key: value for key, value in cfg.items() if key in RESUME_MUTABLE})
             cfg = retained
@@ -435,7 +487,8 @@ def train(name, cfg):
     if int(args.t_max) <= 0:
         raise ValueError('t_max must be an explicitly selected positive physical-step budget')
     output = Path(args.output)
-    run_dir = experiment.run_directory(output, name, args.seed)
+    experiment_arm = getattr(args, 'experiment_arm', None)
+    run_dir = experiment.run_directory(output, name, args.seed, experiment_arm=experiment_arm)
     if any((path.exists() for path in resume_files(run_dir))) and (not args.resume):
         raise FileExistsError(f'Existing run: {run_dir}; use --resume to continue it')
     if not args.resume and any(((run_dir / filename).exists() for filename in ('config.json', 'final.pt', 'best.pt'))):
@@ -461,7 +514,7 @@ def train(name, cfg):
         print(f'[{name}] stop: finish batch and save resume', flush=True)
     for sig in old_signals:
         signal.signal(sig, request_stop)
-    state = dict(episode_num=0, updates=0, next_eval=1, best_score=float('inf'), elapsed_seconds=0.0, training_seconds=0.0, validation_seconds=0.0, validation_completed_episodes=0, validation_measured_episodes=0, validation_measured_seconds=0.0, status='running')
+    state = dict(episode_num=0, updates=0, next_eval=1, best_score=float('inf'), elapsed_seconds=0.0, training_seconds=0.0, validation_seconds=0.0, validation_completed_episodes=0, validation_measured_episodes=0, validation_measured_seconds=0.0, status='running', curriculum_stage=-1, curriculum_switches=0, curriculum_transitions=[])
     import psutil
     process = psutil.Process()
     resource_previous = (time.monotonic(), 0.0)
@@ -481,7 +534,7 @@ def train(name, cfg):
 
     def refresh_curves(force=False):
         nonlocal curve_rendered_at, curve_warning
-        if not args.live_curves or (not force and time.monotonic() - curve_rendered_at < 30):
+        if external_reporting or not args.live_curves or (not force and time.monotonic() - curve_rendered_at < 30):
             return
         try:
             from open_score.eval.report import render_training
@@ -544,10 +597,18 @@ def train(name, cfg):
             loss=getattr(learner_ref.get('learner'), 'last_metrics', {}).get('loss'),
             latest_validation_D=state.get('latest_validation_D'), estimate_ready=bool(observed_update),
             elapsed_seconds=state['elapsed_seconds'] + now - started, remaining_seconds=eta)
+        training_step = int(runner.t_env) if runner is not None else 0
+        progress_row.update(experiment_arm=experiment_arm, preset=getattr(args, 'preset', None),
+            next_eval=int(state['next_eval']), global_depths=list(args.global_depths),
+            curriculum_stage=state.get('curriculum_stage', -1),
+            curriculum_switches=state.get('curriculum_switches', 0),
+            curriculum_transitions=state.get('curriculum_transitions', []),
+            epsilon=float(args.epsilon_start + (args.epsilon_finish - args.epsilon_start) *
+                          min(1., training_step / max(1, args.epsilon_anneal_time))))
         experiment.atomic_json(run_dir / 'resource.json', progress_row)
         return resource_latest
     started = time.monotonic()
-    last_progress = last_report = last_save = started
+    last_progress = last_report = last_save = last_resource = started
     saved_t_env = 0
     formal = True
     eval_progress = dict(completed=0, total=0)
@@ -578,7 +639,11 @@ def train(name, cfg):
             saved_config = saved['config']
             current = vars(args)
             mutable = RESUME_MUTABLE - {'implementation_revision', 't_max'}
-            differing = sorted((key for key in set(saved_config) | set(current) if key not in mutable and saved_config.get(key, RESUME_DEFAULTS.get(key)) != current.get(key)))
+            def scientific_value(key, value):
+                return experiment.stable_environment_identity(value) if key == 'env_identity' else value
+            differing = sorted(key for key in set(saved_config) | set(current) if key not in mutable
+                               and scientific_value(key, saved_config.get(key, RESUME_DEFAULTS.get(key)))
+                               != scientific_value(key, current.get(key)))
             if differing:
                 raise ValueError('Resume configuration differs: ' + ', '.join(differing) + '. Old replay data may not be mixed with a changed experiment; select an independent output.')
             if loaded_from.name == 'resume.pt.pending' or loaded_from.name == 'resume.prev.pt':
@@ -590,7 +655,7 @@ def train(name, cfg):
             safe_checkpoint_t_env = saved_t_env = int(saved['progress']['t_env'])
         experiment.register_environment(output, vars(args), env_info=env_info,
                                         parameter_snapshot=env_info.get('environment_parameters'))
-        record = ExperimentLogger(output, name, args.seed, args.run, env=args.env)
+        record = ExperimentLogger(output, name, args.seed, args.run, env=args.env, experiment_arm=experiment_arm)
         scheme, groups, preprocess = make_scheme(env_info, multi_task=args.multi_task, loop_depth=bool(getattr(args, 'leaf_loop_core', None)))
         model_scheme = copy.deepcopy(scheme)
         model_scheme['entities']['vshape'] = args.entity_shape
@@ -631,9 +696,9 @@ def train(name, cfg):
         (run_dir / 'config.json').write_text(json.dumps(vars(args), ensure_ascii=False, indent=2), encoding='utf-8')
         record.progress(status='resuming' if args.resume else 'starting', phase=args.env, t_env=runner.t_env, budget_steps=args.t_max, checkpoint_t_env=saved_t_env, updates=state['updates'], elapsed_seconds=state['elapsed_seconds'])
         sample_resources()
-        if args.progress == 'tqdm':
+        if args.progress == 'tqdm' and not external_reporting:
             from tqdm import tqdm
-            progress_bar = tqdm(total=args.t_max, initial=runner.t_env, desc=f'LEAF seed {args.seed}',
+            progress_bar = tqdm(total=args.t_max, initial=runner.t_env, desc=f'LEAF {experiment_arm or name} seed {args.seed}',
                                 unit='step', dynamic_ncols=True, mininterval=1, file=sys.stderr)
         refresh_curves(force=True)
 
@@ -669,7 +734,7 @@ def train(name, cfg):
             return path
 
         def heartbeat(evaluating=False, done=0, total=0, in_flight=0):
-            nonlocal last_progress, stop_requested, collection_steps_seen
+            nonlocal last_progress, last_resource, stop_requested, collection_steps_seen
             if transaction_phase == 'collecting' and (not evaluating):
                 collection_steps_seen = max(collection_steps_seen, int(in_flight))
             if stop_event is not None and stop_event.is_set() or (output / 'stop.request').exists() or (run_dir / 'pause.request').exists():
@@ -684,13 +749,16 @@ def train(name, cfg):
             if evaluating and validation_bar is not None:
                 validation_bar.update(max(0, eval_progress['completed'] + done - validation_bar.n))
             refresh_curves()
+            if now - last_resource >= 1:
+                sample_resources()
+                last_resource = now
             if now - last_progress < args.progress_interval:
                 return
             elapsed = state['elapsed_seconds'] + now - started
             session = now - started
             session_sps = (runner.t_env - session_start_t_env) / max(session, 1e-06)
             metrics = dict(status='evaluating' if evaluating else 'training', phase=args.env, t_env=runner.t_env, observed_t_env=observed_steps, budget_steps=args.t_max, steps_per_second=session_sps, lifetime_steps_per_second=runner.t_env / max(elapsed, 1e-06), session_elapsed_seconds=session, eval_completed=eval_progress['completed'] + done if evaluating else 0, eval_total=eval_progress['total'] if evaluating else 0, latest_validation_D=state.get('latest_validation_D'), latest_validation_win_rate=state.get('latest_validation_win_rate'), checkpoint_t_env=saved_t_env, updates=state['updates'], elapsed_seconds=elapsed, loss=getattr(learner, 'last_metrics', {}).get('loss'))
-            metrics.update(sample_resources())
+            metrics.update(resource_latest or sample_resources())
             record.progress(**metrics)
             loss_label = '-' if metrics['loss'] is None else f"{metrics['loss']:.4f}"
             validation_key = 'latest_validation_D'
@@ -710,7 +778,8 @@ def train(name, cfg):
             nonlocal validation_clock, validation_bar
             rng = (random.getstate(), np.random.get_state(), th.get_rng_state(), th.cuda.get_rng_state_all() if args.device == 'cuda' else [])
             runner_state = runner.state_dict()
-            previous = read_records(output, 'episodes', run=args.run, method=name, seed=args.seed, env=args.env)
+            previous = read_records(output, 'episodes', run=args.run, method=name, seed=args.seed,
+                                    env=args.env, experiment_arm=experiment_arm)
             pending = remaining_jobs(jobs, previous)
             eval_progress.update(completed=len(jobs) - len(pending), total=len(jobs))
             if progress_bar is not None:
@@ -765,7 +834,7 @@ def train(name, cfg):
                 save('resume', full=True)
                 transaction_phase = 'validating'
                 point = state['next_eval']
-                jobs = validation_jobs(point, runner.t_env)
+                jobs = validation_jobs(point, runner.t_env, experiment_arm=experiment_arm)
                 rows = evaluate_jobs(jobs)
                 current = [row for row in rows if row.get('phase') == 'train_eval' and row.get('eval_point') == point]
                 score = validation_score(current)
@@ -796,7 +865,20 @@ def train(name, cfg):
             transaction_complete = False
             transaction_phase = 'collecting'
             collection_steps_seen = 0
-            episode_batch, summaries = runner.run(max_train_steps=args.t_max - runner.t_env)
+            batch_start_t_env = int(runner.t_env)
+            episode_batch, summaries = runner.run(max_train_steps=args.t_max - runner.t_env,
+                                                 train_t_env=batch_start_t_env)
+            if summaries:
+                stage = int(summaries[0].get('curriculum_stage', -1))
+                if stage >= 0 and stage != state['curriculum_stage']:
+                    state['curriculum_transitions'].append(dict(stage=stage, t_env=batch_start_t_env))
+                state['curriculum_stage'] = stage
+                state['curriculum_switches'] = int(summaries[0].get('curriculum_switches', 0))
+            collection_depths = getattr(mac, '_episode_depth', None)
+            if isinstance(collection_depths, th.Tensor):
+                collection_depths = collection_depths.detach().cpu().reshape(-1).tolist()
+            elif isinstance(collection_depths, int):
+                collection_depths = [collection_depths]
             transaction_phase = 'updating'
             collection_steps_seen = 0
             collected_at = time.monotonic()
@@ -813,6 +895,10 @@ def train(name, cfg):
                     sample = sample[:, :max_t]
                     sample.to(args.device)
                     metrics = learner.train(sample, runner.t_env, state['episode_num'])
+                    if isinstance(metrics, dict):
+                        depth = getattr(mac.agent, 'cycle_depth', None)
+                        if isinstance(depth, int):
+                            metrics['training_depth'] = depth
                     state['updates'] += 1
                     first_session_update = not observed_update
                     observed_update = True
@@ -857,6 +943,20 @@ def train(name, cfg):
             metrics['train_D'] = float(np.mean([s['D'] for s in summaries]))
             metrics['train_rho'] = float(np.mean([s['rho'] for s in summaries]))
             metrics['train_wipeout_steps'] = float(np.mean([s['wipeout_steps'] for s in summaries]))
+            metrics['budget_truncated_episodes'] = sum(bool(s.get('budget_truncated', False)) for s in summaries)
+            metrics.update(curriculum_stage=state['curriculum_stage'],
+                           curriculum_switches=state['curriculum_switches'],
+                           curriculum_transitions=state['curriculum_transitions'],
+                           epsilon=float(args.epsilon_start + (args.epsilon_finish - args.epsilon_start) *
+                               min(1., runner.t_env / max(1, args.epsilon_anneal_time))))
+            if collection_depths is not None:
+                metrics['collection_depth_hist'] = [collection_depths.count(depth) for depth in (1, 2, 3, 4)]
+            if update_metrics:
+                metrics['update_depth_hist'] = [sum(item.get('training_depth') == depth for item in update_metrics)
+                                                for depth in (1, 2, 3, 4)]
+            for key in ('reward_raw_sum', 'reward_shaping_sum', 'reward_shaped_sum'):
+                if summaries and all(key in summary for summary in summaries):
+                    metrics[key] = float(np.mean([summary[key] for summary in summaries]))
             record.learning(runner.t_env, metrics)
             run_pending_evaluations()
             heartbeat()
@@ -885,7 +985,7 @@ def train(name, cfg):
             pass
         observed_t_env = max(int(runner.t_env) if runner is not None else 0, int(safe_checkpoint_t_env)) + collection_steps_seen
         automatic = bool(oom is not None and safe_checkpoint_path is not None and safe_checkpoint_path.is_file())
-        failure = dict(kind='cuda_oom' if oom is not None else 'exception', automatic_recovery=automatic, recovery_status='safe_checkpoint' if automatic else 'start_failure' if oom else 'failed', env=args.env, method=name, seed=int(args.seed), pid=os.getpid(), physical_gpu=_physical_gpu(), updated_at=time.time(), transaction_phase=transaction_phase, transaction_complete=transaction_complete, observed_t_env=observed_t_env, t_env=observed_t_env, observed_t_env_is_lower_bound=transaction_phase == 'collecting', safe_checkpoint_t_env=int(safe_checkpoint_t_env), safe_checkpoint_path=None if safe_checkpoint_path is None else str(safe_checkpoint_path.resolve()), error=f'{type(error).__name__}: {error}', traceback=traceback.format_exc(), cuda_peak_reserved_gib=resource_latest.get('cuda_peak_reserved_gib', 0.0), cuda_reserved_gib=resource_latest.get('cuda_reserved_gib', 0.0), requested_allocation_gib=None, minimum_additional_gib=None)
+        failure = dict(kind='cuda_oom' if oom is not None else 'exception', automatic_recovery=automatic, recovery_status='safe_checkpoint' if automatic else 'start_failure' if oom else 'failed', env=args.env, method=name, seed=int(args.seed), experiment_arm=experiment_arm, pid=os.getpid(), physical_gpu=_physical_gpu(), updated_at=time.time(), transaction_phase=transaction_phase, transaction_complete=transaction_complete, observed_t_env=observed_t_env, t_env=observed_t_env, observed_t_env_is_lower_bound=transaction_phase == 'collecting', safe_checkpoint_t_env=int(safe_checkpoint_t_env), safe_checkpoint_path=None if safe_checkpoint_path is None else str(safe_checkpoint_path.resolve()), error=f'{type(error).__name__}: {error}', traceback=traceback.format_exc(), cuda_peak_reserved_gib=resource_latest.get('cuda_peak_reserved_gib', 0.0), cuda_reserved_gib=resource_latest.get('cuda_reserved_gib', 0.0), requested_allocation_gib=None, minimum_additional_gib=None)
         if oom is not None:
             failure.update(oom)
         experiment.atomic_json(run_dir / 'failure.json', failure)
@@ -961,4 +1061,4 @@ def load_policy(name, checkpoint):
     return FrozenPolicyAdapter(mac, args, scheme, groups, preprocess, mixer)
 
 
-__all__ = ["train", "load_policy", "load_config", "canonical_method", "METHODS", "POLICY_METHODS", "MAIN_OVERRIDES"]
+__all__ = ["train", "load_policy", "load_config", "resolve_friendly_config", "canonical_method", "METHODS", "POLICY_METHODS", "MAIN_OVERRIDES"]

@@ -25,6 +25,8 @@ EPISODE_FIELDS = (
     "noop_frac", "mean_speed", "mean_pairwise_dist", "mean_dist_to_nearest_target",
     "friendly_collisions", "min_pairwise_dist_p05", "q_tot_mean", "q_tot_std", "q_i_mean",
 )
+EXPERIMENT_EPISODE_FIELDS = ("curriculum_stage", "curriculum_switches", "spawn_configuration",
+    "reward_raw_sum", "reward_shaping_sum", "reward_shaped_sum")
 SCHEMAS = {
     "episodes": IDENTITY + EPISODE_FIELDS + ("checkpoint",),
     "learning": IDENTITY + ("t_env", "metrics"),
@@ -36,9 +38,9 @@ SCHEMAS = {
 def schema_for(output, stream_name):
     """All active writers use the complete HAD identity schema."""
     columns = SCHEMAS[stream_name]
-    extra = ("env", "checkpoint_id", "arm", "cycle_depth", "readout")
+    extra = ("env", "checkpoint_id", "arm", "cycle_depth", "readout", "experiment_arm")
     if stream_name == "episodes":
-        extra += ("return", "source_version", "protocol", "episode_wall_seconds")
+        extra += ("return", "source_version", "protocol", "episode_wall_seconds") + EXPERIMENT_EPISODE_FIELDS
     if stream_name in ("learning", "trajectories", "progress"):
         extra += ("source_version", "protocol")
     return columns + tuple(key for key in extra if key not in columns)
@@ -125,7 +127,9 @@ def append_records(output, stream_name, rows):
             if stream_name == "episodes":
                 required.update(("checkpoint_id", "arm", "protocol"))
             missing = required - set(columns)
-            missing.update(key for row in rows for key in ("checkpoint_id", "arm", "protocol", "cycle_depth", "readout", "source_version") if row.get(key) is not None and key not in columns)
+            missing.update(key for row in rows for key in ("checkpoint_id", "arm", "protocol", "cycle_depth", "readout", "source_version", "experiment_arm") if row.get(key) is not None and key not in columns)
+            if any(row.get("experiment_arm") is not None for row in rows) and stream_name == "episodes":
+                missing.update(key for row in rows for key in EXPERIMENT_EPISODE_FIELDS if row.get(key) is not None and key not in columns)
             if missing:
                 raise RuntimeError(f"Legacy CSV header at {path} lacks identity fields {sorted(missing)}; existing records are preserved")
         payload = io.StringIO(newline="")
@@ -142,7 +146,7 @@ def append_records(output, stream_name, rows):
 _ARCHIVE_TEXT_FIELDS = frozenset(("archive_source", "archive_protocol", "archive_record_status"))
 _OPTIONAL_CELLS = _ARCHIVE_TEXT_FIELDS | frozenset(("checkpoint", "checkpoint_id", "arm", "cycle_depth", "readout",
     "battle_won", "return", "source_version", "dup_pursuit_frac", "intent_stats", "intent_override", "protocol",
-    "q_tot_mean", "q_tot_std", "q_i_mean", "episode_wall_seconds"))
+    "q_tot_mean", "q_tot_std", "q_i_mean", "episode_wall_seconds", "experiment_arm")) | frozenset(EXPERIMENT_EPISODE_FIELDS)
 
 
 def _decode_row(cells, path):
@@ -202,13 +206,13 @@ def record_paths(output, stream_name, env=None):
     return sorted(root.glob(f"*/{stream_name}.csv"))
 
 
-def iter_records(output, stream_name, *, run=None, method=None, seed=None, env=None):
+def iter_records(output, stream_name, *, run=None, method=None, seed=None, env=None, experiment_arm=None):
     """Stream complete JSON-in-CSV rows, filtering before retaining history."""
     for path in record_paths(output, stream_name, env):
-        yield from _iter_record_file(path, run=run, method=method, seed=seed, env=env)
+        yield from _iter_record_file(path, run=run, method=method, seed=seed, env=env, experiment_arm=experiment_arm)
 
 
-def _iter_record_file(path, *, run=None, method=None, seed=None, env=None):
+def _iter_record_file(path, *, run=None, method=None, seed=None, env=None, experiment_arm=None):
     if not path.exists():
         return
     with path.open(encoding="utf-8", newline="") as stream:
@@ -225,19 +229,19 @@ def _iter_record_file(path, *, run=None, method=None, seed=None, env=None):
             if len(cells) != len(header):
                 raise ValueError(f"Malformed complete CSV record in {path}")
             raw = dict(zip(header, cells))
-            filters = (("run", run), ("method", method), ("seed", seed), ("env", env))
+            filters = (("run", run), ("method", method), ("seed", seed), ("env", env), ("experiment_arm", experiment_arm))
             if any(value is not None and json.loads(raw.get(key, '"had"' if key == "env" else "null")) != value
                    for key, value in filters):
                 continue
             yield _decode_row(raw, path)
 
 
-def read_records(output, stream_name, *, run=None, method=None, seed=None, env=None):
-    return list(iter_records(output, stream_name, run=run, method=method, seed=seed, env=env))
+def read_records(output, stream_name, *, run=None, method=None, seed=None, env=None, experiment_arm=None):
+    return list(iter_records(output, stream_name, run=run, method=method, seed=seed, env=env, experiment_arm=experiment_arm))
 
 
 def episode_key(row):
-    return tuple(row.get(key) for key in ("version", "run", "method", "seed", "phase", "eval_point")) + (
+    return tuple(row.get(key) for key in ("version", "run", "method", "seed", "experiment_arm", "phase", "eval_point")) + (
         _encode(row["config"]), int(row["episode_seed"]), row.get("checkpoint"),
         row.get("env"), row.get("checkpoint_id"), row.get("arm"),
     )
@@ -248,11 +252,12 @@ def unique_episodes(rows):
 
 
 class ExperimentLogger:
-    def __init__(self, output=DEFAULT_OUTPUT, method="shared", seed=0, run=FORMAL_RUN, env="had"):
+    def __init__(self, output=DEFAULT_OUTPUT, method="shared", seed=0, run=FORMAL_RUN, env="had", experiment_arm=None):
         if env != "had":
             raise ValueError("The active record writer supports HAD only")
         self.output, self.method, self.seed, self.run = Path(output), str(method), int(seed), str(run)
-        from open_score.eval.experiment import ensure_layout
+        from open_score.eval.experiment import ensure_layout, checked_experiment_arm
+        self.experiment_arm = checked_experiment_arm(experiment_arm)
         ensure_layout(self.output)
         self.profile = True
         root = self.output.parent if self.output.name == "had" else self.output
@@ -271,8 +276,12 @@ class ExperimentLogger:
                    recorded_at=datetime.now(timezone.utc).isoformat(timespec="seconds"))
         if self.profile:
             row["env"] = self.env
+        if self.experiment_arm is not None:
+            row["experiment_arm"] = self.experiment_arm
         if self.protocol:
             row.update(source_version=self.version, protocol=self.protocol)
+        if data.get("experiment_arm", self.experiment_arm) != self.experiment_arm:
+            raise ValueError("Record experiment arm differs from its writer")
         row.update(data)
         return row
 
@@ -306,10 +315,10 @@ class ExperimentLogger:
 
     def trajectories(self, rows):
         def key(row):
-            return tuple(row.get(field) for field in ("run", "method", "seed", "phase", "episode_seed", "checkpoint", "env", "checkpoint_id", "arm")) + (_encode(row["config"]),)
+            return tuple(row.get(field) for field in ("run", "method", "seed", "experiment_arm", "phase", "episode_seed", "checkpoint", "env", "checkpoint_id", "arm")) + (_encode(row["config"]),)
         if self._trajectory_keys is None:
             self._trajectory_keys = {key(row) for row in read_records(self.output, "trajectories", run=self.run,
-                                                                     method=self.method, seed=self.seed)}
+                                                                     method=self.method, seed=self.seed, experiment_arm=self.experiment_arm)}
         pending = []
         for row in rows:
             value = self._row(dict(row))

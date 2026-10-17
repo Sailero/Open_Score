@@ -68,6 +68,76 @@ python -X utf8 Open-SCORE/scripts/plot.py
 
 它读取保存数据和聚合统计，不加载模型，不启动训练、环境回放或评估，不生成另一份报告。
 
+## SkyHAD 统一友好任务：远端三实验臂
+
+新预设为 `sky_friendly_v1`，默认输出 `Open-SCORE/outputs/main_Sky_friendly`。A/B/C每臂只运行seed0、1,000,000物理步，公共参数保存在现有 `Open-SCORE/configs/refil.yaml`；全体飞机的四元数与角速度公开。A随机训练R1–R4、验证R4；B仅改为固定R4训练；C保留A的深度设置，仅加入出生课程。三臂的验证始终使用同一最终友好任务。旧 `main_Sky` 不迁移、不覆盖。
+
+把当前 `Open-SCORE/open_score/`、`configs/`、`scripts/`、`pyproject.toml` 和 `requirements.txt` 上传到服务器的 `~/Open_Score/Open-SCORE/`。同时上传与本代码配套的 **SkyHAD 4.3.0源码**到 `~/SkyHAD/`，至少保留 `had_env/`、`pyproject.toml`、`README.md`、`LICENSE`、`make_env.py`。不要把本机的venv复制到Linux，也不要用未确认版本的 `had-env` 替代这份源码。
+
+例如在本机WSL中，替换真实SSH地址后复制源码；下列命令不上传原实验输出：
+
+```bash
+REMOTE='用户名@服务器地址'
+ssh "$REMOTE" 'mkdir -p ~/Open_Score/Open-SCORE ~/SkyHAD'
+rsync -av --exclude='.git/' --exclude='.venv/' --exclude='__pycache__/' --exclude='outputs/' /mnt/e/Code/Open_Score/Open-SCORE/ "$REMOTE:~/Open_Score/Open-SCORE/"
+rsync -av --exclude='.git/' --exclude='.worktrees/' --exclude='.venv/' --exclude='__pycache__/' --exclude='outputs/' /mnt/e/Code/SkyHAD/ "$REMOTE:~/SkyHAD/"
+```
+
+通过SSH登录后，在Linux上安装。以下CUDA13.0构建需兼容的NVIDIA驱动（至少580）；驱动不满足时按[PyTorch官方版本页](https://pytorch.org/get-started/previous-versions/)选择兼容构建。无需安装GUI渲染依赖；训练曲线使用无头Agg后端。
+
+```bash
+cd ~/Open_Score
+python3.10 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install torch==2.13.0 --index-url https://download.pytorch.org/whl/cu130
+python -m pip install numpy==1.26.4 scipy==1.15.3 matplotlib==3.10.9 PyYAML==6.0.3 psutil==7.2.2 tqdm==4.70.0 gymnasium==1.2.2 pettingzoo==1.27.0
+python -m pip install -e ../SkyHAD
+python -m pip install -e './Open-SCORE[training]'
+```
+
+驱动至少525且GPU兼容CUDA12.6时，可将上面的cu130安装行替换为官方cu126构建；两行选一行：
+
+```bash
+python -m pip install torch==2.13.0 --index-url https://download.pytorch.org/whl/cu126
+```
+
+在已安装的tmux会话中手动启动，两张GPU各一任务。A/B先启动，C在任一空槽接续；本命令只做训练与50次训练内验证，不自动终评：
+
+```bash
+tmux new -s leaf-friendly
+cd ~/Open_Score
+source .venv/bin/activate
+MPLBACKEND=Agg python -u Open-SCORE/scripts/train.py --stage train --preset sky_friendly_v1 --arm all --seed 0 --steps 1000000 --devices 0,1 --per-gpu 1 --progress tqdm --live-curves
+```
+
+`Ctrl-b d`脱离会话，重新连接后用 `tmux attach -t leaf-friendly` 查看三行tqdm。各臂控制台日志保存在 `had/regir_nomem/arms/<A|B|C>/models/seed_0/console.log`。若只启动一臂，用 `--stage single --arm A --devices 0`；单臂入口同样保留训练锁、终端进度和日志。
+
+```bash
+# 查看全部或指定实验臂
+python Open-SCORE/scripts/train.py --stage status --output Open-SCORE/outputs/main_Sky_friendly
+python Open-SCORE/scripts/train.py --stage status --arm C --output Open-SCORE/outputs/main_Sky_friendly
+# 停止A，或停止全部；完成当前完整批次后保留恢复进度
+python Open-SCORE/scripts/train.py --stage stop --arm A --output Open-SCORE/outputs/main_Sky_friendly
+python Open-SCORE/scripts/train.py --stage stop --arm all --output Open-SCORE/outputs/main_Sky_friendly
+# 恢复：已完成臂跳过，中断臂恢复，排队但未运行臂从零开始
+MPLBACKEND=Agg python -u Open-SCORE/scripts/train.py --stage train --preset sky_friendly_v1 --arm all --seed 0 --steps 1000000 --devices 0,1 --per-gpu 1 --progress tqdm --live-curves --resume
+```
+
+曲线原地更新 `had/figures/training.png`，唯一正式报告为输出根目录的 `报告.md`。可用SSH编辑器打开/刷新PNG，或用 `scp`取回该文件；不需要网页服务。共享CSV用 `experiment_arm` 区分A/B/C，原 `arm` 列仍表示standard/confirmation等评估分支。仅刷新保存数据可运行：
+
+```bash
+python Open-SCORE/scripts/plot.py --training --arm all --output Open-SCORE/outputs/main_Sky_friendly
+```
+
+正式终评必须在获得完整 `final.pt` 后显式启动；不会顺带运行确认集或深度扫描：
+
+```bash
+python Open-SCORE/scripts/eval.py --stage final --arm all --method regir_nomem --seed 0 --output Open-SCORE/outputs/main_Sky_friendly --workers 2 --device cpu
+```
+
+跨机器续训须复制整份该实验输出中的 `experiment.json`、共享CSV、各臂 `config.json` 和完整 `resume.pt`；保留独有的 `best.pt`/`final.pt`。`resume.pt`包含replay、优化器、runner与随机状态，`best.pt`不能替代它。保持同一任务、preset、实验臂、观测布局及课程计划；机器上的源码绝对路径可以改变。Windows/Linux或GPU变化仍不保证逐位相同。不要在一个已有实验臂上修改场景或算法后继续混写旧数据。
+
 ## 回放与自定义比较
 
 在仓库根目录运行`python -X utf8 viewer.py`，打开终端打印的地址。默认端口8765，已占用时顺延；`--port 8770`可指定端口。前后端协议为**API 5**，后端代码改变后重启服务。

@@ -1,7 +1,7 @@
 """The only project module importing HAD; physics is never copied or patched."""
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 import copy
 import numpy as np
 
@@ -29,6 +29,18 @@ PLANAR_NATIVE_IDS, NATIVE_TO_PLANAR = planar_action_mapping(ACCELERATION_PRIMITI
 class Entity(NativeEntity):
     initial_health: float = 1.0
     cumulative_damage: float = 0.0
+    quaternion: tuple[float, ...] | None = None
+    angular_velocity: tuple[float, ...] | None = None
+
+    def __post_init__(self):
+        super().__post_init__()
+        for name, length in (("quaternion", 4), ("angular_velocity", 3)):
+            value = getattr(self, name)
+            if value is not None:
+                value = tuple(map(float, value))
+                if len(value) != length:
+                    raise ValueError(f"{name} must have {length} coordinates")
+                object.__setattr__(self, name, value)
 
 
 @dataclass(frozen=True)
@@ -48,7 +60,9 @@ def build_decision_state(adapter, grouping=None, opponent="reactive", last_actio
     def row(entity, identity=None):
         return Entity(int(entity.Id if identity is None else identity),
                       tuple(entity.position), tuple(entity.velocity), float(entity.Health),
-                      float(entity.initial_health), float(entity.cumulative_damage))
+                      float(entity.initial_health), float(entity.cumulative_damage),
+                      tuple(entity.rigid_state[6:10]) if hasattr(entity, "rigid_state") else None,
+                      tuple(entity.rigid_state[10:13]) if hasattr(entity, "rigid_state") else None)
     reds = tuple(row(agent) for agent in adapter.env.red_agents)
     live = tuple(agent.id for agent in reds if agent.alive)
     grouping = Grouping((), live) if grouping is None else grouping.prune(live)
@@ -277,7 +291,8 @@ class HADWrapper:
                  subtask_set="targets", allocation_clock="interval",
                  action_length=5, max_alloc_hold=10, reward_mode="damage",
                  friendly_penalty=1.0, env_agent_type="particle",
-                 env_agent_action_type="acceleration", spatial_dim=None, task_mode="damage", **kwargs):
+                 env_agent_action_type="acceleration", spatial_dim=None, task_mode="damage",
+                 rigid_features=False, birth_curriculum=None, **kwargs):
         self.scale = as_scale(scale)
         self.max_steps = int(max_steps)
         self.blue_upper, self.blue_lower = blue_upper, blue_lower
@@ -290,9 +305,17 @@ class HADWrapper:
                              env_agent_action_type=env_agent_action_type,
                              spatial_dim=spatial_dim, task_mode=task_mode)
         self.effective_config = had_config.EnvConfig.from_values(config_values)
+        if rigid_features and env_agent_type == "particle":
+            raise ValueError("rigid features require a native UAV dynamics model")
+        self.rigid_features = bool(rigid_features)
+        self.current_config = self.effective_config
+        self.birth_curriculum = self._birth_schedule(birth_curriculum)
+        self.curriculum_stage = -1
+        self.training_curriculum_stage = None
+        self.curriculum_switches = 0
         self.spatial_dim = self.effective_config.spatial_dim
         self.feature_spec = feature_spec(self.spatial_dim, self.effective_config.world_bounds,
-                                         self.effective_config.preset.max_speed)
+                                         self.effective_config.preset.max_speed, self.rigid_features)
         self.entity_dim, self.n_actions = self.feature_spec["entity_shape"], self.feature_spec["n_actions"]
         self.native_action_ids = tuple(range(27)) if self.spatial_dim == 3 else tuple(map(int, PLANAR_NATIVE_IDS))
         self.command_interval = int(command_interval)
@@ -331,10 +354,59 @@ class HADWrapper:
         self.last_nearest = None
         self.last_alive = None
 
+    def _birth_schedule(self, stages):
+        """Validate reset-only birth changes without constructing a native world."""
+        allowed = {"red_spawn_annulus", "blue_spawn_x", "spawn_altitude"}
+        result = []
+        for stage in stages or ():
+            start = stage["start_step"]
+            if isinstance(start, bool) or int(start) != start or int(start) < 0:
+                raise ValueError("birth curriculum start_step must be a non-negative integer")
+            start = int(start)
+            if result and start <= result[-1]["start_step"]:
+                raise ValueError("birth curriculum stages must have strictly increasing start_step values")
+            overrides = dict(stage["env_args"])
+            if set(overrides) - allowed:
+                raise ValueError("birth curricula may change only red_spawn_annulus, blue_spawn_x and spawn_altitude")
+            config = replace(self.effective_config, **overrides)
+            if config.red_spawn_annulus[0] < 0:
+                raise ValueError("birth annulus radii must be non-negative")
+            for value, bounds in ((config.blue_spawn_x, config.world_bounds[0]),
+                                  (config.spawn_altitude, config.world_bounds[2])):
+                if value[0] < bounds[0] or value[1] > bounds[1]:
+                    raise ValueError("curriculum birth bounds must remain inside the world")
+            result.append({"start_step": start,
+                           "env_args": {key: list(getattr(config, key)) for key in sorted(overrides)}})
+        if result and result[0]["start_step"] != 0:
+            raise ValueError("the first birth curriculum stage must start at step zero")
+        if result and replace(self.effective_config, **result[-1]["env_args"]) != self.effective_config:
+            raise ValueError("the final birth curriculum stage must match the baseline final task")
+        return result
+
+    def get_curriculum_state(self):
+        return {"training_stage": self.training_curriculum_stage, "switches": self.curriculum_switches}
+
+    def set_curriculum_state(self, state):
+        self.training_curriculum_stage = state.get("training_stage")
+        self.curriculum_switches = int(state.get("switches", 0))
+
+    def _reset_config(self, evaluate, train_t_env):
+        stage = -1
+        if self.birth_curriculum and not evaluate:
+            if train_t_env is None or int(train_t_env) < 0:
+                raise ValueError("birth curriculum training resets require the global train_t_env")
+            stage = max(i for i, row in enumerate(self.birth_curriculum) if row["start_step"] <= int(train_t_env))
+            if self.training_curriculum_stage is not None and stage != self.training_curriculum_stage:
+                self.curriculum_switches += 1
+            self.training_curriculum_stage = stage
+        self.curriculum_stage = stage
+        self.current_config = (self.effective_config if stage < 0 else
+                               replace(self.effective_config, **self.birth_curriculum[stage]["env_args"]))
+
     def parameter_snapshot(self):
         """JSON-safe identity and effective parameters, available before reset."""
         config = self.effective_config
-        return {"core_version": had_config.CORE_VERSION, "physics_protocol": PHYSICS_PROTOCOL,
+        values = {"core_version": had_config.CORE_VERSION, "physics_protocol": PHYSICS_PROTOCOL,
                 "env_agent_type": config.env_agent_type,
                 "env_agent_action_type": config.env_agent_action_type,
                 "spatial_dim": self.spatial_dim, "task_mode": config.task_mode,
@@ -348,8 +420,12 @@ class HADWrapper:
                                           else self.adapter_kwargs.get("target_initialization", "random")),
                 "max_steps": self.max_steps, "command_interval": self.command_interval,
                 "feature_spec": copy.deepcopy(self.feature_spec)}
+        if self.birth_curriculum:
+            values["birth_curriculum"] = copy.deepcopy(self.birth_curriculum)
+        return values
 
-    def reset(self, seed=0, scale=None, evaluate=False, diagnostics=None, retain_trajectory=None):
+    def reset(self, seed=0, scale=None, evaluate=False, diagnostics=None, retain_trajectory=None,
+              train_t_env=None):
         self.scale = self.scale if scale is None else as_scale(scale)
         roster = (self.scale.N_R, self.scale.N_B, self.scale.K)
         pad = (self.n_red, self.n_blue, self.n_targets)
@@ -360,9 +436,10 @@ class HADWrapper:
                 raise ValueError(
                     f"configuration {roster} exceeds this method's ordered slot budget "
                     f"{self.pool_slots}; it has no parameters for the extra entities")
+        self._reset_config(bool(evaluate), train_t_env)
         self.adapter = HADStage3Adapter(self.scale.N_R, self.scale.N_B, self.scale.K,
                                        max_steps=self.max_steps, task_mode="damage", spatial_dim=self.spatial_dim,
-                                       effective_config=self.effective_config, **self.adapter_kwargs)
+                                       effective_config=self.current_config, **self.adapter_kwargs)
         adapter = self.adapter
         adapter.reset(seed=int(seed), red_assignment={i: None for i in adapter.red_ids},
                       blue_assignment={i: None for i in adapter.blue_ids})
@@ -374,6 +451,8 @@ class HADWrapper:
         self.red_grouping = Grouping((), adapter.red_ids)
         self.blue_grouping = Grouping((), adapter.blue_ids)
         self.episode_seed, self.return_sum = int(seed), 0.0
+        self.reward_shaping_sum = self.reward_shaped_sum = 0.0
+        self.budget_truncated = False
         self._decide_blue()
         self.diagnostics = EpisodeDiagnostics(adapter, seed, self.blue_upper, self.blue_lower,
                                               enabled, retain)
@@ -554,16 +633,23 @@ class HADWrapper:
         # convention; truncation keeps the real one because it bootstraps.
         successor_parts = np.zeros(self.n_tasks()) if terminated else self._potential_parts()
         shaped = reward + self.gamma * float(successor_parts.sum()) - potential
+        self.reward_shaping_sum += self.gamma * float(successor_parts.sum()) - potential
+        self.reward_shaped_sum += shaped
         by_task = -damage_parts - ff_parts + self.gamma * successor_parts - potential_parts
         if not np.isclose(by_task.sum(), shaped, atol=1e-6, rtol=0):
             raise AssertionError("per-subtask rewards do not sum to the team reward")
         self._update_hier_decision(terminated, truncated)
         return shaped, by_task, terminated, truncated
 
-    def step(self, actions):
+    def step(self, actions, max_physical_steps=None):
         adapter, env = self.adapter, self.adapter.env
-        if env.is_episode_done() or adapter.step_count >= self.max_steps:
+        if env.is_episode_done() or adapter.step_count >= self.max_steps or self.budget_truncated:
             raise RuntimeError("cannot step a completed HAD episode")
+        if max_physical_steps is not None:
+            if (isinstance(max_physical_steps, bool) or int(max_physical_steps) != max_physical_steps
+                    or int(max_physical_steps) < 1):
+                raise ValueError("max_physical_steps must be a positive integer")
+            max_physical_steps = int(max_physical_steps)
         values = np.asarray(actions, dtype=np.int64).reshape(-1)
         if not (self.scale.N_R <= len(values) <= self.n_red) or np.any((values < 0) | (values >= self.n_actions)):
             raise ValueError(f"red actions must contain 0..{self.n_actions - 1} IDs for the actual or padded red roster")
@@ -580,19 +666,27 @@ class HADWrapper:
             # the entity mixers can only represent as zero.
             noop = {int(a.Id): 0 for a in env.red_agents}
             discount = 1.0
+            fold_complete = True
             while not (terminated or truncated) and any(a.Health > 0 for a in env.blue_agents):
+                if max_physical_steps is not None and 1 + folded_steps >= max_physical_steps:
+                    fold_complete = False
+                    break
                 discount *= self.gamma
                 tail, task_tail, terminated, truncated = self._advance(noop)
                 reward += discount * tail
                 task_rewards = task_rewards + discount * task_tail
                 folded_steps += 1
-            if not terminated:
+            if fold_complete and not terminated:
                 # Declaring a still-running state terminal drops its future,
                 # so take back the successor potential the last step credited.
                 refund = self._potential_parts()
                 reward -= discount * self.gamma * float(refund.sum())
                 task_rewards = task_rewards - discount * self.gamma * refund
-            terminated, truncated = True, False
+            if fold_complete:
+                terminated, truncated = True, False
+            else:
+                terminated, truncated = False, True
+                self.budget_truncated = True
             self.hier_decision = 0
         info = {"terminated": terminated, "truncated": truncated, "episode_limit": truncated,
                 "bootstrap_mask": float(not terminated), "target_damage": float(env.target_damage),
@@ -601,10 +695,12 @@ class HADWrapper:
                 "episode_seed": self.episode_seed, "folded_steps": folded_steps,
                 "task_rewards": task_rewards.tolist(),
                 "tasks_terminated": self._tasks_terminated(terminated).tolist()}
+        if max_physical_steps is not None:
+            info["budget_truncated"] = self.budget_truncated
         if terminated or truncated:
             if not np.isclose(self.return_sum, -env.target_damage, atol=1e-9, rtol=0):
                 raise AssertionError("damage reward does not equal the native episode return")
-            info["episode_summary"] = self.diagnostics.summary()
+            info["episode_summary"] = self.episode_summary()
             if self.diagnostics.retain_trajectory:
                 info["trajectory"] = self.diagnostics.trajectory
         return reward, terminated or truncated, info
@@ -630,23 +726,48 @@ class HADWrapper:
                 for agent in self.adapter.env.red_agents]
 
     def episode_summary(self):
-        return self.diagnostics.summary()
+        summary = {**self.diagnostics.summary(), "curriculum_stage": self.curriculum_stage,
+                "curriculum_switches": self.curriculum_switches,
+                "spawn_configuration": {key: list(getattr(self.current_config, key))
+                                        for key in ("red_spawn_annulus", "blue_spawn_x", "spawn_altitude")},
+                "reward_raw_sum": self.return_sum, "reward_shaping_sum": self.reward_shaping_sum,
+                "reward_shaped_sum": self.reward_shaped_sum}
+        if self.budget_truncated:
+            summary["budget_truncated"] = True
+        return summary
 
     def snapshot(self):
         """Explicit recovery/validation path; never called during physical stepping."""
         return {"native": self.adapter.snapshot(), "opponent_rng": copy.deepcopy(self.opponent_rng.bit_generator.state),
                 "last_actions": dict(self.adapter._policy_last_actions), "return_sum": self.return_sum,
+                "current_config": self.current_config.to_dict(), "curriculum_stage": self.curriculum_stage,
+                "curriculum": self.get_curriculum_state(),
+                "reward_shaping_sum": self.reward_shaping_sum, "reward_shaped_sum": self.reward_shaped_sum,
+                "budget_truncated": self.budget_truncated,
                 "diagnostics": copy.deepcopy({k: v for k, v in vars(self.diagnostics).items() if k != "adapter"}),
                 "hier_decision": int(self.hier_decision), "steps_since_alloc": int(self.steps_since_alloc),
                 "last_nearest": None if self.last_nearest is None else np.asarray(self.last_nearest).copy(),
                 "last_alive": self.last_alive}
 
     def restore(self, state):
+        config = had_config.EnvConfig.from_values(state.get("current_config", self.effective_config.to_dict()))
+        if self.adapter is None or self.adapter.effective_config != config:
+            self.adapter = HADStage3Adapter(self.scale.N_R, self.scale.N_B, self.scale.K,
+                                           max_steps=self.max_steps, task_mode="damage", spatial_dim=self.spatial_dim,
+                                           effective_config=config, **self.adapter_kwargs)
+        self.current_config = config
+        self.curriculum_stage = int(state.get("curriculum_stage", -1))
+        self.set_curriculum_state(state.get("curriculum", {}))
         self.adapter.restore(state["native"])
         self.opponent_rng.bit_generator.state = state["opponent_rng"]
         self.adapter._policy_last_actions = dict(state["last_actions"])
         self.return_sum = state["return_sum"]
+        self.reward_shaping_sum = float(state.get("reward_shaping_sum", 0.0))
+        self.reward_shaped_sum = float(state.get("reward_shaped_sum", self.return_sum))
+        self.budget_truncated = bool(state.get("budget_truncated", False))
+        self.diagnostics.adapter = self.adapter
         vars(self.diagnostics).update(copy.deepcopy(state["diagnostics"]))
+        self.adapter.env.record_events = self.diagnostics.enabled or self.reward_mode == "friendly"
         self._refresh_features()
         self.hier_decision = int(state.get("hier_decision", 0))
         self.steps_since_alloc = int(state.get("steps_since_alloc", 0))

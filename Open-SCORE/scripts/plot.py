@@ -14,13 +14,16 @@ spec.loader.exec_module(report)
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output",type=Path,default=PROJECT/"outputs/main")
+    parser.add_argument("--output",type=Path)
     parser.add_argument("--training", action="store_true", help="Refresh the single training curve PNG and its report from saved logs")
     parser.add_argument("--method", default="regir_nomem")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--run", default="train")
+    parser.add_argument("--arm", choices=("A", "B", "C", "all"), help="Friendly experiment; its one report always includes all arms")
     args=parser.parse_args()
-    paths = report.render_training(args.output, method=args.method, seed=args.seed, run=args.run) if args.training else report.render_figures(args.output)
+    args.output = args.output or PROJECT / ("outputs/main_Sky_friendly" if args.arm else "outputs/main")
+    paths = report.render_training(args.output, method=args.method, seed=args.seed, run=args.run,
+                                  experiment_arm=None if args.arm in (None, "all") else args.arm) if args.training else report.render_figures(args.output)
     for path in paths:
         print(path)
 

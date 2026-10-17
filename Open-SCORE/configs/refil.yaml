@@ -45,3 +45,68 @@ agent:
   imagine: true
   subtask_cond: null
 
+# Resolved before runtime; these are three arms of one frozen experiment.
+experiment_presets:
+  sky_friendly_v1:
+    common:
+      preset: sky_friendly_v1
+      preset_revision: 1
+      method: regir_nomem
+      seed: 0
+      t_max: 1000000
+      lr: 0.0003
+      gamma: 0.995
+      epsilon_start: 1.0
+      epsilon_finish: 0.10
+      epsilon_anneal_time: 500000
+      target_update_interval: 100
+      shaping_coef: 0.5
+      shaping_range: 1600.0
+      lmbda: 0.5
+      batch_size: 32
+      buffer_size: 5000
+      global_depths: [1, 2, 3, 4]
+      global_eval_depth: 4
+      env_args:
+        env_agent_type: UAV_fixedwing
+        env_agent_action_type: acceleration
+        spatial_dim: 3
+        task_mode: damage
+        rigid_features: true
+        scene_scale: 0.4
+        world_bounds: [[-1000.0, 1000.0], [-600.0, 600.0], [0.0, 700.0]]
+        target_region: [[-850.0, -750.0], [-360.0, 360.0], [300.0, 400.0]]
+        red_spawn_annulus: [200.0, 450.0]
+        blue_spawn_x: [500.0, 1000.0]
+        spawn_altitude: [250.0, 450.0]
+        fire_range: 120.0
+        target_health: 2.0
+        target_initialization: random
+        max_steps: 100
+        train_dist: mixed_le10
+        blue_upper: reactive
+        blue_lower: rush
+        command_interval: 5
+    arms:
+      A: {}
+      B:
+        global_depths: [4]
+      C:
+        env_args:
+          birth_curriculum:
+            - start_step: 0
+              env_args:
+                red_spawn_annulus: [180.0, 350.0]
+                blue_spawn_x: [700.0, 1000.0]
+                spawn_altitude: [330.0, 370.0]
+            - start_step: 200000
+              env_args:
+                red_spawn_annulus: [200.0, 400.0]
+                blue_spawn_x: [600.0, 1000.0]
+                spawn_altitude: [300.0, 400.0]
+            - start_step: 400000
+              env_args:
+                red_spawn_annulus: [200.0, 450.0]
+                blue_spawn_x: [500.0, 1000.0]
+                spawn_altitude: [250.0, 450.0]
+

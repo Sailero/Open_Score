@@ -9,9 +9,9 @@ import gzip
 import json
 import math
 import os
+import shlex
 from pathlib import Path
 import statistics
-import subprocess
 import sys
 import threading
 from datetime import datetime, timedelta, timezone
@@ -499,11 +499,247 @@ def refresh_report(output=None, *, run=None):
     return render_figures(output)
 
 
-def render_training(output, *, method="regir_nomem", seed=0, run="train", config=None, state=None):
+def command_text(argv, platform=None):
+    """Return an executable command for the machine recorded with the run."""
+    platform = os.name if platform is None else platform
+    if platform == "nt":
+        return "powershell", "& " + " ".join("'" + str(value).replace("'", "''") + "'" for value in argv)
+    return "bash", shlex.join([str(value) for value in argv])
+
+
+def _render_friendly_training(root, *, config=None, state=None, run="train", experiment_arm=None):
+    from open_score.utils.logging import read_records
+    from open_score.eval.experiment import read_json as optional_json, run_directory, process_lock
+    metadata = optional_json(root / "experiment.json", {})
+    scheduler = optional_json(root / "scheduler.train.json", {})
+    planned = {job["experiment_arm"]: job.get("config", {}) for job in scheduler.get("planned", [])}
+    active = {job["experiment_arm"]: job for job in scheduler.get("active", []) if job.get("experiment_arm")}
+    queued = {job["experiment_arm"] for job in scheduler.get("waiting_train", []) if job.get("experiment_arm")}
+    finished = {job["experiment_arm"]: job for job in scheduler.get("finished", []) if job.get("experiment_arm")}
+    figure_path, report_path = root / "had/figures/training.png", root / "报告.md"
+    configs, progress, learning, episodes, validations = {}, {}, {}, {}, {}
+
+    def finite_points(rows, field):
+        return [(int(row["t_env"]), float(row[field])) for row in rows
+                if row.get(field) is not None and math.isfinite(float(row[field]))]
+
+    def number(value):
+        return "waiting" if value is None else f"{float(value):.5g}"
+
+    def elapsed(value):
+        seconds = int(value or 0)
+        return f"{seconds // 3600}:{seconds % 3600 // 60:02d}:{seconds % 60:02d}"
+
+    for arm in ("A", "B", "C"):
+        retained = metadata.get("arms", {}).get(arm, {})
+        directory = run_directory(root, "regir_nomem", 0, experiment_arm=arm)
+        cfg = {**retained.get("config", {}), **planned.get(arm, {}), **optional_json(directory / "config.json", {})}
+        if config is not None and config.get("experiment_arm") == arm:
+            cfg.update(config)
+        configs[arm] = cfg
+        row = optional_json(directory / "resource.json", {})
+        if state is not None and config is not None and config.get("experiment_arm") == arm:
+            row.update(state)
+        if arm in active:
+            row["status"] = "running"
+        elif arm in queued:
+            row["status"] = "queued" if scheduler.get("status") in ("running", "stopping") else "pending"
+        elif arm in finished:
+            row["status"] = finished[arm]["status"]
+        row.setdefault("status", "not_started")
+        progress[arm] = row
+        arm_run = cfg.get("run", run)
+        rows = read_records(root, "learning", run=arm_run, method="regir_nomem", seed=0,
+                            env="had", experiment_arm=arm)
+        learning[arm] = sorted({int(item["t_env"]): item for item in rows}.values(), key=lambda item: item["t_env"])
+        episodes[arm] = read_records(root, "episodes", run=arm_run, method="regir_nomem", seed=0,
+                                     env="had", experiment_arm=arm)
+        grouped = {}
+        for item in episodes[arm]:
+            if item.get("phase") == "train_eval":
+                key = (json.dumps(item["config"], sort_keys=True), int(item["episode_seed"]))
+                grouped.setdefault(int(item["eval_point"]), {})[key] = item
+        points = []
+        for point, by_key in sorted(grouped.items()):
+            items = list(by_key.values())
+            counts = {}
+            for item in items:
+                key = json.dumps(item["config"], sort_keys=True)
+                counts[key] = counts.get(key, 0) + 1
+            if len(items) == 100 and len(counts) == 4 and set(counts.values()) == {25}:
+                points.append(dict(point=point, t_env=max(int(item["t_env"]) for item in items),
+                    D=statistics.mean(float(item["D"]) for item in items), rows=items))
+        validations[arm] = points
+
+    with process_lock(root / ".report.lock") as claimed:
+        if not claimed:
+            return figure_path, report_path
+        figure_path.parent.mkdir(parents=True, exist_ok=True)
+        visible_steps = max(20000,
+            *(int(row.get("observed_t_env", row.get("t_env", 0))) for row in progress.values()),
+            *(int(item["t_env"]) for rows in learning.values() for item in rows),
+            *(int(item["t_env"]) for rows in validations.values() for item in rows))
+        visible_steps = min(1000000, visible_steps * 1.05)
+        with _RENDER_LOCK:
+            fig, axes = plt.subplots(1, 3, figsize=(12, 4), constrained_layout=True)
+            colors = {"A": TEAL, "B": BLUE, "C": ORANGE}
+            for arm in ("A", "B", "C"):
+                series = (finite_points(learning[arm], "train_D"), finite_points(validations[arm], "D"),
+                          finite_points(learning[arm], "loss"))
+                for index, (ax, data) in enumerate(zip(axes, series)):
+                    if data:
+                        xs, ys = zip(*data)
+                        ax.plot(np.asarray(xs) / 1e6, ys, color=colors[arm], label=arm,
+                                marker="o" if index == 1 else None, markersize=2.5, linewidth=1.1)
+            for ax, caption, ylabel in zip(axes,
+                    ("Training damage (batch mean)", "Common validation damage", "Training loss"),
+                    ("Target damage D", "Target damage D", "Loss")):
+                if not ax.lines:
+                    ax.text(.5, .5, "waiting for data", ha="center", va="center", transform=ax.transAxes, color=GRAY)
+                else:
+                    ax.legend(title="Arm", fontsize=8)
+                ax.set(title=caption, xlabel="Physical steps (millions)", ylabel=ylabel, xlim=(0, visible_steps / 1e6))
+                style(ax)
+            transitions = progress["C"].get("curriculum_transitions", [])
+            if not transitions and learning["C"]:
+                transitions = learning["C"][-1].get("curriculum_transitions", [])
+            for transition in transitions:
+                step = int(transition.get("t_env", 0))
+                if step > 0:
+                    for ax in axes:
+                        ax.axvline(step / 1e6, color=colors["C"], linestyle=":", linewidth=.7, alpha=.6)
+            fig.suptitle("LEAF | sky_friendly_v1 | seed 0 | A: random depth, B: fixed depth 4, C: birth curriculum", fontsize=10)
+            temporary = figure_path.with_name(f".training.{os.getpid()}.png.pending")
+            try:
+                fig.savefig(temporary, format="png", dpi=160, facecolor="white")
+                os.replace(temporary, figure_path)
+            finally:
+                plt.close(fig)
+                temporary.unlink(missing_ok=True)
+
+        lines = ["# LEAF 统一友好任务实验报告", "",
+            f"更新时间：{datetime.now(timezone(timedelta(hours=8))).isoformat(timespec='seconds')}（Asia/Shanghai，UTC+8）。",
+            "", "同一输出包含 A/B/C 三个实验臂，每臂 seed0、1,000,000 物理步。未启动的实验臂保持未运行，不补造数据。",
+            "", "## 真实运行状态", "",
+            "| 实验臂 | 状态 / 阶段 | 已采集 / 完整批次 / 恢复点 | 完整验证点 | C课程阶段 | 训练 / 验证耗时 |",
+            "|---|---|---|---|---|---|"]
+        for arm in ("A", "B", "C"):
+            row = progress[arm]
+            observed = row.get("observed_t_env", row.get("t_env", 0))
+            stage = row.get("curriculum_stage", "waiting") if arm == "C" else "—"
+            label = {"not_started": "未运行", "queued": "排队", "pending": "待恢复", "running": "运行中",
+                     "completed": "已完成", "complete": "已完成", "stopped": "已停止",
+                     "stopped_before_start": "未运行（已停止）", "failed": "失败"}.get(row["status"], row["status"])
+            lines.append(f"| {arm} | {label} (`{row['status']}`) / `{row.get('current_phase', 'waiting')}` | "
+                f"{observed:,} / {int(row.get('t_env', 0)):,} / {int(row.get('safe_checkpoint_t_env', 0)):,} | "
+                f"{len(validations[arm])}/50 | {stage} | {elapsed(row.get('training_seconds'))} / {elapsed(row.get('validation_seconds'))} |")
+        lines += ["", "采集中的步数仅用于进度展示。断点恢复使用包含 replay、runner、优化器和随机状态的完整批次 checkpoint；预算与全部 50 个验证点完成后才标记完成。终评由独立命令显式启动。",
+            "", "## 共同任务与唯一差异", "",
+            "A 使用 R1–R4 随机训练深度、R4验证；B 仅将训练深度固定为 R4；C 保留 A 的深度设置，仅加入出生课程。三臂使用相同最终友好任务、相同验证场景、相同验证种子与预算。全体飞机的四元数与角速度公开，观测布局由实际配置登记。",
+            "", "| 实验臂 | lr / gamma / imagined权重 | epsilon退火 / 下限 | 训练深度 / 验证深度 | 实体维度 / 动作数 |",
+            "|---|---|---|---|---|"]
+        for arm, cfg in configs.items():
+            lines.append(f"| {arm} | {number(cfg.get('lr'))} / {number(cfg.get('gamma'))} / {number(cfg.get('lmbda'))} | "
+                f"{cfg.get('epsilon_anneal_time', 'waiting')} / {number(cfg.get('epsilon_finish'))} | "
+                f"`{cfg.get('global_depths', 'waiting')}` / {cfg.get('global_eval_depth', 'waiting')} | "
+                f"{cfg.get('entity_shape', 'waiting')} / {cfg.get('n_actions', 'waiting')} |")
+        lines += ["", "完整生效配置、物理参数与观测布局见 [experiment.json](experiment.json) 及各臂模型目录的 `config.json`。原始伤害指标满足 R=-D，D越低越好；loss和训练回报可含配置中的potential shaping。",
+            "", "### 最近训练批次的平均回报分量", "", "| 实验臂 | 原始回报 | shaping回报 | 逐物理步塑形后合计 |", "|---|---|---|---|"]
+        for arm in ("A", "B", "C"):
+            latest = learning[arm][-1] if learning[arm] else {}
+            lines.append(f"| {arm} | {number(latest.get('reward_raw_sum'))} | {number(latest.get('reward_shaping_sum'))} | {number(latest.get('reward_shaped_sum'))} |")
+        lines += [
+            "", "这些分量是逐物理步未折扣统计的批次均值，原始回报为 -D；它们不是 replay 中经过尾段折叠、折扣及可能的退款修正后的奖励总和。",
+            "", "## 训练、共同验证与 loss", "", "![三臂训练损伤、共同验证损伤与loss](had/figures/training.png)", "",
+            "曲线为实际完整训练批次及完整100局验证点，不平滑、不插值。橙色竖虚线为C课程实际切换位置。缺失面板显示waiting。",
+            "", "## 最近五个完整验证点", "",
+            "| 实验臂 | 实际点数 | 平均 D | 零受损比例 | 蓝方拦截比例 | 首次受损受限均值（步） |",
+            "|---|---|---|---|---|---|"]
+        for arm in ("A", "B", "C"):
+            recent = validations[arm][-5:]
+            items = [item for point in recent for item in point["rows"]]
+            average = statistics.mean(float(item["D"]) for item in items) if items else None
+            zero = statistics.mean(float(item["D"]) <= 1e-12 for item in items) if items else None
+            intercepted = []
+            first_damage = []
+            for item in items:
+                causes = item.get("blue_deaths_by_cause")
+                if isinstance(causes, dict) and "intercepted" in causes:
+                    intercepted.append(float(causes["intercepted"]) / int(item["config"]["N_B"]))
+                times = item.get("first_damage_step_by_target")
+                if isinstance(times, list):
+                    known = [float(value) for value in times if value is not None]
+                    first_damage.append(min(known) if known else float(configs[arm].get("episode_limit", 100)))
+            lines.append(f"| {arm} | {len(recent)} | {number(average)} | {number(zero)} | "
+                f"{number(statistics.mean(intercepted) if intercepted else None)} | {number(statistics.mean(first_damage) if first_damage else None)} |")
+        lines += ["", "使用最多最近五个已完成验证点（每点100局）；不足五点时只汇总实际数据。拦截比例为事件归因为intercepted的蓝方数量除以初始蓝方数量。首次受损时间取目标中最早受损步，无受损回合按100步计入受限均值；未记录的诊断显示waiting。",
+            "", "### 最近五点按配置损伤", "", "| 实验臂 | 配置 | 实际局数 | 平均 D |", "|---|---|---|---|"]
+        for arm in ("A", "B", "C"):
+            grouped = {}
+            for point in validations[arm][-5:]:
+                for item in point["rows"]:
+                    cfg = item["config"]
+                    key = (int(cfg["N_R"]), int(cfg["N_B"]), int(cfg["K"]))
+                    grouped.setdefault(key, []).append(float(item["D"]))
+            if not grouped:
+                lines.append(f"| {arm} | waiting | 0 | waiting |")
+            for key, values in sorted(grouped.items()):
+                lines.append(f"| {arm} | {key[0]}v{key[1]} K{key[2]} | {len(values)} | {number(statistics.mean(values))} |")
+        lines += ["", "## C出生课程", "",
+                  f"当前阶段：`{progress['C'].get('curriculum_stage', '未运行')}`。实际阶段应用记录：`{transitions}`。",
+                  "训练在完整批次边界切换阶段；验证始终回到公共最终任务，随后训练重置重新应用当前课程。完整阶段表保存于C配置，恢复沿用原计划与实际阶段。",
+                  "", "## 正式终评", "", "| 实验臂 | 已记录 / 7200 | 状态 | 样本平均 D | 零损伤比例 |", "|---|---|---|---|---|"]
+        for arm in ("A", "B", "C"):
+            final = [item for item in episodes[arm] if item.get("phase") == "final_eval" and item.get("arm") != "confirmation"]
+            evaluation = optional_json(run_directory(root, "regir_nomem", 0, experiment_arm=arm) / "evaluation.json", {})
+            if evaluation.get("checkpoint_id"):
+                final = [item for item in final if item.get("checkpoint_id") == evaluation["checkpoint_id"]]
+            final = list({(json.dumps(item["config"], sort_keys=True), int(item["episode_seed"])): item
+                          for item in final}.values())
+            count = len(final)
+            final_status = "未运行 / waiting" if not count else "完整" if count == 7200 else "进行中 / 不排行"
+            lines.append(f"| {arm} | {count}/7200 | {final_status} | "
+                f"{number(statistics.mean(float(item['D']) for item in final) if final else None)} | "
+                f"{number(statistics.mean(float(item['D']) <= 1e-12 for item in final) if final else None)} |")
+        lines += ["", "标准终评为24种配置×300局；上表只汇总已记录的标准终评样本，不混入确认集。未收齐7200局时只报告当前样本均值与比例，不作完整性能排行；实际运行或停止状态见各臂 `evaluation.json`。"]
+        exemplar = next((cfg for cfg in configs.values() if cfg.get("launch_argv")), None)
+        exemplar = exemplar or next((cfg for cfg in configs.values() if cfg), {})
+        platform = exemplar.get("launch_platform", os.name)
+        executable = exemplar.get("python_executable", sys.executable)
+        shell, train_command = command_text(exemplar.get("launch_argv") or [executable, "-u", "Open-SCORE/scripts/train.py",
+            "--stage", "train", "--preset", "sky_friendly_v1", "--arm", "all", "--seed", "0", "--steps", "1000000",
+            "--output", str(root), "--devices", "0,1", "--per-gpu", "1", "--progress", "tqdm", "--live-curves"], platform)
+        lines += ["", "## 启动、恢复与查看", "", f"```{shell}", train_command, "```", "",
+                  "同一命令追加 `--resume` 恢复；已完成臂跳过、已中断臂恢复、未运行臂从零开始。A/B先占两张卡，C在任一槽空闲后接续，不自动执行终评。", ""]
+        commands = [
+            [executable, "Open-SCORE/scripts/train.py", "--stage", "status", "--output", str(root)],
+            [executable, "Open-SCORE/scripts/train.py", "--stage", "stop", "--arm", "A", "--output", str(root)],
+            [executable, "Open-SCORE/scripts/train.py", "--stage", "stop", "--arm", "all", "--output", str(root)],
+            [executable, "Open-SCORE/scripts/eval.py", "--stage", "final", "--arm", "all", "--method", "regir_nomem",
+             "--seed", "0", "--output", str(root), "--workers", "2", "--device", "cpu"],
+        ]
+        lines += [f"```{shell}", *[command_text(command, platform)[1] for command in commands], "```", "",
+                  "共享数据位于 `had/episodes.csv`、`had/learning.csv`、`had/progress.csv`，由 `experiment_arm` 区分A/B/C；原 `arm` 字段仍表示标准/确认等评估分支。所有正式结果合并在本报告，不生成每臂报告。"]
+        temporary_report = report_path.with_name(f".报告.{os.getpid()}.md.pending")
+        try:
+            temporary_report.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            os.replace(temporary_report, report_path)
+        finally:
+            temporary_report.unlink(missing_ok=True)
+    return figure_path, report_path
+
+
+def render_training(output, *, method="regir_nomem", seed=0, run="train", config=None, state=None, experiment_arm=None):
     """Refresh one training PNG and its one report from actual saved records."""
     from open_score.utils.logging import read_records
     root = Path(output)
     root = root.parent if root.name == "had" else root
+    from open_score.eval.experiment import read_json as optional_json
+    metadata = optional_json(root / "experiment.json", {})
+    scheduler = optional_json(root / "scheduler.train.json", {})
+    if ((config or {}).get("preset") == "sky_friendly_v1" or metadata.get("preset") == "sky_friendly_v1"
+            or scheduler.get("preset") == "sky_friendly_v1"):
+        return _render_friendly_training(root, config=config, state=state, run=run, experiment_arm=experiment_arm)
     directory = root / "had" / method / "models" / f"seed_{int(seed)}"
 
     def optional_json(path):
@@ -580,9 +816,16 @@ def render_training(output, *, method="regir_nomem", seed=0, run="train", config
         environment = config.get("env_args", {})
         final_rows = sum(row.get("phase") == "final_eval" for row in episodes)
         final_status = f"已记录 {final_rows} 局，属于单独执行的评估。" if final_rows else "未运行；本次命令仅训练及训练内验证。"
-        evaluation_command = subprocess.list2cmdline([config.get("python_executable", sys.executable),
+        platform = config.get("launch_platform", "nt" if ":\\" in config.get("python_executable", "") else os.name)
+        shell, evaluation_command = command_text([config.get("python_executable", sys.executable),
             "-X", "utf8", "Open-SCORE/scripts/eval.py", "--stage", "final", "--method", method,
-            "--seed", str(seed), "--output", str(root), "--workers", "2", "--device", "cpu"])
+            "--seed", str(seed), "--output", str(root), "--workers", "2", "--device", "cpu"], platform)
+        if config.get("launch_argv"):
+            _, launch_command = command_text(config["launch_argv"], platform)
+        else:
+            launch_command = config.get("launch_command", "waiting for launch command")
+            if platform == "nt" and not launch_command.lstrip().startswith("& "):
+                launch_command = "& " + launch_command
         report = f"""# LEAF SkyHAD 固定翼 seed{seed} 训练报告
 
 更新时间：{datetime.now(timezone(timedelta(hours=8))).isoformat(timespec='seconds')}（Asia/Shanghai，UTC+8）。本报告与下图按实际日志原地更新。
@@ -623,16 +866,16 @@ def render_training(output, *, method="regir_nomem", seed=0, run="train", config
 
 ## 运行命令
 
-```powershell
-& {config.get('launch_command', 'waiting for launch command')}
+```{shell}
+{launch_command}
 ```
 
 中断后在同一命令末尾添加 `--resume` 继续。状态与停止分别使用原训练脚本的 `--stage status` / `--stage stop`，并传入相同 `--output`。
 
 后续正式终评命令如下，当前训练任务不会自动执行：
 
-```powershell
-& {evaluation_command}
+```{shell}
+{evaluation_command}
 ```
 """
         temporary_report = report_path.with_name(".报告.md.pending")

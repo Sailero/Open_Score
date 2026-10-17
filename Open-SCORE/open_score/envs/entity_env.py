@@ -41,8 +41,8 @@ class HADEntityEnv:
                            retain_trajectory=retain_trajectory, **kwargs)
         return self.get_entities(), self.get_masks()
 
-    def step(self, actions):
-        return self.wrapper.step(actions)
+    def step(self, actions, max_physical_steps=None):
+        return self.wrapper.step(actions, max_physical_steps=max_physical_steps)
 
     def get_entities(self):
         return self.wrapper.entities.copy()
@@ -125,11 +125,13 @@ class HADEntityEnv:
 
     def get_rng_state(self):
         return {"scale": copy.deepcopy(self.scale_sampler.state_dict()),
-                "episode": copy.deepcopy(self.episode_seeds.state_dict())}
+                "episode": copy.deepcopy(self.episode_seeds.state_dict()),
+                "curriculum": self.wrapper.get_curriculum_state()}
 
     def set_rng_state(self, state):
         self.scale_sampler.load_state_dict(state["scale"])
         self.episode_seeds.load_state_dict(state["episode"])
+        self.wrapper.set_curriculum_state(state.get("curriculum", {}))
 
     def save_replay(self):
         return self.get_trajectory()

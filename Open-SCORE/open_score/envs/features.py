@@ -19,26 +19,35 @@ FEATURE_NAMES = ("x", "y", "vx", "vy", "alive", "health", "target_damage_share",
                  "is_red", "is_blue", "is_target")
 
 
-def feature_spec(spatial_dim=2, world_bounds=None, max_speed=None):
+def feature_spec(spatial_dim=2, world_bounds=None, max_speed=None, rigid_features=False):
     """Describe the HAD table without changing the original ten columns."""
     if spatial_dim not in (2, 3):
         raise ValueError("spatial_dim must be 2 or 3")
+    if rigid_features and spatial_dim != 3:
+        raise ValueError("rigid features require a three-dimensional aircraft world")
     position_scale = POSITION_SCALE if world_bounds is None else float(np.abs(world_bounds).max())
     velocity_scale = VELOCITY_SCALE if max_speed is None else float(max_speed)
     if not np.isfinite([position_scale, velocity_scale]).all() or min(position_scale, velocity_scale) <= 0:
         raise ValueError("feature normalization scales must be positive and finite")
-    return {"entity_shape": ENTITY_DIM + (2 if spatial_dim == 3 else 0),
+    spec = {"entity_shape": ENTITY_DIM + (2 if spatial_dim == 3 else 0) + (7 if rigid_features else 0),
             "n_actions": 27 if spatial_dim == 3 else N_ACTIONS,
             "spatial_dim": int(spatial_dim),
             "feature_names": list(FEATURE_NAMES + (("z", "vz") if spatial_dim == 3 else ())),
             "had_position_indices": [0, 1, 10] if spatial_dim == 3 else [0, 1],
             "had_velocity_indices": [2, 3, 11] if spatial_dim == 3 else [2, 3],
             "had_position_scale": position_scale, "had_velocity_scale": velocity_scale}
+    if rigid_features:
+        spec.update(rigid_features=True, rigid_visibility="all_aircraft",
+                    feature_names=spec["feature_names"] + ["qw", "qx", "qy", "qz", "p", "q", "r"],
+                    had_quaternion_indices=[12, 13, 14, 15],
+                    had_angular_velocity_indices=[16, 17, 18], had_angular_velocity_scale=1.0,
+                    quaternion_convention="wxyz_body_FLU_to_world_ENU_native_continuous")
+    return spec
 
 
 def table_position_indices(entities):
     """Geometry columns of either supported base HAD table."""
-    return (0, 1, 10) if np.shape(entities)[-1] == 12 else (0, 1)
+    return (0, 1, 10) if np.shape(entities)[-1] in (12, 19) else (0, 1)
 
 
 def resolve_pad(pad):
@@ -132,6 +141,23 @@ def entities_from_state(state, pad="eval", spec=None):
                 [row.velocity[:spec["spatial_dim"]] for row in rows]) / spec["had_velocity_scale"]
             entities[indices, 4] = 1.0
             entities[indices, 5] = [row.health / row.initial_health for row in rows]
+            if spec.get("rigid_features", False):
+                if any(getattr(row, "quaternion", None) is None or getattr(row, "angular_velocity", None) is None
+                       for row in rows):
+                    raise ValueError("a live aircraft is missing quaternion/angular velocity in the rigid feature protocol")
+                quaternion = np.asarray([row.quaternion for row in rows], dtype=np.float64)
+                omega = np.asarray([row.angular_velocity for row in rows], dtype=np.float64)
+                norms = np.linalg.norm(quaternion, axis=-1, keepdims=True)
+                if (quaternion.shape != (len(rows), 4) or omega.shape != (len(rows), 3)
+                        or not np.isfinite(quaternion).all() or not np.isfinite(omega).all()
+                        or not np.isfinite(norms).all()
+                        or np.any(norms < 1e-12)):
+                    raise ValueError("rigid observations require finite unit-normalizable quaternions and body angular velocities")
+                # Native integration keeps the quaternion sign continuous. Only
+                # normalize its length; imposing qw >= 0 would add a sign seam.
+                entities[np.ix_(indices, spec["had_quaternion_indices"])] = quaternion / norms
+                entities[np.ix_(indices, spec["had_angular_velocity_indices"])] = (
+                    omega / spec["had_angular_velocity_scale"])
     return entities, entity_mask
 
 

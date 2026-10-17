@@ -20,7 +20,7 @@ from modules.layers.attention import EntityAttentionLayer
 
 def _had_geometry_indices(args, kind):
     env_args = getattr(args, "env_args", None) or {}
-    spatial_dim = int(env_args.get("spatial_dim", 3 if int(getattr(args, "entity_shape", 10)) == 12 else 2))
+    spatial_dim = int(env_args.get("spatial_dim", 3 if int(getattr(args, "entity_shape", 10)) in (12, 19) else 2))
     default = ([0, 1, 10] if spatial_dim == 3 else [0, 1]) if kind == "position" else (
         [2, 3, 11] if spatial_dim == 3 else [2, 3])
     return list(getattr(args, f"had_{kind}_indices", None) or default)

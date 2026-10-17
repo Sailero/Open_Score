@@ -4,6 +4,7 @@ from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
+import time
 import uuid
 
 PROFILE = "main"
@@ -11,6 +12,31 @@ PROFILE = "main"
 EXPECTED_ENV = {"had_core_version": "had-workbench-2.1.0",
                 "physics_protocol": "rebuild-calibrated-v3-r7-target-initialization"}
 SKY_EXPECTED_ENV = {"had_core_version": "skyhad-4.3.0", "physics_protocol": "skyhad-4.3"}
+EXPERIMENT_ARMS = ("A", "B", "C")
+
+
+def checked_experiment_arm(experiment_arm):
+    if experiment_arm is not None and experiment_arm not in EXPERIMENT_ARMS:
+        raise ValueError("experiment_arm must be A, B, C or None")
+    return experiment_arm
+
+
+def stable_environment_identity(value):
+    """Compare scientific identity independently of the machine's install path."""
+    if isinstance(value, dict):
+        return {key: stable_environment_identity(item) for key, item in value.items() if key != "had_module"}
+    if isinstance(value, (list, tuple)):
+        return [stable_environment_identity(item) for item in value]
+    return value
+
+
+def scientific_config(config):
+    """Freeze learning/task settings while allowing runtime placement to change."""
+    runtime = {"output", "device", "use_cuda", "resume", "run", "report_interval",
+               "progress_interval", "resume_interval", "progress", "live_curves",
+               "launch_command", "launch_argv", "launch_platform", "working_directory", "python_executable", "concurrency", "skip_final_eval"}
+    return json.loads(json.dumps(stable_environment_identity({key: value for key, value in config.items()
+        if key not in runtime and not key.startswith("_")}), ensure_ascii=False, allow_nan=False))
 
 
 def is_sky_environment(env_args=None):
@@ -47,9 +73,15 @@ def register_environment(output, config, env_info=None, parameter_snapshot=None)
     identity = check_environment(env_args)
     env_info = dict(env_info or {})
     parameters = parameter_snapshot if parameter_snapshot is not None else config.get("environment_parameters")
-    features = {key: env_info.get(key, config.get(key)) for key in (
+    features = dict((parameters or {}).get("feature_spec") or {})
+    for key in (
         "entity_shape", "n_actions", "feature_names", "spatial_dim", "had_position_indices",
-        "had_velocity_indices", "had_position_scale", "had_velocity_scale")}
+        "had_velocity_indices", "had_position_scale", "had_velocity_scale", "rigid_features",
+        "had_quaternion_indices", "had_angular_velocity_indices", "had_angular_velocity_scale",
+        "actor_entity_shape", "observer_entity_shape"):
+        value = env_info.get(key, config.get(key))
+        if value is not None:
+            features[key] = value
     metadata = dict(schema="had-current-experiment-v1", profile=root.name,
                     main_method=config["method"], main_method_display="LEAF" if config["method"] == "regir_nomem" else config["method"],
                     seeds=[int(config["seed"])], budget_steps=int(config["t_max"]),
@@ -62,13 +94,60 @@ def register_environment(output, config, env_info=None, parameter_snapshot=None)
                     validation_scenes=[9500, 9599], final_episodes_per_config=300,
                     final_scenes=[9000, 9299])
     metadata = json.loads(json.dumps(metadata, ensure_ascii=False, allow_nan=False))
+    experiment_arm = checked_experiment_arm(config.get("experiment_arm"))
+    if experiment_arm is not None:
+        if config.get("preset") != "sky_friendly_v1":
+            raise ValueError("Experiment arms require preset sky_friendly_v1")
+        common_args = {key: value for key, value in metadata["env_args"].items() if key != "birth_curriculum"}
+        common_parameters = {key: value for key, value in (metadata["environment_parameters"] or {}).items()
+                             if key != "birth_curriculum"}
+        common = {key: metadata[key] for key in ("env_identity", "feature_spec", "train_N", "train_K",
+            "validation_configs", "validation_points", "validation_episodes_per_config", "validation_scenes",
+            "final_episodes_per_config", "final_scenes", "official_checkpoint")}
+        common.update(env_args=common_args, environment_parameters=common_parameters)
+        arm = dict(experiment_arm=experiment_arm, config=scientific_config(config),
+                   env_args=metadata["env_args"], environment_parameters=metadata["environment_parameters"],
+                   model_directory=str(run_directory(root, config["method"], config["seed"],
+                       experiment_arm=experiment_arm).relative_to(root)).replace("\\", "/"))
+        manifest = dict(schema="had-current-experiment-v2", profile=root.name,
+            preset=config["preset"], main_method=config["method"], main_method_display=metadata["main_method_display"],
+            seeds=metadata["seeds"], budget_steps=metadata["budget_steps"],
+            env_identity=identity, feature_spec=features, common=common, arms={experiment_arm: arm})
+        manifest = json.loads(json.dumps(manifest, ensure_ascii=False, allow_nan=False))
+        path = root / "experiment.json"
+        deadline = time.monotonic() + 15
+        while True:
+            with process_lock(root / ".experiment.metadata.lock") as owned:
+                if owned:
+                    retained = read_json(path)
+                    if path.exists() and retained is None:
+                        raise ValueError("Existing experiment metadata are unreadable; existing data are preserved")
+                    if retained is not None:
+                        for key in ("schema", "profile", "preset", "main_method", "seeds", "budget_steps", "common"):
+                            if stable_environment_identity(retained.get(key)) != stable_environment_identity(manifest[key]):
+                                raise ValueError(f"Existing experiment {key} differs; existing data are preserved")
+                        previous_arm = retained.get("arms", {}).get(experiment_arm)
+                        if previous_arm is not None and stable_environment_identity(previous_arm) != stable_environment_identity(arm):
+                            raise ValueError(f"Existing experiment arm {experiment_arm} configuration differs; existing data are preserved")
+                        if previous_arm is not None:
+                            return retained
+                        retained["arms"][experiment_arm] = arm
+                        manifest = retained
+                    elif any((environment_directory(root) / f"{stream}.csv").exists()
+                             for stream in ("episodes", "learning", "progress", "trajectories")):
+                        raise ValueError("Existing records lack armed experiment identity; existing data are preserved")
+                    atomic_json(path, manifest)
+                    return manifest
+            if time.monotonic() >= deadline:
+                raise RuntimeError("Experiment metadata are busy; no identity changes were written")
+            time.sleep(.05)
     path = root / "experiment.json"
     retained = read_json(path)
     if path.exists() and retained is None:
         raise ValueError("Existing experiment metadata are unreadable; existing data are preserved")
     if retained is not None:
         for key in ("profile", "main_method", "seeds", "budget_steps", "env_identity", "env_args", "feature_spec", "environment_parameters"):
-            if retained.get(key) != metadata[key]:
+            if stable_environment_identity(retained.get(key)) != stable_environment_identity(metadata[key]):
                 raise ValueError(f"Existing experiment {key} differs; existing data are preserved")
         return retained
     directory = environment_directory(root)
@@ -96,8 +175,11 @@ def ensure_layout(output):
     directory.mkdir(parents=True, exist_ok=True)
     return directory
 
-def run_directory(output, method, seed, env="had", run="train"):
-    return environment_directory(output, env) / str(method) / "models" / f"seed_{int(seed)}"
+def run_directory(output, method, seed, env="had", run="train", *, experiment_arm=None):
+    directory = environment_directory(output, env) / str(method)
+    if checked_experiment_arm(experiment_arm) is not None:
+        directory = directory / "arms" / experiment_arm
+    return directory / "models" / f"seed_{int(seed)}"
 
 def new_artifact_id():
     return uuid.uuid4().hex

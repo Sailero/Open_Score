@@ -45,11 +45,14 @@ def evaluation_thresholds(budget):
         raise ValueError("A formal budget must support 50 validation points")
     return [math.ceil(budget * point / 50) for point in range(1, 51)]
 
-def validation_jobs(eval_point, t_env=0):
+def validation_jobs(eval_point, t_env=0, *, experiment_arm=None):
+    from .experiment import checked_experiment_arm
+    checked_experiment_arm(experiment_arm)
     if not 1 <= int(eval_point) <= 50:
         raise ValueError("eval_point must be 1..50")
     return [dict(config=config_dict(c), episode_seed=9500 + 25 * i + offset,
-                 phase="train_eval", eval_point=int(eval_point), t_env=int(t_env), retain_trajectory=False)
+                 phase="train_eval", eval_point=int(eval_point), t_env=int(t_env), retain_trajectory=False,
+                 experiment_arm=experiment_arm)
             for i, c in enumerate(VALIDATION_CONFIGS) for offset in range(25)]
 
 def checkpoint_tag(stem, t_env):
@@ -67,12 +70,14 @@ def parse_checkpoint_t_env(checkpoint):
     except (ValueError, IndexError):
         return None
 
-def final_jobs(t_env=0, checkpoint=None, method=None, *, confirmation=False):
+def final_jobs(t_env=0, checkpoint=None, method=None, *, confirmation=False, experiment_arm=None):
+    from .experiment import checked_experiment_arm
+    checked_experiment_arm(experiment_arm)
     start = 110000 if confirmation else 9000
     tag = checkpoint_tag(checkpoint or OFFICIAL_CHECKPOINT, t_env) + ("/confirmation" if confirmation else "")
     return [dict(config=config_dict(c), episode_seed=start + offset, phase="final_eval",
                  eval_point=50, t_env=int(t_env), checkpoint=tag,
-                 arm="confirmation" if confirmation else "standard", retain_trajectory=False)
+                 arm="confirmation" if confirmation else "standard", retain_trajectory=False, experiment_arm=experiment_arm)
             for c in FINAL_CONFIGS for offset in range(FINAL_EPISODES_PER_CONFIG)]
 
 def validation_score(rows):
@@ -84,11 +89,11 @@ def validation_score(rows):
     outside = {config_key(row["config"]) for row in selected} - set(VALIDATION_CONFIGS)
     if outside:
         raise ValueError(f"Checkpoint selection saw non-training configurations: {sorted(outside)}")
-    for field in ("run", "method", "seed", "eval_point"):
-        identities = {row[field] for row in selected if row.get(field) is not None}
+    for field in ("run", "method", "seed", "eval_point", "experiment_arm"):
+        identities = {row.get(field) for row in selected if field == "experiment_arm" or row.get(field) is not None}
         if len(identities) > 1:
             raise ValueError("Checkpoint selection requires exactly one run/method/seed/eval_point")
-    expected = {(config_key(job["config"]), job["episode_seed"]) for job in validation_jobs(selected[0]["eval_point"])}
+    expected = {(config_key(job["config"]), job["episode_seed"]) for job in validation_jobs(selected[0]["eval_point"], experiment_arm=selected[0].get("experiment_arm"))}
     by_episode = {(config_key(row["config"]), int(row["episode_seed"])): row for row in selected}
     if set(by_episode) != expected:
         return None
@@ -99,15 +104,15 @@ def validation_score(rows):
 
 
 def remaining_jobs(jobs, recorded_rows):
-    done = {(row.get("phase"), row.get("eval_point"), config_key(row["config"]),
+    done = {(row.get("experiment_arm"), row.get("phase"), row.get("eval_point"), config_key(row["config"]),
              int(row["episode_seed"]), row.get("checkpoint")) for row in recorded_rows}
-    return [job for job in jobs if (job.get("phase"), job.get("eval_point"), config_key(job["config"]),
+    return [job for job in jobs if (job.get("experiment_arm"), job.get("phase"), job.get("eval_point"), config_key(job["config"]),
             int(job["episode_seed"]), job.get("checkpoint")) not in done]
 
 
-def run_directory(output, method, seed, run=None):
+def run_directory(output, method, seed, run=None, *, experiment_arm=None):
     from .experiment import run_directory as directory
-    return directory(output, method, seed)
+    return directory(output, method, seed, experiment_arm=experiment_arm)
 
 def checkpoint_identity(saved, checkpoint=None, output=None):
     value = saved.get("artifact_id") or saved.get("progress", {}).get("final_artifact_id")
@@ -125,14 +130,16 @@ def checkpoint_identity(saved, checkpoint=None, output=None):
                 if path.resolve() == Path(checkpoint).resolve():
                     return str(row["artifact_id"])
     c = saved["config"]
-    return f"{c['method']}:{int(c['seed'])}:{int(saved['progress']['t_env'])}:{c.get('implementation_revision', 'retained')}"
+    retained = f"{c['method']}:{int(c['seed'])}:{int(saved['progress']['t_env'])}:{c.get('implementation_revision', 'retained')}"
+    return retained + f":arm={c['experiment_arm']}" if c.get("experiment_arm") is not None else retained
 
 def _evaluate(method, checkpoint, *, output=None, run=None, seed=None, device="cpu",
-              on_progress=None, stop_requested=None, confirmation=False, depths=None):
+              on_progress=None, stop_requested=None, confirmation=False, depths=None, experiment_arm=None):
     import torch
     from open_score.algos import load_policy
     from open_score.utils.logging import DEFAULT_OUTPUT, FORMAL_RUN, ExperimentLogger, read_records
-    from .experiment import atomic_json, process_lock, check_environment, ensure_layout, is_sky_environment, register_environment
+    from .experiment import atomic_json, process_lock, check_environment, ensure_layout, is_sky_environment, register_environment, checked_experiment_arm, stable_environment_identity
+    checked_experiment_arm(experiment_arm)
     output = Path(DEFAULT_OUTPUT if output is None else output)
     ensure_layout(output)
     checkpoint = Path(checkpoint)
@@ -142,10 +149,13 @@ def _evaluate(method, checkpoint, *, output=None, run=None, seed=None, device="c
             raise RuntimeError(f"Checkpoint already has an evaluator: {checkpoint}")
         saved = torch.load(checkpoint, map_location="cpu", weights_only=False)
         cfg, progress = saved["config"], saved["progress"]
+        actual_arm = checked_experiment_arm(cfg.get("experiment_arm"))
+        if experiment_arm is not None and experiment_arm != actual_arm:
+            raise ValueError("Evaluation arm differs from the retained checkpoint")
         identity_env = check_environment(cfg.get("env_args"))
         fixedwing = is_sky_environment(cfg.get("env_args"))
         retained_env = cfg.get("env_identity")
-        if retained_env and any(retained_env.get(key) != identity_env[key] for key in ("had_core_version", "physics_protocol")):
+        if retained_env and stable_environment_identity(retained_env) != stable_environment_identity(identity_env):
             raise ValueError("Checkpoint physics identity differs; no evaluation sampling started")
         actual_seed, t_env = int(cfg["seed"]), int(progress["t_env"])
         if cfg.get("method") != method or (seed is not None and int(seed) != actual_seed):
@@ -159,16 +169,16 @@ def _evaluate(method, checkpoint, *, output=None, run=None, seed=None, device="c
         selected = tuple(int(d) for d in depths) if depths is not None else ()
         if depths is not None and (not selected or len(set(selected)) != len(selected) or min(selected) < 1 or max(selected) > 6):
             raise ValueError("Explicit depth selection must be a distinct subset of R1..R6")
-        jobs = final_jobs(t_env, confirmation=confirmation)
+        jobs = final_jobs(t_env, confirmation=confirmation, experiment_arm=actual_arm)
         if selected:
             jobs = [dict(job, phase="depth_eval", cycle_depth=d,
                          checkpoint=checkpoint_tag("final", t_env) + f"/R{d}", arm="depth")
-                    for d in selected for job in final_jobs(t_env)]
+                    for d in selected for job in final_jobs(t_env, experiment_arm=actual_arm)]
         for job in jobs:
             job.update(checkpoint_id=identity, protocol=protocol)
-        existing = read_records(output, "episodes", run=run, method=method, seed=actual_seed, env="had")
+        existing = read_records(output, "episodes", run=run, method=method, seed=actual_seed, env="had", experiment_arm=actual_arm)
         def key(row):
-            return row.get("phase"), row.get("eval_point"), config_key(row["config"]), int(row["episode_seed"]), row.get("checkpoint")
+            return row.get("experiment_arm"), row.get("phase"), row.get("eval_point"), config_key(row["config"]), int(row["episode_seed"]), row.get("checkpoint")
         wanted = {key(job) for job in jobs}
         retained = {key(r): r for r in existing if str(r.get("checkpoint_id")) == identity and key(r) in wanted}
         compatible = [row for row in retained.values() if row.get("protocol") == protocol]
@@ -176,11 +186,11 @@ def _evaluate(method, checkpoint, *, output=None, run=None, seed=None, device="c
         total, completed = len(jobs), len(jobs) - len(pending)
         sum_d = sum(float(row["D"]) for row in compatible)
         phase = "depth_eval" if selected else "confirmation" if confirmation else "final_eval"
-        logger = ExperimentLogger(output, method, actual_seed, run, env="had")
+        logger = ExperimentLogger(output, method, actual_seed, run, env="had", experiment_arm=actual_arm)
         started, initial, last_publish = time.monotonic(), completed, 0.
         def publish(status):
             elapsed = time.monotonic() - started
-            row = dict(phase=phase, status=status, method=method, seed=actual_seed,
+            row = dict(phase=phase, status=status, method=method, seed=actual_seed, experiment_arm=actual_arm,
                        t_env=t_env, budget_steps=int(cfg.get("t_max", t_env)), completed=completed,
                        total=total, checkpoint_id=identity, checkpoint=str(checkpoint),
                        remaining_seconds=(0. if completed == total else (total - completed) * elapsed / (completed - initial) if completed > initial else None),
@@ -203,6 +213,10 @@ def _evaluate(method, checkpoint, *, output=None, run=None, seed=None, device="c
             env_args = dict(cfg.get("env_args") or {})
             for key in ("seed", "scale", "config", "worker_id"):
                 env_args.pop(key, None)
+            env_args.setdefault("gamma", float(cfg["gamma"]))
+            for key in ("shaping_coef", "shaping_range", "reward_mode", "friendly_penalty", "pool_slots"):
+                if cfg.get(key) is not None:
+                    env_args[key] = cfg[key]
             env_args.update(pad="eval", diagnostics=True, retain_trajectory=False,
                             max_steps=int(cfg.get("episode_limit", 100)))
             environment = HADEntityEnv(seed=actual_seed, **env_args)
@@ -213,7 +227,7 @@ def _evaluate(method, checkpoint, *, output=None, run=None, seed=None, device="c
                     raise ValueError(f"Frozen evaluation {key} differs from the checkpoint")
             expected_parameters = cfg.get("environment_parameters")
             actual_parameters = environment.parameter_snapshot()
-            if expected_parameters is None or json.dumps(expected_parameters, sort_keys=True) != json.dumps(actual_parameters, sort_keys=True):
+            if expected_parameters is None or stable_environment_identity(expected_parameters) != stable_environment_identity(actual_parameters):
                 environment.close()
                 raise ValueError("Frozen evaluation effective parameters differ from the checkpoint")
         else:
@@ -269,15 +283,15 @@ def _evaluate(method, checkpoint, *, output=None, run=None, seed=None, device="c
                 environment.close()
         return dict(status="complete", completed=completed, total=total)
 
-def evaluate_checkpoint(method, checkpoint, *, output=None, run=None, seed=None, device="cpu", on_progress=None, stop_requested=None, confirmation=False):
+def evaluate_checkpoint(method, checkpoint, *, output=None, run=None, seed=None, device="cpu", on_progress=None, stop_requested=None, confirmation=False, experiment_arm=None):
     return _evaluate(method, checkpoint, output=output, run=run, seed=seed, device=device,
-                     on_progress=on_progress, stop_requested=stop_requested, confirmation=confirmation)
+                     on_progress=on_progress, stop_requested=stop_requested, confirmation=confirmation, experiment_arm=experiment_arm)
 
-def evaluate_depth_sweep(method, checkpoint, *, output=None, run=None, seed=None, device="cpu", on_progress=None, stop_requested=None, depths=DEPTH_SWEEP_DEPTHS):
+def evaluate_depth_sweep(method, checkpoint, *, output=None, run=None, seed=None, device="cpu", on_progress=None, stop_requested=None, depths=DEPTH_SWEEP_DEPTHS, experiment_arm=None):
     if method not in CYCLE_SERIES_METHODS:
         raise ValueError(f"{method} has no cycle-depth interface")
     return _evaluate(method, checkpoint, output=output, run=run, seed=seed, device=device,
-                     on_progress=on_progress, stop_requested=stop_requested, depths=depths)
+                     on_progress=on_progress, stop_requested=stop_requested, depths=depths, experiment_arm=experiment_arm)
 
 def compute_nds(rho, rho_random, rho_rule):
     denominator = float(rho_random) - float(rho_rule)
