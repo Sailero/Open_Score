@@ -1,0 +1,44 @@
+# ALMA 81bd5c475972b982ce470b1ed78154ec39d236da qmix_atten.yaml.
+runner: parallel
+batch_size_run: 8
+buffer_size: 5000
+batch_size: 32
+training_iters: 8
+target_update_interval: 200
+action_selector: epsilon_greedy
+epsilon_start: 1.0
+epsilon_finish: 0.05
+epsilon_anneal_time: 100000
+agent_output_type: q
+double_q: true
+lr: 0.0005
+gamma: 0.99
+rnn_hidden_dim: 64
+encoder_chunk_size: 1024
+encoder_skip_dead: true
+attn_embed_dim: 128
+attn_n_heads: 4
+mixing_embed_dim: 32
+mixer_chunk_size: 256
+mixer_skip_unfilled: true
+hypernet_embed: 128
+softmax_mixing_weights: true
+obs_agent_id: false
+obs_last_action: false
+popart: false
+max_traj_len: -1
+t_max: 0
+name: b2_qmix_atten
+mac: entity_mac
+learner: q_learner
+mixer: flex_qmix
+encoder: attention
+entity_last_action: true
+lmbda: 0.5
+agent:
+  # See refil.yaml: the GRU head is enabled for all three basic methods.
+  recurrent: true
+  entity_scheme: true
+  imagine: false
+  subtask_cond: null
+

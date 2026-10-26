@@ -1,0 +1,67 @@
+# Experiment data (keep reports and figures)
+*.csv
+*.tsv
+*.parquet
+*.jsonl
+*.jsonl.gz
+*.gz
+*.zip
+*.tar
+*.7z
+
+# Model weights and arrays
+*.pt
+*.pth
+*.ckpt
+*.pkl
+*.npy
+*.npz
+*.h5
+*.log
+
+# Python / packaging
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+
+# Runtime junk
+*.lock
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Atomic checkpoint and experiment control files
+*.pt.pending
+*.pt.tmp
+stop.request
+eval.stop.request
+
+# Local diagnostic trajectories and process handles
+*.json.gz
+*.pid
+
+# Per-run runtime state (rewritten continuously; not results)
+resource.json
+resource_retry.json
+failure.json
+scheduler.*.json
+queue.*.json
+backup/
+*.aux
+*.bbl
+*.blg
+*.out
+*.toc
+*.xdv
+*.synctex.gz
+evaluation.json
+
+# Full timing calls stay local; publish small configs, aggregates and figures.
+Open-SCORE/outputs/main/had/decision_timing.json

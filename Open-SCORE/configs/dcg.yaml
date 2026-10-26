@@ -1,0 +1,52 @@
+# DCG official 4de100cddf7c3a7035cd89a47d7c1b8a878e7428 defaults retained.
+# Runner parallelism and entity attention are HAD migration choices.
+name: dcg
+mac: dcg_mac
+learner: dcg_learner
+mixer: null
+encoder: attention
+runner: parallel
+batch_size_run: 8
+# Official DCG pairs a 500-episode buffer with one update per collection. The
+# cross-scale budget is fixed in environment steps, so updates per step are a
+# shared control: all six methods use 8 iters over a 5000-episode buffer, which
+# leaves the coordination graph as the only difference from B2.
+buffer_size: 5000
+batch_size: 32
+training_iters: 8
+target_update_interval: 200
+action_selector: epsilon_greedy
+epsilon_start: 1.0
+epsilon_finish: 0.05
+epsilon_anneal_time: 50000
+agent_output_type: q
+double_q: true
+lr: 0.0005
+gamma: 0.99
+rnn_hidden_dim: 64
+encoder_chunk_size: 1024
+encoder_skip_dead: true
+attn_embed_dim: 128
+attn_n_heads: 4
+mixing_embed_dim: 32
+hypernet_embed: 128
+entity_last_action: true
+obs_agent_id: false
+obs_last_action: false
+cg_edges: full
+cg_utilities_hidden_dim: null
+cg_payoffs_hidden_dim: null
+cg_payoff_rank: null
+duelling: false
+msg_anytime: true
+msg_iterations: 8
+msg_normalized: true
+popart: false
+max_traj_len: -1
+t_max: 0
+agent:
+  recurrent: true
+  entity_scheme: true
+  imagine: false
+  subtask_cond: null
+
