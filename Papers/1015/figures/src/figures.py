@@ -176,17 +176,19 @@ SWEEPS = (
     ("c", "Larger teams, $K$ = 2", ("4-2", "5-2", "6-2", "8-2", "10-2", "15-2", "20-2", "25-2", "30-2", "40-2",
                                      "50-2"), (4, 5, 6, 8, 10, 15, 20, 25, 30, 40, 50),
      r"Aircraft per side $N$", (4, 10, 20, 50), (5, 6, 8, 15, 25, 30, 40), np.sqrt(150)),
-    ("d", "More targets, $N$ = 30", ("30-2", "30-4", "30-6", "30-9", "30-12"), (2, 4, 6, 9, 12),
-     r"Targets $K$", (2, 4, 6, 12), (9,), None),
 )
 
 
-def fig_generalization(data):
-    fig, add = canvas(PAGE, 1.84)
-    bottom, width, height = 0.32, 1.40, 1.10
-    axes = [add(left, bottom, width, height) for left in (0.40, 2.35, 3.99, 5.63)]
+def fig_generalization(data, alternative=False):
+    if alternative:
+        fig, add = canvas(PAGE, 4.90)
+        axes = [add(left, bottom, 2.65, 1.52)
+                for left, bottom in ((0.45, 2.93), (4.10, 2.93), (0.45, 0.58), (4.10, 0.58))]
+    else:
+        fig, add = canvas(PAGE, 1.84)
+        axes = [add(left, 0.32, 1.40, 1.10) for left in (0.40, 2.35, 3.99, 5.63)]
     ticks = (0.3, 1, 3, 10, 30)
-    for ax in axes[1:]:
+    for ax in axes[1:3] if alternative else axes[1:]:
         if ax is not axes[1]:
             ax.sharey(axes[1])
         log_y(ax, 0.15, 30, ticks)
@@ -211,7 +213,7 @@ def fig_generalization(data):
     ax.set_ylabel(r"Validation damage $D$")
     title(ax, "a", "Training on ID scales")
 
-    for ax, (letter, name, cfgs, xs, xlabel, major, minor, train) in zip(axes[1:], SWEEPS):
+    for ax, (letter, name, cfgs, xs, xlabel, major, minor, train) in zip(axes[1:3], SWEEPS):
         if train:
             ax.axvspan(0.1, train, color=SHADE, lw=0, zorder=0)
             ax.text(xs[0] / 1.07, 0.94, "training", transform=ax.get_xaxis_transform(),
@@ -221,16 +223,69 @@ def fig_generalization(data):
         log_x(ax, major, minor)
         ax.set_xlim(xs[0] / 1.12, xs[-1] * 1.12)
         ax.set_xlabel(xlabel)
-        ax.tick_params(axis="y", labelleft=ax is axes[1])
-        if ax is axes[1]:
+        ax.tick_params(axis="y", labelleft=alternative or ax is axes[1])
+        if alternative or ax is axes[1]:
             ax.set_ylabel(r"Target damage $D$")
         title(ax, letter, name)
+
+    ax = axes[3]
+    joint = data["groups"]["Joint-OOD"]
+    xs = np.arange(len(joint))
+    if alternative:
+        means = np.array([[data["configs"][m][c]["mean"] for c in joint] for m in ORDER])
+        im = ax.imshow(means, aspect="auto", cmap="Blues", vmin=0, vmax=20, interpolation="nearest")
+        for i, method in enumerate(ORDER):
+            for j, cfg in enumerate(joint):
+                cell = data["configs"][method][cfg]
+                label = f"{cell['mean']:.1f}"
+                if method != "rule":
+                    label += f"\n±{cell['sd']:.1f}"
+                ax.text(j, i, label, ha="center", va="center", fontsize=5.8,
+                        color="white" if cell["mean"] >= 11 else COLORS[LEAF] if method == LEAF else INK,
+                        fontweight="bold" if method == LEAF else "normal", linespacing=1.0)
+        ax.set_yticks(range(len(ORDER)), [NAMES[m] for m in ORDER], fontsize=6.5)
+        ax.get_yticklabels()[-1].set_color(COLORS[LEAF])
+        ax.get_yticklabels()[-1].set_fontweight("bold")
+        ax.tick_params(axis="both", length=0)
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+        cax = ax.inset_axes([1.035, 0, 0.025, 1])
+        cb = fig.colorbar(im, cax=cax, ticks=(0, 5, 10, 15, 20))
+        cb.outline.set_visible(False)
+        cb.ax.tick_params(labelsize=6, length=2, pad=2)
+        cb.ax.set_title(r"$D$", fontsize=7, pad=4)
+        ax.set_xlabel(r"Targets $K$", labelpad=16)
+    else:
+        ax.set_xlim(-0.45, len(joint) - 0.55)
+        ax.tick_params(axis="y", labelleft=False)
+        ax.set_xlabel(r"Targets $K$")
+    # Team sizes label the regions; ticks show only the target count.
+    for n in dict.fromkeys(c.split("-")[0] for c in joint):
+        indices = [i for i, c in enumerate(joint) if c.split("-")[0] == n]
+        if not alternative:
+            for method in ORDER:
+                curve(ax, data, method, [joint[i] for i in indices], xs[indices])
+        if indices[-1] < len(joint) - 1:
+            ax.axvline(indices[-1] + 0.5, color="white" if alternative else GRID,
+                       lw=1.2 if alternative else 0.5, zorder=3 if alternative else 0)
+        ax.text(np.mean(xs[indices]), -0.20 if alternative else 0.08, rf"$N={n}$",
+                transform=ax.get_xaxis_transform(), ha="center", va="center", fontsize=6.5,
+                color=SPINE)
+    ax.set_xticks(xs, [c.split("-")[1] for c in joint])
+    title(ax, "d", "Joint OOD")
 
     handles = [Line2D([], [], color=COLORS[m], lw=1.8 if m == LEAF else 1.0, ls=DASH if m == "rule" else "-",
                       label=NAMES[m]) for m in ORDER]
     fig.legend(handles=handles, loc="upper center", ncol=8, bbox_to_anchor=(0.5, 1.0), columnspacing=1.8,
                handlelength=2.0)
-    return save(fig, "exp_generalization")
+    if alternative:
+        fig.text(0.50, 0.005, "Joint OOD: mean ± seed SD; lower damage is better. Rule has no training seed.",
+                 ha="center", va="bottom", fontsize=6.2, color=SPINE)
+    return save(fig, "backfig/exp_generalization_alternative" if alternative else "exp_generalization")
+
+
+def fig_generalization_alternative(data):
+    return fig_generalization(data, alternative=True)
 
 
 # ---------------------------------------------------------------- Fig. 5, organization versus size
@@ -449,7 +504,8 @@ FIGURES = {
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    renderers = {**FIGURES, "depth-preview": fig_depth_preview}
+    renderers = {**FIGURES, "depth-preview": fig_depth_preview,
+                 "generalization-alternative": fig_generalization_alternative}
     parser.add_argument("names", nargs="*", help=f"subset of {', '.join(renderers)}")
     parser.add_argument("--rebuild", action="store_true", help="recompute statistics from the saved records")
     args = parser.parse_args()

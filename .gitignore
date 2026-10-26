@@ -50,7 +50,28 @@ failure.json
 scheduler.*.json
 queue.*.json
 Open-SCORE/outputs/*/smacv2/scenes/manifest.json
-backup/
+# Historical raw data and models remain local; publish the sole report,
+# compact provenance/result index and necessary existing result figures.
+backup/*
+!backup/README.md
+!backup/experiment.json
+!backup/had/
+backup/had/*
+!backup/had/extra_variants/
+backup/had/extra_variants/*
+!backup/had/extra_variants/figures/
+backup/had/extra_variants/figures/*
+!backup/had/extra_variants/figures/*.png
+!backup/had/historical_protocols/
+backup/had/historical_protocols/*
+!backup/had/historical_protocols/figures/
+backup/had/historical_protocols/figures/*
+!backup/had/historical_protocols/figures/*.png
+!backup/smacv2/
+backup/smacv2/*
+!backup/smacv2/figures/
+backup/smacv2/figures/*
+!backup/smacv2/figures/*.png
 *.aux
 *.bbl
 *.blg

@@ -828,7 +828,7 @@
     "main1013_base": "Current SPECTra/TransfQMix baseline comparisons use 19-dimensional entity inputs and common HAD task/sampling controls. Author-specific Adam, TD(lambda=0.6), half-MSE and model structures remain. New formal/confirmation rows record damage only; missing safety metrics are not copied from old models."
   },
   "excluded_configurations": [],
-  "archive_metadata": "Open-SCORE/outputs/backup/experiment.json",
+  "archive_metadata": "backup/experiment.json",
   "decision_timing20": {
     "schema": "leaf-decision-latency-20episodes-v1",
     "run": "decision_timing20",
@@ -1027,5 +1027,76 @@
   },
   "report": "docs/LEAF_主实验结果分析.md",
   "statistics": "had/aggregates.json",
-  "model_layout": "had/<method>/models/seed_<seed>"
+  "model_layout": "had/<method>/models/seed_<seed>",
+  "repository_preservation": {
+    "schema": "research-git-local-storage-v1",
+    "recorded_canonical_workspace": "E:/Code/Open_Score",
+    "path_base": "Repository root; raw data/models remain in the canonical local workspace, not temporary Git worktrees. Relative paths can move with the matching local data.",
+    "branch_roles": {
+      "main": "Current code and all retained result reports/figures/small configurations/aggregates/provenance, including historical and stopped SkyHAD result metadata.",
+      "experiment/leaf-skyhad-fixedwing-seed0": "SkyHAD fixed-wing seed0 runtime with local resumable progress; currently stopped.",
+      "pure": "Minimal development starting point with selected LEAF, seven design comparisons and Rule/Random reports, figures and small aggregates; excludes papers, raw records and model weights."
+    },
+    "git_includes": [
+      "code",
+      "reports",
+      "necessary figures",
+      "small configuration",
+      "aggregates",
+      "provenance indices"
+    ],
+    "local_only": [
+      "raw CSV/JSONL and compressed per-episode data",
+      "final/best weights",
+      "resume checkpoints and runtime state",
+      "backup/summary.json and large historical data"
+    ],
+    "local_roots": [
+      "Open-SCORE/outputs/main",
+      "Open-SCORE/outputs/main_Sky",
+      "backup"
+    ],
+    "backup_notice": "Git publication is not backup of raw data, weights or resume state. Source commit IDs record provenance and do not promise permanent recovery of deleted refs.",
+    "source_refs": [
+      {
+        "former_branch": "leaf/main1009-dual-route",
+        "commit": "608d9c2a12fcb96abf623c6e9de57639b623f7bc",
+        "retained": "Completed source results already consolidated in main metadata, aggregates, main report and figures; decision_timing20 is 280 environment episodes, decision_timing_fixed100 is 1400 measured calls without environment episodes. No old runtime/directory copies restored."
+      },
+      {
+        "former_branch": "experiment/main1013",
+        "commit": "b42a23899329eebdda832c21c21dc645ba534742",
+        "retained": "Memory-placement implementation and pending protocol only; no new completed training/evaluation outputs. Runtime not merged into main."
+      },
+      {
+        "former_branch": "remote_train",
+        "commit": "1fa1fa6b8b0f92482f7a8729ada85b06adc3b475",
+        "import_commit": "f4ffe5b20fe14c3cde80d59b5ea3fe53de3b58ed",
+        "retained": "Imported main0921 manifest, 13 compressed CSV slices and 21 final/config pairs are reused prior baseline sources mapped by source_version, checkpoint/artifact_map into main and backup. No duplicate run, weights or source directory restored."
+      },
+      {
+        "former_reference": "stash/index",
+        "commit": "5b9fffdaae686251c8680fbbafd4cddcb12ea3d2",
+        "retained": "Unique early main_v1/v2/v3/v4 and alma_probe_v3 result tables, small configuration snapshots and selected figures consolidated into backup/README.md and backup/experiment.json. Already archived main report tables reused. Logs, main.zip and duplicate reports not restored."
+      },
+      {
+        "branch": "experiment/leaf-skyhad-fixedwing-seed0",
+        "snapshot_commit": "fd8e1de55f9dada95139461a1dbe57315fbefa01",
+        "result_metadata_commit": "459e0521bcbe2257a0294eb974423923bf58e2c4",
+        "retained": "Shared Papers changes plus main_Sky report/config/experiment/training figure. Stopped at 243571/1000000 steps, 12/50 validation points; no final evaluation or qualified final checkpoint. Runtime stays on experiment branch."
+      }
+    ],
+    "historical_index": "backup/experiment.json",
+    "skyhad_run": {
+      "report": "Open-SCORE/outputs/main_Sky/报告.md",
+      "status": "stopped",
+      "physical_steps": 243571,
+      "budget_steps": 1000000,
+      "validation_points": 12,
+      "planned_validation_points": 50,
+      "validation_episodes": 1200,
+      "final_evaluation": "not_run",
+      "qualified_final_checkpoint": false
+    }
+  }
 }

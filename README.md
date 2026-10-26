@@ -2,15 +2,18 @@
 
 **LEAF**以攻击者、目标和队友构成的威胁情境支持多目标防护。当前主工作区保留LEAF、七个设计比较、七个学习基线及Rule/Random的HAD结果；同一冻结策略的实体规模外推、执行深度、机制、时延和受控探针在一份[主实验报告](docs/LEAF_主实验结果分析.md)中解释。
 
+仓库保留三个长期分支：`main` 归并代码、全部已有研究结果的报告、必要图表、配置、聚合统计和来源索引；`experiment/leaf-skyhad-fixedwing-seed0` 保留固定翼实验运行实现；`pure` 提供精简开发起点，保留所选 LEAF、七个设计比较及 Rule/Random 的报告、图表和小型聚合结果，排除论文、原始数据和模型。旧实验分支中的独有成果已按来源归并，旧提交号用于追溯来源，不表示旧目录仍需独立保留。
+
 | 入口 | 内容 |
 |---|---|
 | [主实验结果分析](docs/LEAF_主实验结果分析.md) | 当前正式比较、学习验证、设计比较、正常/冻结机制、R1–R6、独立确认、时延与探针 |
 | [方法与变体说明](docs/LEAF_方法与变体说明.md) | 当前前向、训练/执行深度及保存设计比较的query条件 |
 | [Baseline与Rule实现说明](docs/LEAF_Baseline与Rule实现说明.md) | 七基线、Rule/Random、共同对手、优化设置与实现来源 |
 | [HAD环境与问题建模](docs/HAD_环境与问题建模.md) | 当前正式数据的实体接口、物理与奖励协议 |
-| [论文包](Papers/1014/README.md) | [main.tex](Papers/1014/main.tex)、[PDF](Papers/1014/main.pdf)和可编辑示意图 |
+| [当前论文](Papers/1015/main.tex) | [PDF](Papers/1015/main.pdf)、[通用排版 PDF](Papers/1015/main_generic.pdf)及其共享实验图片；[早期论文包](Papers/1014/README.md)保留原稿来源 |
 | [主数据](Open-SCORE/outputs/main) | 同类合并数据、必要final/best/config及共享实验图 |
 | [归档说明](backup/README.md) | 与当前研究无关但独有的额外结构、旧协议、10维基线、SMACv2及其他结果 |
+| [SkyHAD 固定翼实验报告](Open-SCORE/outputs/main_Sky/报告.md) | seed0 已停止：243,571 / 1M 物理步、12 / 50 验证点，未运行正式终评，无完成预算的 final |
 
 内部键`regir_nomem`用于加载LEAF已有权重；它表示当前query不读历史hidden，时序GRU与上一动作仍保留。七个历史设计比较的query条件不同，不能统称单因素消融。数据按来源、run、方法、种子、协议与实验臂区分，展示与目录不按日期版本组织。
 
@@ -23,6 +26,10 @@ LEAF、七个设计比较及当前基线的权重位于`main/had/<方法>/models
 正常与冻结机制原始记录统一在`had/regir_nomem/mechanisms/results.json.gz`，各数据池保留自身协议、配对和复用身份；展示轨迹为`had/trajectories.json.gz`。R1–R6补评有完整432单元，R4复用21,600场，新增108,000场的逐场JSONL未提供；不以现存R4逐场记录替代缺失出口数据。
 
 八组实验图共同保存在`main/had/figures/`，每组PNG供报告阅读、PDF供论文排版。论文实验图片直接引用这一份来源。Git发布代码、论文、报告、聚合统计与图片；原始逐局数据、模型及恢复进度保留本地。
+
+完整本地数据按仓库相对路径存放在 `Open-SCORE/outputs/main/`、`Open-SCORE/outputs/main_Sky/` 和 `backup/`；当前原工作区为 `E:/Code/Open_Score`，临时 worktree 不复制大数据。路径可随完整数据迁移，文档中的数据/权重链接用于完整本地工作区。Git 不包含原始 CSV/JSONL、模型权重、恢复进度或大型 `backup/summary.json`，提交和推送不构成这些内容的备份。小型来源、模型身份与历史结果表见 [归档索引](backup/experiment.json)，分支来源与存储范围见 [主实验登记](Open-SCORE/outputs/main/experiment.json)的 `repository_preservation`。
+
+固定翼使用独立的 SkyHAD 4.3、12维实体特征和27动作协议，已有1,200局训练内验证。其停止状态和恢复进度不属于已完成的HAD 19维基线比较；继续运行须使用实验分支的对应入口。
 
 ## 环境与安装
 

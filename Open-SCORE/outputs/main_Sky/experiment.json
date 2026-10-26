@@ -1,0 +1,272 @@
+{
+  "schema": "had-current-experiment-v1",
+  "profile": "main_Sky",
+  "main_method": "regir_nomem",
+  "main_method_display": "LEAF",
+  "seeds": [
+    0
+  ],
+  "budget_steps": 1000000,
+  "official_checkpoint": "final",
+  "env_identity": {
+    "had_core_version": "skyhad-4.3.0",
+    "physics_protocol": "skyhad-4.3",
+    "library_version": "4.3.0",
+    "had_module": "E:\\Code\\SkyHAD\\had_env\\__init__.py"
+  },
+  "env_args": {
+    "env_agent_type": "UAV_fixedwing",
+    "env_agent_action_type": "acceleration",
+    "spatial_dim": 3,
+    "task_mode": "damage",
+    "train_dist": "mixed_le10",
+    "max_steps": 100,
+    "blue_upper": "reactive",
+    "blue_lower": "rush",
+    "target_initialization": "random"
+  },
+  "feature_spec": {
+    "entity_shape": 12,
+    "n_actions": 27,
+    "feature_names": [
+      "x",
+      "y",
+      "vx",
+      "vy",
+      "alive",
+      "health",
+      "target_damage_share",
+      "is_red",
+      "is_blue",
+      "is_target",
+      "z",
+      "vz"
+    ],
+    "spatial_dim": 3,
+    "had_position_indices": [
+      0,
+      1,
+      10
+    ],
+    "had_velocity_indices": [
+      2,
+      3,
+      11
+    ],
+    "had_position_scale": 1000.0,
+    "had_velocity_scale": 30.0
+  },
+  "environment_parameters": {
+    "core_version": "skyhad-4.3.0",
+    "physics_protocol": "skyhad-4.3",
+    "env_agent_type": "UAV_fixedwing",
+    "env_agent_action_type": "acceleration",
+    "spatial_dim": 3,
+    "task_mode": "damage",
+    "scene_scale": 0.4,
+    "effective_config": {
+      "env_agent_type": "UAV_fixedwing",
+      "env_agent_action_type": "acceleration",
+      "spatial_dim": 3,
+      "task_mode": "damage",
+      "world_bounds": [
+        [
+          -1000.0,
+          1000.0
+        ],
+        [
+          -1000.0,
+          1000.0
+        ],
+        [
+          0.0,
+          1000.0
+        ]
+      ],
+      "target_region": [
+        [
+          -920.0,
+          -760.0
+        ],
+        [
+          -480.0,
+          480.0
+        ],
+        [
+          200.0,
+          600.0
+        ]
+      ],
+      "red_spawn_annulus": [
+        320.0,
+        880.0
+      ],
+      "blue_spawn_x": [
+        0.0,
+        1000.0
+      ],
+      "spawn_altitude": [
+        80.0,
+        600.0
+      ],
+      "plane_altitude": 40.0,
+      "fire_range": 120.0,
+      "scene_scale": 0.4
+    },
+    "model_preset": {
+      "scene_scale": 0.4,
+      "reference_speed": 30.0,
+      "acceleration_limit": 5.0,
+      "min_speed": 18.0,
+      "max_speed": 30.0
+    },
+    "attack_distance": [
+      120.0,
+      240.0
+    ],
+    "fire_range": 120.0,
+    "collision_distance": 8.0,
+    "interval": 1.0,
+    "target_health": 2.0,
+    "target_initialization": "random",
+    "max_steps": 100,
+    "command_interval": 5,
+    "feature_spec": {
+      "entity_shape": 12,
+      "n_actions": 27,
+      "spatial_dim": 3,
+      "feature_names": [
+        "x",
+        "y",
+        "vx",
+        "vy",
+        "alive",
+        "health",
+        "target_damage_share",
+        "is_red",
+        "is_blue",
+        "is_target",
+        "z",
+        "vz"
+      ],
+      "had_position_indices": [
+        0,
+        1,
+        10
+      ],
+      "had_velocity_indices": [
+        2,
+        3,
+        11
+      ],
+      "had_position_scale": 1000.0,
+      "had_velocity_scale": 30.0
+    }
+  },
+  "effective_config": {
+    "env_agent_type": "UAV_fixedwing",
+    "env_agent_action_type": "acceleration",
+    "spatial_dim": 3,
+    "task_mode": "damage",
+    "world_bounds": [
+      [
+        -1000.0,
+        1000.0
+      ],
+      [
+        -1000.0,
+        1000.0
+      ],
+      [
+        0.0,
+        1000.0
+      ]
+    ],
+    "target_region": [
+      [
+        -920.0,
+        -760.0
+      ],
+      [
+        -480.0,
+        480.0
+      ],
+      [
+        200.0,
+        600.0
+      ]
+    ],
+    "red_spawn_annulus": [
+      320.0,
+      880.0
+    ],
+    "blue_spawn_x": [
+      0.0,
+      1000.0
+    ],
+    "spawn_altitude": [
+      80.0,
+      600.0
+    ],
+    "plane_altitude": 40.0,
+    "fire_range": 120.0,
+    "scene_scale": 0.4
+  },
+  "train_N": [
+    4,
+    6,
+    8,
+    10
+  ],
+  "train_K": [
+    1,
+    2,
+    3
+  ],
+  "validation_configs": [
+    [
+      4,
+      4,
+      2
+    ],
+    [
+      6,
+      6,
+      2
+    ],
+    [
+      8,
+      8,
+      2
+    ],
+    [
+      10,
+      10,
+      3
+    ]
+  ],
+  "validation_points": 50,
+  "validation_episodes_per_config": 25,
+  "validation_scenes": [
+    9500,
+    9599
+  ],
+  "final_episodes_per_config": 300,
+  "final_scenes": [
+    9000,
+    9299
+  ],
+  "saved_run_status": {
+    "report": "Open-SCORE/outputs/main_Sky/报告.md",
+    "status": "stopped",
+    "physical_steps": 243571,
+    "budget_steps": 1000000,
+    "validation_points": 12,
+    "planned_validation_points": 50,
+    "validation_episodes": 1200,
+    "final_evaluation": "not_run",
+    "qualified_final_checkpoint": false
+  },
+  "runtime_branch": "experiment/leaf-skyhad-fixedwing-seed0",
+  "result_source_commit": "459e0521bcbe2257a0294eb974423923bf58e2c4"
+}
