@@ -1,0 +1,793 @@
+{
+  "training": {
+    "status": "complete",
+    "passed": true,
+    "total": 8,
+    "completed": 8,
+    "cases": [
+      {
+        "method": "regir_nomem",
+        "public_method": "regir_nomem",
+        "seed": 0,
+        "status": "passed",
+        "passed": true,
+        "checkpoint": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\outputs\\smoke\\regir_nomem\\models\\seed_0\\resume.pt",
+        "t_env": 205,
+        "updates": 2,
+        "sessions": [
+          {
+            "initial_t_env": 0,
+            "initial_updates": 0,
+            "final_t_env": 97,
+            "final_updates": 1,
+            "session_updates": 1,
+            "parameter_changes": {
+              "main": 0.0047529335133731365
+            },
+            "optimizer_steps_before": {
+              "optimizer": 0
+            },
+            "optimizer_steps_after": {
+              "optimizer": 1
+            },
+            "finite_training": true,
+            "replay_episodes": 2,
+            "restored": false
+          },
+          {
+            "initial_t_env": 97,
+            "initial_updates": 1,
+            "final_t_env": 205,
+            "final_updates": 2,
+            "session_updates": 1,
+            "parameter_changes": {
+              "main": 0.004813566338270903
+            },
+            "optimizer_steps_before": {
+              "optimizer": 1
+            },
+            "optimizer_steps_after": {
+              "optimizer": 2
+            },
+            "finite_training": true,
+            "replay_episodes": 4,
+            "restored": true
+          }
+        ],
+        "problems": []
+      },
+      {
+        "method": "refil",
+        "public_method": "refil",
+        "seed": 0,
+        "status": "passed",
+        "passed": true,
+        "checkpoint": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\outputs\\smoke\\refil\\models\\seed_0\\resume.pt",
+        "t_env": 164,
+        "updates": 2,
+        "sessions": [
+          {
+            "initial_t_env": 0,
+            "initial_updates": 0,
+            "final_t_env": 73,
+            "final_updates": 1,
+            "session_updates": 1,
+            "parameter_changes": {
+              "main": 0.004852764308452606
+            },
+            "optimizer_steps_before": {
+              "optimizer": 0
+            },
+            "optimizer_steps_after": {
+              "optimizer": 1
+            },
+            "finite_training": true,
+            "replay_episodes": 2,
+            "restored": false
+          },
+          {
+            "initial_t_env": 73,
+            "initial_updates": 1,
+            "final_t_env": 164,
+            "final_updates": 2,
+            "session_updates": 1,
+            "parameter_changes": {
+              "main": 0.004838570952415466
+            },
+            "optimizer_steps_before": {
+              "optimizer": 1
+            },
+            "optimizer_steps_after": {
+              "optimizer": 2
+            },
+            "finite_training": true,
+            "replay_episodes": 4,
+            "restored": true
+          }
+        ],
+        "problems": []
+      },
+      {
+        "method": "refil_matched",
+        "public_method": "refil_matched",
+        "seed": 0,
+        "status": "passed",
+        "passed": true,
+        "checkpoint": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\outputs\\smoke\\refil_matched\\models\\seed_0\\resume.pt",
+        "t_env": 164,
+        "updates": 2,
+        "sessions": [
+          {
+            "initial_t_env": 0,
+            "initial_updates": 0,
+            "final_t_env": 73,
+            "final_updates": 1,
+            "session_updates": 1,
+            "parameter_changes": {
+              "main": 0.004849456250667572
+            },
+            "optimizer_steps_before": {
+              "optimizer": 0
+            },
+            "optimizer_steps_after": {
+              "optimizer": 1
+            },
+            "finite_training": true,
+            "replay_episodes": 2,
+            "restored": false
+          },
+          {
+            "initial_t_env": 73,
+            "initial_updates": 1,
+            "final_t_env": 164,
+            "final_updates": 2,
+            "session_updates": 1,
+            "parameter_changes": {
+              "main": 0.00481618195772171
+            },
+            "optimizer_steps_before": {
+              "optimizer": 1
+            },
+            "optimizer_steps_after": {
+              "optimizer": 2
+            },
+            "finite_training": true,
+            "replay_episodes": 4,
+            "restored": true
+          }
+        ],
+        "problems": []
+      },
+      {
+        "method": "b2_qmix_atten",
+        "public_method": "qmix",
+        "seed": 0,
+        "status": "passed",
+        "passed": true,
+        "checkpoint": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\outputs\\smoke\\b2_qmix_atten\\models\\seed_0\\resume.pt",
+        "t_env": 177,
+        "updates": 2,
+        "sessions": [
+          {
+            "initial_t_env": 0,
+            "initial_updates": 0,
+            "final_t_env": 73,
+            "final_updates": 1,
+            "session_updates": 1,
+            "parameter_changes": {
+              "main": 0.004852600395679474
+            },
+            "optimizer_steps_before": {
+              "optimizer": 0
+            },
+            "optimizer_steps_after": {
+              "optimizer": 1
+            },
+            "finite_training": true,
+            "replay_episodes": 2,
+            "restored": false
+          },
+          {
+            "initial_t_env": 73,
+            "initial_updates": 1,
+            "final_t_env": 177,
+            "final_updates": 2,
+            "session_updates": 1,
+            "parameter_changes": {
+              "main": 0.0048350989818573
+            },
+            "optimizer_steps_before": {
+              "optimizer": 1
+            },
+            "optimizer_steps_after": {
+              "optimizer": 2
+            },
+            "finite_training": true,
+            "replay_episodes": 4,
+            "restored": true
+          }
+        ],
+        "problems": []
+      },
+      {
+        "method": "dcg",
+        "public_method": "dcg",
+        "seed": 0,
+        "status": "passed",
+        "passed": true,
+        "checkpoint": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\outputs\\smoke\\dcg\\models\\seed_0\\resume.pt",
+        "t_env": 177,
+        "updates": 2,
+        "sessions": [
+          {
+            "initial_t_env": 0,
+            "initial_updates": 0,
+            "final_t_env": 73,
+            "final_updates": 1,
+            "session_updates": 1,
+            "parameter_changes": {
+              "main": 0.0049828700721263885
+            },
+            "optimizer_steps_before": {
+              "optimizer": 0
+            },
+            "optimizer_steps_after": {
+              "optimizer": 1
+            },
+            "finite_training": true,
+            "replay_episodes": 2,
+            "restored": false
+          },
+          {
+            "initial_t_env": 73,
+            "initial_updates": 1,
+            "final_t_env": 177,
+            "final_updates": 2,
+            "session_updates": 1,
+            "parameter_changes": {
+              "main": 0.004823697730898857
+            },
+            "optimizer_steps_before": {
+              "optimizer": 1
+            },
+            "optimizer_steps_after": {
+              "optimizer": 2
+            },
+            "finite_training": true,
+            "replay_episodes": 4,
+            "restored": true
+          }
+        ],
+        "problems": []
+      },
+      {
+        "method": "spectra",
+        "public_method": "spectra",
+        "seed": 0,
+        "status": "passed",
+        "passed": true,
+        "checkpoint": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\outputs\\smoke\\spectra\\models\\seed_0\\resume.pt",
+        "t_env": 177,
+        "updates": 2,
+        "sessions": [
+          {
+            "initial_t_env": 0,
+            "initial_updates": 0,
+            "final_t_env": 73,
+            "final_updates": 1,
+            "session_updates": 1,
+            "parameter_changes": {
+              "main": 0.001000046730041504
+            },
+            "optimizer_steps_before": {
+              "optimizer": 0
+            },
+            "optimizer_steps_after": {
+              "optimizer": 1
+            },
+            "finite_training": true,
+            "replay_episodes": 2,
+            "restored": false
+          },
+          {
+            "initial_t_env": 73,
+            "initial_updates": 1,
+            "final_t_env": 177,
+            "final_updates": 2,
+            "session_updates": 1,
+            "parameter_changes": {
+              "main": 0.0010013580322265625
+            },
+            "optimizer_steps_before": {
+              "optimizer": 1
+            },
+            "optimizer_steps_after": {
+              "optimizer": 2
+            },
+            "finite_training": true,
+            "replay_episodes": 4,
+            "restored": true
+          }
+        ],
+        "problems": []
+      },
+      {
+        "method": "alma",
+        "public_method": "alma",
+        "seed": 0,
+        "status": "passed",
+        "passed": true,
+        "checkpoint": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\outputs\\smoke\\alma\\models\\seed_0\\resume.pt",
+        "t_env": 212,
+        "updates": 2,
+        "sessions": [
+          {
+            "initial_t_env": 0,
+            "initial_updates": 0,
+            "final_t_env": 115,
+            "final_updates": 1,
+            "session_updates": 1,
+            "parameter_changes": {
+              "main": 0.004756160080432892,
+              "allocation_actor": 0.004997429437935352,
+              "allocation_critic": 0.004991069436073303
+            },
+            "optimizer_steps_before": {
+              "optimizer": 0,
+              "alloc_pi_optimizer": 0,
+              "alloc_q_optimizer": 0
+            },
+            "optimizer_steps_after": {
+              "optimizer": 1,
+              "alloc_pi_optimizer": 1,
+              "alloc_q_optimizer": 1
+            },
+            "finite_training": true,
+            "replay_episodes": 2,
+            "restored": false
+          },
+          {
+            "initial_t_env": 115,
+            "initial_updates": 1,
+            "final_t_env": 212,
+            "final_updates": 2,
+            "session_updates": 1,
+            "parameter_changes": {
+              "main": 0.004751250147819519,
+              "allocation_actor": 0.004995808005332947,
+              "allocation_critic": 0.00494568794965744
+            },
+            "optimizer_steps_before": {
+              "optimizer": 1,
+              "alloc_pi_optimizer": 1,
+              "alloc_q_optimizer": 1
+            },
+            "optimizer_steps_after": {
+              "optimizer": 2,
+              "alloc_pi_optimizer": 2,
+              "alloc_q_optimizer": 2
+            },
+            "finite_training": true,
+            "replay_episodes": 4,
+            "restored": true
+          }
+        ],
+        "problems": []
+      },
+      {
+        "method": "transfqmix",
+        "public_method": "transfqmix",
+        "seed": 0,
+        "status": "passed",
+        "passed": true,
+        "checkpoint": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\outputs\\smoke\\transfqmix\\models\\seed_0\\resume.pt",
+        "t_env": 177,
+        "updates": 2,
+        "sessions": [
+          {
+            "initial_t_env": 0,
+            "initial_updates": 0,
+            "final_t_env": 73,
+            "final_updates": 1,
+            "session_updates": 1,
+            "parameter_changes": {
+              "main": 0.001000046730041504
+            },
+            "optimizer_steps_before": {
+              "optimizer": 0
+            },
+            "optimizer_steps_after": {
+              "optimizer": 1
+            },
+            "finite_training": true,
+            "replay_episodes": 2,
+            "restored": false
+          },
+          {
+            "initial_t_env": 73,
+            "initial_updates": 1,
+            "final_t_env": 177,
+            "final_updates": 2,
+            "session_updates": 1,
+            "parameter_changes": {
+              "main": 0.0010013580322265625
+            },
+            "optimizer_steps_before": {
+              "optimizer": 1
+            },
+            "optimizer_steps_after": {
+              "optimizer": 2
+            },
+            "finite_training": true,
+            "replay_episodes": 4,
+            "restored": true
+          }
+        ],
+        "problems": []
+      }
+    ],
+    "diagnostic": true,
+    "steps_ceiling": 4096,
+    "sessions_per_method": 2,
+    "train_config": {
+      "N_R": 4,
+      "N_B": 4,
+      "K": 2,
+      "batch_size_run": 2,
+      "batch_size": 2,
+      "buffer_size": 16,
+      "training_iters": 1
+    },
+    "updated_at": 1793022581.046586
+  },
+  "reproduction": {
+    "status": "complete",
+    "completed": 60,
+    "total": 60,
+    "reference_output": "E:\\Code\\Open_Score\\Open-SCORE\\outputs\\main",
+    "csv": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\outputs\\smoke\\reproduction.csv",
+    "device": "cpu",
+    "environment": {
+      "had_core_version": "skyhad-3.0.0a1",
+      "physics_protocol": "rebuild-calibrated-v3-r7-target-initialization",
+      "source_commit": "9536b74bdfaf75b832598e4b12d356f2e5a52ffc",
+      "module_path": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\envs\\PureHAD\\had_env\\__init__.py"
+    },
+    "configurations": [
+      {
+        "N_R": 4,
+        "N_B": 4,
+        "K": 2
+      },
+      {
+        "N_R": 15,
+        "N_B": 15,
+        "K": 2
+      }
+    ],
+    "episode_seeds": [
+      9000,
+      9001,
+      9002
+    ],
+    "training_seed": 0,
+    "checkpoint_kind": "final",
+    "rng_policy": "reset-python-numpy-torch-to-episode-seed-v1",
+    "protocol_known": 12,
+    "protocol_unknown": 48,
+    "exact_D_matches": 54,
+    "exact_ep_len_matches": 56,
+    "exact_both_matches": 53,
+    "max_abs_delta_D": 1.6806175269076906,
+    "max_abs_delta_ep_len": 55,
+    "elapsed_seconds": 28.25,
+    "updated_at": 1793022486.3453436,
+    "remaining_seconds": 0.0,
+    "migration_diagnosis": {
+      "module": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\outputs\\smoke\\equivalence_sources\\old_score\\open_score\\__init__.py",
+      "native": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\outputs\\smoke\\equivalence_sources\\old_native\\had_env\\__init__.py",
+      "cases": [
+        {
+          "N_R": 4,
+          "N_B": 4,
+          "K": 2,
+          "episode_seed": 9000,
+          "D": 1.0,
+          "ep_len": 35,
+          "new_D": 1.0,
+          "new_ep_len": 35,
+          "exact_migration_match": true,
+          "archive_D": 1.0,
+          "archive_ep_len": 36
+        },
+        {
+          "N_R": 15,
+          "N_B": 15,
+          "K": 2,
+          "episode_seed": 9000,
+          "D": 1.0,
+          "ep_len": 37,
+          "new_D": 1.0,
+          "new_ep_len": 37,
+          "exact_migration_match": true,
+          "archive_D": 2.0,
+          "archive_ep_len": 71
+        },
+        {
+          "N_R": 15,
+          "N_B": 15,
+          "K": 2,
+          "episode_seed": 9001,
+          "D": 3.599303008440457,
+          "ep_len": 40,
+          "new_D": 3.599303008440457,
+          "new_ep_len": 40,
+          "exact_migration_match": true,
+          "archive_D": 1.9186854815327665,
+          "archive_ep_len": 39
+        },
+        {
+          "N_R": 15,
+          "N_B": 15,
+          "K": 2,
+          "episode_seed": 9002,
+          "D": 1.0,
+          "ep_len": 45,
+          "new_D": 1.0,
+          "new_ep_len": 45,
+          "exact_migration_match": true,
+          "archive_D": 0.0,
+          "archive_ep_len": 100
+        }
+      ],
+      "all_exact_migration_match": true,
+      "scope": "Four already-selected mismatching ALMA openings; no new evaluation cases"
+    },
+    "difference_groups": {
+      "bitwise_equal_D_and_length": 53,
+      "last_digit_only": {
+        "count": 3,
+        "max_abs_delta_D": 1.7763568394002505e-15,
+        "note": "Observed numerical differences retained exactly; no tolerance-based pass is assigned"
+      },
+      "alma_archived_reference_difference": {
+        "count": 4,
+        "old_vs_new_code_exact_match": 4,
+        "note": "Old bcf25c2 wrappers/algorithm + original native 9e25a1c match new code in all four differing ALMA cases under the same explicit RNG reset. The archived action RNG was not fully recorded; historical exact reproduction remains unresolved."
+      }
+    }
+  },
+  "environment_equivalence": {
+    "status": "passed",
+    "scope": {
+      "seed": 9000,
+      "configs": [
+        [
+          4,
+          4,
+          2
+        ],
+        [
+          15,
+          15,
+          2
+        ]
+      ],
+      "max_steps": 100,
+      "task_mode": "damage",
+      "spatial_dim": 2,
+      "target_initialization": "random",
+      "wrapper_shaping_coef": 1.0,
+      "actions": "planar action (decision_step + ordered_agent_slot) modulo 9",
+      "comparison": "exact Python scalar/type equality, no tolerance",
+      "allowed_runtime_metadata_keys": [
+        "core_version"
+      ]
+    },
+    "sources": {
+      "old_native_commit": "9e25a1c3e32cba31f00c0a42bd2c1e58988afaa2",
+      "old_score_commit": "bcf25c228c8eaba837549db044d04a246a8ccf5b",
+      "new_native_source_commit": "9536b74bdfaf75b832598e4b12d356f2e5a52ffc"
+    },
+    "process_metadata": {
+      "old_native": {
+        "arm": "old_native",
+        "native_version": "1.0.0",
+        "native_path": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\outputs\\smoke\\equivalence_sources\\old_native\\had_env\\__init__.py",
+        "core_version": "had-workbench-2.1.0",
+        "physics_protocol": "rebuild-calibrated-v3-r7-target-initialization",
+        "python_path": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\.venv\\Scripts\\python.exe"
+      },
+      "new_native": {
+        "arm": "new_native",
+        "native_version": "3.0.0a1",
+        "native_path": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\envs\\PureHAD\\had_env\\__init__.py",
+        "core_version": "skyhad-3.0.0a1",
+        "physics_protocol": "rebuild-calibrated-v3-r7-target-initialization",
+        "python_path": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\.venv\\Scripts\\python.exe"
+      },
+      "old_wrapper": {
+        "arm": "old_wrapper",
+        "native_version": "1.0.0",
+        "native_path": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\outputs\\smoke\\equivalence_sources\\old_native\\had_env\\__init__.py",
+        "core_version": "had-workbench-2.1.0",
+        "physics_protocol": "rebuild-calibrated-v3-r7-target-initialization",
+        "python_path": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\.venv\\Scripts\\python.exe",
+        "wrapper_package_path": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\outputs\\smoke\\equivalence_sources\\old_score\\open_score\\__init__.py"
+      },
+      "new_wrapper": {
+        "arm": "new_wrapper",
+        "native_version": "3.0.0a1",
+        "native_path": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\envs\\PureHAD\\had_env\\__init__.py",
+        "core_version": "skyhad-3.0.0a1",
+        "physics_protocol": "rebuild-calibrated-v3-r7-target-initialization",
+        "python_path": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\.venv\\Scripts\\python.exe",
+        "wrapper_package_path": "E:\\Code\\.codex-worktrees\\Open_Score-pure\\__init__.py"
+      }
+    },
+    "native_static_ast": {
+      "python_files": 48,
+      "imported_runtime_equal_excluding_version_metadata": true,
+      "differences": [
+        {
+          "path": "had_env/__init__.py",
+          "exact_ast_equal": false,
+          "imported_runtime_ast_equal": true,
+          "explanation": "Only __version__ assignment changed."
+        },
+        {
+          "path": "had_env/core/env/env.py",
+          "exact_ast_equal": false,
+          "imported_runtime_ast_equal": true,
+          "explanation": "Unused __main__ demo removed; imported runtime definitions unchanged."
+        },
+        {
+          "path": "had_env/core/version.py",
+          "exact_ast_equal": false,
+          "imported_runtime_ast_equal": true,
+          "explanation": "Only CORE_VERSION metadata and its __version__ import changed."
+        }
+      ]
+    },
+    "pairs": [
+      {
+        "kind": "native",
+        "config": [
+          4,
+          4,
+          2
+        ],
+        "seed": 9000,
+        "exact_equal_excluding_metadata": true,
+        "difference_count": 0,
+        "differences": [],
+        "metadata_difference_count": 808,
+        "metadata_examples": [
+          {
+            "path": "case.steps[0].transition[4].blue_2.core_version",
+            "old": "had-workbench-2.1.0",
+            "new": "skyhad-3.0.0a1"
+          },
+          {
+            "path": "case.steps[0].transition[4].red_0.core_version",
+            "old": "had-workbench-2.1.0",
+            "new": "skyhad-3.0.0a1"
+          },
+          {
+            "path": "case.steps[0].transition[4].red_3.core_version",
+            "old": "had-workbench-2.1.0",
+            "new": "skyhad-3.0.0a1"
+          }
+        ],
+        "decision_steps": 100,
+        "final_target_damage": 0.0,
+        "event_counts": {
+          "fire": 1,
+          "self_destruct": 1,
+          "attack_damage": 1
+        }
+      },
+      {
+        "kind": "native",
+        "config": [
+          15,
+          15,
+          2
+        ],
+        "seed": 9000,
+        "exact_equal_excluding_metadata": true,
+        "difference_count": 0,
+        "differences": [],
+        "metadata_difference_count": 3030,
+        "metadata_examples": [
+          {
+            "path": "case.steps[0].transition[4].red_8.core_version",
+            "old": "had-workbench-2.1.0",
+            "new": "skyhad-3.0.0a1"
+          },
+          {
+            "path": "case.steps[0].transition[4].red_2.core_version",
+            "old": "had-workbench-2.1.0",
+            "new": "skyhad-3.0.0a1"
+          },
+          {
+            "path": "case.steps[0].transition[4].red_12.core_version",
+            "old": "had-workbench-2.1.0",
+            "new": "skyhad-3.0.0a1"
+          }
+        ],
+        "decision_steps": 100,
+        "final_target_damage": 0.0,
+        "event_counts": {
+          "collision": 4,
+          "fire": 8,
+          "self_destruct": 8,
+          "attack_damage": 9
+        }
+      },
+      {
+        "kind": "wrapper",
+        "config": [
+          4,
+          4,
+          2
+        ],
+        "seed": 9000,
+        "exact_equal_excluding_metadata": true,
+        "difference_count": 0,
+        "differences": [],
+        "metadata_difference_count": 0,
+        "metadata_examples": [],
+        "decision_steps": 35,
+        "final_target_damage": 2.0,
+        "event_counts": {
+          "collision": 2,
+          "fire": 3,
+          "self_destruct": 3,
+          "attack_damage": 3
+        }
+      },
+      {
+        "kind": "wrapper",
+        "config": [
+          15,
+          15,
+          2
+        ],
+        "seed": 9000,
+        "exact_equal_excluding_metadata": true,
+        "difference_count": 0,
+        "differences": [],
+        "metadata_difference_count": 0,
+        "metadata_examples": [],
+        "decision_steps": 44,
+        "final_target_damage": 9.0,
+        "event_counts": {
+          "collision": 6,
+          "fire": 12,
+          "self_destruct": 12,
+          "attack_damage": 13
+        }
+      }
+    ],
+    "trace_file": "equivalence.traces.json",
+    "elapsed_seconds": 9.04868459701538,
+    "physics_protocol_compared_exactly": true
+  },
+  "scope": {
+    "training": "Eight seed-0 learning methods, two independent saved/resumed sessions with real updates; diagnostic only",
+    "evaluation": "Ten policies, two configurations, three retained openings = 60; no additional seeds or full evaluation",
+    "formal_reproduction_claimed": false
+  },
+  "preservation": {
+    "main_commit": "47e2cb6d870e8e30523ff1d6021a27bc29bed172",
+    "main_worktree_clean": true,
+    "original_model_and_recovery_files": 174,
+    "original_model_and_recovery_bytes": 3384908245,
+    "changed_original_data": false,
+    "check": "File presence, counts and retained byte sizes; no file hashes",
+    "main_models": 76,
+    "archived_models": 95,
+    "fixedwing_best_and_resume_files": 3
+  }
+}

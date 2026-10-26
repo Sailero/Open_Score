@@ -1,0 +1,19 @@
+# Public QMIX is the existing attention/FlexQMIX implementation from ALMA
+# 81bd5c475972b982ce470b1ed78154ec39d236da, not a flattened-state QMIX.
+# Preserve b2_qmix_atten in model/CSV ABI. imagine=false disables REFIL;
+# retained lmbda=0.5 is inert without imagined branches (matches saved runs).
+extends: base.yaml
+method: b2_qmix_atten
+name: b2_qmix_atten
+policy_kind: learning
+mac: entity_mac
+learner: q_learner
+mixer: flex_qmix
+encoder: attention
+softmax_mixing_weights: true
+lmbda: 0.5
+agent:
+  recurrent: true
+  entity_scheme: true
+  imagine: false
+  subtask_cond: null

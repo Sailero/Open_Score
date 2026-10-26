@@ -1,0 +1,24 @@
+# DCG 4de100cddf7c3a7035cd89a47d7c1b8a878e7428 adaptation.
+# Full graph, eight normalized anytime max-sum rounds, 50k epsilon schedule.
+extends: base.yaml
+method: dcg
+name: dcg
+policy_kind: learning
+mac: dcg_mac
+learner: dcg_learner
+mixer: null
+encoder: attention
+epsilon_anneal_time: 50000
+cg_edges: full
+cg_utilities_hidden_dim: null
+cg_payoffs_hidden_dim: null
+cg_payoff_rank: null
+duelling: false
+msg_anytime: true
+msg_iterations: 8
+msg_normalized: true
+agent:
+  recurrent: true
+  entity_scheme: true
+  imagine: false
+  subtask_cond: null

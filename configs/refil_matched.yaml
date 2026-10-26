@@ -1,0 +1,7 @@
+# Parameter-matched REFIL; the residual MLP width is an explicit default.
+extends: refil.yaml
+method: refil_matched
+name: refil_matched
+imagine_group: original
+global_branch: null
+matched_hidden: 576

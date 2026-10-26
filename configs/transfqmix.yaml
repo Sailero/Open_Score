@@ -1,0 +1,34 @@
+# TransfQMix native transformer actor/mixer; Adam 1e-3, TD(lambda)=0.6.
+# HAD 10 features + 9 prior actions = 19 inputs, 32-wide two-layer blocks.
+extends: base.yaml
+method: transfqmix
+name: transfqmix
+policy_kind: learning
+mac: transfqmix_mac
+learner: transfqmix_learner
+mixer: transfqmix
+lr: 0.001
+weight_decay: 0
+optimizer: adam
+gamma: 0.99
+td_lambda: 0.6
+grad_norm_clip: 10
+target_update_interval: 200
+entity_last_action: true
+obs_agent_id: false
+obs_last_action: false
+emb: 32
+heads: 4
+depth: 2
+mixer_emb: 32
+mixer_heads: 4
+mixer_depth: 2
+ff_hidden_mult: 4
+dropout: 0.0
+softmax_mixing_weights: true
+lmbda: 0.0
+agent:
+  recurrent: true
+  entity_scheme: true
+  imagine: false
+  subtask_cond: null

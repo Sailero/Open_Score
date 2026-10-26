@@ -1,0 +1,17 @@
+# Evaluation anchor only; the learning-method validator rejects training.
+extends: base.yaml
+method: rule
+name: rule
+policy_kind: anchor
+anchor_id: rule_nv1
+strategy:
+  architecture: hierarchical
+  layers:
+    grouping: nv1
+    control: predictive_intercept
+mac: null
+learner: null
+mixer: null
+training_iters: 0
+t_max: 0
+use_cuda: false

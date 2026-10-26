@@ -1,0 +1,28 @@
+# SPECTra GRF ffababf6187216c9d16b2109ee8ef6fe5fdf1172 adaptation.
+# Adam 1e-3 and TD(lambda)=0.6; HAD 10 features + 9 prior actions = 19 inputs.
+extends: base.yaml
+method: spectra
+name: spectra
+policy_kind: learning
+mac: spectra_mac
+learner: nq_learner
+mixer: spectra_mixer
+hidden_size: 64
+rnn_hidden_dim: 64
+n_head: 4
+attn_n_heads: 4
+mixing_n_head: 4
+hypernet_embed: 32
+mixing_embed_dim: 32
+lr: 0.001
+td_lambda: 0.6
+optimizer: adam
+q_lambda: false
+n_reward: 1
+use_SAQA: true
+entity_last_action: true
+agent:
+  recurrent: true
+  entity_scheme: true
+  imagine: false
+  subtask_cond: null

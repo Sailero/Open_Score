@@ -1,0 +1,1 @@
+"""Optional HAD pygame renderer."""

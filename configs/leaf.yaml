@@ -1,0 +1,23 @@
+# LEAF public entry; historical saved method/name remain regir_nomem.
+# Recurrent REFIL with four shared cycle rounds and memory-free queries.
+extends: refil.yaml
+method: regir_nomem
+name: regir_nomem
+imagine_group: original
+count_cond: phi2
+global_branch: cycle
+global_slots: 4
+global_depths:
+- 1
+- 2
+- 3
+- 4
+global_eval_depth: 4
+global_embed_dim: 64
+global_ffn_mult: 2
+global_n_heads: 4
+skip_count_inject: true
+global_query_detach_memory: true
+global_query_no_memory: true
+rer_update: tied
+rer_readout: learned

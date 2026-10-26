@@ -63,5 +63,16 @@ backup/
 *.synctex.gz
 evaluation.json
 
-# Full timing calls stay local; publish small configs, aggregates and figures.
-Open-SCORE/outputs/main/had/decision_timing.json
+# Publish compact saved artifacts; runtime JSON, raw data and weights stay local.
+outputs/**
+!outputs/**/
+!outputs/experiment.json
+!outputs/aggregates.json
+!outputs/summary.json
+!outputs/*/models/seed_*/config.json
+!outputs/figures/*.png
+!outputs/figures/*.pdf
+
+# The authorized short run has one compact result summary and optional real plot.
+!outputs/smoke/summary.json
+!outputs/smoke/summary.png

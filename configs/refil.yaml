@@ -1,0 +1,17 @@
+# ALMA 81bd5c475972b982ce470b1ed78154ec39d236da REFIL adaptation.
+# Imagined branches are trained with lmbda=0.5; the HAD GRU head is enabled.
+extends: base.yaml
+method: refil
+name: refil
+policy_kind: learning
+mac: entity_mac
+learner: q_learner
+mixer: flex_qmix
+encoder: attention
+softmax_mixing_weights: true
+lmbda: 0.5
+agent:
+  recurrent: true
+  entity_scheme: true
+  imagine: true
+  subtask_cond: null

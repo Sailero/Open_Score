@@ -1,0 +1,27 @@
+# ALMA full-field adaptation: target subtasks, five-step allocation clock,
+# no hard action mask, one team Q and team reward. Retained vendor defaults
+# in base.yaml specify the AQL proposal, allocation optimizers and policy.
+extends: base.yaml
+method: alma
+name: alma
+policy_kind: learning
+mac: entity_mac
+learner: q_learner
+mixer: flex_qmix
+encoder: attention
+softmax_mixing_weights: true
+alloc_target_update_interval: 50
+alloc_embed_dim: 128
+alloc_n_heads: 4
+n_extra_tasks: 9
+mixer_subtask_cond: 'off'
+agent:
+  recurrent: true
+  entity_scheme: true
+  imagine: false
+  subtask_cond: full_obs
+hier_agent:
+  task_allocation: aql
+env_args:
+  subtask_set: targets
+  allocation_clock: interval

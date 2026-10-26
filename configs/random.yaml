@@ -1,0 +1,15 @@
+# Evaluation anchor only; the learning-method validator rejects training.
+extends: base.yaml
+method: random
+name: random
+policy_kind: anchor
+anchor_id: random
+strategy:
+  architecture: end_to_end
+  policy: random_accel
+mac: null
+learner: null
+mixer: null
+training_iters: 0
+t_max: 0
+use_cuda: false
