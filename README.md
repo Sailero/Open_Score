@@ -1,5 +1,7 @@
 # Open-SCORE
 
+本分支 `experiment/leaf-skyhad-fixedwing-seed0` 用于固定翼训练探索。原 HAD 的全部实验成果与来源记录见 [`main`](https://github.com/Sailero/Open_Score/tree/main)，精简代码、报告与图表见 [`pure`](https://github.com/Sailero/Open_Score/tree/pure)。原始大数据、模型权重和训练恢复文件仅保存在本地，Git 不备份这些材料。当前固定翼 seed0 已停止于 243,571 / 1,000,000 步，完成 12 / 50 个验证点，未完成正式终评，尚无合格的 `final.pt`。
+
 **LEAF**以攻击者、目标和队友构成的威胁情境支持多目标防护。当前主工作区保留LEAF、七个设计比较、七个学习基线及Rule/Random的HAD结果；同一冻结策略的实体规模外推、执行深度、机制、时延和受控探针在一份[主实验报告](docs/LEAF_主实验结果分析.md)中解释。
 
 | 入口 | 内容 |
