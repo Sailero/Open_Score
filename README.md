@@ -102,6 +102,14 @@ python -m pip install -e './Open-SCORE[training]'
 python -m pip install torch==2.13.0 --index-url https://download.pytorch.org/whl/cu126
 ```
 
+**RTX PRO 6000 Blackwell / 570驱动例外：** Blackwell不使用cu126构建，570驱动也不满足上述cu130要求。保留驱动时，三臂统一使用官方PyTorch 2.11.0/cu128；这是运行环境版本调整，首次启动前确定。将前面的torch安装行替换为：
+
+```bash
+python -m pip install torch==2.11.0 --index-url https://download.pytorch.org/whl/cu128
+```
+
+参见[PyTorch官方版本页](https://pytorch.org/get-started/previous-versions/)、[Blackwell支持说明](https://pytorch.org/blog/pytorch-2-7/)与[CUDA构建变更说明](https://pytorch.org/blog/pytorch-2-12-release-blog/)。切换版本前先正常停止本环境中的训练；不要在运行中更换依赖。
+
 在已安装的tmux会话中手动启动，两张GPU各一任务。A/B先启动，C在任一空槽接续；本命令只做训练与50次训练内验证，不自动终评：
 
 ```bash
@@ -112,6 +120,8 @@ MPLBACKEND=Agg python -u Open-SCORE/scripts/train.py --stage train --preset sky_
 ```
 
 `Ctrl-b d`脱离会话，重新连接后用 `tmux attach -t leaf-friendly` 查看三行tqdm。各臂控制台日志保存在 `had/regir_nomem/arms/<A|B|C>/models/seed_0/console.log`。若只启动一臂，用 `--stage single --arm A --devices 0`；单臂入口同样保留训练锁、终端进度和日志。
+
+需要GPU0同时运行两臂、GPU1运行一臂时，在上述双卡启动命令后添加 `--gpu-slots 2,1`：A/B分配到GPU0，C分配到GPU1，三臂同时运行。默认省略该参数仍为每卡一臂。槽位只是并发设置，不改变每臂预算、batch或学习参数；恢复也可更改槽位。运行前按可用显存而非总显存判断余量，三臂会产生24个环境worker及3个learner，且会与已有GPU作业共享算力。更高并发不保证更短的总耗时。
 
 ```bash
 # 查看全部或指定实验臂

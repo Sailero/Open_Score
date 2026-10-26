@@ -710,7 +710,7 @@ def _render_friendly_training(root, *, config=None, state=None, run="train", exp
             "--stage", "train", "--preset", "sky_friendly_v1", "--arm", "all", "--seed", "0", "--steps", "1000000",
             "--output", str(root), "--devices", "0,1", "--per-gpu", "1", "--progress", "tqdm", "--live-curves"], platform)
         lines += ["", "## 启动、恢复与查看", "", f"```{shell}", train_command, "```", "",
-                  "同一命令追加 `--resume` 恢复；已完成臂跳过、已中断臂恢复、未运行臂从零开始。A/B先占两张卡，C在任一槽空闲后接续，不自动执行终评。", ""]
+                  "同一命令追加 `--resume` 恢复；已完成臂跳过、已中断臂恢复、未运行臂从零开始。GPU分配遵循 `--devices` 与 `--gpu-slots`（默认每卡一槽），空闲槽按A/B/C顺序接任务，不自动执行终评。", ""]
         commands = [
             [executable, "Open-SCORE/scripts/train.py", "--stage", "status", "--output", str(root)],
             [executable, "Open-SCORE/scripts/train.py", "--stage", "stop", "--arm", "A", "--output", str(root)],

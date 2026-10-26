@@ -261,19 +261,31 @@ def friendly_worker(options, job, gpu, stop, results):
 
 
 def friendly(options):
-    """Schedule the selected approved arms, one job per visible GPU."""
+    """Schedule the selected approved arms using explicit slots per visible GPU."""
     from open_score.algos import resolve_friendly_config, resume_files, train
     arms = FRIENDLY_ARMS if options.arm == "all" else (options.arm,)
     if options.stage == "single" and len(arms) != 1:
         raise ValueError("single requires --arm A, B or C")
     devices = logical_devices(options.devices or ("0" if options.stage == "single" else "0,1"))
     if options.per_gpu != 1 or len(devices) != (1 if options.stage == "single" else 2):
-        raise ValueError("sky_friendly_v1 uses one job per GPU; single selects one GPU and train selects two")
+        raise ValueError("Use --per-gpu 1; single selects one GPU and train selects two. Use --gpu-slots for asymmetric slots")
+    if options.gpu_slots is None:
+        slot_counts = (1,) * len(devices)
+    else:
+        try:
+            slot_counts = tuple(int(value.strip()) for value in options.gpu_slots.split(","))
+        except ValueError as error:
+            raise ValueError("--gpu-slots requires comma-separated positive integers, e.g. 2,1") from error
+        if len(slot_counts) != len(devices) or any(value < 1 for value in slot_counts):
+            raise ValueError("--gpu-slots requires one positive count for each --devices entry")
+    if options.stage == "single" and slot_counts != (1,):
+        raise ValueError("single has one arm and requires one GPU slot")
     if options.method != "regir_nomem" or selection(options.seeds, integer=True) != (0,) or options.steps != 1000000:
         raise ValueError("sky_friendly_v1 selects LEAF, seed 0 and 1,000,000 physical steps per arm")
     if options.confirmation:
         raise ValueError("The friendly training preset does not automatically run formal evaluation")
-    slots = tuple(physical_device(device) for device in devices)
+    slots = tuple(physical_device(device) for device, count in zip(devices, slot_counts)
+                  for _ in range(count))
     started_at = time.time()
     ctx = get_context("spawn")
     stop, results = ctx.Event(), ctx.Queue()
@@ -637,6 +649,7 @@ def main():
     parser.add_argument("--run", default="train")
     parser.add_argument("--devices", help="Logical GPU indices within inherited CUDA_VISIBLE_DEVICES; single defaults to 0")
     parser.add_argument("--per-gpu", type=positive_integer, help="Defaults to 1 for sky_friendly_v1 and 3 for legacy training")
+    parser.add_argument("--gpu-slots", help="Friendly preset slots aligned with --devices, e.g. 2,1 for two jobs on GPU0 and one on GPU1")
     parser.add_argument("--eval-workers", type=positive_integer, default=2)
     parser.add_argument("--eval-device", type=evaluation_device, default="cpu", help="Independent evaluation pool device: cpu or cuda:N")
     parser.add_argument("--resume", action="store_true")
@@ -690,6 +703,8 @@ def main():
         return friendly(options)
     if options.arm is not None:
         parser.error("--arm requires --preset sky_friendly_v1 or its saved manifest")
+    if options.gpu_slots is not None:
+        parser.error("--gpu-slots requires --preset sky_friendly_v1")
     options.per_gpu = 3 if options.per_gpu is None else options.per_gpu
     if not options.method or options.seeds is None or options.steps is None:
         parser.error("Training requires explicit --method, --seed/--seeds and --steps")
